@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SB BARBER Pro</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://i.imgur.com/PzcD4W2.jpeg">
+    <link rel="icon" type="image/jpeg" href="https://i.imgur.com/PzcD4W2.jpeg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family:'Inter',sans-serif; -webkit-tap-highlight-color:transparent; }
+        ::-webkit-scrollbar { display:none; }
+        .glass { background:rgba(17,24,39,0.85); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border-bottom:1px solid rgba(255,255,255,0.08); }
+        .glass-card { background:rgba(30,41,59,0.7); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.05); box-shadow:0 8px 32px rgba(0,0,0,0.4); }
+        .glass-modal { background:rgba(20,25,35,0.95); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.1); }
+        .animate-enter { animation:enter 0.4s cubic-bezier(0.16,1,0.3,1); }
+        @keyframes enter { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        .shine-effect { position:relative; overflow:hidden; }
+        .shine-effect::after { content:''; position:absolute; top:0; left:-100%; width:50%; height:100%; background:linear-gradient(to right,transparent,rgba(255,255,255,0.1),transparent); animation:shine 3s infinite; }
+        @keyframes shine { 0%{left:-100%} 20%{left:200%} 100%{left:200%} }
+        .no-select { -webkit-user-select:none; -moz-user-select:none; user-select:none; -webkit-touch-callout:none; }
+        input[type="date"] { -webkit-appearance:none; min-height:2.5rem; }
+        input[type="date"]::-webkit-calendar-picker-indicator { filter:invert(1); opacity:0.6; }
+        body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
+        button:disabled { opacity:0.7; cursor:not-allowed; }
+        .stock-low { animation:pulse-red 2s infinite; }
+        @keyframes pulse-red { 0%,100%{border-color:rgba(239,68,68,0.4)} 50%{border-color:rgba(239,68,68,0.9)} }
+        /* Slide in desde la derecha */
+        .slide-in { animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1); }
+        @keyframes slideIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
+    </style>
+</head>
+<body class="h-full bg-[#0f1115] text-white flex items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0f1115] to-black">
+<div class="w-full max-w-md h-full flex flex-col relative shadow-2xl bg-transparent overflow-hidden">
+
+    <!-- Loading -->
+    <div id="loading-view" class="absolute inset-0 z-50 bg-[#0f1115] flex flex-col justify-center items-center transition-opacity duration-500">
+        <img src="https://i.imgur.com/xyjMT6X.png" alt="SB BARBER" class="h-28 mb-6 animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+        <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+    </div>
+
+    <!-- Login -->
+    <div id="login-view" class="flex-1 flex flex-col justify-center p-8 hidden glass-card m-0 sm:m-4 sm:rounded-3xl">
+        <div class="text-center mb-12">
+            <img src="https://i.imgur.com/xyjMT6X.png" alt="SB BARBER" class="h-40 mx-auto mb-6 drop-shadow-2xl hover:scale-105 transition duration-500">
+            <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-400 to-emerald-400">BIENVENIDO</h1>
+        </div>
+        <form id="login-form" class="space-y-5">
+            <input type="email" id="login-email" placeholder="Correo electrónico" class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-blue-500 outline-none transition text-white placeholder-gray-500" required>
+            <input type="password" id="login-password" placeholder="Contraseña" class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-blue-500 outline-none transition text-white placeholder-gray-500" required>
+            <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-cyan-600 p-4 rounded-xl font-bold text-lg shadow-lg hover:scale-[1.02] transition text-white uppercase tracking-wider">Ingresar</button>
+        </form>
+    </div>
+
+    <!-- ============================================================
+         DASHBOARD PRINCIPAL
+    ============================================================ -->
+    <div id="dashboard-view" class="flex-1 flex flex-col hidden h-full">
+
+        <!-- Header -->
+        <header class="px-5 py-4 glass sticky top-0 z-20 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <img src="https://i.imgur.com/xyjMT6X.png" alt="Logo" class="h-10 w-auto object-contain drop-shadow-lg">
+                <div><h1 class="text-sm font-bold text-white leading-none tracking-wider">SB BARBER</h1><span id="welcome-text" class="text-[10px] text-gray-400 font-medium">Panel</span></div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="window.openUpdatesModal()" class="relative w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-blue-400 transition">
+                    <i class="fas fa-bell text-xs"></i>
+                    <span id="updates-badge" class="hidden absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#1a1d24]"></span>
+                </button>
+                <button onclick="window.openSettingsModal()" id="settings-btn" class="hidden w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-blue-400 transition"><i class="fas fa-camera text-xs"></i></button>
+                <button onclick="window.openAdminSettingsModal()" id="admin-settings-btn" class="hidden w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-blue-400 transition"><i class="fas fa-cog text-xs"></i></button>
+                <button onclick="window.logout()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-red-400 transition"><i class="fas fa-power-off text-xs"></i></button>
+            </div>
+        </header>
+
+        <!-- Nav períodos -->
+        <div class="bg-[#0f1115] sticky top-[73px] z-10 py-3 px-4 border-b border-gray-800/50">
+            <nav class="flex bg-gray-900/80 p-1 rounded-xl border border-gray-800">
+                <button onclick="window.setPeriod('dia',this)" class="nav-btn flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-gradient-to-r from-blue-600 to-cyan-600 shadow-md scale-105 transition-all">HOY</button>
+                <button onclick="window.setPeriod('ayer',this)" class="nav-btn flex-1 py-2 rounded-lg text-[10px] font-medium text-gray-500 hover:text-gray-300 transition-all">AYER</button>
+                <button onclick="window.setPeriod('semanal',this)" class="nav-btn flex-1 py-2 rounded-lg text-[10px] font-medium text-gray-500 hover:text-gray-300 transition-all">SEMANA</button>
+                <button onclick="window.setPeriod('mensual',this)" class="nav-btn flex-1 py-2 rounded-lg text-[10px] font-medium text-gray-500 hover:text-gray-300 transition-all">MES</button>
+                <button onclick="window.setPeriod('historial',this)" class="nav-btn flex-1 py-2 rounded-lg text-[10px] font-medium text-gray-500 hover:text-gray-300 transition-all"><i class="fas fa-search text-[8px]"></i></button>
+            </nav>
+        </div>
+
+        <!-- Contenido principal -->
+        <div class="flex-1 overflow-y-auto p-4 pb-28 space-y-4" id="main-scroll">
+
+            <!-- Ganancia -->
+            <div class="glass-card rounded-2xl p-6">
+                <span class="text-gray-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2 mb-1"><i class="fas fa-wallet"></i> Tu Ganancia</span>
+                <div class="flex items-baseline gap-1 mt-2"><span class="text-2xl text-gray-400 font-light">$</span><span id="total-revenue" class="text-5xl font-extrabold text-white tracking-tighter">0</span></div>
+                <div class="h-px bg-gradient-to-r from-gray-700 via-gray-600 to-transparent w-full my-4 opacity-50"></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><span class="text-[10px] text-gray-500 uppercase font-bold block">Facturación</span><span id="total-revenue-full" class="font-mono text-gray-300 text-sm">$0</span></div>
+                    <div class="text-right"><span class="text-[10px] text-gray-500 uppercase font-bold block">Cortes</span><span id="total-services-count" class="font-bold text-blue-300 text-lg bg-blue-900/30 px-2 rounded-md">0</span></div>
+                </div>
+            </div>
+
+            <!-- Top performer -->
+            <div id="top-performer-card" class="hidden glass-card p-4 rounded-xl items-center justify-between border-l-4 border-yellow-500 bg-gradient-to-r from-yellow-500/10 to-transparent shine-effect animate-enter no-select">
+                <div class="flex items-center gap-4 z-10">
+                    <div id="top-performer-avatar" class="w-12 h-12 rounded-full border-2 border-yellow-500 shadow-lg flex items-center justify-center bg-gray-800 text-yellow-500 font-bold text-lg">👑</div>
+                    <div><div class="text-[10px] font-bold text-yellow-500 uppercase tracking-widest mb-0.5">LIDERANDO</div><div id="top-performer-name" class="font-bold text-white text-lg leading-tight">...</div></div>
+                </div>
+                <div class="text-right z-10"><div class="text-[9px] text-gray-400">Ganancia (Neto)</div><div id="top-performer-amount" class="font-mono font-bold text-yellow-400 text-lg">$0</div></div>
+            </div>
+
+            <!-- Ganancias semana (admin) -->
+            <div id="admin-earnings-panel" class="hidden glass-card p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 no-select">
+                <h3 class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fas fa-chart-line"></i> Ganancias Netas (Semana)</h3>
+                <div id="admin-earnings-list" class="space-y-3"></div>
+            </div>
+
+            <div id="service-stats-container" class="space-y-3 animate-enter no-select"></div>
+            <div id="cuts-list" class="space-y-3 pb-8 no-select"></div>
+        </div>
+
+        <!-- FAB: Nuevo corte -->
+        <button onclick="window.openAddModal()" class="absolute bottom-6 right-6 w-16 h-16 bg-gradient-to-tr from-blue-600 to-cyan-500 rounded-full shadow-[0_0_25px_rgba(59,130,246,0.6)] flex items-center justify-center text-2xl text-white transition-all active:scale-90 hover:scale-105 z-30 border-2 border-white/10"><i class="fas fa-plus"></i></button>
+
+        <!-- FAB: Gastos (solo admin) -->
+        <button id="gastos-fab" onclick="window.openGastosView()" class="hidden absolute bottom-6 left-6 w-16 h-16 bg-gradient-to-tr from-orange-600 to-red-500 rounded-full shadow-[0_0_25px_rgba(234,88,12,0.5)] flex items-center justify-center text-xl text-white transition-all active:scale-90 hover:scale-105 z-30 border-2 border-white/10">
+            <i class="fas fa-file-invoice-dollar"></i>
+        </button>
+
+    </div><!-- /dashboard-view -->
+
+
+    <!-- ============================================================
+         PANTALLA DE GASTOS (se desliza sobre el dashboard)
+    ============================================================ -->
+    <div id="gastos-view" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden slide-in">
+
+        <!-- Header de Gastos -->
+        <header class="px-5 py-4 glass flex items-center gap-4">
+            <button onclick="window.closeGastosView()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition">
+                <i class="fas fa-arrow-left text-sm"></i>
+            </button>
+            <div>
+                <h1 class="text-sm font-bold text-white leading-none">GASTOS</h1>
+                <span class="text-[10px] text-orange-400 font-medium">Solo visible para admins</span>
+            </div>
+        </header>
+
+        <!-- Contenido de Gastos -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4 pb-10">
+
+            <!-- Card: Ganancia neta de la semana -->
+            <div class="glass-card rounded-2xl p-5">
+                <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <i class="fas fa-calculator text-emerald-400"></i> Ganancia Neta — Semana Actual
+                </div>
+                <div class="space-y-2 mb-4">
+                    <div class="flex justify-between text-xs"><span class="text-gray-400">Facturación total</span><span id="wp-billing" class="font-bold text-white">$0</span></div>
+                    <div class="flex justify-between text-xs"><span class="text-gray-400">Comisiones barberos</span><span id="wp-commissions" class="font-bold text-red-400">- $0</span></div>
+                    <div class="flex justify-between text-xs border-t border-white/5 pt-2"><span class="text-gray-300 font-medium">Ganancia del negocio</span><span id="wp-gross" class="font-bold text-blue-300">$0</span></div>
+                </div>
+                <div class="bg-black/20 rounded-xl p-3 space-y-2 mb-4">
+                    <div class="flex justify-between text-xs"><span class="text-gray-400">Gastos variables (semana)</span><span id="wp-var-exp" class="font-bold text-orange-300">- $0</span></div>
+                    <div class="flex justify-between text-xs"><span class="text-gray-400">Gastos fijos estimados (÷4)</span><span id="wp-fixed-exp" class="font-bold text-orange-300">- $0</span></div>
+                </div>
+                <div class="border-t border-white/10 pt-4">
+                    <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Ganancia Neta</div>
+                    <div id="wp-net" class="text-4xl font-extrabold text-emerald-400 tracking-tighter">$0</div>
+                </div>
+            </div>
+
+            <!-- Card: Gastos Fijos del Mes -->
+            <div class="glass-card rounded-2xl p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-home text-orange-400"></i> Gastos Fijos del Mes</h3>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Alquiler, insumos, CM, etc.</p>
+                    </div>
+                    <button onclick="window.openFixedExpensesModal()" class="bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-orange-500/20 transition flex items-center gap-1.5">
+                        <i class="fas fa-edit text-[10px]"></i> Editar
+                    </button>
+                </div>
+                <div id="fixed-expenses-display" class="space-y-2 mb-4"></div>
+                <div class="flex justify-between items-center pt-3 border-t border-white/5">
+                    <span class="text-xs text-gray-400 font-bold uppercase">Total mensual</span>
+                    <span id="fixed-total-display" class="text-lg font-extrabold text-orange-400">$0</span>
+                </div>
+            </div>
+
+            <!-- Card: Gastos Variables -->
+            <div class="glass-card rounded-2xl p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-receipt text-orange-400"></i> Gastos Variables</h3>
+                        <p id="var-exp-period-label" class="text-[10px] text-gray-500 mt-0.5">Esta semana</p>
+                    </div>
+                    <button onclick="window.openExpenseModal()" class="bg-orange-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-orange-700 transition flex items-center gap-1.5">
+                        <i class="fas fa-plus text-[10px]"></i> Agregar
+                    </button>
+                </div>
+                <!-- Filtro período -->
+                <div class="flex gap-1 mb-4 bg-gray-900/60 p-1 rounded-lg border border-gray-800">
+                    <button onclick="window.setExpensePeriod('semanal',this)" class="exp-period-btn flex-1 py-1.5 rounded-md text-[10px] font-bold text-white bg-gradient-to-r from-orange-600 to-red-600">Semana</button>
+                    <button onclick="window.setExpensePeriod('mensual',this)" class="exp-period-btn flex-1 py-1.5 rounded-md text-[10px] font-medium text-gray-500 hover:text-gray-300">Mes</button>
+                    <button onclick="window.setExpensePeriod('todos',this)" class="exp-period-btn flex-1 py-1.5 rounded-md text-[10px] font-medium text-gray-500 hover:text-gray-300">Todo</button>
+                </div>
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-[10px] text-gray-500 uppercase font-bold">Total período:</span>
+                    <span id="total-expenses-amount" class="text-lg font-bold text-orange-400">$0</span>
+                </div>
+                <div id="expenses-list" class="space-y-2"></div>
+            </div>
+
+            <!-- Card: Stock de Bebidas -->
+            <div class="glass-card rounded-2xl p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-wine-bottle text-cyan-400"></i> Stock de Bebidas</h3>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Inventario actual</p>
+                    </div>
+                    <button onclick="window.openAddStockItemModal()" class="bg-cyan-700/40 border border-cyan-500/30 text-cyan-400 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-cyan-700/60 transition flex items-center gap-1.5">
+                        <i class="fas fa-plus text-[10px]"></i> Agregar
+                    </button>
+                </div>
+                <div id="stock-items-list" class="space-y-2">
+                    <p class="text-xs text-gray-600 text-center py-3">No hay bebidas cargadas</p>
+                </div>
+            </div>
+
+        </div>
+    </div><!-- /gastos-view -->
+
+
+    <!-- ====== MODALES ====== -->
+
+    <!-- Novedades -->
+    <div id="updates-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
+        <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl flex flex-col rounded-t-3xl max-h-[85vh]">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-white"><i class="fas fa-bullhorn text-blue-400 mr-2"></i>Novedades</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="updates-list" class="space-y-4 overflow-y-auto pr-2 pb-4 flex-1"></div>
+        </div>
+    </div>
+
+    <!-- Comisiones -->
+    <div id="admin-settings-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
+        <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl flex flex-col rounded-t-3xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-white"><i class="fas fa-cog text-blue-400 mr-2"></i>Comisiones</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="admin-settings-list" class="space-y-3 mb-6"></div>
+            <button onclick="window.saveCommissions()" id="btn-save-commissions" class="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest no-select">Guardar Cambios</button>
+        </div>
+    </div>
+
+    <!-- Nuevo Corte -->
+    <div id="add-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
+        <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl flex flex-col rounded-t-3xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-white">Nuevo Corte</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="add-form" class="flex-1 flex flex-col space-y-5">
+                <div id="barber-selection-grid" class="grid grid-cols-2 gap-3 no-select"></div>
+                <div><div id="services-grid" class="space-y-2 max-h-48 overflow-y-auto pr-1 no-select"></div><input type="hidden" id="svc-name"><input type="hidden" id="svc-price"></div>
+                <input type="text" id="client-name" placeholder="Nombre, aspecto o detalles del cliente" class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-blue-500 outline-none transition text-white placeholder-gray-500 no-select">
+                <button type="submit" id="btn-submit-cut" class="w-full bg-white text-black p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest no-select">Confirmar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Gasto Variable -->
+    <div id="expense-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
+        <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl flex flex-col rounded-t-3xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-white">Registrar Gasto</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="expense-form" class="space-y-5">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Detalle</label>
+                    <input type="text" id="expense-desc" placeholder="Ej: Luz, Bebidas, Limpieza..." required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-orange-500 outline-none transition text-white placeholder-gray-500 mt-1">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Monto</label>
+                    <input type="number" id="expense-amount" placeholder="Ej: 5000" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-orange-500 outline-none transition text-white placeholder-gray-500 mt-1">
+                </div>
+                <button type="submit" id="btn-submit-expense" class="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest no-select">Guardar Gasto</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Gastos Fijos -->
+    <div id="fixed-expenses-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
+        <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl flex flex-col rounded-t-3xl max-h-[85vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-xl font-bold text-white"><i class="fas fa-edit text-orange-400 mr-2"></i>Gastos Fijos Mensuales</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <p class="text-[11px] text-gray-500 mb-5">Configurá los montos que se repiten cada mes. Se usan para calcular la ganancia neta semanal (se divide por 4).</p>
+            <div id="fixed-expenses-form-list" class="space-y-3 mb-6"></div>
+            <button onclick="window.saveFixedExpenses()" id="btn-save-fixed" class="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest no-select">Guardar</button>
+        </div>
+    </div>
+
+    <!-- Stock (nuevo o movimiento) -->
+    <div id="stock-item-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
+        <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl flex flex-col rounded-t-3xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="stock-modal-title" class="text-xl font-bold text-white">Agregar Bebida</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="stock-item-form" class="space-y-4">
+                <div id="stock-name-group">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Nombre de la Bebida</label>
+                    <input type="text" id="stock-name" placeholder="Ej: Coca Cola, Agua, Cerveza..." class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none transition text-white placeholder-gray-500 mt-1">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1" id="stock-qty-label">Cantidad inicial</label>
+                    <input type="number" id="stock-quantity" placeholder="0" min="1" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none transition text-white placeholder-gray-500 mt-1">
+                </div>
+                <div id="stock-price-group">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Precio unitario (opcional)</label>
+                    <input type="number" id="stock-price" placeholder="0" class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none transition text-white placeholder-gray-500 mt-1">
+                </div>
+                <button type="submit" id="btn-submit-stock" class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest no-select">Confirmar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Perfil -->
+    <div id="settings-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-center p-6 animate-enter">
+        <div class="glass-modal border border-white/10 rounded-3xl p-6 shadow-2xl w-full max-w-sm mx-auto">
+            <div class="flex justify-between items-center mb-8"><h2 class="text-xl font-bold text-white">Mi Perfil</h2><button onclick="window.closeModals()" class="text-gray-400"><i class="fas fa-times"></i></button></div>
+            <div class="flex flex-col items-center mb-6 space-y-4 no-select">
+                <input type="file" id="file-upload" accept="image/*" class="hidden">
+                <label for="file-upload" class="cursor-pointer group relative">
+                    <div id="current-avatar-preview" class="w-32 h-32 rounded-full bg-gray-800 border-4 border-white/10 shadow-2xl flex items-center justify-center overflow-hidden"><div class="animate-pulse bg-gray-700 w-full h-full"></div></div>
+                    <div class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-camera text-2xl text-white"></i></div>
+                </label>
+                <p id="settings-user-name" class="font-bold text-lg uppercase"></p>
+            </div>
+            <button onclick="window.saveProfileImage()" class="w-full bg-gradient-to-r from-blue-600 to-cyan-600 p-4 rounded-xl font-bold text-white shadow-lg uppercase tracking-wider">Guardar Foto</button>
+        </div>
+    </div>
+
+    <!-- Historial por fecha -->
+    <div id="date-search-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-center p-6 animate-enter">
+        <div class="glass-modal border border-white/10 rounded-2xl p-6 shadow-2xl w-full max-w-sm mx-auto">
+            <div class="flex justify-between items-center mb-6 pb-4 border-b border-white/10"><h2 class="text-lg font-bold text-white">Historial</h2><button onclick="window.closeModals()" class="text-gray-400"><i class="fas fa-times"></i></button></div>
+            <form id="date-search-form" class="space-y-5">
+                <div><label class="text-[10px] font-bold text-gray-500 uppercase">Desde</label><input type="date" id="start-date" required class="w-full p-3 bg-black/40 border border-gray-700 rounded-lg text-white"></div>
+                <div><label class="text-[10px] font-bold text-gray-500 uppercase">Hasta</label><input type="date" id="end-date" required class="w-full p-3 bg-black/40 border border-gray-700 rounded-lg text-white"></div>
+                <button type="submit" class="w-full bg-blue-600 p-4 rounded-xl font-bold text-white uppercase text-xs tracking-widest">Buscar</button>
+            </form>
+        </div>
+    </div>
+
+</div><!-- /wrapper -->
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
+    authDomain: "sb-barber-6dc16.firebaseapp.com",
+    projectId: "sb-barber-6dc16",
+    storageBucket: "sb-barber-6dc16.firebasestorage.app",
+    messagingSenderId: "213501157745",
+    appId: "1:213501157745:web:09fd59996cf1d72b6696d0"
+};
+
+const SERVICES = [
+    { name:"Corte Promo 50%", price:12000 },
+    { name:"Corte", price:16000 },
+    { name:"Corte y Barba", price:20000 },
+    { name:"Corte + Pomada", price:18000 },
+    { name:"Barba", price:14000 },
+    { name:"Pelo largo", price:18000 },
+    { name:"Mechas", price:55000 },
+    { name:"Global", price:60000 }
+];
+
+const APP_UPDATES = [
+    { id:4, date:"09 Jun 2026", time:"12:00", title:"Sistema de Gastos y Stock", details:"Nuevo botón GASTOS (solo admins) con ganancia neta semanal automática, gastos fijos configurables, gastos variables y control de stock de bebidas." },
+    { id:3, date:"05 May 2026", time:"17:30", title:"Cambios en el Equipo y Servicios", details:"Se incorporó a Maxi al equipo en reemplazo de Diego. Se reordenó la lista de servicios." },
+    { id:2, date:"07 Abr 2026", time:"17:30", title:"Actualización de Precios", details:"Se ajustaron los valores de 'Pelo Largo' a $18.000 y 'Barba' a $14.000." },
+    { id:1, date:"06 Abr 2026", time:"10:00", title:"Cambios en Tarifas y Promos", details:"Se actualizaron todos los precios base. 'Corte Promo' pasó a llamarse 'Corte Promo 50%'." }
+];
+
+const FIXED_CATEGORIES = [
+    { key:'alquiler',  label:'Alquiler',            icon:'fa-home' },
+    { key:'insumos',   label:'Insumos',              icon:'fa-box' },
+    { key:'cm',        label:'CM / Redes sociales',  icon:'fa-hashtag' },
+    { key:'servicios', label:'Servicios (luz/gas)',   icon:'fa-bolt' },
+    { key:'otros',     label:'Otros',                icon:'fa-ellipsis-h' }
+];
+
+const ADMINS = ['abalo7272@gmail.com','carusomanu21@gmail.com'];
+const BARBER_EMAIL_MAP = { 'yorleanyerbautista@gmail.com':'Bauti', 'gomezmaximilianorodrigo@gmail.com':'Maxi', 'ap1773508@gmail.com':'Tony' };
+const BARBER_THEME = {
+    Tony:  { color:'blue',   text:'text-blue-400',   border:'border-blue-500',   bg:'bg-blue-500',   initial:'T' },
+    Maxi:  { color:'emerald',text:'text-emerald-400', border:'border-emerald-500', bg:'bg-emerald-500', initial:'M' },
+    Bauti: { color:'red',    text:'text-red-400',    border:'border-red-500',    bg:'bg-red-500',    initial:'B' },
+    Stefa: { color:'purple', text:'text-purple-400', border:'border-purple-500', bg:'bg-purple-500', initial:'S' }
+};
+
+const PATH_MAIN     = `artifacts/${firebaseConfig.projectId}/public/data/all_cuts`;
+const PATH_LEGACY   = `barbershop`;
+const PATH_PROFILES = `barber_profiles`;
+const PATH_SETTINGS = `settings`;
+const PATH_EXPENSES = `expenses`;
+const PATH_STOCK    = `stock_items`;
+
+let app, auth, db, currentUser;
+let allCuts=[], allExpenses=[], allStock=[];
+let activePeriod='dia', customDateFilter=null;
+let barberProfilesData={}, currentBase64Image=null;
+let barberCommissions={ Tony:0.5, Maxi:0.5, Bauti:0.5, Stefa:0.5 };
+let fixedExpenses={};
+let expensePeriod='semanal';
+let currentStockAction=null;
+
+// ---- INIT ----
+async function init() {
+    app=initializeApp(firebaseConfig);
+    auth=getAuth(app); db=getFirestore(app);
+    await setPersistence(auth, browserLocalPersistence);
+
+    document.body.addEventListener('click', async e => {
+        const btn=e.target.closest('.btn-delete-action');
+        if(btn && confirm('¿Eliminar registro?')) await deleteDoc(doc(db, btn.dataset.path));
+    });
+
+    onAuthStateChanged(auth, user => {
+        if(user) {
+            currentUser=user;
+            document.getElementById('dashboard-view').classList.remove('hidden');
+            document.getElementById('login-view').classList.add('hidden');
+            const bName=BARBER_EMAIL_MAP[user.email];
+            if(bName){ document.getElementById('settings-btn').classList.remove('hidden'); document.getElementById('settings-user-name').textContent=bName; }
+            listenToBarberProfiles();
+            listenToSettings();
+            checkUpdatesBadge();
+            if(ADMINS.includes(user.email)){
+                document.getElementById('admin-settings-btn').classList.remove('hidden');
+                document.getElementById('gastos-fab').classList.remove('hidden');
+                document.getElementById('gastos-fab').classList.add('flex');
+                listenToExpenses();
+                listenToFixedExpenses();
+                listenToStock();
+            }
+            startDualSync();
+        } else {
+            document.getElementById('loading-view').classList.add('opacity-0','pointer-events-none');
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('login-view').classList.remove('hidden');
+        }
+    });
+    document.getElementById('file-upload').addEventListener('change', handleFileSelect);
+}
+
+// ---- PANTALLA GASTOS ----
+window.openGastosView = () => {
+    const v=document.getElementById('gastos-view');
+    v.classList.remove('hidden'); v.classList.add('flex','flex-col');
+    renderGastosView();
+};
+window.closeGastosView = () => {
+    const v=document.getElementById('gastos-view');
+    v.classList.add('hidden'); v.classList.remove('flex','flex-col');
+};
+
+function renderGastosView() {
+    renderWeeklyProfit();
+    renderFixedExpensesDisplay();
+    renderExpensesList();
+    renderStockList();
+}
+
+// ---- NOVEDADES ----
+function checkUpdatesBadge() {
+    const lastSeen=localStorage.getItem('lastSeenAppUpdate');
+    const badge=document.getElementById('updates-badge');
+    if(APP_UPDATES.length>0 && String(APP_UPDATES[0].id)!==lastSeen) badge.classList.remove('hidden');
+    else badge.classList.add('hidden');
+}
+window.openUpdatesModal = () => {
+    showModal('updates-modal');
+    if(APP_UPDATES.length>0){ localStorage.setItem('lastSeenAppUpdate',String(APP_UPDATES[0].id)); document.getElementById('updates-badge').classList.add('hidden'); }
+    document.getElementById('updates-list').innerHTML=APP_UPDATES.map((u,i)=>`
+        <div class="border-l-2 ${i===0?'border-blue-500':'border-gray-700'} pl-4 relative pb-4">
+            <div class="absolute -left-[9px] top-1 w-4 h-4 ${i===0?'bg-blue-500':'bg-gray-700'} rounded-full border-4 border-[#141923]"></div>
+            <div class="text-[10px] ${i===0?'text-blue-400':'text-gray-500'} font-bold mb-1">${u.date} - ${u.time}</div>
+            <div class="text-sm font-bold text-white">${u.title}</div>
+            <div class="text-xs text-gray-400 mt-1">${u.details}</div>
+        </div>`).join('');
+};
+
+// ---- COMISIONES ----
+function listenToSettings() {
+    onSnapshot(doc(db,PATH_SETTINGS,'commissions'), snap=>{
+        if(snap.exists()){ const d=snap.data(); ['Tony','Maxi','Bauti','Stefa'].forEach(b=>barberCommissions[b]=(d[b]??50)/100); }
+        render();
+    });
+}
+window.openAdminSettingsModal = () => {
+    document.getElementById('admin-settings-list').innerHTML=['Tony','Maxi','Bauti','Stefa'].map(b=>`
+        <div class="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-gray-700">
+            <span class="font-bold text-sm ${BARBER_THEME[b].text}">${b}</span>
+            <div class="flex items-center gap-2">
+                <input type="number" id="comm-${b}" value="${(barberCommissions[b]||0.5)*100}" min="0" max="100" class="w-16 p-2 bg-gray-900 rounded-lg border border-gray-600 text-white text-center focus:border-blue-500 outline-none">
+                <span class="text-gray-400 font-bold">%</span>
+            </div>
+        </div>`).join('');
+    showModal('admin-settings-modal');
+};
+window.saveCommissions = async () => {
+    const btn=document.getElementById('btn-save-commissions');
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+    const data={};
+    ['Tony','Maxi','Bauti','Stefa'].forEach(b=>data[b]=Number(document.getElementById(`comm-${b}`).value));
+    try{ await setDoc(doc(db,PATH_SETTINGS,'commissions'),data,{merge:true}); window.closeModals(); }
+    catch{ alert('Error al guardar'); }
+    btn.disabled=false; btn.innerHTML='GUARDAR CAMBIOS';
+};
+
+// ---- GASTOS VARIABLES ----
+function listenToExpenses() {
+    onSnapshot(query(collection(db,PATH_EXPENSES),orderBy('createdAt','desc'),limit(300)), s=>{
+        allExpenses=s.docs.map(d=>({...d.data(),id:d.id,_ref:d.ref.path}));
+        renderWeeklyProfit();
+        renderExpensesList();
+    });
+}
+window.openExpenseModal = () => showModal('expense-modal');
+
+window.setExpensePeriod = (p, el) => {
+    expensePeriod=p;
+    document.querySelectorAll('.exp-period-btn').forEach(b=>b.className='exp-period-btn flex-1 py-1.5 rounded-md text-[10px] font-medium text-gray-500 hover:text-gray-300');
+    el.className='exp-period-btn flex-1 py-1.5 rounded-md text-[10px] font-bold text-white bg-gradient-to-r from-orange-600 to-red-600';
+    renderExpensesList();
+};
+
+function renderExpensesList() {
+    const now=new Date(), today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    const day=today.getDay()||7;
+    const weekStart=new Date(today); if(day!==1) weekStart.setDate(today.getDate()-(day-1));
+    const monthStart=new Date(now.getFullYear(),now.getMonth(),1);
+
+    let filtered=allExpenses, label='Todo el historial';
+    if(expensePeriod==='semanal'){ filtered=allExpenses.filter(e=>e.createdAt&&e.createdAt.toDate()>=weekStart); label='Esta semana'; }
+    else if(expensePeriod==='mensual'){ filtered=allExpenses.filter(e=>e.createdAt&&e.createdAt.toDate()>=monthStart); label='Este mes'; }
+
+    const labelEl=document.getElementById('var-exp-period-label');
+    if(labelEl) labelEl.textContent=label;
+    const total=filtered.reduce((s,e)=>s+Number(e.amount),0);
+    const totalEl=document.getElementById('total-expenses-amount');
+    if(totalEl) totalEl.textContent=`$${total.toLocaleString('es-AR')}`;
+
+    const list=document.getElementById('expenses-list');
+    if(!list)return;
+    list.innerHTML=filtered.length===0
+        ? '<p class="text-xs text-gray-600 text-center py-3">No hay gastos en este período</p>'
+        : filtered.map(exp=>`
+            <div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border border-orange-500/10">
+                <div>
+                    <div class="text-xs font-bold text-gray-200">${exp.description}</div>
+                    <div class="text-[10px] text-gray-500">${exp.createdAt?exp.createdAt.toDate().toLocaleString('es-AR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}):''}</div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-bold text-orange-400">-$${Number(exp.amount).toLocaleString('es-AR')}</span>
+                    <button class="btn-delete-action text-gray-600 hover:text-red-500 transition" data-path="${exp._ref}"><i class="fas fa-times text-xs"></i></button>
+                </div>
+            </div>`).join('');
+}
+
+// ---- GASTOS FIJOS ----
+function listenToFixedExpenses() {
+    onSnapshot(doc(db,PATH_SETTINGS,'fixed_expenses'), snap=>{
+        fixedExpenses=snap.exists()?snap.data():{};
+        renderWeeklyProfit();
+        renderFixedExpensesDisplay();
+    });
+}
+window.openFixedExpensesModal = () => {
+    document.getElementById('fixed-expenses-form-list').innerHTML=FIXED_CATEGORIES.map(cat=>`
+        <div class="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-gray-700">
+            <div class="flex items-center gap-2">
+                <i class="fas ${cat.icon} text-orange-400 w-4 text-center text-sm"></i>
+                <span class="font-medium text-sm text-gray-300">${cat.label}</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <span class="text-gray-500 text-sm">$</span>
+                <input type="number" id="fixed-${cat.key}" value="${fixedExpenses[cat.key]||0}" min="0" placeholder="0"
+                    class="w-28 p-2 bg-gray-900 rounded-lg border border-gray-600 text-white text-right focus:border-orange-500 outline-none text-sm">
+            </div>
+        </div>`).join('');
+    showModal('fixed-expenses-modal');
+};
+window.saveFixedExpenses = async () => {
+    const btn=document.getElementById('btn-save-fixed');
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+    const data={};
+    FIXED_CATEGORIES.forEach(cat=>data[cat.key]=Number(document.getElementById(`fixed-${cat.key}`).value)||0);
+    try{ await setDoc(doc(db,PATH_SETTINGS,'fixed_expenses'),data); window.closeModals(); }
+    catch{ alert('Error al guardar'); }
+    btn.disabled=false; btn.innerHTML='Guardar';
+};
+function renderFixedExpensesDisplay() {
+    const total=FIXED_CATEGORIES.reduce((s,c)=>s+(fixedExpenses[c.key]||0),0);
+    const totalEl=document.getElementById('fixed-total-display');
+    if(totalEl) totalEl.textContent=`$${total.toLocaleString('es-AR')}`;
+    const el=document.getElementById('fixed-expenses-display');
+    if(!el)return;
+    const items=FIXED_CATEGORIES.filter(c=>(fixedExpenses[c.key]||0)>0);
+    el.innerHTML=items.length===0
+        ? '<p class="text-xs text-gray-600 text-center py-2">Sin configurar — tocá "Editar" para cargar los montos</p>'
+        : items.map(c=>`
+            <div class="flex justify-between items-center py-1.5 border-b border-white/5">
+                <span class="text-sm text-gray-400 flex items-center gap-2"><i class="fas ${c.icon} w-4 text-center text-orange-400/60 text-xs"></i>${c.label}</span>
+                <span class="text-sm font-bold text-gray-300">$${(fixedExpenses[c.key]||0).toLocaleString('es-AR')}</span>
+            </div>`).join('');
+}
+
+// ---- GANANCIA NETA SEMANAL ----
+function renderWeeklyProfit() {
+    const now=new Date(), today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    const day=today.getDay()||7;
+    const weekStart=new Date(today); if(day!==1) weekStart.setDate(today.getDate()-(day-1));
+
+    const weekCuts=allCuts.filter(c=>c.createdAt&&c.createdAt.toDate()>=weekStart);
+    const totalBilling=weekCuts.reduce((s,c)=>s+c.price,0);
+    const totalCommissions=weekCuts.reduce((s,c)=>s+(c.price*(barberCommissions[c.barber]||0.5)),0);
+    const ownerGross=totalBilling-totalCommissions;
+    const weekExp=allExpenses.filter(e=>e.createdAt&&e.createdAt.toDate()>=weekStart);
+    const totalVarExp=weekExp.reduce((s,e)=>s+Number(e.amount),0);
+    const totalFixed=FIXED_CATEGORIES.reduce((s,c)=>s+(fixedExpenses[c.key]||0),0);
+    const fixedWeekly=Math.round(totalFixed/4);
+    const net=ownerGross-totalVarExp-fixedWeekly;
+    const fmt=n=>`$${Math.round(n).toLocaleString('es-AR')}`;
+
+    const set=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
+    set('wp-billing', fmt(totalBilling));
+    set('wp-commissions', `- ${fmt(totalCommissions)}`);
+    set('wp-gross', fmt(ownerGross));
+    set('wp-var-exp', `- ${fmt(totalVarExp)}`);
+    set('wp-fixed-exp', `- ${fmt(fixedWeekly)}`);
+    const netEl=document.getElementById('wp-net');
+    if(netEl){ netEl.textContent=fmt(net); netEl.className=`text-4xl font-extrabold tracking-tighter ${net>=0?'text-emerald-400':'text-red-400'}`; }
+}
+
+// ---- STOCK ----
+function listenToStock() {
+    onSnapshot(query(collection(db,PATH_STOCK),orderBy('name','asc')), s=>{
+        allStock=s.docs.map(d=>({...d.data(),id:d.id,_ref:d.ref.path}));
+        renderStockList();
+    });
+}
+function renderStockList() {
+    const list=document.getElementById('stock-items-list');
+    if(!list)return;
+    if(allStock.length===0){ list.innerHTML='<p class="text-xs text-gray-600 text-center py-3">No hay bebidas cargadas aún</p>'; return; }
+    list.innerHTML=allStock.map(item=>{
+        const qty=item.quantity||0, isLow=qty<=2;
+        const qtyColor=qty===0?'text-red-400':isLow?'text-yellow-400':'text-cyan-300';
+        const border=isLow?'border-red-500/40 stock-low':'border-cyan-500/10';
+        return `
+        <div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${border}">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-cyan-900/30 flex items-center justify-center"><i class="fas fa-wine-bottle text-cyan-400 text-xs"></i></div>
+                <div>
+                    <div class="text-sm font-bold text-white">${item.name}</div>
+                    ${item.price?`<div class="text-[10px] text-gray-500">$${Number(item.price).toLocaleString('es-AR')} c/u</div>`:''}
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="text-center mr-1">
+                    <div class="${qtyColor} font-bold text-xl leading-none">${qty}</div>
+                    <div class="text-[9px] text-gray-600">unid.</div>
+                </div>
+                <button onclick="window.openStockMovement('${item.id}','${item.name}','compra')" class="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 hover:bg-emerald-600/40 transition" title="Compra"><i class="fas fa-plus text-xs"></i></button>
+                <button onclick="window.openStockMovement('${item.id}','${item.name}','venta')" class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 hover:bg-red-600/40 transition" title="Venta"><i class="fas fa-minus text-xs"></i></button>
+                <button class="btn-delete-action w-8 h-8 rounded-lg flex items-center justify-center text-gray-600 hover:text-red-400 transition" data-path="${item._ref}"><i class="fas fa-trash text-xs"></i></button>
+            </div>
+        </div>`;
+    }).join('');
+}
+window.openAddStockItemModal = () => {
+    currentStockAction={type:'nuevo'};
+    document.getElementById('stock-modal-title').textContent='Agregar Bebida';
+    document.getElementById('stock-name-group').classList.remove('hidden');
+    document.getElementById('stock-price-group').classList.remove('hidden');
+    document.getElementById('stock-qty-label').textContent='Cantidad inicial';
+    document.getElementById('btn-submit-stock').textContent='AGREGAR';
+    document.getElementById('btn-submit-stock').className='w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest no-select';
+    document.getElementById('stock-item-form').reset();
+    showModal('stock-item-modal');
+};
+window.openStockMovement = (itemId, itemName, type) => {
+    currentStockAction={itemId,itemName,type};
+    const isCompra=type==='compra';
+    document.getElementById('stock-modal-title').textContent=isCompra?`Compra — ${itemName}`:`Venta — ${itemName}`;
+    document.getElementById('stock-name-group').classList.add('hidden');
+    document.getElementById('stock-price-group').classList.add('hidden');
+    document.getElementById('stock-qty-label').textContent=isCompra?'Cantidad comprada':'Cantidad vendida';
+    document.getElementById('btn-submit-stock').textContent=isCompra?'REGISTRAR COMPRA':'REGISTRAR VENTA';
+    document.getElementById('btn-submit-stock').className=`w-full bg-gradient-to-r ${isCompra?'from-emerald-600 to-teal-600':'from-red-600 to-rose-600'} text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest no-select`;
+    document.getElementById('stock-item-form').reset();
+    showModal('stock-item-modal');
+};
+document.getElementById('stock-item-form').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const btn=document.getElementById('btn-submit-stock');
+    const qty=Number(document.getElementById('stock-quantity').value);
+    if(!qty||qty<1) return alert('Ingresá una cantidad válida');
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+    try{
+        if(currentStockAction.type==='nuevo'){
+            const name=document.getElementById('stock-name').value.trim();
+            const price=Number(document.getElementById('stock-price').value)||0;
+            if(!name){ alert('Ingresá el nombre'); btn.disabled=false; return; }
+            await addDoc(collection(db,PATH_STOCK),{name,quantity:qty,price,createdAt:serverTimestamp()});
+        } else {
+            const delta=currentStockAction.type==='compra'?qty:-qty;
+            await updateDoc(doc(db,PATH_STOCK,currentStockAction.itemId),{quantity:increment(delta)});
+        }
+        window.closeModals();
+    } catch{ alert('Error al guardar'); }
+    btn.disabled=false;
+});
+
+// ---- CORTES ----
+function listenToBarberProfiles() {
+    onSnapshot(collection(db,PATH_PROFILES), s=>{
+        barberProfilesData={}; s.forEach(d=>{ const n=BARBER_EMAIL_MAP[d.id]; if(n) barberProfilesData[n]=d.data().photoURL; });
+        render(); renderBarberSelection();
+    });
+}
+function startDualSync() {
+    let d1=[],d2=[];
+    const upd=()=>{
+        const map=new Map(); [...d1,...d2].forEach(c=>map.set(c.id,c));
+        allCuts=Array.from(map.values()).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+        render(); renderWeeklyProfit();
+        document.getElementById('loading-view').classList.add('opacity-0','pointer-events-none');
+    };
+    onSnapshot(query(collection(db,PATH_MAIN),orderBy('createdAt','desc'),limit(500)),s=>{ d1=s.docs.map(d=>({...d.data(),id:d.id,_ref:d.ref.path})); upd(); });
+    onSnapshot(query(collection(db,PATH_LEGACY),orderBy('createdAt','desc'),limit(500)),s=>{ d2=s.docs.map(d=>({...d.data(),id:d.id,_ref:d.ref.path})); upd(); });
+}
+
+function render() {
+    const list=document.getElementById('cuts-list'); list.innerHTML='';
+    const now=new Date(), today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    const yesterday=new Date(today); yesterday.setDate(today.getDate()-1);
+    const day=today.getDay()||7;
+    const week=new Date(today); if(day!==1) week.setDate(today.getDate()-(day-1));
+    const month=new Date(now.getFullYear(),now.getMonth(),1);
+
+    const match=c=>{
+        if(!c.createdAt)return false; const d=c.createdAt.toDate();
+        if(customDateFilter) return d>=customDateFilter.start&&d<=customDateFilter.end;
+        if(activePeriod==='dia') return d>=today;
+        if(activePeriod==='ayer') return d>=yesterday&&d<today;
+        if(activePeriod==='semanal') return d>=week;
+        if(activePeriod==='mensual') return d>=month;
+        return true;
+    };
+    const globals=allCuts.filter(match);
+    const revs={};
+    globals.forEach(c=>{ revs[c.barber]=(revs[c.barber]||0)+c.price*(barberCommissions[c.barber]||0.5); });
+
+    let topB=null,maxR=-1;
+    Object.entries(revs).forEach(([n,a])=>{ if(a>maxR){maxR=a;topB=n;} });
+    const tCard=document.getElementById('top-performer-card');
+    if(topB&&maxR>0&&activePeriod!=='historial'){
+        document.getElementById('top-performer-name').textContent=topB;
+        document.getElementById('top-performer-amount').textContent=`$${maxR.toLocaleString('es-AR')}`;
+        document.getElementById('top-performer-avatar').innerHTML=barberProfilesData[topB]?`<img src="${barberProfilesData[topB]}" class="w-full h-full rounded-full object-cover">`:'👑';
+        tCard.classList.remove('hidden'); tCard.classList.add('flex');
+    } else tCard.classList.add('hidden');
+
+    const isAdmin=ADMINS.includes(currentUser.email);
+    const myName=BARBER_EMAIL_MAP[currentUser.email];
+    const ePanel=document.getElementById('admin-earnings-panel');
+    if(isAdmin&&activePeriod==='semanal'){
+        ePanel.classList.remove('hidden');
+        document.getElementById('admin-earnings-list').innerHTML=['Tony','Maxi','Bauti','Stefa'].map(b=>`
+            <div class="flex items-center justify-between bg-black/20 p-3 rounded-lg border border-white/5 no-select">
+                <span class="text-xs font-bold ${BARBER_THEME[b].text}">${b}</span>
+                <span class="text-sm font-mono font-bold text-emerald-400">$${(revs[b]||0).toLocaleString('es-AR')}</span>
+            </div>`).join('');
+    } else ePanel.classList.add('hidden');
+
+    const personal=globals.filter(c=>isAdmin||c.userEmail===currentUser.email||(myName&&c.barber===myName));
+    let earnings=0; personal.forEach(c=>earnings+=c.price*(barberCommissions[c.barber]||0.5));
+    document.getElementById('total-revenue').textContent=earnings.toLocaleString('es-AR');
+    document.getElementById('total-revenue-full').textContent=`$${personal.reduce((s,c)=>s+c.price,0).toLocaleString('es-AR')}`;
+    document.getElementById('total-services-count').textContent=personal.length;
+
+    personal.forEach(c=>{
+        const theme=BARBER_THEME[c.barber]||{border:'border-gray-600',bg:'bg-gray-600',initial:'?'};
+        const avatar=barberProfilesData[c.barber]?`<img src="${barberProfilesData[c.barber]}" class="w-10 h-10 rounded-full object-cover ring-2 ring-white/10">`:`<div class="w-10 h-10 rounded-full ${theme.bg} flex items-center justify-center text-white font-bold ring-2 ring-white/10">${theme.initial}</div>`;
+        const clientText=c.clientName?`<span class="text-blue-300 ml-1 font-normal">(${c.clientName})</span>`:'';
+        const div=document.createElement('div');
+        div.className=`glass-card p-4 rounded-xl flex justify-between items-center border-l-[3px] ${theme.border} animate-enter no-select`;
+        div.innerHTML=`<div class="flex items-center gap-3">${avatar}<div><div class="font-bold text-white text-sm">${c.service}${clientText}</div><div class="text-[10px] text-gray-400">${c.barber} - ${c.createdAt.toDate().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div></div></div><div class="flex items-center"><span class="font-bold text-white mr-2">$${c.price.toLocaleString('es-AR')}</span>${(isAdmin||c.userEmail===currentUser.email)?`<button class="btn-delete-action text-gray-500 hover:text-red-400" data-path="${c._ref}"><i class="fas fa-trash"></i></button>`:''}</div>`;
+        list.appendChild(div);
+    });
+    renderServiceStats(personal);
+}
+function renderServiceStats(filtered) {
+    const container=document.getElementById('service-stats-container'); container.innerHTML='';
+    const stats={};
+    filtered.forEach(c=>{ if(!stats[c.barber])stats[c.barber]={}; if(!stats[c.barber][c.service])stats[c.barber][c.service]=0; stats[c.barber][c.service]++; });
+    ['Tony','Maxi','Bauti','Stefa'].filter(b=>stats[b]).forEach(b=>{
+        let h=`<div class="bg-[#1a1d24]/80 rounded-xl p-3 border border-gray-800 mb-2 no-select"><div class="flex justify-between items-center mb-2 pb-2 border-b border-gray-700/50"><span class="font-bold uppercase text-[10px] ${BARBER_THEME[b].text}">${b}</span></div><div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">`;
+        Object.keys(stats[b]).forEach(s=>h+=`<div class="flex justify-between py-0.5"><span class="text-gray-400 truncate">${s}</span><span class="text-white font-bold bg-white/5 px-1.5 rounded">${stats[b][s]}</span></div>`);
+        container.innerHTML+=h+`</div></div>`;
+    });
+}
+window.renderServices = (selectedBarber) => {
+    document.getElementById('services-grid').innerHTML=SERVICES.filter(s=>['Mechas','Global'].includes(s.name)?selectedBarber==='Maxi':true).map(s=>`
+        <div onclick="window.selectSvc('${s.name}',${s.price},this)" class="svc-card group p-3 bg-gray-800/40 border border-gray-700/50 rounded-xl flex justify-between items-center cursor-pointer transition-all hover:bg-gray-800 no-select">
+            <div class="flex items-center gap-3"><div class="w-8 h-8 rounded-lg bg-gray-700/50 flex items-center justify-center text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition"><i class="fas fa-cut text-xs"></i></div><span class="font-medium text-sm text-gray-300 group-hover:text-white">${s.name}</span></div>
+            <span class="text-white font-bold text-sm bg-black/30 px-2 py-1 rounded-md">$${s.price.toLocaleString('es-AR')}</span>
+        </div>`).join('');
+};
+window.selectSvc = (n,p,el) => {
+    document.getElementById('svc-name').value=n; document.getElementById('svc-price').value=p;
+    document.querySelectorAll('.svc-card').forEach(c=>c.className='svc-card group p-3 bg-gray-800/40 border border-gray-700/50 rounded-xl flex justify-between items-center cursor-pointer transition-all no-select');
+    el.className='svc-card p-3 bg-blue-600/10 border border-blue-500 rounded-xl flex justify-between items-center cursor-pointer transition-all scale-[1.02] shadow-lg no-select';
+};
+function renderBarberSelection() {
+    const g=document.getElementById('barber-selection-grid'); g.innerHTML='';
+    ['Tony','Maxi','Bauti','Stefa'].forEach(b=>{
+        const t=BARBER_THEME[b], p=barberProfilesData[b];
+        const pic=p?`<img src="${p}" class="w-full h-full rounded-full object-cover">`:`<div class="w-full h-full rounded-full ${t.bg} flex items-center justify-center text-white font-bold">${t.initial}</div>`;
+        const l=document.createElement('label'); l.className="cursor-pointer group relative no-select";
+        l.innerHTML=`<input type="radio" name="barber" value="${b}" class="peer sr-only" onchange="window.renderServices('${b}')"><div class="p-3 bg-gray-800/50 rounded-xl border border-gray-700 peer-checked:border-${t.color}-500 peer-checked:bg-${t.color}-500/10 transition text-center h-20 flex flex-col items-center justify-center gap-1"><div class="w-7 h-7 p-0.5">${pic}</div><span class="font-bold text-xs text-gray-400 peer-checked:text-${t.color}-400">${b}</span></div><i class="fas fa-check-circle absolute top-2 right-2 text-${t.color}-500 opacity-0 peer-checked:opacity-100 transition"></i>`;
+        g.appendChild(l);
+    });
+}
+function handleFileSelect(e) {
+    const f=e.target.files[0]; if(!f)return;
+    const r=new FileReader(); r.onload=ev=>{
+        const img=new Image(); img.onload=()=>{
+            const c=document.createElement('canvas'); const ctx=c.getContext('2d'); c.width=250; c.height=250; ctx.drawImage(img,0,0,250,250);
+            currentBase64Image=c.toDataURL('image/jpeg',0.7);
+            document.getElementById('current-avatar-preview').innerHTML=`<img src="${currentBase64Image}" class="w-full h-full object-cover">`;
+        }; img.src=ev.target.result;
+    }; r.readAsDataURL(f);
+}
+window.saveProfileImage = async ()=>{ if(!currentBase64Image)return; await setDoc(doc(db,PATH_PROFILES,currentUser.email),{photoURL:currentBase64Image},{merge:true}); window.closeModals(); };
+window.setPeriod = (p,el)=>{
+    activePeriod=p; customDateFilter=null;
+    document.querySelectorAll('.nav-btn').forEach(b=>b.className='nav-btn flex-1 py-2 rounded-lg text-[10px] font-medium text-gray-500 hover:text-gray-300 transition-all');
+    el.className='nav-btn flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-gradient-to-r from-blue-600 to-cyan-600 shadow-md scale-105 transition-all';
+    render();
+};
+window.openSettingsModal = ()=>showModal('settings-modal');
+window.openAddModal = ()=>{ showModal('add-modal'); renderBarberSelection(); };
+
+const ALL_MODALS=['settings-modal','add-modal','expense-modal','date-search-modal','admin-settings-modal','updates-modal','fixed-expenses-modal','stock-item-modal'];
+function showModal(id){ document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
+window.closeModals = ()=>ALL_MODALS.forEach(id=>{ document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); });
+window.logout = ()=>signOut(auth);
+
+// ---- FORMULARIOS ----
+document.getElementById('login-form').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const btn=e.target.querySelector('button'); btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+    try{ await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value); }
+    catch{ alert('Error de acceso'); }
+    btn.disabled=false; btn.innerHTML='INGRESAR';
+});
+document.getElementById('add-form').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const btn=document.getElementById('btn-submit-cut');
+    const barber=document.querySelector('input[name="barber"]:checked')?.value;
+    const serviceName=document.getElementById('svc-name').value;
+    const servicePrice=Number(document.getElementById('svc-price').value);
+    const clientName=document.getElementById('client-name').value.trim();
+    if(!barber||!serviceName) return alert('Selecciona barbero y servicio');
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+    try{
+        await addDoc(collection(db,PATH_MAIN),{barber,service:serviceName,price:servicePrice,clientName,userEmail:currentUser.email,createdAt:serverTimestamp()});
+        window.closeModals();
+        document.getElementById('add-form').reset();
+        ['svc-name','svc-price','client-name'].forEach(id=>document.getElementById(id).value='');
+        document.querySelectorAll('.svc-card').forEach(c=>c.className='svc-card group p-3 bg-gray-800/40 border border-gray-700/50 rounded-xl flex justify-between items-center cursor-pointer transition-all hover:bg-gray-800 no-select');
+    } catch{ alert('Error al guardar'); }
+    btn.disabled=false; btn.innerHTML='CONFIRMAR';
+});
+document.getElementById('expense-form').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const btn=document.getElementById('btn-submit-expense');
+    const desc=document.getElementById('expense-desc').value.trim();
+    const amount=Number(document.getElementById('expense-amount').value);
+    if(!desc||!amount) return alert('Completá todos los campos');
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+    try{
+        await addDoc(collection(db,PATH_EXPENSES),{description:desc,amount,userEmail:currentUser.email,createdAt:serverTimestamp()});
+        window.closeModals();
+        document.getElementById('expense-form').reset();
+    } catch{ alert('Error al guardar el gasto'); }
+    btn.disabled=false; btn.innerHTML='GUARDAR GASTO';
+});
+document.getElementById('date-search-form').addEventListener('submit', e=>{
+    e.preventDefault();
+    customDateFilter={ start:new Date(document.getElementById('start-date').value+'T00:00:00'), end:new Date(document.getElementById('end-date').value+'T23:59:59') };
+    window.closeModals(); render();
+});
+document.querySelector('button[onclick="window.setPeriod(\'historial\',this)"]').addEventListener('click', ()=>showModal('date-search-modal'));
+
+init();
+</script>
+</body>
+</html>

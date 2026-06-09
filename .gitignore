@@ -1,0 +1,14 @@
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Editor
+.vscode/
+.idea/
+
+# Node (por si se agrega en el futuro)
+node_modules/
