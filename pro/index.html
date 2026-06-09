@@ -800,7 +800,7 @@ function render() {
             </div>`).join('');
     } else ePanel.classList.add('hidden');
 
-    const personal=globals.filter(c=>isAdmin||c.userEmail===currentUser.email||(myName&&c.barber===myName));
+    const personal=globals.filter(c=>isAdmin||(myName?c.barber===myName:c.userEmail===currentUser.email));
     let earnings=0; personal.forEach(c=>earnings+=c.price*(barberCommissions[c.barber]||0.5));
     document.getElementById('total-revenue').textContent=earnings.toLocaleString('es-AR');
     document.getElementById('total-revenue-full').textContent=`$${personal.reduce((s,c)=>s+c.price,0).toLocaleString('es-AR')}`;
