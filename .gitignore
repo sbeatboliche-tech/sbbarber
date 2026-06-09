@@ -10,5 +10,8 @@ desktop.ini
 .vscode/
 .idea/
 
+# Claude Code
+.claude/
+
 # Node (por si se agrega en el futuro)
 node_modules/
