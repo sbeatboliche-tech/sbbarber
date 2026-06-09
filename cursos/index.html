@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cursos de Barbería — SB Barber</title>
+    <meta name="description" content="Aprendé barbería con los mejores. Cursos presenciales en SB Barber, Dávila 951, CABA.">
+    <link rel="icon" type="image/jpeg" href="https://i.imgur.com/PzcD4W2.jpeg">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0a0a0a;
+            --card: #111111;
+            --border: #1f1f1f;
+            --text: #ffffff;
+            --muted: #71717a;
+            --accent: #ffffff;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 100vh;
+        }
+
+        /* ---- HEADER ---- */
+        header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2.5rem 1.5rem 2rem;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+        }
+        header img { height: 3rem; margin-bottom: 1.5rem; }
+        header h1 {
+            font-size: clamp(2rem, 8vw, 3rem);
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            margin-bottom: 0.75rem;
+        }
+        header p {
+            color: var(--muted);
+            font-size: 1rem;
+            max-width: 320px;
+            line-height: 1.6;
+        }
+
+        /* ---- CURSOS ---- */
+        .section { padding: 2rem 1.25rem; max-width: 480px; margin: 0 auto; }
+        .section-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: 1.25rem;
+        }
+
+        .cursos-grid { display: flex; flex-direction: column; gap: 1rem; }
+
+        .curso-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+        .curso-card:hover { border-color: #3f3f3f; }
+        .curso-card.featured { border-color: #ffffff30; }
+        .curso-card.featured::before {
+            content: 'MÁS POPULAR';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.6rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            background: white;
+            color: black;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+        }
+
+        .curso-nombre {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+        .curso-duracion {
+            font-size: 0.75rem;
+            color: var(--muted);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .curso-desc {
+            font-size: 0.875rem;
+            color: #a1a1aa;
+            line-height: 1.65;
+            margin-bottom: 1.25rem;
+        }
+        .curso-incluye {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            margin-bottom: 1.5rem;
+        }
+        .curso-incluye li {
+            list-style: none;
+            font-size: 0.82rem;
+            color: #d4d4d8;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        .curso-incluye li::before { content: '✓'; color: white; font-weight: 700; flex-shrink: 0; }
+
+        .curso-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border);
+        }
+        .curso-precio {
+            font-size: 1.5rem;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+        }
+        .btn-inscribir {
+            background: white;
+            color: black;
+            border: none;
+            border-radius: 0.75rem;
+            padding: 0.6rem 1.25rem;
+            font-size: 0.82rem;
+            font-weight: 800;
+            cursor: pointer;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            transition: opacity 0.15s, transform 0.1s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-inscribir:active { opacity: 0.75; transform: scale(0.97); }
+
+        /* ---- FORMULARIO ---- */
+        .form-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 1.25rem;
+            padding: 1.75rem 1.5rem;
+        }
+        .form-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.4rem;
+        }
+        .form-subtitle {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 1.75rem;
+            line-height: 1.5;
+        }
+
+        .form-group { margin-bottom: 1rem; }
+        .form-group label {
+            display: block;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 0.5rem;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            background: #0a0a0a;
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 0.9rem 1rem;
+            color: white;
+            font-size: 1rem;
+            font-family: inherit;
+            -webkit-appearance: none;
+            appearance: none;
+            transition: border-color 0.2s;
+            resize: none;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus { outline: none; border-color: #525252; }
+        .form-group input::placeholder,
+        .form-group textarea::placeholder { color: #3f3f3f; }
+        .form-group select { color: #a1a1aa; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23525252'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1rem; padding-right: 2.5rem; }
+        .form-group select option { background: #111; color: white; }
+
+        .input-error { border-color: #ef4444 !important; }
+
+        .btn-submit {
+            width: 100%;
+            background: white;
+            color: black;
+            border: none;
+            border-radius: 0.875rem;
+            padding: 1rem;
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            transition: opacity 0.15s;
+        }
+        .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-submit:active:not(:disabled) { opacity: 0.8; }
+
+        /* ---- ÉXITO ---- */
+        #success-msg {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 2rem 0 1rem;
+        }
+        #success-msg .check {
+            width: 4rem; height: 4rem;
+            background: white;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 1.25rem;
+            font-size: 1.5rem;
+        }
+        #success-msg h3 { font-size: 1.35rem; font-weight: 800; margin-bottom: 0.5rem; }
+        #success-msg p { color: var(--muted); font-size: 0.875rem; line-height: 1.6; }
+
+        /* ---- WA FLOAT ---- */
+        .wa-float {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            width: 3.5rem; height: 3.5rem;
+            background: #25D366;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 20px rgba(37,211,102,0.4);
+            z-index: 100;
+            text-decoration: none;
+            transition: transform 0.2s;
+        }
+        .wa-float:active { transform: scale(0.93); }
+        .wa-float svg { width: 1.75rem; height: 1.75rem; }
+
+        /* ---- FOOTER ---- */
+        footer {
+            text-align: center;
+            padding: 2rem 1.5rem 3rem;
+            color: var(--muted);
+            font-size: 0.75rem;
+        }
+        footer a { color: var(--muted); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <img src="https://i.imgur.com/xyjMT6X.png" alt="SB Barber">
+        <h1>Cursos de<br>Barbería</h1>
+        <p>Aprendé el oficio con quienes lo hacen todos los días. Clases presenciales en nuestro local.</p>
+    </header>
+
+    <!-- CURSOS -->
+    <div class="section">
+        <p class="section-label">Qué ofrecemos</p>
+        <div class="cursos-grid">
+
+            <!-- CURSO 1 -->
+            <div class="curso-card">
+                <div class="curso-nombre">Curso Inicial</div>
+                <div class="curso-duracion">4 semanas · Presencial</div>
+                <p class="curso-desc">Ideal para empezar desde cero. Aprendés las bases del corte masculino, uso de máquinas y tijera.</p>
+                <ul class="curso-incluye">
+                    <li>Técnica de máquina y degradado</li>
+                    <li>Uso de tijera y navaja</li>
+                    <li>Perfilado y terminaciones</li>
+                    <li>Kit de herramientas incluido</li>
+                </ul>
+                <div class="curso-footer">
+                    <span class="curso-precio">$XX.XXX</span>
+                    <a href="#inscripcion" class="btn-inscribir" onclick="preseleccionarCurso('Curso Inicial')">Me interesa</a>
+                </div>
+            </div>
+
+            <!-- CURSO 2 (destacado) -->
+            <div class="curso-card featured">
+                <div class="curso-nombre">Curso Completo</div>
+                <div class="curso-duracion">8 semanas · Presencial</div>
+                <p class="curso-desc">Formación completa para trabajar como barbero profesional. Desde técnicas básicas hasta estilos avanzados y atención al cliente.</p>
+                <ul class="curso-incluye">
+                    <li>Todo el contenido del Curso Inicial</li>
+                    <li>Estilos avanzados y cortes con diseño</li>
+                    <li>Afeitado y tratamientos de barba</li>
+                    <li>Gestión del cliente</li>
+                    <li>Certificado de finalización</li>
+                    <li>Kit profesional incluido</li>
+                </ul>
+                <div class="curso-footer">
+                    <span class="curso-precio">$XX.XXX</span>
+                    <a href="#inscripcion" class="btn-inscribir" onclick="preseleccionarCurso('Curso Completo')">Me interesa</a>
+                </div>
+            </div>
+
+            <!-- CURSO 3 -->
+            <div class="curso-card">
+                <div class="curso-nombre">Taller de Barba</div>
+                <div class="curso-duracion">1 día · Presencial</div>
+                <p class="curso-desc">Jornada intensiva enfocada en técnicas de perfilado, afeitado a navaja y tratamientos de barba.</p>
+                <ul class="curso-incluye">
+                    <li>Perfilado profesional</li>
+                    <li>Afeitado a navaja</li>
+                    <li>Productos y tratamientos</li>
+                </ul>
+                <div class="curso-footer">
+                    <span class="curso-precio">$XX.XXX</span>
+                    <a href="#inscripcion" class="btn-inscribir" onclick="preseleccionarCurso('Taller de Barba')">Me interesa</a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- FORMULARIO -->
+    <div class="section" id="inscripcion">
+        <p class="section-label">Inscripción</p>
+        <div class="form-card">
+            <h2 class="form-title">¿Te anotás?</h2>
+            <p class="form-subtitle">Completá el formulario y te contactamos para confirmar fecha y cupo.</p>
+
+            <form id="form-inscripcion">
+                <div class="form-group">
+                    <label>Nombre completo *</label>
+                    <input type="text" id="f-nombre" placeholder="Tu nombre" autocomplete="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Teléfono / WhatsApp *</label>
+                    <input type="tel" id="f-tel" placeholder="Ej: 1167891234" inputmode="tel" autocomplete="tel" required>
+                </div>
+                <div class="form-group">
+                    <label>Curso que te interesa *</label>
+                    <select id="f-curso" required>
+                        <option value="" disabled selected>Elegí un curso</option>
+                        <option value="Curso Inicial">Curso Inicial</option>
+                        <option value="Curso Completo">Curso Completo</option>
+                        <option value="Taller de Barba">Taller de Barba</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>¿Tenés experiencia previa?</label>
+                    <select id="f-exp">
+                        <option value="Sin experiencia">No, empiezo desde cero</option>
+                        <option value="Algo de experiencia">Sí, algo de experiencia</option>
+                        <option value="Experiencia profesional">Sí, soy profesional</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Mensaje (opcional)</label>
+                    <textarea id="f-mensaje" rows="3" placeholder="¿Alguna consulta?"></textarea>
+                </div>
+                <button type="submit" id="btn-submit" class="btn-submit">Enviar inscripción</button>
+            </form>
+
+            <div id="success-msg">
+                <div class="check">✓</div>
+                <h3>¡Inscripción recibida!</h3>
+                <p>Te vamos a contactar por WhatsApp a la brevedad para confirmar tu lugar.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>SB Barber · Dávila 951, CABA</p>
+        <p style="margin-top:0.5rem"><a href="/">← Volver al inicio</a></p>
+    </footer>
+
+    <!-- WhatsApp flotante -->
+    <a href="https://wa.me/541170583352" target="_blank" rel="noopener" class="wa-float" title="Consultanos por WhatsApp">
+        <svg fill="white" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+    </a>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
+            authDomain: "sb-barber-6dc16.firebaseapp.com",
+            projectId: "sb-barber-6dc16",
+            storageBucket: "sb-barber-6dc16.firebasestorage.app",
+            messagingSenderId: "213501157745",
+            appId: "1:213501157745:web:09fd59996cf1d72b6696d0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db  = getFirestore(app);
+
+        document.getElementById('form-inscripcion').addEventListener('submit', async e => {
+            e.preventDefault();
+            const nombre  = document.getElementById('f-nombre').value.trim();
+            const tel     = document.getElementById('f-tel').value.trim();
+            const curso   = document.getElementById('f-curso').value;
+            const exp     = document.getElementById('f-exp').value;
+            const mensaje = document.getElementById('f-mensaje').value.trim();
+
+            // Validación básica
+            let err = false;
+            ['f-nombre','f-tel','f-curso'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el.value.trim()) { el.classList.add('input-error'); err = true; }
+                else el.classList.remove('input-error');
+            });
+            if (err) return;
+
+            const btn = document.getElementById('btn-submit');
+            btn.disabled = true; btn.textContent = 'Enviando...';
+
+            try {
+                await addDoc(collection(db, 'inscripciones_cursos'), {
+                    nombre, telefono: tel, curso, experiencia: exp,
+                    mensaje: mensaje || null,
+                    creadoEn: serverTimestamp()
+                });
+
+                // Mostrar éxito
+                document.getElementById('form-inscripcion').style.display = 'none';
+                document.getElementById('success-msg').style.display = 'flex';
+            } catch(err) {
+                console.error(err);
+                alert('Hubo un error al enviar. Intentá de nuevo o contactanos por WhatsApp.');
+                btn.disabled = false; btn.textContent = 'Enviar inscripción';
+            }
+        });
+
+        // Limpiar error al escribir
+        ['f-nombre','f-tel','f-curso'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                document.getElementById(id).classList.remove('input-error');
+            });
+        });
+    </script>
+
+    <script>
+        // Preseleccionar curso al tocar "Me interesa"
+        function preseleccionarCurso(nombre) {
+            const sel = document.getElementById('f-curso');
+            if (sel) sel.value = nombre;
+        }
+    </script>
+
+</body>
+</html>
