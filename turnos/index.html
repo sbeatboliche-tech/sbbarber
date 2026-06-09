@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>SB Barber - Turnos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --safe-area-top: env(safe-area-inset-top, 0px);
+            --bg-color: #000000;
+            --card-bg: #121212;
+            --border-color: #27272a;
+        }
+
+        body {
+            overflow: hidden;
+            position: fixed; width: 100%; height: 100%;
+            -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+            background-color: var(--bg-color); color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        #splash-screen {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: var(--bg-color); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.6s ease-out;
+        }
+
+        @keyframes pulse-soft {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .animate-pulse-soft { animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+        .app-shell {
+            display: flex; flex-direction: column; height: 100%;
+            padding-top: var(--safe-area-top); opacity: 0; transition: opacity 0.5s ease-in;
+        }
+
+        /* 4 PASOS: contenedor 400%, cada paso 25% */
+        .step-container {
+            display: flex; width: 400%; height: 100%;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); will-change: transform;
+        }
+        .step {
+            width: 25%; height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch;
+            padding: 1.5rem; padding-bottom: 8rem;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        input[type="text"], input[type="tel"] {
+            font-size: 16px !important; background-color: var(--card-bg);
+            border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1rem; color: white; width: 100%;
+            -webkit-appearance: none; appearance: none;
+        }
+        input:focus { outline: none; border-color: white; }
+
+        .selected-item {
+            background-color: white !important; color: black !important; border-color: white !important;
+            transform: scale(1.02);
+        }
+
+        button:active:not(:disabled) { opacity: 0.7; transform: scale(0.98); }
+
+        .input-error { border-color: #ef4444 !important; }
+        .input-error::placeholder { color: #ef4444; }
+
+        #success-screen {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: var(--bg-color); z-index: 9999;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            padding: 2rem; text-align: center;
+            opacity: 0; transition: opacity 0.4s ease-in;
+        }
+        #success-screen.visible { display: flex; opacity: 1; }
+
+        @keyframes check-pop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .check-anim { animation: check-pop 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+    </style>
+</head>
+<body>
+
+    <!-- SPLASH SCREEN -->
+    <div id="splash-screen">
+        <img src="https://i.imgur.com/xyjMT6X.png" alt="SB Barber" class="h-32 object-contain animate-pulse-soft mb-8" onerror="this.style.display='none'">
+        <div class="w-8 h-8 border-4 border-zinc-800 border-t-white rounded-full animate-spin"></div>
+    </div>
+
+    <!-- APP SHELL -->
+    <div id="app-shell" class="app-shell">
+        <header class="bg-black border-b border-zinc-800 px-4 pt-4 pb-4 shrink-0 z-50">
+            <div class="flex justify-center mb-4">
+                <img src="https://i.imgur.com/xyjMT6X.png" alt="SB Barber Logo" class="h-10 object-contain" onerror="this.style.display='none'">
+            </div>
+            <div class="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+                <div id="progress-bar" class="h-full bg-white transition-all duration-300 ease-out" style="width: 25%;"></div>
+            </div>
+        </header>
+
+        <main class="flex-grow overflow-hidden relative">
+            <div id="main-slider" class="step-container">
+
+                <!-- PASO 1 · BARBERO -->
+                <section class="step">
+                    <h1 class="text-2xl font-bold mb-6 mt-2 tracking-wide">Elegí tu barbero</h1>
+                    <div id="barber-list" class="grid grid-cols-1 gap-4"></div>
+                </section>
+
+                <!-- PASO 2 · SERVICIO -->
+                <section class="step">
+                    <div class="flex items-center gap-2 mb-6 mt-2">
+                        <button onclick="window.goToStep(1)" class="p-2 -ml-2 rounded-full active:bg-zinc-800">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+                        <h1 class="text-2xl font-bold tracking-wide">Elegí el servicio</h1>
+                    </div>
+                    <div id="service-list" class="grid grid-cols-1 gap-4"></div>
+                </section>
+
+                <!-- PASO 3 · FECHA Y HORA -->
+                <section class="step">
+                    <div class="flex items-center gap-2 mb-6 mt-2">
+                        <button onclick="window.goToStep(2)" class="p-2 -ml-2 rounded-full active:bg-zinc-800">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+                        <h1 class="text-2xl font-bold tracking-wide">Fecha y Hora</h1>
+                    </div>
+
+                    <label class="text-xs text-zinc-400 mb-2 block uppercase tracking-widest font-semibold">Día</label>
+                    <div id="date-selector" class="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-1 px-1 mb-8"></div>
+
+                    <label id="time-label" class="text-xs text-zinc-400 mb-3 block uppercase tracking-widest font-semibold hidden">Horarios disponibles</label>
+                    <div id="time-slots" class="grid grid-cols-3 gap-3"></div>
+                </section>
+
+                <!-- PASO 4 · DATOS -->
+                <section class="step">
+                    <div class="flex items-center gap-2 mb-6 mt-2">
+                        <button onclick="window.goToStep(3)" class="p-2 -ml-2 rounded-full active:bg-zinc-800">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+                        <h1 class="text-2xl font-bold tracking-wide">Tus Datos</h1>
+                    </div>
+
+                    <div id="resumen" class="bg-[#121212] border border-zinc-800 rounded-2xl p-4 mb-6 text-sm"></div>
+
+                    <div class="space-y-5">
+                        <div>
+                            <label class="text-xs text-zinc-400 mb-2 block uppercase tracking-widest font-semibold">Nombre <span class="text-red-500">*</span></label>
+                            <input type="text" id="client-name" placeholder="Nombre completo" autocomplete="name" required>
+                        </div>
+                        <div>
+                            <label class="text-xs text-zinc-400 mb-2 block uppercase tracking-widest font-semibold">Teléfono <span class="text-red-500">*</span></label>
+                            <input type="tel" id="client-phone" placeholder="Ej: 1167891234" autocomplete="tel" inputmode="tel" required>
+                        </div>
+                    </div>
+
+                    <div class="fixed bottom-0 left-0 w-full p-6 bg-black border-t border-zinc-800 safe-area-bottom hidden" id="confirm-bar">
+                        <button id="btn-confirm" class="w-full bg-white text-black font-bold text-lg rounded-xl py-4 hover:bg-zinc-200 transition duration-150 shadow-lg uppercase tracking-wide flex justify-center items-center">
+                            Confirmar Turno
+                        </button>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- PANTALLA DE ÉXITO -->
+    <div id="success-screen">
+        <div class="check-anim mb-6">
+            <svg class="w-24 h-24 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="11" stroke-width="1.5" opacity="0.3"></circle>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 13l3 3 7-7"></path>
+            </svg>
+        </div>
+        <h1 class="text-3xl font-bold mb-2 tracking-wide">¡Turno confirmado!</h1>
+        <p class="text-zinc-400 mb-8">Te esperamos, no llegues tarde 💈</p>
+        <div id="success-details" class="bg-[#121212] border border-zinc-800 rounded-2xl p-5 w-full max-w-sm text-sm mb-6"></div>
+        <a id="wa-confirm-btn" href="#" target="_blank" rel="noopener" style="display:none;" class="w-full max-w-sm bg-[#25D366] text-black font-bold text-lg rounded-xl py-4 uppercase tracking-wide mb-3 flex items-center justify-center gap-2">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+            Confirmar por WhatsApp
+        </a>
+        <button onclick="location.reload()" class="w-full max-w-sm bg-white text-black font-bold text-lg rounded-xl py-4 uppercase tracking-wide">
+            Sacar otro turno
+        </button>
+    </div>
+
+    <script>
+        /* ===========================================================
+           CONFIGURACIÓN
+           =========================================================== */
+
+        const barberosConfig = [
+            { id: 'tony',  nombre: 'Tony',  inicio: '11:00', fin: '19:30', grilla: 30, foto: 'tony.jpg',
+              duraciones: { corte_barba: 45, pelo_largo: 50 } },
+            { id: 'stefa', nombre: 'Stefa', inicio: '11:00', fin: '19:00', grilla: 30, foto: 'stefa.jpg',
+              duraciones: { corte: 45, corte_barba: 60, pelo_largo: 60 } },
+            { id: 'bauti', nombre: 'Bauti', inicio: '11:00', fin: '19:30', grilla: 30, foto: 'bauti.jpg',
+              duraciones: { corte: 40, pelo_largo: 50 } },
+            { id: 'maxi',  nombre: 'Maxi',  inicio: '11:00', fin: '19:30', grilla: 30, foto: 'maxi.jpg',
+              duraciones: {} }
+        ];
+
+        const SERVICIOS = [
+            { id: 'corte',       nombre: 'Corte',         duracion: 30, precio: 16000 },
+            { id: 'corte_barba', nombre: 'Corte y Barba', duracion: 50, precio: 20000 },
+            { id: 'barba',       nombre: 'Barba',         duracion: 20, precio: 12000 },
+            { id: 'pelo_largo',  nombre: 'Pelo Largo',    duracion: 40, precio: 18000 }
+        ];
+
+        // 0=Dom · 1=Lun · 2=Mar · 3=Mié · 4=Jue · 5=Vie · 6=Sáb
+        const DIAS_CERRADOS = [0, 1];
+        const DIAS_A_MOSTRAR = 14;
+        const MIN_ANTICIPACION = 20;
+
+        // Pegá acá la URL de Make.com cuando la tengas
+        const WEBHOOK_URL = '';
+
+        // Número WhatsApp formato internacional sin + ni espacios (ej: 5491170583352)
+        const WHATSAPP_BARBERIA = '541170583352';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
+            authDomain: "sb-barber-6dc16.firebaseapp.com",
+            projectId: "sb-barber-6dc16",
+            storageBucket: "sb-barber-6dc16.firebasestorage.app",
+            messagingSenderId: "213501157745",
+            appId: "1:213501157745:web:09fd59996cf1d72b6696d0"
+        };
+
+        /* =========================================================== */
+
+        let db = null;
+        let fb = {};
+        let fbReady = false;
+        let turnoActual = { barbero: null, servicio: null, fecha: null, hora: null };
+
+        const aMin  = (hhmm) => { const [h,m] = hhmm.split(':').map(Number); return h*60+m; };
+        const aHHMM = (min)  => String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0');
+        const fmtPrecio = (n) => '$'+n.toLocaleString('es-AR');
+
+        function getDuracion(barbero, servicio) {
+            if (barbero?.duraciones?.[servicio.id] !== undefined) return barbero.duraciones[servicio.id];
+            return servicio.duracion;
+        }
+
+        function fechaLegible(iso) {
+            const [y,m,d] = iso.split('-').map(Number);
+            const dt = new Date(y, m-1, d);
+            const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+            return dias[dt.getDay()]+' '+String(d).padStart(2,'0')+'/'+String(m).padStart(2,'0');
+        }
+
+        function ocultarSplash() {
+            const splash = document.getElementById('splash-screen');
+            const appShell = document.getElementById('app-shell');
+            if (appShell) appShell.style.opacity = '1';
+            if (splash) { splash.style.opacity = '0'; setTimeout(() => splash.style.display = 'none', 600); }
+        }
+
+        window.goToStep = function(n) {
+            document.getElementById('main-slider').style.transform = 'translateX('+(-((n-1)*25))+'%)';
+            document.getElementById('progress-bar').style.width = (n*25)+'%';
+            const confirmBar = document.getElementById('confirm-bar');
+            if (n === 4) { renderResumen(); confirmBar.classList.remove('hidden'); }
+            else confirmBar.classList.add('hidden');
+        };
+
+        function renderBarbers() {
+            const barberList = document.getElementById('barber-list');
+            barberosConfig.forEach(barbero => {
+                const btn = document.createElement('button');
+                btn.className = 'bg-[#121212] border border-zinc-800 rounded-2xl p-4 text-left flex items-center gap-5 transition-all duration-150 w-full hover:border-zinc-600 focus:outline-none';
+                btn.innerHTML =
+                    '<div class="relative shrink-0">'+
+                        '<img src="'+barbero.foto+'" alt="'+barbero.nombre+'" onerror="this.src=\'https://ui-avatars.com/api/?name='+barbero.nombre+'&background=27272a&color=fff&size=128\'" class="w-16 h-16 rounded-full object-cover border-2 border-zinc-800 shadow-lg bg-zinc-900">'+
+                    '</div>'+
+                    '<div class="flex flex-col gap-1 w-full">'+
+                        '<span class="text-xl font-bold">'+barbero.nombre+'</span>'+
+                        '<span class="text-sm text-zinc-400">'+barbero.inicio+' - '+barbero.fin+'</span>'+
+                    '</div>';
+                btn.onclick = () => {
+                    document.querySelectorAll('#barber-list button').forEach(b => b.classList.remove('border-white','bg-zinc-800'));
+                    btn.classList.add('border-white','bg-zinc-800');
+                    turnoActual = { barbero, servicio: null, fecha: null, hora: null };
+                    renderServices();
+                    document.querySelectorAll('.date-item').forEach(d => d.classList.remove('selected-item'));
+                    document.getElementById('time-slots').innerHTML = '';
+                    document.getElementById('time-label').classList.add('hidden');
+                    setTimeout(() => window.goToStep(2), 200);
+                };
+                barberList.appendChild(btn);
+            });
+        }
+
+        function renderServices() {
+            const list = document.getElementById('service-list');
+            list.innerHTML = '';
+            SERVICIOS.forEach(s => {
+                const dur = getDuracion(turnoActual.barbero, s);
+                const btn = document.createElement('button');
+                btn.className = 'bg-[#121212] border border-zinc-800 rounded-2xl p-5 flex items-center justify-between transition-all duration-150 w-full hover:border-zinc-600 focus:outline-none text-left';
+                btn.innerHTML =
+                    '<div class="flex flex-col gap-1">'+
+                        '<span class="text-xl font-bold">'+s.nombre+'</span>'+
+                        '<span class="text-sm text-zinc-400">'+dur+' min</span>'+
+                    '</div>'+
+                    '<span class="text-lg font-bold shrink-0 ml-3">'+fmtPrecio(s.precio)+'</span>';
+                btn.onclick = () => {
+                    document.querySelectorAll('#service-list button').forEach(b => b.classList.remove('border-white','bg-zinc-800'));
+                    btn.classList.add('border-white','bg-zinc-800');
+                    turnoActual.servicio = s;
+                    turnoActual.fecha = null;
+                    turnoActual.hora = null;
+                    document.querySelectorAll('.date-item').forEach(d => d.classList.remove('selected-item'));
+                    document.getElementById('time-slots').innerHTML = '';
+                    document.getElementById('time-label').classList.add('hidden');
+                    setTimeout(() => window.goToStep(3), 200);
+                };
+                list.appendChild(btn);
+            });
+        }
+
+        function renderCustomDatePicker() {
+            const dateSelector = document.getElementById('date-selector');
+            const diasSemana = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+            const hoy = new Date();
+            for (let i = 0; i < DIAS_A_MOSTRAR; i++) {
+                const f = new Date(hoy); f.setDate(hoy.getDate()+i);
+                if (DIAS_CERRADOS.includes(f.getDay())) continue;
+                const d = f.getDate(), m = f.getMonth()+1;
+                const iso = f.getFullYear()+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+                const btn = document.createElement('button');
+                btn.className = 'date-item flex-shrink-0 bg-[#121212] border border-zinc-800 rounded-xl py-3 px-4 flex flex-col items-center justify-center min-w-[65px] transition-all duration-150';
+                btn.dataset.date = iso;
+                btn.innerHTML = '<span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">'+diasSemana[f.getDay()]+'</span><span class="text-2xl font-bold mt-1">'+d+'</span>';
+                btn.onclick = () => {
+                    document.querySelectorAll('.date-item').forEach(d => d.classList.remove('selected-item'));
+                    btn.classList.add('selected-item');
+                    turnoActual.fecha = iso;
+                    turnoActual.hora = null;
+                    generarHorarios();
+                };
+                dateSelector.appendChild(btn);
+            }
+        }
+
+        async function generarHorarios() {
+            if (!turnoActual.barbero || !turnoActual.servicio || !turnoActual.fecha) return;
+            const timeSlots = document.getElementById('time-slots');
+            const timeLabel = document.getElementById('time-label');
+            timeSlots.innerHTML = '<div class="col-span-3 text-center text-sm text-zinc-400 py-4">Buscando horarios...</div>';
+            timeLabel.classList.remove('hidden');
+
+            let ocupados = [];
+            if (fbReady && db) {
+                try {
+                    const q = fb.query(fb.collection(db,'turnos'), fb.where('barbero','==',turnoActual.barbero.id), fb.where('fecha','==',turnoActual.fecha));
+                    const snap = await fb.getDocs(q);
+                    snap.forEach(doc => {
+                        const t = doc.data();
+                        if (t.estado !== 'cancelado') { const ini = aMin(t.hora); ocupados.push({ ini, fin: ini+(t.duracion||30) }); }
+                    });
+                } catch(e) { console.error(e); }
+            }
+
+            timeSlots.innerHTML = '';
+            const dur = getDuracion(turnoActual.barbero, turnoActual.servicio);
+            const grilla = turnoActual.barbero.grilla;
+            const inicioDia = aMin(turnoActual.barbero.inicio);
+            const finDia = aMin(turnoActual.barbero.fin);
+            const ahora = new Date();
+            const hoyISO = ahora.getFullYear()+'-'+String(ahora.getMonth()+1).padStart(2,'0')+'-'+String(ahora.getDate()).padStart(2,'0');
+            const esHoy = turnoActual.fecha === hoyISO;
+            const minDesdeAhora = esHoy ? (ahora.getHours()*60 + ahora.getMinutes() + MIN_ANTICIPACION) : 0;
+
+            for (let S = inicioDia; S+dur <= finDia; S += grilla) {
+                if (esHoy && S < minDesdeAhora) continue;
+                const horaStr = aHHMM(S);
+                const seSolapa = ocupados.some(o => S < o.fin && (S+dur) > o.ini);
+                const btn = document.createElement('button');
+                if (seSolapa) {
+                    btn.className = 'border border-zinc-800 bg-zinc-900/50 rounded-xl py-3.5 text-lg font-medium text-center text-zinc-600 cursor-not-allowed';
+                    btn.innerText = horaStr; btn.disabled = true;
+                } else {
+                    btn.className = 'time-btn border border-zinc-800 bg-[#121212] rounded-xl py-3.5 text-lg font-medium text-center transition-all duration-150';
+                    btn.innerText = horaStr;
+                    btn.onclick = () => {
+                        document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('selected-item'));
+                        btn.classList.add('selected-item');
+                        turnoActual.hora = horaStr;
+                        setTimeout(() => window.goToStep(4), 250);
+                    };
+                }
+                timeSlots.appendChild(btn);
+            }
+            if (timeSlots.children.length === 0) {
+                timeSlots.innerHTML = '<div class="col-span-3 text-center text-sm text-zinc-400 py-4">No hay horarios disponibles para este día.</div>';
+            }
+            setTimeout(() => timeLabel.scrollIntoView({ behavior:'smooth', block:'start' }), 100);
+        }
+
+        function renderResumen() {
+            const t = turnoActual;
+            if (!t.barbero || !t.servicio || !t.fecha || !t.hora) return;
+            const dur = getDuracion(t.barbero, t.servicio);
+            document.getElementById('resumen').innerHTML =
+                '<div class="flex justify-between py-1"><span class="text-zinc-400">Barbero</span><span class="font-semibold">'+t.barbero.nombre+'</span></div>'+
+                '<div class="flex justify-between py-1"><span class="text-zinc-400">Servicio</span><span class="font-semibold">'+t.servicio.nombre+'</span></div>'+
+                '<div class="flex justify-between py-1"><span class="text-zinc-400">Duración</span><span class="font-semibold">'+dur+' min</span></div>'+
+                '<div class="flex justify-between py-1"><span class="text-zinc-400">Día y hora</span><span class="font-semibold">'+fechaLegible(t.fecha)+' · '+t.hora+'</span></div>'+
+                '<div class="flex justify-between py-1 border-t border-zinc-800 mt-2 pt-2"><span class="text-zinc-400">Precio</span><span class="font-bold text-base">'+fmtPrecio(t.servicio.precio)+'</span></div>';
+        }
+
+        function mostrarExito(nombre) {
+            const t = turnoActual;
+            const dur = getDuracion(t.barbero, t.servicio);
+            document.getElementById('success-details').innerHTML =
+                '<div class="flex justify-between py-2"><span class="text-zinc-400">Barbero</span><span class="font-semibold">'+t.barbero.nombre+'</span></div>'+
+                '<div class="flex justify-between py-2"><span class="text-zinc-400">Servicio</span><span class="font-semibold">'+t.servicio.nombre+'</span></div>'+
+                '<div class="flex justify-between py-2"><span class="text-zinc-400">Duración</span><span class="font-semibold">'+dur+' min</span></div>'+
+                '<div class="flex justify-between py-2"><span class="text-zinc-400">Día y hora</span><span class="font-semibold">'+fechaLegible(t.fecha)+' · '+t.hora+'</span></div>'+
+                '<div class="flex justify-between py-2 border-t border-zinc-800 mt-2 pt-2"><span class="text-zinc-400">Precio</span><span class="font-bold text-base">'+fmtPrecio(t.servicio.precio)+'</span></div>'+
+                '<div class="flex justify-between py-2 border-t border-zinc-800 mt-1 pt-2"><span class="text-zinc-400">Cliente</span><span class="font-semibold">'+nombre+'</span></div>';
+
+            const waBtn = document.getElementById('wa-confirm-btn');
+            if (WHATSAPP_BARBERIA) {
+                const msg = '¡Hola! Confirmo mi turno en SB Barber:\n\n💈 Barbero: '+t.barbero.nombre+'\n✂️ Servicio: '+t.servicio.nombre+'\n📅 '+fechaLegible(t.fecha)+' a las '+t.hora+'\n👤 '+nombre;
+                waBtn.href = 'https://wa.me/'+WHATSAPP_BARBERIA+'?text='+encodeURIComponent(msg);
+                waBtn.style.display = 'flex';
+            }
+
+            const screen = document.getElementById('success-screen');
+            screen.style.display = 'flex';
+            screen.offsetHeight;
+            screen.classList.add('visible');
+        }
+
+        function notificarTurno(datos) {
+            if (!WEBHOOK_URL) return;
+            fetch(WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...datos,
+                    mensaje: '📋 *Nuevo turno*\n\n💈 Barbero: *'+datos.nombreBarbero+'*\n✂️ Servicio: '+datos.nombreServicio+' ('+datos.duracion+' min)\n📅 '+fechaLegible(datos.fecha)+'\n🕐 '+datos.hora+'\n👤 '+datos.cliente+'\n📱 '+datos.telefono
+                })
+            }).catch(e => console.warn('Webhook error:', e));
+        }
+
+        function initBotonConfirmar() {
+            const nameInput  = document.getElementById('client-name');
+            const phoneInput = document.getElementById('client-phone');
+            nameInput.addEventListener('input',  () => nameInput.classList.remove('input-error'));
+            phoneInput.addEventListener('input', () => phoneInput.classList.remove('input-error'));
+
+            document.getElementById('btn-confirm').addEventListener('click', async () => {
+                const nombre = nameInput.value.trim();
+                const tel    = phoneInput.value.trim();
+                const btn    = document.getElementById('btn-confirm');
+                let hayError = false;
+                if (!nombre) { nameInput.classList.add('input-error');  hayError = true; }
+                if (!tel)    { phoneInput.classList.add('input-error'); hayError = true; }
+                if (hayError) return;
+
+                const datos = {
+                    barbero: turnoActual.barbero.id, nombreBarbero: turnoActual.barbero.nombre,
+                    servicio: turnoActual.servicio.id, nombreServicio: turnoActual.servicio.nombre,
+                    duracion: getDuracion(turnoActual.barbero, turnoActual.servicio),
+                    precio: turnoActual.servicio.precio,
+                    fecha: turnoActual.fecha, hora: turnoActual.hora,
+                    cliente: nombre, telefono: tel,
+                    estado: 'pendiente', creadoEn: new Date().toISOString()
+                };
+
+                if (!fbReady || !db) { notificarTurno(datos); mostrarExito(nombre); return; }
+
+                btn.innerText = '⏳ Guardando...'; btn.disabled = true;
+                try {
+                    await fb.addDoc(fb.collection(db,'turnos'), datos);
+                    notificarTurno(datos);
+                    mostrarExito(nombre);
+                } catch(e) {
+                    alert('Error de conexión. Intentá de nuevo.');
+                    btn.innerText = 'Confirmar Turno'; btn.disabled = false;
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderBarbers();
+            renderServices();
+            renderCustomDatePicker();
+            initBotonConfirmar();
+            setTimeout(ocultarSplash, 1000);
+        });
+
+        (async () => {
+            try {
+                const appMod = await import("https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js");
+                const fsMod  = await import("https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js");
+                db = fsMod.getFirestore(appMod.initializeApp(firebaseConfig));
+                fb = { collection: fsMod.collection, addDoc: fsMod.addDoc, query: fsMod.query, where: fsMod.where, getDocs: fsMod.getDocs };
+                fbReady = true;
+            } catch(e) { console.warn('Firebase no disponible:', e); }
+        })();
+    </script>
+</body>
+</html>
