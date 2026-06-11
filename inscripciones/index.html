@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SB BARBER — Inscripciones</title>
+    <link rel="icon" type="image/jpeg" href="https://i.imgur.com/PzcD4W2.jpeg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family:'Inter',sans-serif; -webkit-tap-highlight-color:transparent; }
+        ::-webkit-scrollbar { display:none; }
+        .glass-card { background:rgba(30,41,59,0.7); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.05); box-shadow:0 8px 32px rgba(0,0,0,0.4); }
+        .glass-modal { background:rgba(20,25,35,0.97); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.1); }
+        .glass { background:rgba(17,24,39,0.85); backdrop-filter:blur(16px); border-bottom:1px solid rgba(255,255,255,0.08); }
+        .animate-enter { animation:enter 0.35s cubic-bezier(0.16,1,0.3,1); }
+        @keyframes enter { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        .badge-pendiente { background:rgba(234,179,8,0.15); color:#fbbf24; border:1px solid rgba(234,179,8,0.3); }
+        .badge-contactado { background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); }
+        .badge-confirmado { background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); }
+    </style>
+</head>
+<body class="h-full bg-[#0f1115] text-white">
+<div class="max-w-md mx-auto min-h-full flex flex-col">
+
+    <!-- Loading -->
+    <div id="loading-view" class="fixed inset-0 z-50 bg-[#0f1115] flex flex-col justify-center items-center transition-opacity duration-500">
+        <img src="https://i.imgur.com/xyjMT6X.png" alt="SB BARBER" class="h-20 mb-5 animate-pulse">
+        <div class="animate-spin rounded-full h-7 w-7 border-t-2 border-b-2 border-cyan-500"></div>
+    </div>
+
+    <!-- Login -->
+    <div id="login-view" class="hidden flex-1 flex flex-col justify-center p-8">
+        <div class="text-center mb-10">
+            <img src="https://i.imgur.com/xyjMT6X.png" alt="SB BARBER" class="h-28 mx-auto mb-5">
+            <h1 class="text-2xl font-extrabold text-white">Inscripciones</h1>
+            <p class="text-gray-500 text-sm mt-1">Solo para admins</p>
+        </div>
+        <form id="login-form" class="space-y-4">
+            <input type="email" id="login-email" placeholder="Correo" class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none text-white placeholder-gray-500">
+            <input type="password" id="login-password" placeholder="Contraseña" class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none text-white placeholder-gray-500">
+            <button type="submit" class="w-full bg-gradient-to-r from-cyan-600 to-teal-600 p-4 rounded-xl font-bold text-white uppercase tracking-wider">Ingresar</button>
+        </form>
+        <p id="login-error" class="hidden text-center text-red-400 text-sm mt-3">Acceso denegado.</p>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard-view" class="hidden flex flex-col flex-1">
+
+        <header class="px-5 py-4 glass sticky top-0 z-20 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <img src="https://i.imgur.com/xyjMT6X.png" class="h-9">
+                <div>
+                    <h1 class="text-sm font-bold text-white leading-none">Inscripciones</h1>
+                    <span class="text-[10px] text-cyan-400">Cursos de barbería</span>
+                </div>
+            </div>
+            <button onclick="logout()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-red-400 transition">
+                <i class="fas fa-power-off text-xs"></i>
+            </button>
+        </header>
+
+        <!-- Stats -->
+        <div class="p-4">
+            <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="glass-card rounded-xl p-3 text-center">
+                    <div id="stat-total" class="text-2xl font-extrabold text-white">0</div>
+                    <div class="text-[10px] text-gray-500 mt-0.5">total</div>
+                </div>
+                <div class="glass-card rounded-xl p-3 text-center">
+                    <div id="stat-pendiente" class="text-2xl font-extrabold text-yellow-400">0</div>
+                    <div class="text-[10px] text-gray-500 mt-0.5">sin contactar</div>
+                </div>
+                <div class="glass-card rounded-xl p-3 text-center">
+                    <div id="stat-confirmado" class="text-2xl font-extrabold text-emerald-400">0</div>
+                    <div class="text-[10px] text-gray-500 mt-0.5">confirmados</div>
+                </div>
+            </div>
+
+            <!-- Filtro por curso -->
+            <div id="filter-bar" class="flex gap-2 overflow-x-auto pb-2 mb-4" style="-ms-overflow-style:none;scrollbar-width:none;"></div>
+
+            <!-- Lista -->
+            <div id="inscripciones-list" class="space-y-3 pb-24">
+                <p class="text-xs text-gray-600 text-center py-8">Cargando...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal detalle -->
+    <div id="detail-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
+        <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl rounded-t-3xl">
+            <div class="flex justify-between items-center mb-5">
+                <h2 class="text-lg font-bold text-white">Detalle</h2>
+                <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="detail-content" class="space-y-3 mb-6"></div>
+            <div>
+                <p class="text-[10px] font-bold text-gray-500 uppercase mb-2">Cambiar estado</p>
+                <div class="grid grid-cols-3 gap-2" id="estado-btns"></div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, query, orderBy, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
+    authDomain: "sb-barber-6dc16.firebaseapp.com",
+    projectId: "sb-barber-6dc16",
+    storageBucket: "sb-barber-6dc16.firebasestorage.app",
+    messagingSenderId: "213501157745",
+    appId: "1:213501157745:web:09fd59996cf1d72b6696d0"
+};
+
+const ADMINS = ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
+const ESTADOS = [
+    { key: 'pendiente',  label: 'Sin contactar', cls: 'badge-pendiente' },
+    { key: 'contactado', label: 'Contactado',     cls: 'badge-contactado' },
+    { key: 'confirmado', label: 'Confirmado',     cls: 'badge-confirmado' }
+];
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+let allInscripciones = [];
+let filtroActivo = 'todos';
+let currentId = null;
+
+onAuthStateChanged(auth, user => {
+    if (user && ADMINS.includes(user.email)) {
+        document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
+        document.getElementById('login-view').classList.add('hidden');
+        document.getElementById('dashboard-view').classList.remove('hidden');
+        listenToInscripciones();
+    } else if (user) {
+        document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
+        document.getElementById('login-view').classList.remove('hidden');
+        document.getElementById('login-error').textContent = 'No tenés permiso para ver esta página.';
+        document.getElementById('login-error').classList.remove('hidden');
+        signOut(auth);
+    } else {
+        document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
+        document.getElementById('login-view').classList.remove('hidden');
+    }
+});
+
+function listenToInscripciones() {
+    onSnapshot(query(collection(db, 'inscripciones_cursos'), orderBy('creadoEn', 'desc')), snap => {
+        allInscripciones = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        renderAll();
+    });
+}
+
+function renderAll() {
+    const filtered = filtroActivo === 'todos' ? allInscripciones : allInscripciones.filter(i => i.curso === filtroActivo);
+
+    // Stats
+    document.getElementById('stat-total').textContent = allInscripciones.length;
+    document.getElementById('stat-pendiente').textContent = allInscripciones.filter(i => !i.estado || i.estado === 'pendiente').length;
+    document.getElementById('stat-confirmado').textContent = allInscripciones.filter(i => i.estado === 'confirmado').length;
+
+    // Filtros
+    const cursos = ['todos', ...new Set(allInscripciones.map(i => i.curso).filter(Boolean))];
+    document.getElementById('filter-bar').innerHTML = cursos.map(c => `
+        <button onclick="setFiltro('${c}')" class="filter-btn flex-shrink-0 text-[10px] font-bold px-3 py-1.5 rounded-lg border transition ${filtroActivo === c ? 'bg-white text-black border-white' : 'bg-black/30 text-gray-400 border-gray-700 hover:border-gray-500'}">
+            ${c === 'todos' ? 'Todos' : c}
+        </button>`).join('');
+
+    // Lista
+    const list = document.getElementById('inscripciones-list');
+    if (filtered.length === 0) {
+        list.innerHTML = '<p class="text-xs text-gray-600 text-center py-8">Sin inscripciones</p>';
+        return;
+    }
+    list.innerHTML = filtered.map(ins => {
+        const estado = ins.estado || 'pendiente';
+        const estadoInfo = ESTADOS.find(e => e.key === estado) || ESTADOS[0];
+        const fecha = ins.creadoEn ? ins.creadoEn.toDate().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
+        return `
+        <div onclick="openDetail('${ins.id}')" class="glass-card rounded-xl p-4 cursor-pointer hover:border-gray-600 transition animate-enter">
+            <div class="flex items-start justify-between gap-3">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-sm font-bold text-white truncate">${ins.nombre}</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${estadoInfo.cls}">${estadoInfo.label}</span>
+                    </div>
+                    <div class="text-[10px] text-cyan-400 font-semibold mb-1">${ins.curso || '—'}</div>
+                    <div class="text-[11px] text-gray-400 flex items-center gap-3">
+                        <span><i class="fas fa-phone text-[9px] mr-1"></i>${ins.telefono}</span>
+                        <span>${fecha}</span>
+                    </div>
+                    ${ins.mensaje ? `<div class="text-[11px] text-gray-500 mt-1 italic truncate">"${ins.mensaje}"</div>` : ''}
+                </div>
+                <a href="https://wa.me/54${ins.telefono?.replace(/\D/g,'')}" target="_blank" onclick="event.stopPropagation()" class="w-9 h-9 bg-[#25D366]/20 border border-[#25D366]/30 rounded-xl flex items-center justify-center text-[#25D366] flex-shrink-0 hover:bg-[#25D366]/30 transition">
+                    <i class="fab fa-whatsapp text-sm"></i>
+                </a>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+window.setFiltro = (f) => { filtroActivo = f; renderAll(); };
+
+window.openDetail = (id) => {
+    currentId = id;
+    const ins = allInscripciones.find(i => i.id === id);
+    if (!ins) return;
+    const estado = ins.estado || 'pendiente';
+    const fecha = ins.creadoEn ? ins.creadoEn.toDate().toLocaleString('es-AR') : '—';
+    document.getElementById('detail-content').innerHTML = `
+        <div class="flex justify-between text-sm py-1 border-b border-white/5"><span class="text-gray-400">Nombre</span><span class="font-bold">${ins.nombre}</span></div>
+        <div class="flex justify-between text-sm py-1 border-b border-white/5"><span class="text-gray-400">Teléfono</span><span class="font-bold">${ins.telefono}</span></div>
+        <div class="flex justify-between text-sm py-1 border-b border-white/5"><span class="text-gray-400">Curso</span><span class="font-bold text-cyan-400">${ins.curso}</span></div>
+        <div class="flex justify-between text-sm py-1 border-b border-white/5"><span class="text-gray-400">Experiencia</span><span class="font-bold">${ins.experiencia || '—'}</span></div>
+        <div class="flex justify-between text-sm py-1 border-b border-white/5"><span class="text-gray-400">Fecha</span><span class="font-bold">${fecha}</span></div>
+        ${ins.mensaje ? `<div class="text-sm py-1"><span class="text-gray-400 block mb-1">Mensaje</span><span class="text-gray-300 italic">"${ins.mensaje}"</span></div>` : ''}`;
+    document.getElementById('estado-btns').innerHTML = ESTADOS.map(e => `
+        <button onclick="cambiarEstado('${e.key}')" class="text-[10px] font-bold py-2 rounded-lg border transition ${estado === e.key ? 'bg-white text-black border-white' : 'bg-black/30 text-gray-400 border-gray-700 hover:border-gray-500'}">
+            ${e.label}
+        </button>`).join('');
+    document.getElementById('detail-modal').classList.remove('hidden');
+    document.getElementById('detail-modal').classList.add('flex', 'flex-col');
+};
+
+window.cambiarEstado = async (estado) => {
+    if (!currentId) return;
+    await updateDoc(doc(db, 'inscripciones_cursos', currentId), { estado });
+    closeModal();
+};
+
+window.closeModal = () => {
+    document.getElementById('detail-modal').classList.add('hidden');
+    document.getElementById('detail-modal').classList.remove('flex', 'flex-col');
+};
+
+document.getElementById('login-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try { await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value); }
+    catch { document.getElementById('login-error').classList.remove('hidden'); }
+    btn.disabled = false; btn.textContent = 'INGRESAR';
+});
+
+window.logout = () => signOut(auth);
+</script>
+</body>
+</html>

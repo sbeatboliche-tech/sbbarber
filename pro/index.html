@@ -130,6 +130,12 @@
             <i class="fas fa-file-invoice-dollar"></i>
         </button>
 
+        <!-- FAB: Retiros y Propinas (todos) -->
+        <button id="retiros-fab" onclick="window.openRetirosView()" class="hidden absolute bottom-24 left-6 w-14 h-14 bg-gradient-to-tr from-violet-600 to-purple-600 rounded-full shadow-[0_0_20px_rgba(139,92,246,0.4)] flex items-center justify-center text-lg text-white transition-all active:scale-90 hover:scale-105 z-30 border-2 border-white/10">
+            <i class="fas fa-wallet"></i>
+            <span id="retiros-badge" class="hidden absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-[#0f1115] text-[9px] font-bold flex items-center justify-center leading-none">0</span>
+        </button>
+
     </div><!-- /dashboard-view -->
 
 
@@ -232,6 +238,53 @@
 
         </div>
     </div><!-- /gastos-view -->
+
+
+    <!-- ============================================================
+         PANTALLA DE RETIROS Y PROPINAS
+    ============================================================ -->
+    <div id="retiros-view" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden slide-in">
+
+        <header class="px-5 py-4 glass flex items-center gap-4">
+            <button onclick="window.closeRetirosView()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition">
+                <i class="fas fa-arrow-left text-sm"></i>
+            </button>
+            <div>
+                <h1 class="text-sm font-bold text-white leading-none">RETIROS Y PROPINAS</h1>
+                <span id="retiros-header-sub" class="text-[10px] text-violet-400 font-medium">Mi cuenta</span>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-4 pb-10">
+
+            <!-- Panel pendientes (admin) -->
+            <div id="retiros-pending-panel" class="hidden"></div>
+
+            <!-- Balance (barbero) -->
+            <div id="retiros-balance" class="hidden glass-card rounded-2xl p-5"></div>
+
+            <!-- Botones acción (barbero) -->
+            <div id="retiros-actions" class="hidden grid grid-cols-2 gap-3">
+                <button onclick="window.openRetiroModal()" class="bg-violet-600/20 border border-violet-500/30 text-violet-300 p-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-violet-600/30 transition active:scale-95">
+                    <i class="fas fa-money-bill-wave"></i> Pedir Retiro
+                </button>
+                <button onclick="window.openPropinaModal()" class="bg-yellow-600/20 border border-yellow-500/30 text-yellow-300 p-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-yellow-600/30 transition active:scale-95">
+                    <i class="fas fa-hand-holding-usd"></i> Anotar Propina
+                </button>
+            </div>
+
+            <!-- Historial -->
+            <div class="glass-card rounded-2xl p-5">
+                <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <i class="fas fa-clock text-violet-400"></i> Historial
+                </h3>
+                <div id="retiros-history" class="space-y-2">
+                    <p class="text-xs text-gray-600 text-center py-3">Cargando...</p>
+                </div>
+            </div>
+
+        </div>
+    </div><!-- /retiros-view -->
 
 
     <!-- ====== MODALES ====== -->
@@ -362,12 +415,51 @@
         </div>
     </div>
 
+    <!-- Modal: Solicitar Retiro -->
+    <div id="retiro-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
+        <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl rounded-t-3xl">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-xl font-bold text-white">Solicitar Retiro</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <p id="retiro-limit-info" class="text-xs text-gray-500 mb-5"></p>
+            <form id="retiro-form" class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Monto</label>
+                    <input type="number" id="retiro-monto" placeholder="Ej: 5000" min="1" max="10000" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-violet-500 outline-none transition text-white placeholder-gray-500 mt-1">
+                </div>
+                <button type="submit" id="btn-submit-retiro" class="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest">Solicitar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Anotar Propina -->
+    <div id="propina-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
+        <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl rounded-t-3xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-white">Anotar Propina</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="propina-form" class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Monto</label>
+                    <input type="number" id="propina-monto" placeholder="Ej: 2000" min="1" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-yellow-500 outline-none transition text-white placeholder-gray-500 mt-1">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Detalle (opcional)</label>
+                    <input type="text" id="propina-desc" placeholder="Ej: cliente de la tarde" class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-yellow-500 outline-none transition text-white placeholder-gray-500 mt-1">
+                </div>
+                <button type="submit" id="btn-submit-propina" class="w-full bg-gradient-to-r from-yellow-600 to-amber-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest">Registrar</button>
+            </form>
+        </div>
+    </div>
+
 </div><!-- /wrapper -->
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -419,9 +511,13 @@ const PATH_PROFILES = `barber_profiles`;
 const PATH_SETTINGS = `settings`;
 const PATH_EXPENSES = `expenses`;
 const PATH_STOCK    = `stock_items`;
+const PATH_RETIROS  = `retiros`;
+const PATH_PROPINAS = `propinas`;
+const RETIRO_LIMITE = 10000;
 
 let app, auth, db, currentUser;
 let allCuts=[], allExpenses=[], allStock=[];
+let allRetiros=[], allPropinas=[];
 let activePeriod='dia', customDateFilter=null;
 let barberProfilesData={}, currentBase64Image=null;
 let barberCommissions={ Tony:0.5, Maxi:0.5, Bauti:0.5, Stefa:0.5 };
@@ -458,6 +554,10 @@ async function init() {
                 listenToFixedExpenses();
                 listenToStock();
             }
+            document.getElementById('retiros-fab').classList.remove('hidden');
+            document.getElementById('retiros-fab').classList.add('flex');
+            listenToRetiros();
+            listenToPropinas();
             startDualSync();
         } else {
             document.getElementById('loading-view').classList.add('opacity-0','pointer-events-none');
@@ -467,6 +567,240 @@ async function init() {
     });
     document.getElementById('file-upload').addEventListener('change', handleFileSelect);
 }
+
+// ---- RETIROS Y PROPINAS ----
+window.openRetirosView = () => {
+    const v=document.getElementById('retiros-view');
+    v.classList.remove('hidden'); v.classList.add('flex','flex-col');
+    renderRetirosView();
+};
+window.closeRetirosView = () => {
+    const v=document.getElementById('retiros-view');
+    v.classList.add('hidden'); v.classList.remove('flex','flex-col');
+};
+
+function listenToRetiros() {
+    const isAdmin=ADMINS.includes(currentUser.email);
+    const q=isAdmin
+        ? query(collection(db,PATH_RETIROS), orderBy('creadoEn','desc'), limit(300))
+        : query(collection(db,PATH_RETIROS), where('userEmail','==',currentUser.email), orderBy('creadoEn','desc'), limit(100));
+    onSnapshot(q, snap => {
+        allRetiros=snap.docs.map(d=>({...d.data(),id:d.id}));
+        updateRetirosBadge();
+        if(!document.getElementById('retiros-view').classList.contains('hidden')) renderRetirosView();
+    });
+}
+
+function listenToPropinas() {
+    const isAdmin=ADMINS.includes(currentUser.email);
+    const q=isAdmin
+        ? query(collection(db,PATH_PROPINAS), orderBy('creadoEn','desc'), limit(300))
+        : query(collection(db,PATH_PROPINAS), where('userEmail','==',currentUser.email), orderBy('creadoEn','desc'), limit(100));
+    onSnapshot(q, snap => {
+        allPropinas=snap.docs.map(d=>({...d.data(),id:d.id}));
+        updateRetirosBadge();
+        if(!document.getElementById('retiros-view').classList.contains('hidden')) renderRetirosView();
+    });
+}
+
+function updateRetirosBadge() {
+    if(!ADMINS.includes(currentUser.email)) return;
+    const badge=document.getElementById('retiros-badge');
+    const n=[...allRetiros,...allPropinas].filter(i=>i.estado==='pendiente').length;
+    if(n>0){ badge.textContent=n; badge.classList.remove('hidden'); badge.classList.add('flex'); }
+    else { badge.classList.add('hidden'); badge.classList.remove('flex'); }
+}
+
+function renderRetirosView() {
+    const isAdmin=ADMINS.includes(currentUser.email);
+    const myName=BARBER_EMAIL_MAP[currentUser.email];
+    const sub=document.getElementById('retiros-header-sub');
+    if(isAdmin) {
+        sub.textContent='Gestión de solicitudes';
+        document.getElementById('retiros-balance').classList.add('hidden');
+        document.getElementById('retiros-actions').classList.add('hidden');
+        renderPendingPanel();
+        renderHistoryAdmin();
+    } else {
+        sub.textContent=myName||'Mi cuenta';
+        document.getElementById('retiros-pending-panel').classList.add('hidden');
+        renderBalanceCard(myName);
+        renderHistoryBarber(myName);
+    }
+}
+
+function renderBalanceCard(barberName) {
+    const hoy=new Date().toISOString().split('T')[0];
+    const retiradoHoy=allRetiros.filter(r=>r.barbero===barberName&&r.fecha===hoy&&r.estado!=='rechazado').reduce((s,r)=>s+r.monto,0);
+    const disponible=RETIRO_LIMITE-retiradoHoy;
+    const totalRetiros=allRetiros.filter(r=>r.barbero===barberName&&r.estado==='confirmado').reduce((s,r)=>s+r.monto,0);
+    const totalPropinas=allPropinas.filter(p=>p.barbero===barberName&&p.estado==='confirmado').reduce((s,p)=>s+p.monto,0);
+    const pendRetiros=allRetiros.filter(r=>r.barbero===barberName&&r.estado==='pendiente').reduce((s,r)=>s+r.monto,0);
+    const pendPropinas=allPropinas.filter(p=>p.barbero===barberName&&p.estado==='pendiente').reduce((s,p)=>s+p.monto,0);
+    const el=document.getElementById('retiros-balance');
+    el.innerHTML=`
+        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <i class="fas fa-wallet text-violet-400"></i> Mi Balance
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="bg-black/30 rounded-xl p-3 text-center">
+                <div class="text-xl font-extrabold text-violet-300">$${totalRetiros.toLocaleString('es-AR')}</div>
+                <div class="text-[10px] text-gray-500 mt-0.5">retirado</div>
+            </div>
+            <div class="bg-black/30 rounded-xl p-3 text-center">
+                <div class="text-xl font-extrabold text-yellow-300">$${totalPropinas.toLocaleString('es-AR')}</div>
+                <div class="text-[10px] text-gray-500 mt-0.5">propinas</div>
+            </div>
+        </div>
+        ${(pendRetiros+pendPropinas)>0?`
+        <div class="bg-yellow-900/20 border border-yellow-500/20 rounded-xl p-3 mb-3 flex justify-between items-center">
+            <span class="text-xs text-yellow-400 flex items-center gap-2"><i class="fas fa-clock text-xs"></i> Pendiente confirmación</span>
+            <span class="text-sm font-bold text-yellow-300">$${(pendRetiros+pendPropinas).toLocaleString('es-AR')}</span>
+        </div>`:''}
+        <div class="bg-violet-900/20 border border-violet-500/20 rounded-xl p-3 flex justify-between items-center">
+            <span class="text-xs text-gray-400">Disponible hoy</span>
+            <span class="text-sm font-bold ${disponible>0?'text-violet-300':'text-red-400'}">$${retiradoHoy.toLocaleString('es-AR')} / $${RETIRO_LIMITE.toLocaleString('es-AR')}</span>
+        </div>`;
+    el.classList.remove('hidden');
+    document.getElementById('retiros-actions').classList.remove('hidden');
+}
+
+function renderHistoryBarber(barberName) {
+    const combined=[
+        ...allRetiros.filter(r=>r.barbero===barberName).map(r=>({...r,tipo:'retiro'})),
+        ...allPropinas.filter(p=>p.barbero===barberName).map(p=>({...p,tipo:'propina'}))
+    ].sort((a,b)=>(b.creadoEn?.seconds||0)-(a.creadoEn?.seconds||0));
+    const list=document.getElementById('retiros-history');
+    if(!combined.length){ list.innerHTML='<p class="text-xs text-gray-600 text-center py-3">Nada todavía</p>'; return; }
+    list.innerHTML=combined.map(item=>{
+        const ec=item.estado==='confirmado'?'text-emerald-400':item.estado==='rechazado'?'text-red-400':'text-yellow-400';
+        const ei=item.estado==='confirmado'?'✓':item.estado==='rechazado'?'✗':'⏳';
+        const bdr=item.tipo==='retiro'?'border-violet-500/20':'border-yellow-500/20';
+        const lbl=item.tipo==='retiro'?'Retiro':`Propina${item.descripcion?' · '+item.descripcion:''}`;
+        const f=item.creadoEn?item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
+        return `<div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${bdr}">
+            <div><div class="text-xs font-bold text-gray-200">${lbl}</div><div class="text-[10px] text-gray-500">${f}</div></div>
+            <div class="flex items-center gap-3"><span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span></div>
+        </div>`;
+    }).join('');
+}
+
+function renderHistoryAdmin() {
+    const combined=[
+        ...allRetiros.filter(r=>r.estado!=='pendiente').map(r=>({...r,tipo:'retiro'})),
+        ...allPropinas.filter(p=>p.estado!=='pendiente').map(p=>({...p,tipo:'propina'}))
+    ].sort((a,b)=>(b.creadoEn?.seconds||0)-(a.creadoEn?.seconds||0)).slice(0,40);
+    const list=document.getElementById('retiros-history');
+    if(!combined.length){ list.innerHTML='<p class="text-xs text-gray-600 text-center py-3">Sin historial aún</p>'; return; }
+    list.innerHTML=combined.map(item=>{
+        const ec=item.estado==='confirmado'?'text-emerald-400':'text-red-400';
+        const ei=item.estado==='confirmado'?'✓':'✗';
+        const bdr=item.tipo==='retiro'?'border-violet-500/20':'border-yellow-500/20';
+        const lbl=item.tipo==='retiro'?`Retiro · ${item.barbero}`:`Propina · ${item.barbero}${item.descripcion?' · '+item.descripcion:''}`;
+        const f=item.creadoEn?item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
+        return `<div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${bdr}">
+            <div><div class="text-xs font-bold text-gray-200">${lbl}</div><div class="text-[10px] text-gray-500">${f}</div></div>
+            <div class="flex items-center gap-3"><span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span></div>
+        </div>`;
+    }).join('');
+}
+
+function renderPendingPanel() {
+    const pending=[
+        ...allRetiros.filter(r=>r.estado==='pendiente').map(r=>({...r,tipo:'retiro'})),
+        ...allPropinas.filter(p=>p.estado==='pendiente').map(p=>({...p,tipo:'propina'}))
+    ].sort((a,b)=>(a.creadoEn?.seconds||0)-(b.creadoEn?.seconds||0));
+    const panel=document.getElementById('retiros-pending-panel');
+    panel.classList.remove('hidden');
+    if(!pending.length){
+        panel.innerHTML=`<div class="glass-card rounded-2xl p-5 text-center"><i class="fas fa-check-circle text-emerald-400 text-2xl mb-2"></i><p class="text-sm text-gray-400">Sin solicitudes pendientes</p></div>`;
+        return;
+    }
+    panel.innerHTML=`<div class="glass-card rounded-2xl p-5">
+        <h3 class="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fas fa-clock"></i> Pendientes (${pending.length})</h3>
+        <div class="space-y-3">
+            ${pending.map(item=>{
+                const path=item.tipo==='retiro'?PATH_RETIROS:PATH_PROPINAS;
+                const lbl=item.tipo==='retiro'?`Retiro · ${item.barbero}`:`Propina · ${item.barbero}${item.descripcion?' · '+item.descripcion:''}`;
+                const f=item.creadoEn?item.creadoEn.toDate().toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+                const icoBg=item.tipo==='retiro'?'bg-violet-600/20 text-violet-400':'bg-yellow-600/20 text-yellow-400';
+                const ico=item.tipo==='retiro'?'fa-money-bill-wave':'fa-hand-holding-usd';
+                return `<div class="bg-black/30 p-3 rounded-xl border border-white/5">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <div class="w-7 h-7 rounded-lg ${icoBg} flex items-center justify-center text-xs"><i class="fas ${ico}"></i></div>
+                            <div><div class="text-xs font-bold text-gray-200">${lbl}</div><div class="text-[10px] text-gray-500">${f}</div></div>
+                        </div>
+                        <span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="window.approveItem('${path}','${item.id}')" class="bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold py-2 rounded-lg hover:bg-emerald-600/30 transition">✓ Confirmar</button>
+                        <button onclick="window.rejectItem('${path}','${item.id}')" class="bg-red-600/20 border border-red-500/30 text-red-400 text-xs font-bold py-2 rounded-lg hover:bg-red-600/30 transition">✗ Rechazar</button>
+                    </div>
+                </div>`;
+            }).join('')}
+        </div>
+    </div>`;
+}
+
+window.approveItem = async (path, id) => {
+    try { await updateDoc(doc(db,path,id), {estado:'confirmado', confirmadoPor:currentUser.email}); }
+    catch(e) { alert('Error al confirmar'); }
+};
+window.rejectItem = async (path, id) => {
+    try { await updateDoc(doc(db,path,id), {estado:'rechazado', confirmadoPor:currentUser.email}); }
+    catch(e) { alert('Error al rechazar'); }
+};
+
+window.openRetiroModal = () => {
+    const myName=BARBER_EMAIL_MAP[currentUser.email];
+    const hoy=new Date().toISOString().split('T')[0];
+    const retiradoHoy=allRetiros.filter(r=>r.barbero===myName&&r.fecha===hoy&&r.estado!=='rechazado').reduce((s,r)=>s+r.monto,0);
+    const disponible=RETIRO_LIMITE-retiradoHoy;
+    document.getElementById('retiro-limit-info').textContent=`Límite diario: $${RETIRO_LIMITE.toLocaleString('es-AR')} — Disponible hoy: $${disponible.toLocaleString('es-AR')}`;
+    document.getElementById('retiro-monto').value='';
+    showModal('retiro-modal');
+};
+window.openPropinaModal = () => {
+    document.getElementById('propina-monto').value='';
+    document.getElementById('propina-desc').value='';
+    showModal('propina-modal');
+};
+
+document.getElementById('retiro-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const myName=BARBER_EMAIL_MAP[currentUser.email];
+    if(!myName) return alert('Solo los barberos pueden solicitar retiros');
+    const monto=Number(document.getElementById('retiro-monto').value);
+    if(!monto||monto<1) return alert('Ingresá un monto válido');
+    const hoy=new Date().toISOString().split('T')[0];
+    const retiradoHoy=allRetiros.filter(r=>r.barbero===myName&&r.fecha===hoy&&r.estado!=='rechazado').reduce((s,r)=>s+r.monto,0);
+    if(retiradoHoy+monto>RETIRO_LIMITE) return alert(`Límite diario: $${RETIRO_LIMITE.toLocaleString('es-AR')}. Ya solicitaste $${retiradoHoy.toLocaleString('es-AR')} hoy.`);
+    const btn=document.getElementById('btn-submit-retiro');
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        await addDoc(collection(db,PATH_RETIROS),{barbero:myName,userEmail:currentUser.email,monto,fecha:hoy,estado:'pendiente',creadoEn:serverTimestamp()});
+        window.closeModals();
+    } catch { alert('Error al guardar'); }
+    btn.disabled=false; btn.textContent='SOLICITAR';
+});
+
+document.getElementById('propina-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const myName=BARBER_EMAIL_MAP[currentUser.email];
+    if(!myName) return alert('Solo los barberos pueden anotar propinas');
+    const monto=Number(document.getElementById('propina-monto').value);
+    const desc=document.getElementById('propina-desc').value.trim();
+    if(!monto||monto<1) return alert('Ingresá un monto válido');
+    const btn=document.getElementById('btn-submit-propina');
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        const hoy=new Date().toISOString().split('T')[0];
+        await addDoc(collection(db,PATH_PROPINAS),{barbero:myName,userEmail:currentUser.email,monto,descripcion:desc||null,fecha:hoy,estado:'pendiente',creadoEn:serverTimestamp()});
+        window.closeModals();
+    } catch { alert('Error al guardar'); }
+    btn.disabled=false; btn.textContent='REGISTRAR';
+});
 
 // ---- PANTALLA GASTOS ----
 window.openGastosView = () => {
@@ -886,7 +1220,7 @@ window.setPeriod = (p,el)=>{
 window.openSettingsModal = ()=>showModal('settings-modal');
 window.openAddModal = ()=>{ showModal('add-modal'); renderBarberSelection(); };
 
-const ALL_MODALS=['settings-modal','add-modal','expense-modal','date-search-modal','admin-settings-modal','updates-modal','fixed-expenses-modal','stock-item-modal'];
+const ALL_MODALS=['settings-modal','add-modal','expense-modal','date-search-modal','admin-settings-modal','updates-modal','fixed-expenses-modal','stock-item-modal','retiro-modal','propina-modal'];
 function showModal(id){ document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
 window.closeModals = ()=>ALL_MODALS.forEach(id=>{ document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); });
 window.logout = ()=>signOut(auth);
