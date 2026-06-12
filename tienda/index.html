@@ -665,6 +665,9 @@
         </div>
 
         <div id="panel-transfer" class="info-block" style="display:none;">
+            <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);padding:10px 14px;margin-bottom:16px;font-size:12px;font-weight:700;letter-spacing:.05em;text-align:center;">
+                5% OFF pagando por transferencia
+            </div>
             <div class="info-block-label">Datos para transferir</div>
             <div class="info-row">
                 <div><span class="info-key">Alias</span><br><span class="info-val">sbeat.ar</span></div>
@@ -714,11 +717,26 @@ const PRODUCTS = [
         description: 'Brillo intenso y fijación duradera. El look retro que marca la diferencia.',
         tag: null,
         icon: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
+    },
+    {
+        id: 'desinfectante-everest',
+        name: 'Desinfectante Aerosol',
+        variant: 'Everest 5 en 1',
+        price: 7200,
+        description: 'Desinfectante profesional de uso múltiple. Elimina bacterias, virus y hongos en superficies e instrumental.',
+        tag: null,
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6v4H9z"/><path d="M8 6c0 0-3 2-3 8s3 8 3 8h8s3-2 3-8-3-8-3-8"/><line x1="12" y1="10" x2="12" y2="16"/><line x1="9" y1="13" x2="15" y2="13"/></svg>`
     }
 ];
 
 let cart = JSON.parse(localStorage.getItem('sb_cart') || '[]');
 let activeTab = 'mp';
+const TRANSFER_DISCOUNT = 0.05;
+
+function getFinalTotal() {
+    const base = getTotal();
+    return activeTab === 'transfer' ? Math.round(base * (1 - TRANSFER_DISCOUNT)) : base;
+}
 
 function renderProducts() {
     document.getElementById('products-grid').innerHTML = PRODUCTS.map((p, i) => `
@@ -831,9 +849,14 @@ function closeCheckout() {
 }
 
 function renderSummary() {
+    const base = getTotal();
+    const final = getFinalTotal();
+    const hasDiscount = activeTab === 'transfer';
+    const discountRow = hasDiscount ? `<div class="summary-item"><span class="summary-key">Descuento transferencia (5%)</span><span style="font-weight:700">− $${(base - final).toLocaleString('es-AR')}</span></div>` : '';
     document.getElementById('order-summary').innerHTML =
         cart.map(i => `<div class="summary-item"><span class="summary-key">${i.qty}× ${i.name} <span style="opacity:.5">${i.variant}</span></span><span style="font-weight:700">$${(i.price*i.qty).toLocaleString('es-AR')}</span></div>`).join('') +
-        `<div class="summary-item summary-total"><span class="summary-key">Total</span><span class="summary-val">$${getTotal().toLocaleString('es-AR')}</span></div>`;
+        discountRow +
+        `<div class="summary-item summary-total"><span class="summary-key">Total</span><span class="summary-val">$${final.toLocaleString('es-AR')}</span></div>`;
 }
 
 function setTab(tab) {
@@ -843,6 +866,7 @@ function setTab(tab) {
     document.getElementById('panel-mp').style.display = tab === 'mp' ? 'block' : 'none';
     document.getElementById('panel-transfer').style.display = tab === 'transfer' ? 'block' : 'none';
     document.getElementById('btn-pay').textContent = tab === 'mp' ? 'Pagar con MercadoPago' : 'Confirmar pedido';
+    renderSummary();
 }
 
 function copyText(text, btn) {
@@ -885,7 +909,7 @@ async function submitCheckout() {
             const res = await fetch('/api/notify-transfer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ items, buyer, orderId, total: getTotal() })
+                body: JSON.stringify({ items, buyer, orderId, total: getFinalTotal(), discount: getTotal() - getFinalTotal() })
             });
             if (!res.ok) throw new Error('Error al confirmar el pedido');
             cart = []; saveCart(); updateCartUI();
