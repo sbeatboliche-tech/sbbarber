@@ -45,6 +45,7 @@
         </div>
         <h1>Gracias por<br>tu compra.</h1>
         <p class="sub">Tu pago fue confirmado. Te enviamos un email con los detalles del pedido.</p>
+        <div id="success-ship" class="data-block" style="display:none;margin-top:20px;"></div>
     </div>
 
     <div id="view-transfer" style="display:none">
@@ -60,6 +61,7 @@
             <div class="data-row"><span class="data-key">CVU</span><span class="data-val" style="font-family:monospace;font-size:12px">0000003100061376563207</span></div>
             <div class="data-row"><span class="data-key">Titular</span><span class="data-val">Agustín Abalo</span></div>
         </div>
+        <div id="transfer-ship" class="data-block" style="display:none;margin-top:16px;"></div>
     </div>
 
     <div id="view-pending" style="display:none">
@@ -84,6 +86,16 @@
     document.getElementById(views[p.get('status')] || 'view-success').style.display = 'block';
     const ord = p.get('order');
     if (ord) document.getElementById('order-id').textContent = ord;
+
+    const isPickup = !p.get('shipping') || p.get('shipping') === 'pickup';
+    const shipHtml = isPickup
+        ? `<div class="data-row"><span class="data-key">Retiro</span><span class="data-val">Dávila 951, Parque Chacabuco</span></div><div class="data-row"><span class="data-key">Horario</span><span class="data-val">Lun–Sáb 12:00–19:30</span></div>`
+        : `<div class="data-row"><span class="data-key">Entrega</span><span class="data-val">Envío a domicilio</span></div><div class="data-row"><span class="data-key">Info</span><span class="data-val" style="font-size:12px;color:#737373;">Te vamos a contactar para coordinar el envío.</span></div>`;
+    ['success-ship','transfer-ship'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.innerHTML = shipHtml; el.style.display = 'block'; }
+    });
+
     localStorage.removeItem('sb_cart');
 </script>
 </body>

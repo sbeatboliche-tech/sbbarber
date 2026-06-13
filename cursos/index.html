@@ -300,7 +300,7 @@
                     <li>Kit de herramientas incluido</li>
                 </ul>
                 <div class="curso-footer">
-                    <span class="curso-precio">$XX.XXX</span>
+                    <span class="curso-precio" id="cp-curso-inicial">Consultá</span>
                     <a href="#inscripcion" class="btn-inscribir" onclick="preseleccionarCurso('Curso Inicial')">Me interesa</a>
                 </div>
             </div>
@@ -319,7 +319,7 @@
                     <li>Kit profesional incluido</li>
                 </ul>
                 <div class="curso-footer">
-                    <span class="curso-precio">$XX.XXX</span>
+                    <span class="curso-precio" id="cp-curso-completo">Consultá</span>
                     <a href="#inscripcion" class="btn-inscribir" onclick="preseleccionarCurso('Curso Completo')">Me interesa</a>
                 </div>
             </div>
@@ -335,7 +335,7 @@
                     <li>Productos y tratamientos</li>
                 </ul>
                 <div class="curso-footer">
-                    <span class="curso-precio">$XX.XXX</span>
+                    <span class="curso-precio" id="cp-taller-barba">Consultá</span>
                     <a href="#inscripcion" class="btn-inscribir" onclick="preseleccionarCurso('Taller de Barba')">Me interesa</a>
                 </div>
             </div>
@@ -403,7 +403,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -416,6 +416,15 @@
 
         const app = initializeApp(firebaseConfig);
         const db  = getFirestore(app);
+
+        // Precios de cursos desde Firestore
+        const cursoMap = { 'curso-inicial':'cp-curso-inicial', 'curso-completo':'cp-curso-completo', 'taller-barba':'cp-taller-barba' };
+        onSnapshot(collection(db, 'tienda_cursos'), snap => {
+            snap.forEach(d => {
+                const el = document.getElementById(cursoMap[d.id]);
+                if (el && d.data().price) el.textContent = '$' + Number(d.data().price).toLocaleString('es-AR');
+            });
+        });
 
         document.getElementById('form-inscripcion').addEventListener('submit', async e => {
             e.preventDefault();

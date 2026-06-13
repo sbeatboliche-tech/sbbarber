@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    const { items, buyer, orderId } = req.body;
+    const { items, buyer, orderId, shipping } = req.body;
     if (!items?.length || !buyer?.name || !buyer?.email) {
         return res.status(400).json({ error: 'Faltan datos' });
     }
@@ -26,9 +26,9 @@ export default async function handler(req, res) {
             ...(buyer.phone && { phone: { area_code: '54', number: buyer.phone.replace(/\D/g, '') } })
         },
         back_urls: {
-            success: `${baseUrl}/gracias.html?order=${orderId}&status=success`,
+            success: `${baseUrl}/gracias.html?order=${orderId}&status=success&shipping=${shipping?.mode||'pickup'}`,
             failure: `${baseUrl}/?error=1`,
-            pending: `${baseUrl}/gracias.html?order=${orderId}&status=pending`
+            pending: `${baseUrl}/gracias.html?order=${orderId}&status=pending&shipping=${shipping?.mode||'pickup'}`
         },
         auto_return: 'approved',
         notification_url: `${baseUrl}/api/webhook`,
@@ -39,7 +39,10 @@ export default async function handler(req, res) {
             buyer_email: buyer.email,
             buyer_phone: buyer.phone || '',
             items_summary: items.map(i => `${i.quantity}x ${i.name}`).join(', '),
-            total: String(items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0))
+            total: String(items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0)),
+            shipping_mode: shipping?.mode || 'pickup',
+            shipping_address: shipping?.address || '',
+            shipping_cost: String(shipping?.cost || 0)
         }
     };
 

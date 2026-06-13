@@ -145,6 +145,48 @@
         .spinner { width:18px; height:18px; border:2px solid rgba(0,0,0,.2); border-top-color:var(--black); border-radius:50%; animation:spin .6s linear infinite; display:inline-block; vertical-align:middle; }
         @keyframes spin { to { transform:rotate(360deg); } }
         @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+        /* ── STOCK ── */
+        .stock-badge { position:absolute; top:12px; right:12px; font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; padding:4px 9px; }
+        .stock-out-badge { background:rgba(0,0,0,.75); border:1px solid rgba(255,255,255,.15); color:var(--g600); }
+        .stock-low-badge { background:rgba(0,0,0,.6); border:1px solid rgba(255,255,255,.1); color:var(--g400); }
+        .btn-add:disabled, .btn-add.btn-soldout { background:var(--g900); color:var(--g700); cursor:not-allowed; }
+
+        /* ── ADMIN ── */
+        .admin-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.92); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); z-index:500; display:none; align-items:center; justify-content:center; padding:16px; }
+        .admin-backdrop.show { display:flex; }
+        .admin-box { background:var(--g950); border:1px solid rgba(255,255,255,.09); width:100%; max-width:480px; max-height:88dvh; display:flex; flex-direction:column; }
+        .admin-box-header { padding:14px 18px; border-bottom:1px solid rgba(255,255,255,.07); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+        .admin-box-title { font-size:10px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--g600); }
+        .admin-tabs { display:flex; border-bottom:1px solid rgba(255,255,255,.07); flex-shrink:0; }
+        .admin-tab { flex:1; padding:11px; font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; background:none; border:none; border-bottom:2px solid transparent; color:var(--g600); cursor:pointer; font-family:'Inter',sans-serif; transition:color .2s; }
+        .admin-tab.active { color:var(--white); border-bottom-color:var(--white); }
+        .admin-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0 16px 16px; }
+        .admin-hdr { display:grid; align-items:center; padding:10px 0 6px; border-bottom:1px solid rgba(255,255,255,.08); margin-bottom:4px; gap:8px; }
+        .admin-hdr-3 { grid-template-columns:1fr 90px 80px; }
+        .admin-hdr-2 { grid-template-columns:1fr 120px; }
+        .admin-col-label { font-size:9px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--g800); text-align:right; }
+        .admin-col-label:first-child { text-align:left; }
+        .admin-row { display:grid; align-items:center; gap:8px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,.04); }
+        .admin-row:last-of-type { border-bottom:none; }
+        .admin-row-3 { grid-template-columns:1fr 90px 80px; }
+        .admin-row-2 { grid-template-columns:1fr 120px; }
+        .admin-prod-name { font-size:13px; font-weight:700; line-height:1.2; }
+        .admin-prod-variant { font-size:10px; color:var(--g600); margin-top:1px; }
+        .admin-input { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09); color:var(--white); padding:7px 9px; font-size:13px; font-family:'Inter',sans-serif; width:100%; text-align:right; -webkit-appearance:none; border-radius:0; }
+        .admin-input:focus { outline:none; border-color:rgba(255,255,255,.3); }
+        .admin-save { width:100%; height:44px; background:var(--white); color:var(--black); border:none; font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; font-family:'Inter',sans-serif; margin-top:14px; transition:background .15s; }
+        .admin-save:active { background:var(--g200); }
+        .admin-save:disabled { opacity:.5; cursor:not-allowed; }
+        .admin-footer-bar { padding:12px 16px; border-top:1px solid rgba(255,255,255,.07); flex-shrink:0; }
+        .btn-logout { width:100%; height:40px; background:none; border:1px solid rgba(255,255,255,.1); color:var(--g600); font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; font-family:'Inter',sans-serif; }
+        .admin-fab { position:fixed; bottom:76px; right:16px; width:44px; height:44px; background:var(--white); border:none; cursor:pointer; display:none; align-items:center; justify-content:center; z-index:200; box-shadow:0 2px 16px rgba(0,0,0,.7); -webkit-appearance:none; }
+        .admin-fab.show { display:flex; }
+        .admin-fab svg { width:18px; height:18px; stroke:var(--black); }
+        @media(min-width:640px) { .admin-fab { bottom:20px; } }
+        .tienda-footer { text-align:center; padding:16px 20px 52px; }
+        .admin-trigger { font-size:11px; color:var(--g950); background:none; border:none; cursor:pointer; font-family:'Inter',sans-serif; padding:8px; user-select:none; }
+        .admin-trigger:hover { color:var(--g800); }
     </style>
 </head>
 <body>
@@ -227,6 +269,18 @@
         <div class="field-group"><label class="field-label">Nombre completo</label><input class="field" id="buyer-name" type="text" placeholder="Tu nombre" autocomplete="name"></div>
         <div class="field-group"><label class="field-label">Email</label><input class="field" id="buyer-email" type="email" placeholder="Para recibir la confirmación" autocomplete="email" inputmode="email"></div>
 
+        <div style="margin:20px 0 0;">
+            <label class="field-label" style="margin-bottom:8px;display:block;">Entrega</label>
+            <div class="payment-tabs" style="margin-bottom:0;">
+                <button id="ship-pickup" class="payment-tab active" onclick="setShipping('pickup')">Retiro en local</button>
+                <button id="ship-delivery" class="payment-tab" onclick="setShipping('delivery')">Envío a domicilio</button>
+            </div>
+        </div>
+        <div id="shipping-detail" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:none;padding:12px 14px;margin-bottom:20px;font-size:12px;color:#737373;line-height:1.6;">
+            <span id="shipping-detail-text">📍 Dávila 951, Parque Chacabuco · Lun–Sáb 12:00–19:30 · <strong style="color:#a3a3a3;">Gratis</strong></span>
+            <input id="buyer-address" class="field" type="text" placeholder="Dirección completa (calle, número, piso, depto)" autocomplete="street-address" style="margin-top:8px;display:none;height:44px;font-size:15px;">
+        </div>
+
         <div class="payment-tabs">
             <button id="tab-mp" class="payment-tab active" onclick="setTab('mp')">
                 <span style="display:inline-flex;align-items:center;gap:7px;justify-content:center;">
@@ -302,40 +356,80 @@ const PRODUCTS = [
 ];
 
 const TRANSFER_DISCOUNT = 0.05;
+let productConfig = {};
+let courseConfig = {};
+let shippingMode = 'pickup';
+let shippingCost = 0;
 let cart = JSON.parse(localStorage.getItem('sb_cart')||'[]');
 let activeTab = 'mp';
 
 function getTotal() { return cart.reduce((s,i)=>s+i.price*i.qty,0); }
-function getFinalTotal() { const b=getTotal(); return activeTab==='transfer'?Math.round(b*(1-TRANSFER_DISCOUNT)):b; }
+function getFinalTotal() {
+    const b=getTotal();
+    const afterDisc = activeTab==='transfer'?Math.round(b*(1-TRANSFER_DISCOUNT)):b;
+    return afterDisc + (shippingMode==='delivery' ? shippingCost : 0);
+}
 function getTotalItems() { return cart.reduce((s,i)=>s+i.qty,0); }
 
+function setShipping(mode) {
+    shippingMode = mode;
+    document.getElementById('ship-pickup').classList.toggle('active', mode==='pickup');
+    document.getElementById('ship-delivery').classList.toggle('active', mode==='delivery');
+    const addr = document.getElementById('buyer-address');
+    const txt = document.getElementById('shipping-detail-text');
+    if (mode==='pickup') {
+        addr.style.display = 'none';
+        txt.innerHTML = '📍 Dávila 951, Parque Chacabuco · Lun–Sáb 12:00–19:30 · <strong style="color:#a3a3a3;">Gratis</strong>';
+    } else {
+        addr.style.display = 'block';
+        const cost = shippingCost > 0 ? '$'+shippingCost.toLocaleString('es-AR') : 'a coordinar';
+        txt.innerHTML = 'Costo de envío: <strong style="color:#a3a3a3;">'+cost+'</strong>';
+    }
+    renderSummary();
+}
+
 function renderProducts() {
-    document.getElementById('products-grid').innerHTML = PRODUCTS.map((p,i)=>`
+    document.getElementById('products-grid').innerHTML = PRODUCTS.map((p,i)=>{
+        const cfg = productConfig[p.id] || {};
+        const price = cfg.price != null ? cfg.price : p.price;
+        const stock = cfg.stock;
+        const out = typeof stock === 'number' && stock === 0;
+        const low = typeof stock === 'number' && stock > 0 && stock <= 5;
+        return `
         <div class="product-card" style="animation:fadeUp ${.15+i*.07}s ease both">
             <div class="product-image-wrap">
                 ${p.image
                     ? `<img src="${p.image}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;display:block;">`
                     : p.icon}
-                ${p.tag?`<div class="product-tag">${p.tag}</div>`:''}
+                ${p.tag && !out ? `<div class="product-tag">${p.tag}</div>` : ''}
+                ${out ? `<div class="stock-badge stock-out-badge">Sin stock</div>` : ''}
+                ${low ? `<div class="stock-badge stock-low-badge">Últimas ${stock}</div>` : ''}
             </div>
             <div class="product-info">
                 <div class="product-name">${p.name}</div>
                 <div class="product-variant">${p.variant}</div>
                 <div class="product-desc">${p.description}</div>
                 <div class="product-footer">
-                    <div class="product-price">$${p.price.toLocaleString('es-AR')}</div>
-                    <button class="btn-add" onclick="addToCart('${p.id}')">+ Agregar</button>
+                    <div class="product-price">$${price.toLocaleString('es-AR')}</div>
+                    <button class="btn-add${out?' btn-soldout':''}" onclick="addToCart('${p.id}')" ${out?'disabled':''}>
+                        ${out ? 'Sin stock' : '+ Agregar'}
+                    </button>
                 </div>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 }
 
 function addToCart(id) {
     const p = PRODUCTS.find(x=>x.id===id);
     if(!p) return;
+    const cfg = productConfig[p.id] || {};
+    const price = cfg.price != null ? cfg.price : p.price;
+    const stock = cfg.stock;
+    if(typeof stock === 'number' && stock === 0) return;
     const ex = cart.find(x=>x.id===id);
     if(ex) ex.qty++;
-    else cart.push({...p,qty:1});
+    else cart.push({...p, price, qty:1});
     saveCart(); updateCartUI(); openCart();
 }
 
@@ -433,10 +527,14 @@ function closeCheckout() {
 
 function renderSummary() {
     const base=getTotal(), final=getFinalTotal();
-    const discRow = activeTab==='transfer'?`<div class="summary-item"><span class="summary-key">Descuento transferencia (5%)</span><span style="font-weight:700;flex-shrink:0">− $${(base-final).toLocaleString('es-AR')}</span></div>`:'';
+    const discountAmt = activeTab==='transfer' ? base-Math.round(base*(1-TRANSFER_DISCOUNT)) : 0;
+    const discRow = discountAmt>0 ? `<div class="summary-item"><span class="summary-key">Descuento transferencia (5%)</span><span style="font-weight:700;flex-shrink:0">− $${discountAmt.toLocaleString('es-AR')}</span></div>` : '';
+    const shipRow = shippingMode==='delivery'
+        ? `<div class="summary-item"><span class="summary-key">Envío a domicilio</span><span style="font-weight:700;flex-shrink:0">${shippingCost>0?'$'+shippingCost.toLocaleString('es-AR'):'A coordinar'}</span></div>`
+        : `<div class="summary-item"><span class="summary-key">Retiro en local</span><span style="color:#525252;font-weight:700;flex-shrink:0">Gratis</span></div>`;
     document.getElementById('order-summary').innerHTML =
         cart.map(i=>`<div class="summary-item"><span class="summary-key">${i.qty}× ${i.name} <span style="opacity:.4">${i.variant}</span></span><span style="font-weight:700;flex-shrink:0">$${(i.price*i.qty).toLocaleString('es-AR')}</span></div>`).join('')+
-        discRow+
+        discRow + shipRow +
         `<div class="summary-item summary-total"><span class="summary-key" style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#525252">Total</span><span class="summary-val">$${final.toLocaleString('es-AR')}</span></div>`;
 }
 
@@ -463,33 +561,36 @@ function copyText(text,btn) {
 async function submitCheckout() {
     const name=document.getElementById('buyer-name').value.trim();
     const email=document.getElementById('buyer-email').value.trim();
-    const phone=document.getElementById('buyer-phone').value.trim();
+    const address=shippingMode==='delivery'?document.getElementById('buyer-address').value.trim():'';
     const errEl=document.getElementById('checkout-error');
     errEl.style.display='none';
 
     if(!name){errEl.textContent='Ingresá tu nombre.';errEl.style.display='block';return;}
     if(!email||!email.includes('@')){errEl.textContent='Ingresá un email válido.';errEl.style.display='block';return;}
+    if(shippingMode==='delivery'&&!address){errEl.textContent='Ingresá tu dirección de entrega.';errEl.style.display='block';return;}
 
     const btn=document.getElementById('btn-pay');
     btn.disabled=true;
     btn.innerHTML='<div class="spinner"></div>';
 
     const orderId='SBB-'+Date.now();
-    const buyer={name,email,phone};
+    const buyer={name,email};
+    const shipping={mode:shippingMode,address,cost:shippingMode==='delivery'?shippingCost:0};
     const items=cart.map(i=>({id:i.id,name:`${i.name} ${i.variant}`,price:i.price,quantity:i.qty}));
 
     try {
         if(activeTab==='mp') {
-            const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,buyer,orderId})});
+            const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,buyer,orderId,shipping})});
             const data=await res.json();
             if(!res.ok||!data.init_point) throw new Error(data.error||'Error al procesar el pago');
             window.location.href=data.init_point;
         } else {
-            const discount=getTotal()-getFinalTotal();
-            const res=await fetch('/api/notify-transfer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,buyer,orderId,total:getFinalTotal(),discount})});
+            const base=getTotal();
+            const discountAmt=activeTab==='transfer'?base-Math.round(base*(1-TRANSFER_DISCOUNT)):0;
+            const res=await fetch('/api/notify-transfer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,buyer,orderId,total:getFinalTotal(),discount:discountAmt,shipping})});
             if(!res.ok) throw new Error('Error al confirmar el pedido');
             cart=[];saveCart();updateCartUI();
-            window.location.href=`/gracias.html?order=${orderId}&status=transfer`;
+            window.location.href=`/gracias.html?order=${orderId}&status=transfer&shipping=${shippingMode}`;
         }
     } catch(err) {
         errEl.textContent=err.message||'Hubo un error. Intentá de nuevo.';
@@ -501,6 +602,236 @@ async function submitCheckout() {
 
 renderProducts();
 updateCartUI();
+</script>
+
+<!-- TIENDA FOOTER -->
+<div class="tienda-footer">
+    <button class="admin-trigger" onclick="openLoginModal()">·</button>
+</div>
+
+<!-- ADMIN FAB -->
+<button id="admin-fab" class="admin-fab" onclick="openAdminModal()" title="Panel Admin">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+</button>
+
+<!-- LOGIN MODAL -->
+<div id="login-modal" class="admin-backdrop">
+    <div class="admin-box" style="max-width:340px;">
+        <div class="admin-box-header">
+            <span class="admin-box-title">Acceso Admin</span>
+            <button class="close-btn" onclick="closeLoginModal()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+        <div class="admin-body" style="padding:16px 16px 20px;">
+            <div class="field-group" style="margin-bottom:10px;"><label class="field-label">Email</label><input id="admin-email" class="field" type="email" autocomplete="email" inputmode="email"></div>
+            <div class="field-group" style="margin-bottom:16px;"><label class="field-label">Contraseña</label><input id="admin-pass" class="field" type="password" autocomplete="current-password"></div>
+            <p id="login-error" class="error-msg" style="margin-bottom:10px;"></p>
+            <button id="login-btn" class="btn-pay" onclick="doAdminLogin()">Ingresar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ADMIN MODAL -->
+<div id="admin-modal" class="admin-backdrop">
+    <div class="admin-box">
+        <div class="admin-box-header">
+            <span class="admin-box-title">Panel Admin</span>
+            <button class="close-btn" onclick="closeAdminModal()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+        <div class="admin-tabs">
+            <button id="atab-productos" class="admin-tab active" onclick="switchAdminTab('productos')">Productos</button>
+            <button id="atab-cursos" class="admin-tab" onclick="switchAdminTab('cursos')">Cursos</button>
+        </div>
+        <div id="admin-body" class="admin-body"></div>
+        <div class="admin-footer-bar">
+            <button class="btn-logout" onclick="doAdminLogout()">Cerrar sesión</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
+    authDomain: "sb-barber-6dc16.firebaseapp.com",
+    projectId: "sb-barber-6dc16",
+    storageBucket: "sb-barber-6dc16.firebasestorage.app",
+    messagingSenderId: "213501157745",
+    appId: "1:213501157745:web:09fd59996cf1d72b6696d0"
+};
+const ADMINS = ['abalo7272@gmail.com','carusomanu21@gmail.com'];
+const COURSES = [
+    { id:'curso-inicial', name:'Curso Inicial' },
+    { id:'curso-completo', name:'Curso Completo' },
+    { id:'taller-barba', name:'Taller de Barba' }
+];
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+let adminUser = null;
+let adminTab = 'productos';
+
+onSnapshot(collection(db, 'tienda_productos'), snap => {
+    productConfig = {};
+    snap.forEach(d => { productConfig[d.id] = d.data(); });
+    renderProducts();
+});
+
+onSnapshot(collection(db, 'tienda_cursos'), snap => {
+    courseConfig = {};
+    snap.forEach(d => { courseConfig[d.id] = d.data(); });
+});
+
+onSnapshot(doc(db, 'tienda_config', 'general'), d => {
+    if (d.exists()) {
+        shippingCost = d.data().envioCosto || 0;
+        if (shippingMode === 'delivery') setShipping('delivery');
+    }
+});
+
+setPersistence(auth, browserLocalPersistence).catch(()=>{}).finally(()=>{
+    onAuthStateChanged(auth, user => {
+        if (user && ADMINS.includes(user.email)) {
+            adminUser = user;
+            document.getElementById('admin-fab').classList.add('show');
+        } else {
+            adminUser = null;
+            document.getElementById('admin-fab').classList.remove('show');
+        }
+    });
+});
+
+window.openLoginModal = () => {
+    document.getElementById('login-modal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('admin-email').focus(), 100);
+};
+window.closeLoginModal = () => {
+    document.getElementById('login-modal').classList.remove('show');
+    document.body.style.overflow = '';
+    document.getElementById('login-error').style.display = 'none';
+};
+window.doAdminLogin = async () => {
+    const email = document.getElementById('admin-email').value.trim();
+    const pass = document.getElementById('admin-pass').value;
+    const errEl = document.getElementById('login-error');
+    const btn = document.getElementById('login-btn');
+    errEl.style.display = 'none';
+    btn.textContent = '...'; btn.disabled = true;
+    try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        closeLoginModal();
+        openAdminModal();
+    } catch(e) {
+        errEl.textContent = 'Email o contraseña incorrectos.';
+        errEl.style.display = 'block';
+        btn.textContent = 'Ingresar'; btn.disabled = false;
+    }
+};
+
+window.openAdminModal = () => {
+    if (!adminUser) return;
+    renderAdminPanel();
+    document.getElementById('admin-modal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+};
+window.closeAdminModal = () => {
+    document.getElementById('admin-modal').classList.remove('show');
+    document.body.style.overflow = '';
+};
+window.doAdminLogout = async () => {
+    await signOut(auth);
+    closeAdminModal();
+};
+window.switchAdminTab = (tab) => {
+    adminTab = tab;
+    document.getElementById('atab-productos').classList.toggle('active', tab==='productos');
+    document.getElementById('atab-cursos').classList.toggle('active', tab==='cursos');
+    renderAdminPanel();
+};
+
+function renderAdminPanel() {
+    const body = document.getElementById('admin-body');
+    if (adminTab === 'productos') {
+        body.innerHTML = `
+            <div class="admin-hdr admin-hdr-3">
+                <span class="admin-col-label">Producto</span>
+                <span class="admin-col-label">Precio</span>
+                <span class="admin-col-label">Stock</span>
+            </div>
+            ${PRODUCTS.map(p => {
+                const cfg = productConfig[p.id] || {};
+                const price = cfg.price != null ? cfg.price : p.price;
+                const stock = cfg.stock != null ? cfg.stock : '';
+                return `<div class="admin-row admin-row-3">
+                    <div>
+                        <div class="admin-prod-name">${p.name}</div>
+                        <div class="admin-prod-variant">${p.variant}</div>
+                    </div>
+                    <input class="admin-input" type="number" id="ap-${p.id}" value="${price}" min="0">
+                    <input class="admin-input" type="number" id="as-${p.id}" value="${stock}" min="0" placeholder="∞">
+                </div>`;
+            }).join('')}
+            <div style="border-top:1px solid rgba(255,255,255,.08);margin-top:4px;padding-top:4px;">
+                <div class="admin-row admin-row-2" style="grid-template-columns:1fr 80px;">
+                    <div>
+                        <div class="admin-prod-name">Costo de envío</div>
+                        <div class="admin-prod-variant">0 = "a coordinar"</div>
+                    </div>
+                    <input class="admin-input" type="number" id="envio-costo" value="${shippingCost}" min="0" placeholder="0">
+                </div>
+            </div>
+            <button class="admin-save" id="save-btn-p" onclick="saveProductos()">Guardar</button>`;
+    } else {
+        body.innerHTML = `
+            <div class="admin-hdr admin-hdr-2">
+                <span class="admin-col-label">Curso</span>
+                <span class="admin-col-label">Precio</span>
+            </div>
+            ${COURSES.map(c => {
+                const cfg = courseConfig[c.id] || {};
+                const price = cfg.price != null ? cfg.price : '';
+                return `<div class="admin-row admin-row-2">
+                    <div class="admin-prod-name">${c.name}</div>
+                    <input class="admin-input" type="number" id="ac-${c.id}" value="${price}" min="0" placeholder="0">
+                </div>`;
+            }).join('')}
+            <button class="admin-save" id="save-btn-c" onclick="saveCursos()">Guardar</button>`;
+    }
+}
+
+window.saveProductos = async () => {
+    const btn = document.getElementById('save-btn-p');
+    btn.textContent = 'Guardando...'; btn.disabled = true;
+    try {
+        for (const p of PRODUCTS) {
+            const priceVal = parseInt(document.getElementById(`ap-${p.id}`).value);
+            const stockRaw = document.getElementById(`as-${p.id}`).value;
+            const data = { price: isNaN(priceVal) ? p.price : priceVal, stock: stockRaw !== '' ? parseInt(stockRaw) : null };
+            await setDoc(doc(db, 'tienda_productos', p.id), data);
+        }
+        const envioCostoVal = parseInt(document.getElementById('envio-costo').value) || 0;
+        await setDoc(doc(db, 'tienda_config', 'general'), { envioCosto: envioCostoVal }, { merge: true });
+        btn.textContent = '✓ Guardado';
+        setTimeout(() => { btn.textContent = 'Guardar'; btn.disabled = false; }, 1500);
+    } catch(e) { btn.textContent = 'Error — intentá de nuevo'; btn.disabled = false; }
+};
+
+window.saveCursos = async () => {
+    const btn = document.getElementById('save-btn-c');
+    btn.textContent = 'Guardando...'; btn.disabled = true;
+    try {
+        for (const c of COURSES) {
+            const priceVal = parseInt(document.getElementById(`ac-${c.id}`).value);
+            if (!isNaN(priceVal)) await setDoc(doc(db, 'tienda_cursos', c.id), { price: priceVal });
+        }
+        btn.textContent = '✓ Guardado';
+        setTimeout(() => { btn.textContent = 'Guardar'; btn.disabled = false; }, 1500);
+    } catch(e) { btn.textContent = 'Error — intentá de nuevo'; btn.disabled = false; }
+};
 </script>
 </body>
 </html>
