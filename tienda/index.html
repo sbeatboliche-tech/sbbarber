@@ -228,8 +228,21 @@
         <div class="field-group"><label class="field-label">Email</label><input class="field" id="buyer-email" type="email" placeholder="Para recibir la confirmación" autocomplete="email" inputmode="email"></div>
 
         <div class="payment-tabs">
-            <button id="tab-mp" class="payment-tab active" onclick="setTab('mp')">MercadoPago</button>
-            <button id="tab-transfer" class="payment-tab" onclick="setTab('transfer')">Transferencia</button>
+            <button id="tab-mp" class="payment-tab active" onclick="setTab('mp')">
+                <span style="display:inline-flex;align-items:center;gap:7px;justify-content:center;">
+                    <svg width="18" height="18" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="48" height="48" rx="10" fill="#009EE3"/>
+                        <path d="M8 30V18l6 8 6-8v12M26 18h6c2.2 0 4 1.8 4 4s-1.8 4-4 4h-6V18z" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    MercadoPago
+                </span>
+            </button>
+            <button id="tab-transfer" class="payment-tab" onclick="setTab('transfer')">
+                <span style="display:inline-flex;align-items:center;gap:7px;justify-content:center;">
+                    Transferencia
+                    <span id="transfer-badge" style="background:#fff;color:#000;font-size:9px;font-weight:800;padding:2px 6px;letter-spacing:.05em;">5% OFF</span>
+                </span>
+            </button>
         </div>
 
         <div id="panel-mp" class="info-block" style="font-size:13px;color:#737373;line-height:1.6;">
@@ -436,6 +449,9 @@ function setTab(tab) {
     document.getElementById('panel-mp').style.display=tab==='mp'?'block':'none';
     document.getElementById('panel-transfer').style.display=tab==='transfer'?'block':'none';
     document.getElementById('btn-pay').textContent=tab==='mp'?'Pagar con MercadoPago':'Confirmar pedido';
+    const badge=document.getElementById('transfer-badge');
+    badge.style.background=tab==='transfer'?'#000':'#fff';
+    badge.style.color=tab==='transfer'?'#fff':'#000';
     renderSummary();
 }
 
