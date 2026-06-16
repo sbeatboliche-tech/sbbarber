@@ -309,6 +309,17 @@
                 <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
             </div>
             <form id="add-item-form" class="space-y-4">
+                <!-- Foto -->
+                <div class="flex items-center gap-4">
+                    <div id="new-item-photo-preview" onclick="document.getElementById('new-item-photo-input').click()" class="w-16 h-16 rounded-xl bg-black/40 border border-gray-700 flex items-center justify-center cursor-pointer hover:border-cyan-500 transition overflow-hidden flex-shrink-0">
+                        <i class="fas fa-camera text-gray-500 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-500 uppercase">Foto (opcional)</p>
+                        <p class="text-xs text-gray-600 mt-0.5">Tocá para agregar una imagen</p>
+                    </div>
+                    <input type="file" id="new-item-photo-input" accept="image/*" class="hidden">
+                </div>
                 <div>
                     <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Nombre</label>
                     <input type="text" id="new-item-name" placeholder="Ej: Coca Cola, Agua..." required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none transition text-white placeholder-gray-500 mt-1">
@@ -323,6 +334,24 @@
                 </div>
                 <button type="submit" id="btn-submit-add-item" class="w-full bg-gradient-to-r from-cyan-600 to-teal-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest">Agregar</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Editar foto de bebida (admin) -->
+    <div id="edit-photo-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
+        <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl">
+            <div class="flex justify-between items-center mb-5">
+                <h2 id="edit-photo-title" class="text-xl font-bold text-white">Foto de bebida</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="flex flex-col items-center gap-4 mb-6">
+                <div id="edit-photo-preview" onclick="document.getElementById('edit-photo-input').click()" class="w-32 h-32 rounded-2xl bg-black/40 border-2 border-dashed border-gray-600 flex items-center justify-center cursor-pointer hover:border-cyan-500 transition overflow-hidden">
+                    <i class="fas fa-camera text-gray-500 text-3xl"></i>
+                </div>
+                <p class="text-xs text-gray-500">Tocá la imagen para cambiarla</p>
+                <input type="file" id="edit-photo-input" accept="image/*" class="hidden">
+            </div>
+            <button onclick="window.saveItemPhoto()" id="btn-save-photo" class="w-full bg-gradient-to-r from-cyan-600 to-teal-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest">Guardar foto</button>
         </div>
     </div>
 
@@ -411,6 +440,7 @@ let app, auth, db, currentUser;
 let allCuts = [], allStock = [], allVentas = [];
 let productoStock = {};
 let currentMovement = null, currentProductoMovement = null;
+let newItemPhoto = null, editItemPhoto = null, editItemId = null;
 let isAdmin = false;
 let activeTab = 'cortes';
 let selectedProducto = null, cantVenta = 1;
@@ -634,15 +664,19 @@ function renderStock() {
         const isLow = qty <= 2;
         const qtyColor = qty === 0 ? 'text-red-400' : isLow ? 'text-yellow-400' : 'text-cyan-300';
         const border = isLow ? 'border-red-500/40 stock-low' : 'border-cyan-500/10';
+        const thumb = item.photoURL
+            ? `<img src="${item.photoURL}" class="w-11 h-11 rounded-lg object-cover flex-shrink-0">`
+            : `<div class="w-11 h-11 rounded-lg bg-cyan-900/30 flex items-center justify-center flex-shrink-0 ${isAdmin ? 'cursor-pointer hover:bg-cyan-900/60 transition' : ''}" ${isAdmin ? `onclick="window.openEditPhoto('${item.id}','${item.name}')"` : ''}><i class="fas fa-camera text-cyan-600 text-sm"></i></div>`;
+        const photoBtn = isAdmin
+            ? `<button onclick="window.openEditPhoto('${item.id}','${item.name}')" class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-500 hover:text-cyan-400 transition"><i class="fas fa-camera text-xs"></i></button>`
+            : '';
         const deleteBtn = isAdmin
             ? `<button onclick="window.deleteStockItem('${item.id}')" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-600 hover:text-red-400 transition"><i class="fas fa-trash text-xs"></i></button>`
             : '';
         return `
         <div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${border}">
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-lg bg-cyan-900/30 flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-wine-bottle text-cyan-400 text-xs"></i>
-                </div>
+                ${thumb}
                 <div>
                     <div class="text-sm font-bold text-white">${item.name}</div>
                     ${item.price ? `<div class="text-[10px] text-gray-500">$${Number(item.price).toLocaleString('es-AR')} c/u</div>` : ''}
@@ -660,7 +694,7 @@ function renderStock() {
                 <button onclick="window.openMovement('${item.id}','${item.name}','venta')" class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 hover:bg-red-600/40 transition">
                     <i class="fas fa-minus text-xs"></i>
                 </button>
-                ${deleteBtn}
+                ${photoBtn}${deleteBtn}
             </div>
         </div>`;
     }).join('');
@@ -696,7 +730,71 @@ document.getElementById('movement-form').addEventListener('submit', async e => {
 
 window.openAddItemModal = () => {
     document.getElementById('add-item-form').reset();
+    newItemPhoto = null;
+    const prev = document.getElementById('new-item-photo-preview');
+    prev.innerHTML = '<i class="fas fa-camera text-gray-500 text-xl"></i>';
     showModal('add-item-modal');
+};
+
+function resizeImageToBase64(file, cb) {
+    const reader = new FileReader();
+    reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+            const size = 200;
+            const canvas = document.createElement('canvas');
+            canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const min = Math.min(img.width, img.height);
+            const sx = (img.width - min) / 2, sy = (img.height - min) / 2;
+            ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+            cb(canvas.toDataURL('image/jpeg', 0.75));
+        };
+        img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+document.getElementById('new-item-photo-input').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    resizeImageToBase64(file, b64 => {
+        newItemPhoto = b64;
+        const prev = document.getElementById('new-item-photo-preview');
+        prev.innerHTML = `<img src="${b64}" class="w-full h-full object-cover">`;
+    });
+});
+
+window.openEditPhoto = (itemId, itemName) => {
+    editItemId = itemId; editItemPhoto = null;
+    document.getElementById('edit-photo-title').textContent = itemName;
+    const item = allStock.find(i => i.id === itemId);
+    const prev = document.getElementById('edit-photo-preview');
+    if (item?.photoURL) {
+        prev.innerHTML = `<img src="${item.photoURL}" class="w-full h-full object-cover">`;
+    } else {
+        prev.innerHTML = '<i class="fas fa-camera text-gray-500 text-3xl"></i>';
+    }
+    document.getElementById('edit-photo-input').value = '';
+    showModal('edit-photo-modal');
+};
+
+document.getElementById('edit-photo-input').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    resizeImageToBase64(file, b64 => {
+        editItemPhoto = b64;
+        document.getElementById('edit-photo-preview').innerHTML = `<img src="${b64}" class="w-full h-full object-cover">`;
+    });
+});
+
+window.saveItemPhoto = async () => {
+    if (!editItemPhoto) return alert('Seleccioná una foto primero');
+    const btn = document.getElementById('btn-save-photo');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        await updateDoc(doc(db, PATH_STOCK, editItemId), { photoURL: editItemPhoto });
+        closeModals();
+    } catch { alert('Error al guardar'); }
+    btn.disabled = false; btn.textContent = 'Guardar foto';
 };
 
 document.getElementById('add-item-form').addEventListener('submit', async e => {
@@ -708,7 +806,9 @@ document.getElementById('add-item-form').addEventListener('submit', async e => {
     const btn = document.getElementById('btn-submit-add-item');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
-        await addDoc(collection(db, PATH_STOCK), { name, quantity: qty, price, createdAt: serverTimestamp() });
+        const data = { name, quantity: qty, price, createdAt: serverTimestamp() };
+        if (newItemPhoto) data.photoURL = newItemPhoto;
+        await addDoc(collection(db, PATH_STOCK), data);
         closeModals();
     } catch { alert('Error al guardar'); }
     btn.disabled = false; btn.textContent = 'AGREGAR';
@@ -928,7 +1028,7 @@ document.getElementById('login-form').addEventListener('submit', async e => {
 window.logout = () => signOut(auth);
 
 // ---- MODALES ----
-const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal'];
+const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal'];
 function showModal(id) {
     document.getElementById(id).classList.remove('hidden');
     document.getElementById(id).classList.add('flex', 'flex-col');
