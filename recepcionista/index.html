@@ -272,8 +272,20 @@
                 <h2 id="movement-title" class="text-xl font-bold text-white">Movimiento</h2>
                 <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
             </div>
-            <p id="movement-subtitle" class="text-xs text-gray-500 mb-6"></p>
+            <p id="movement-subtitle" class="text-xs text-gray-500 mb-4"></p>
             <form id="movement-form" class="space-y-4">
+                <!-- Selector cobrado/regalo (solo salidas) -->
+                <div id="mv-tipo-wrap" class="hidden">
+                    <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-2">¿Se cobró?</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="mv-tipo-venta" onclick="window.setDrinkSalidaTipo('venta')" class="p-3 rounded-xl border text-sm font-bold transition bg-emerald-600/20 border-emerald-500 text-emerald-300">
+                            💰 Sí, es una venta
+                        </button>
+                        <button type="button" id="mv-tipo-regalo" onclick="window.setDrinkSalidaTipo('regalo')" class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
+                            🎁 No (regalo / uso)
+                        </button>
+                    </div>
+                </div>
                 <div>
                     <label id="movement-qty-label" class="text-[10px] font-bold text-gray-500 uppercase ml-1">Cantidad</label>
                     <input type="number" id="movement-qty" placeholder="0" min="1" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none transition text-white placeholder-gray-500 mt-1">
@@ -453,7 +465,7 @@ const PRODUCTOS_BARBER = [
 let app, auth, db, currentUser;
 let allCuts = [], allStock = [], allVentas = [];
 let productoStock = {};
-let currentMovement = null, currentProductoMovement = null, salidaTipo = 'venta';
+let currentMovement = null, currentProductoMovement = null, salidaTipo = 'venta', drinkSalidaTipo = 'venta';
 let newItemPhoto = null, editItemPhoto = null, editItemId = null;
 let isAdmin = false;
 let activeTab = 'cortes';
@@ -738,16 +750,25 @@ function renderStock() {
     initSortable();
 }
 
+window.setDrinkSalidaTipo = (tipo) => {
+    drinkSalidaTipo = tipo;
+    const esVenta = tipo === 'venta';
+    document.getElementById('mv-tipo-venta').className = `p-3 rounded-xl border text-sm font-bold transition ${esVenta ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    document.getElementById('mv-tipo-regalo').className = `p-3 rounded-xl border text-sm font-bold transition ${!esVenta ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
+};
+
 window.openMovement = (itemId, itemName, type) => {
     currentMovement = { itemId, itemName, type };
     const isCompra = type === 'compra';
-    document.getElementById('movement-title').textContent = isCompra ? `Compra — ${itemName}` : `Venta — ${itemName}`;
-    document.getElementById('movement-subtitle').textContent = isCompra ? 'Cantidad que llegó al local' : 'Cantidad vendida';
-    document.getElementById('movement-qty-label').textContent = isCompra ? 'Cantidad comprada' : 'Cantidad vendida';
+    document.getElementById('movement-title').textContent = isCompra ? `Compra — ${itemName}` : `Salida — ${itemName}`;
+    document.getElementById('movement-subtitle').textContent = isCompra ? 'Cantidad que llegó al local' : '';
+    document.getElementById('movement-qty-label').textContent = isCompra ? 'Cantidad comprada' : 'Cantidad';
     const btn = document.getElementById('btn-submit-movement');
-    btn.textContent = isCompra ? 'REGISTRAR COMPRA' : 'REGISTRAR VENTA';
+    btn.textContent = isCompra ? 'REGISTRAR COMPRA' : 'CONFIRMAR SALIDA';
     btn.className = `w-full text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest bg-gradient-to-r ${isCompra ? 'from-emerald-600 to-teal-600' : 'from-red-600 to-rose-600'}`;
     document.getElementById('movement-qty').value = '';
+    document.getElementById('mv-tipo-wrap').classList.toggle('hidden', isCompra);
+    if (!isCompra) { drinkSalidaTipo = 'venta'; window.setDrinkSalidaTipo('venta'); }
     showModal('movement-modal');
 };
 
