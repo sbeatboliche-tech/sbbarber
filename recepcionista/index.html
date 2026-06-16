@@ -174,6 +174,16 @@
                     </div>
                 </div>
 
+                <!-- Stock de productos de barber -->
+                <div class="glass-card rounded-2xl p-5 animate-enter">
+                    <span class="text-gray-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2 mb-3">
+                        <i class="fas fa-box text-indigo-400"></i> Stock de productos
+                    </span>
+                    <div id="productos-stock-list" class="space-y-2">
+                        <p class="text-xs text-gray-600 text-center py-2">Cargando...</p>
+                    </div>
+                </div>
+
                 <!-- Resumen stock -->
                 <div class="glass-card rounded-2xl p-5 animate-enter">
                     <span class="text-gray-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2 mb-3">
@@ -269,6 +279,24 @@
         </div>
     </div>
 
+    <!-- Movimiento de stock de producto barber -->
+    <div id="producto-movement-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
+        <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl">
+            <div class="flex justify-between items-center mb-2">
+                <h2 id="pm-title" class="text-xl font-bold text-white">Stock</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <p id="pm-subtitle" class="text-xs text-gray-500 mb-6"></p>
+            <form id="producto-movement-form" class="space-y-4">
+                <div>
+                    <label id="pm-qty-label" class="text-[10px] font-bold text-gray-500 uppercase ml-1">Cantidad</label>
+                    <input type="number" id="pm-qty" placeholder="0" min="1" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-indigo-500 outline-none transition text-white placeholder-gray-500 mt-1">
+                </div>
+                <button type="submit" id="btn-submit-pm" class="w-full text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest">Confirmar</button>
+            </form>
+        </div>
+    </div>
+
     <!-- Agregar bebida (solo admin) -->
     <div id="add-item-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
         <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl">
@@ -331,7 +359,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, query, orderBy, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, increment, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, query, orderBy, where, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, doc, increment, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -345,7 +373,8 @@ const firebaseConfig = {
 const ADMINS    = ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
 const PATH_CUTS = `artifacts/sb-barber-6dc16/public/data/all_cuts`;
 const PATH_STOCK   = `stock_items`;
-const PATH_VENTAS  = `ventas_productos`;
+const PATH_VENTAS    = `ventas_productos`;
+const PATH_PRODUCTOS = `productos_barber`;
 
 const SERVICES = [
     { name:'Corte Promo 50%', price:12000 },
@@ -367,16 +396,17 @@ const BARBER_THEME = {
 };
 
 const PRODUCTOS_BARBER = [
-    { name:'Pomada Mate',              precio:11000 },
-    { name:'Pomada Brillosa',          precio:11000 },
-    { name:'Polvo Texturizador',       precio:11000 },
-    { name:'Aftershave',               precio:10000 },
-    { name:'Matizador Violeta Opción', precio:10000 },
+    { id:'pomada-mate',        name:'Pomada Mate',              precio:11000 },
+    { id:'pomada-brillosa',    name:'Pomada Brillosa',          precio:11000 },
+    { id:'polvo-texturizador', name:'Polvo Texturizador',       precio:11000 },
+    { id:'aftershave',         name:'Aftershave',               precio:10000 },
+    { id:'matizador-violeta',  name:'Matizador Violeta Opción', precio:10000 },
 ];
 
 let app, auth, db, currentUser;
 let allCuts = [], allStock = [], allVentas = [];
-let currentMovement = null;
+let productoStock = {};
+let currentMovement = null, currentProductoMovement = null;
 let isAdmin = false;
 let activeTab = 'cortes';
 let selectedProducto = null, cantVenta = 1;
@@ -401,6 +431,7 @@ async function init() {
             listenToCuts();
             listenToStock();
             listenToVentas();
+            listenToProductos();
         } else {
             document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
             document.getElementById('dashboard-view').classList.add('hidden');
@@ -742,12 +773,17 @@ function renderVentas() {
 window.openVentaModal = () => {
     selectedProducto = null; cantVenta = 1;
     document.getElementById('venta-cantidad-display').textContent = '1';
-    document.getElementById('productos-grid').innerHTML = PRODUCTOS_BARBER.map((p, i) =>
-        `<div onclick="window.selectProductoVenta(${i},this)" class="prod-btn p-3 bg-gray-800/50 border border-gray-700 rounded-xl flex justify-between items-center cursor-pointer hover:bg-gray-800 transition">
-            <span class="text-sm font-medium text-gray-300">${p.name}</span>
+    document.getElementById('productos-grid').innerHTML = PRODUCTOS_BARBER.map((p, i) => {
+        const stock = (productoStock[p.id]?.stock) || 0;
+        const sinStock = stock === 0;
+        const stockBadge = sinStock
+            ? `<span class="text-[10px] text-red-400 font-bold ml-1">Sin stock</span>`
+            : `<span class="text-[10px] text-gray-500 ml-1">${stock} unid.</span>`;
+        return `<div onclick="${sinStock ? '' : `window.selectProductoVenta(${i},this)`}" class="prod-btn p-3 ${sinStock ? 'bg-gray-900/50 opacity-50 cursor-not-allowed' : 'bg-gray-800/50 cursor-pointer hover:bg-gray-800'} border border-gray-700 rounded-xl flex justify-between items-center transition">
+            <div><span class="text-sm font-medium text-gray-300">${p.name}</span>${stockBadge}</div>
             <span class="text-sm font-bold text-white bg-black/30 px-2 py-1 rounded-md">$${p.precio.toLocaleString('es-AR')}</span>
-        </div>`
-    ).join('');
+        </div>`;
+    }).join('');
     showModal('ventas-modal');
 };
 
@@ -764,6 +800,8 @@ window.cambiarCantVenta = d => {
 
 window.submitVenta = async () => {
     if (!selectedProducto) return alert('Seleccioná un producto');
+    const stockActual = (productoStock[selectedProducto.id]?.stock) || 0;
+    if (cantVenta > stockActual) return alert(`Stock insuficiente. Disponible: ${stockActual}`);
     const btn = document.getElementById('btn-submit-venta');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
@@ -778,10 +816,86 @@ window.submitVenta = async () => {
             fecha: hoy,
             creadoEn: serverTimestamp()
         });
+        await updateDoc(doc(db, PATH_PRODUCTOS, selectedProducto.id), { stock: increment(-cantVenta) });
         closeModals();
     } catch(e) { alert('Error al guardar'); }
     btn.disabled = false; btn.innerHTML = 'Registrar venta';
 };
+
+// ---- STOCK DE PRODUCTOS BARBER ----
+async function listenToProductos() {
+    // Inicializar docs que no existen aún
+    for (const p of PRODUCTOS_BARBER) {
+        const ref = doc(db, PATH_PRODUCTOS, p.id);
+        await setDoc(ref, { name: p.name, precio: p.precio, stock: 0 }, { merge: true });
+    }
+    onSnapshot(collection(db, PATH_PRODUCTOS), snap => {
+        productoStock = {};
+        snap.docs.forEach(d => { productoStock[d.id] = d.data(); });
+        renderProductoStock();
+    });
+}
+
+function renderProductoStock() {
+    const list = document.getElementById('productos-stock-list');
+    list.innerHTML = PRODUCTOS_BARBER.map(p => {
+        const data = productoStock[p.id] || { stock: 0 };
+        const qty = data.stock || 0;
+        const isLow = qty > 0 && qty <= 3;
+        const qtyColor = qty === 0 ? 'text-red-400' : isLow ? 'text-yellow-400' : 'text-indigo-300';
+        const border = qty === 0 ? 'border-red-500/30' : isLow ? 'border-yellow-500/20' : 'border-indigo-500/10';
+        const badge = qty === 0
+            ? '<div class="text-[10px] text-red-500 font-bold">Sin stock</div>'
+            : isLow ? '<div class="text-[10px] text-yellow-500 font-bold">Stock bajo</div>' : '';
+        return `<div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${border}">
+            <div>
+                <div class="text-sm font-bold text-white">${p.name}</div>
+                <div class="text-[10px] text-gray-500">$${p.precio.toLocaleString('es-AR')} c/u</div>
+                ${badge}
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="text-center mr-1">
+                    <div class="${qtyColor} font-bold text-xl leading-none">${qty}</div>
+                    <div class="text-[9px] text-gray-600">unid.</div>
+                </div>
+                <button onclick="window.openMovimientoProducto('${p.id}','${p.name}','entrada')" class="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 hover:bg-emerald-600/40 transition">
+                    <i class="fas fa-plus text-xs"></i>
+                </button>
+                <button onclick="window.openMovimientoProducto('${p.id}','${p.name}','salida')" class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 hover:bg-red-600/40 transition" ${qty===0?'disabled':''}>
+                    <i class="fas fa-minus text-xs"></i>
+                </button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+window.openMovimientoProducto = (productoId, productoName, tipo) => {
+    currentProductoMovement = { productoId, tipo };
+    const isEntrada = tipo === 'entrada';
+    document.getElementById('pm-title').textContent = isEntrada ? `Entrada — ${productoName}` : `Salida — ${productoName}`;
+    document.getElementById('pm-subtitle').textContent = isEntrada ? 'Unidades que ingresaron al stock' : 'Unidades que salieron del stock';
+    document.getElementById('pm-qty-label').textContent = isEntrada ? 'Cantidad que ingresó' : 'Cantidad que salió';
+    const btn = document.getElementById('btn-submit-pm');
+    btn.textContent = isEntrada ? 'REGISTRAR ENTRADA' : 'REGISTRAR SALIDA';
+    btn.className = `w-full text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest bg-gradient-to-r ${isEntrada ? 'from-emerald-600 to-teal-600' : 'from-red-600 to-rose-600'}`;
+    document.getElementById('pm-qty').value = '';
+    showModal('producto-movement-modal');
+};
+
+document.getElementById('producto-movement-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const qty = Number(document.getElementById('pm-qty').value);
+    if (!qty || qty < 1) return alert('Ingresá una cantidad válida');
+    const btn = document.getElementById('btn-submit-pm');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        const delta = currentProductoMovement.tipo === 'entrada' ? qty : -qty;
+        await updateDoc(doc(db, PATH_PRODUCTOS, currentProductoMovement.productoId), { stock: increment(delta) });
+        closeModals();
+    } catch { alert('Error al guardar'); }
+    btn.disabled = false;
+    btn.textContent = currentProductoMovement.tipo === 'entrada' ? 'REGISTRAR ENTRADA' : 'REGISTRAR SALIDA';
+});
 
 // ---- AUTH ----
 document.getElementById('login-form').addEventListener('submit', async e => {
@@ -799,7 +913,7 @@ document.getElementById('login-form').addEventListener('submit', async e => {
 window.logout = () => signOut(auth);
 
 // ---- MODALES ----
-const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal'];
+const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal'];
 function showModal(id) {
     document.getElementById(id).classList.remove('hidden');
     document.getElementById(id).classList.add('flex', 'flex-col');
