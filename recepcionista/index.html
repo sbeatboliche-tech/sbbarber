@@ -396,7 +396,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, query, orderBy, where, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, doc, increment, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, query, orderBy, where, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, getDoc, doc, increment, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -956,10 +956,13 @@ window.submitVenta = async () => {
 
 // ---- STOCK DE PRODUCTOS BARBER ----
 async function listenToProductos() {
-    // Inicializar docs que no existen aún
+    // Solo crear el doc si no existe todavía (nunca pisar el stock existente)
     for (const p of PRODUCTOS_BARBER) {
         const ref = doc(db, PATH_PRODUCTOS, p.id);
-        await setDoc(ref, { name: p.name, precio: p.precio, stock: 0 }, { merge: true });
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+            await setDoc(ref, { name: p.name, precio: p.precio, stock: 0 });
+        }
     }
     onSnapshot(collection(db, PATH_PRODUCTOS), snap => {
         productoStock = {};
