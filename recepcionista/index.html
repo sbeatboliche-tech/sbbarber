@@ -309,10 +309,7 @@
                     <label id="pm-qty-label" class="text-[10px] font-bold text-gray-500 uppercase ml-1">Cantidad</label>
                     <input type="number" id="pm-qty" placeholder="0" min="1" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-indigo-500 outline-none transition text-white placeholder-gray-500 mt-1">
                 </div>
-                <div id="pm-motivo-wrap" class="hidden">
-                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Motivo (opcional)</label>
-                    <input type="text" id="pm-motivo" placeholder="Ej: regalo, muestra, uso propio..." class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-indigo-500 outline-none transition text-white placeholder-gray-500 mt-1">
-                </div>
+                <input type="hidden" id="pm-motivo">
                 <button type="submit" id="btn-submit-pm" class="w-full text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest bg-gradient-to-r from-red-600 to-rose-600">Confirmar salida</button>
             </form>
         </div>
@@ -1030,7 +1027,6 @@ window.setSalidaTipo = (tipo) => {
         desc.textContent = 'Solo descuenta el stock. No aparece como ingreso.';
         desc.className = 'text-[10px] text-gray-500 mt-2 ml-1';
     }
-    document.getElementById('pm-motivo-wrap').classList.toggle('hidden', esVenta);
 };
 
 window.openMovimientoProducto = (productoId, productoName, tipo) => {
@@ -1042,7 +1038,6 @@ window.openMovimientoProducto = (productoId, productoName, tipo) => {
     document.getElementById('pm-qty').value = '';
     document.getElementById('pm-motivo').value = '';
     document.getElementById('pm-tipo-wrap').classList.toggle('hidden', isEntrada);
-    document.getElementById('pm-motivo-wrap').classList.add('hidden');
     const btn = document.getElementById('btn-submit-pm');
     btn.className = `w-full text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest bg-gradient-to-r ${isEntrada ? 'from-emerald-600 to-teal-600' : 'from-red-600 to-rose-600'}`;
     btn.textContent = isEntrada ? 'REGISTRAR ENTRADA' : 'CONFIRMAR SALIDA';
