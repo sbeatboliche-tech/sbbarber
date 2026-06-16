@@ -8,6 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="icon" type="image/jpeg" href="https://i.imgur.com/PzcD4W2.jpeg">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -25,6 +26,9 @@
         /* Mobile tabs */
         .tab-content { display:none; }
         .tab-content.active { display:flex; flex-direction:column; }
+        .drag-handle { cursor:grab; touch-action:none; }
+        .drag-handle:active { cursor:grabbing; }
+        .sortable-ghost { opacity:0.3; border:2px dashed rgba(6,182,212,0.4) !important; }
         /* Desktop: both columns always visible */
         @media (min-width:768px) {
             ::-webkit-scrollbar { display:block; width:4px; }
@@ -640,9 +644,29 @@ document.getElementById('add-cut-form').addEventListener('submit', async e => {
 });
 
 // ---- STOCK ----
+let stockSortable = null;
+
+function initSortable() {
+    if (stockSortable) { try { stockSortable.destroy(); } catch(e) {} }
+    const el = document.getElementById('stock-list');
+    if (!el || allStock.length === 0) return;
+    stockSortable = Sortable.create(el, {
+        handle: '.drag-handle',
+        animation: 180,
+        ghostClass: 'sortable-ghost',
+        onEnd: async () => {
+            const rows = el.querySelectorAll('[data-stock-id]');
+            await Promise.all([...rows].map((row, i) =>
+                updateDoc(doc(db, PATH_STOCK, row.dataset.stockId), { position: i })
+            ));
+        }
+    });
+}
+
 function listenToStock() {
-    onSnapshot(query(collection(db, PATH_STOCK), orderBy('name', 'asc')), snap => {
+    onSnapshot(query(collection(db, PATH_STOCK)), snap => {
         allStock = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        allStock.sort((a, b) => (a.position ?? 999) - (b.position ?? 999) || a.name.localeCompare(b.name));
         renderStock();
     });
 }
@@ -674,8 +698,11 @@ function renderStock() {
             ? `<button onclick="window.deleteStockItem('${item.id}')" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-600 hover:text-red-400 transition"><i class="fas fa-trash text-xs"></i></button>`
             : '';
         return `
-        <div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${border}">
-            <div class="flex items-center gap-3">
+        <div data-stock-id="${item.id}" class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${border}">
+            <div class="flex items-center gap-2">
+                <div class="drag-handle px-1 text-gray-600 hover:text-gray-400 transition select-none">
+                    <i class="fas fa-grip-vertical text-sm"></i>
+                </div>
                 ${thumb}
                 <div>
                     <div class="text-sm font-bold text-white">${item.name}</div>
@@ -698,6 +725,7 @@ function renderStock() {
             </div>
         </div>`;
     }).join('');
+    initSortable();
 }
 
 window.openMovement = (itemId, itemName, type) => {
