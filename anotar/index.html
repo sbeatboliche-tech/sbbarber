@@ -323,6 +323,26 @@
 
     <!-- ====== MODALES ====== -->
 
+    <!-- Venta de producto -->
+    <div id="ventas-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
+        <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl flex flex-col rounded-t-3xl">
+            <div class="flex justify-between items-center mb-5">
+                <h2 class="text-xl font-bold text-white"><i class="fas fa-shopping-bag text-indigo-400 mr-2"></i>Venta de producto</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="grid grid-cols-1 gap-2 mb-5" id="productos-grid"></div>
+            <div class="flex items-center justify-between bg-black/30 rounded-xl px-4 py-3 mb-5">
+                <span class="text-sm text-gray-300 font-medium">Cantidad</span>
+                <div class="flex items-center gap-3">
+                    <button onclick="window.cambiarCantVenta(-1)" class="w-8 h-8 rounded-full bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 transition">−</button>
+                    <span id="venta-cantidad-display" class="text-lg font-bold text-white w-6 text-center">1</span>
+                    <button onclick="window.cambiarCantVenta(1)" class="w-8 h-8 rounded-full bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 transition">+</button>
+                </div>
+            </div>
+            <button onclick="window.submitVenta()" id="btn-submit-venta" class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white p-4 rounded-xl font-bold text-base shadow-lg uppercase tracking-widest no-select">Registrar venta</button>
+        </div>
+    </div>
+
     <!-- Novedades -->
     <div id="updates-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
         <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl flex flex-col rounded-t-3xl max-h-[85vh]">
@@ -547,11 +567,19 @@ const PATH_EXPENSES = `expenses`;
 const PATH_STOCK    = `stock_items`;
 const PATH_RETIROS  = `retiros`;
 const PATH_PROPINAS = `propinas`;
+const PATH_VENTAS   = `ventas_productos`;
 const RETIRO_LIMITE = 10000;
+const PRODUCTOS_BARBER = [
+    { name:'Pomada Mate',              precio:11000 },
+    { name:'Pomada Brillosa',          precio:11000 },
+    { name:'Polvo Texturizador',       precio:11000 },
+    { name:'Aftershave',               precio:10000 },
+    { name:'Matizador Violeta Opción', precio:10000 },
+];
 
 let app, auth, db, currentUser;
 let allCuts=[], allExpenses=[], allStock=[];
-let allRetiros=[], allPropinas=[];
+let allRetiros=[], allPropinas=[], allVentas=[];
 let activePeriod='dia', customDateFilter=null;
 let barberProfilesData={}, currentBase64Image=null;
 let barberCommissions={ Tony:0.5, Maxi:0.5, Bauti:0.5, Stefa:0.5 };
@@ -594,6 +622,7 @@ async function init() {
             document.getElementById('cierre-fab').classList.add('flex');
             listenToRetiros();
             listenToPropinas();
+            listenToVentas();
             startDualSync();
         } else {
             document.getElementById('loading-view').classList.add('opacity-0','pointer-events-none');
@@ -1256,7 +1285,7 @@ window.setPeriod = (p,el)=>{
 window.openSettingsModal = ()=>showModal('settings-modal');
 window.openAddModal = ()=>{ showModal('add-modal'); renderBarberSelection(); };
 
-const ALL_MODALS=['settings-modal','add-modal','expense-modal','date-search-modal','admin-settings-modal','updates-modal','fixed-expenses-modal','stock-item-modal','retiro-modal','propina-modal'];
+const ALL_MODALS=['settings-modal','add-modal','expense-modal','date-search-modal','admin-settings-modal','updates-modal','fixed-expenses-modal','stock-item-modal','retiro-modal','propina-modal','ventas-modal'];
 function showModal(id){ document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
 window.closeModals = ()=>ALL_MODALS.forEach(id=>{ document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); });
 window.logout = ()=>signOut(auth);
@@ -1307,6 +1336,90 @@ document.getElementById('date-search-form').addEventListener('submit', e=>{
     window.closeModals(); render();
 });
 document.querySelector('button[onclick="window.setPeriod(\'historial\',this)"]').addEventListener('click', ()=>showModal('date-search-modal'));
+
+// ---- VENTAS DE PRODUCTOS ----
+function listenToVentas() {
+    const isAdmin = ADMINS.includes(currentUser.email);
+    const q = isAdmin
+        ? query(collection(db,PATH_VENTAS), orderBy('creadoEn','desc'), limit(500))
+        : query(collection(db,PATH_VENTAS), where('userEmail','==',currentUser.email), orderBy('creadoEn','desc'), limit(200));
+    onSnapshot(q, snap => {
+        allVentas = snap.docs.map(d => ({...d.data(), id:d.id}));
+        if (!document.getElementById('cierre-view').classList.contains('hidden')) renderCierreView();
+    });
+}
+
+let selectedProducto = null, cantVenta = 1;
+
+window.openVentaModal = () => {
+    selectedProducto = null; cantVenta = 1;
+    document.getElementById('venta-cantidad-display').textContent = '1';
+    document.getElementById('productos-grid').innerHTML = PRODUCTOS_BARBER.map((p,i) =>
+        `<div onclick="window.selectProductoVenta(${i},this)" class="prod-btn p-3 bg-gray-800/50 border border-gray-700 rounded-xl flex justify-between items-center cursor-pointer hover:bg-gray-800 transition no-select">
+            <span class="text-sm font-medium text-gray-300">${p.name}</span>
+            <span class="text-sm font-bold text-white bg-black/30 px-2 py-1 rounded-md">$${p.precio.toLocaleString('es-AR')}</span>
+        </div>`
+    ).join('');
+    showModal('ventas-modal');
+};
+window.selectProductoVenta = (i, el) => {
+    selectedProducto = PRODUCTOS_BARBER[i];
+    document.querySelectorAll('.prod-btn').forEach(b => b.className='prod-btn p-3 bg-gray-800/50 border border-gray-700 rounded-xl flex justify-between items-center cursor-pointer hover:bg-gray-800 transition no-select');
+    el.className='prod-btn p-3 bg-indigo-600/20 border border-indigo-500 rounded-xl flex justify-between items-center cursor-pointer transition scale-[1.01] shadow-lg no-select';
+};
+window.cambiarCantVenta = (d) => {
+    cantVenta = Math.max(1, Math.min(20, cantVenta + d));
+    document.getElementById('venta-cantidad-display').textContent = cantVenta;
+};
+window.submitVenta = async () => {
+    if (!selectedProducto) return alert('Seleccioná un producto');
+    const btn = document.getElementById('btn-submit-venta');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        const hoy = new Date().toISOString().split('T')[0];
+        const myName = BARBER_EMAIL_MAP[currentUser.email] || currentUser.email;
+        await addDoc(collection(db,PATH_VENTAS), {
+            producto: selectedProducto.name,
+            precio: selectedProducto.precio,
+            cantidad: cantVenta,
+            total: selectedProducto.precio * cantVenta,
+            barbero: myName,
+            userEmail: currentUser.email,
+            fecha: hoy,
+            creadoEn: serverTimestamp()
+        });
+        window.closeModals();
+    } catch(e) { alert('Error al guardar'); }
+    btn.disabled = false; btn.innerHTML = 'Registrar venta';
+};
+
+function renderVentasCard(ventasFiltradas) {
+    const totalVentas = ventasFiltradas.reduce((s,v) => s + v.total, 0);
+    const isAdmin = ADMINS.includes(currentUser.email);
+    let rows = '';
+    if (ventasFiltradas.length === 0) {
+        rows = '<p class="text-xs text-gray-600 text-center py-2">Sin ventas en este período</p>';
+    } else {
+        ventasFiltradas.forEach(v => {
+            const time = v.creadoEn ? v.creadoEn.toDate().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : v.fecha||'';
+            rows += `<div class="flex justify-between items-center bg-black/30 p-3 rounded-xl border-l-2 border-indigo-500/40">
+                <div>
+                    <div class="text-xs font-bold text-white">${v.producto}${v.cantidad>1?` <span class="text-indigo-300">×${v.cantidad}</span>`:''}</div>
+                    <div class="text-[10px] text-gray-500">${isAdmin?v.barbero+' · ':''}${time}</div>
+                </div>
+                <span class="text-sm font-bold text-indigo-300">$${v.total.toLocaleString('es-AR')}</span>
+            </div>`;
+        });
+    }
+    return `<div class="glass-card rounded-2xl p-5">
+        <div class="flex justify-between items-center mb-3">
+            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2"><i class="fas fa-shopping-bag text-indigo-400"></i> Ventas de productos</div>
+            <button onclick="window.openVentaModal()" class="bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-indigo-600/30 transition flex items-center gap-1.5"><i class="fas fa-plus text-[9px]"></i> Vender</button>
+        </div>
+        <div class="space-y-2 mb-3">${rows}</div>
+        ${totalVentas>0?`<div class="flex justify-between items-center pt-2 border-t border-white/10"><span class="text-[10px] text-gray-500 uppercase font-bold">Total</span><span class="text-sm font-extrabold text-indigo-300">$${totalVentas.toLocaleString('es-AR')}</span></div>`:''}
+    </div>`;
+}
 
 // ---- CIERRE DEL DÍA / SEMANA ----
 let cierreTab = 'dia';
@@ -1425,6 +1538,9 @@ function renderCierreDia() {
         html += `<div class="text-center py-10 text-gray-600"><i class="fas fa-moon text-3xl mb-3 block opacity-40"></i><p class="text-sm">Nada registrado hoy todavía</p></div>`;
     }
 
+    const ventasHoy = allVentas.filter(v => v.fecha === new Date().toISOString().split('T')[0]);
+    html += renderVentasCard(ventasHoy);
+
     document.getElementById('cierre-content').innerHTML = html;
 }
 
@@ -1479,17 +1595,22 @@ function renderCierreSemana() {
         </div>`;
     }
 
+    const ventasSemana = allVentas.filter(v => { const d = new Date(v.fecha+'T00:00:00'); return d >= weekStart && d <= today; });
+    html += renderVentasCard(ventasSemana);
+
     if (isAdmin) {
         const weekExpenses = allExpenses.filter(e => e.createdAt && e.createdAt.toDate() >= weekStart);
         const totalVarExp = weekExpenses.reduce((s,e) => s + e.amount, 0);
         if (totalVarExp > 0 || Object.keys(fixedExpenses).length > 0) {
             const fixedTotal = Object.values(fixedExpenses).reduce((s,v) => s + (Number(v)||0), 0);
             const fixedWeek = Math.round(fixedTotal / 4);
-            const netaSemana = bizNet - totalVarExp - fixedWeek;
+            const totalVentasSemana = ventasSemana.reduce((s,v) => s + v.total, 0);
+            const netaSemana = bizNet + totalVentasSemana - totalVarExp - fixedWeek;
             html += `<div class="glass-card rounded-2xl p-5 border border-emerald-500/20">
                 <div class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fas fa-calculator"></i> Ganancia neta del negocio</div>
                 <div class="space-y-2">
                     <div class="flex justify-between text-sm"><span class="text-gray-400">Ganancia del negocio</span><span class="font-bold text-blue-300">$${bizNet.toLocaleString('es-AR')}</span></div>
+                    ${totalVentasSemana>0?`<div class="flex justify-between text-sm"><span class="text-gray-400">Ventas de productos</span><span class="font-bold text-indigo-300">+ $${totalVentasSemana.toLocaleString('es-AR')}</span></div>`:''}
                     <div class="flex justify-between text-sm"><span class="text-gray-400">Gastos variables semana</span><span class="font-bold text-orange-400">− $${totalVarExp.toLocaleString('es-AR')}</span></div>
                     <div class="flex justify-between text-sm"><span class="text-gray-400">Gastos fijos estimados (÷4)</span><span class="font-bold text-orange-400">− $${fixedWeek.toLocaleString('es-AR')}</span></div>
                     <div class="flex justify-between text-sm border-t border-white/10 pt-2">
