@@ -290,8 +290,21 @@
                 <h2 id="pm-title" class="text-xl font-bold text-white">Stock</h2>
                 <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
             </div>
-            <p id="pm-subtitle" class="text-xs text-gray-500 mb-6"></p>
+            <p id="pm-subtitle" class="text-xs text-gray-500 mb-4"></p>
             <form id="producto-movement-form" class="space-y-4">
+                <!-- Selector cobrado/sin cargo (solo salidas) -->
+                <div id="pm-tipo-wrap" class="hidden">
+                    <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-2">¿Se cobró?</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="pm-tipo-venta" onclick="window.setSalidaTipo('venta')" class="p-3 rounded-xl border text-sm font-bold transition bg-emerald-600/20 border-emerald-500 text-emerald-300">
+                            💰 Sí, es una venta
+                        </button>
+                        <button type="button" id="pm-tipo-regalo" onclick="window.setSalidaTipo('regalo')" class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
+                            🎁 No (regalo / uso)
+                        </button>
+                    </div>
+                    <p id="pm-tipo-desc" class="text-[10px] text-emerald-400 mt-2 ml-1">Se va a registrar como ingreso en el cierre de caja.</p>
+                </div>
                 <div>
                     <label id="pm-qty-label" class="text-[10px] font-bold text-gray-500 uppercase ml-1">Cantidad</label>
                     <input type="number" id="pm-qty" placeholder="0" min="1" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-indigo-500 outline-none transition text-white placeholder-gray-500 mt-1">
@@ -300,7 +313,7 @@
                     <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Motivo (opcional)</label>
                     <input type="text" id="pm-motivo" placeholder="Ej: regalo, muestra, uso propio..." class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-indigo-500 outline-none transition text-white placeholder-gray-500 mt-1">
                 </div>
-                <button type="submit" id="btn-submit-pm" class="w-full text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest">Confirmar</button>
+                <button type="submit" id="btn-submit-pm" class="w-full text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest bg-gradient-to-r from-red-600 to-rose-600">Confirmar salida</button>
             </form>
         </div>
     </div>
@@ -443,7 +456,7 @@ const PRODUCTOS_BARBER = [
 let app, auth, db, currentUser;
 let allCuts = [], allStock = [], allVentas = [];
 let productoStock = {};
-let currentMovement = null, currentProductoMovement = null;
+let currentMovement = null, currentProductoMovement = null, salidaTipo = 'venta';
 let newItemPhoto = null, editItemPhoto = null, editItemId = null;
 let isAdmin = false;
 let activeTab = 'cortes';
@@ -1004,18 +1017,36 @@ function renderProductoStock() {
     }).join('');
 }
 
+window.setSalidaTipo = (tipo) => {
+    salidaTipo = tipo;
+    const esVenta = tipo === 'venta';
+    document.getElementById('pm-tipo-venta').className = `p-3 rounded-xl border text-sm font-bold transition ${esVenta ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    document.getElementById('pm-tipo-regalo').className = `p-3 rounded-xl border text-sm font-bold transition ${!esVenta ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    const desc = document.getElementById('pm-tipo-desc');
+    if (esVenta) {
+        desc.textContent = 'Se va a registrar como ingreso en el cierre de caja.';
+        desc.className = 'text-[10px] text-emerald-400 mt-2 ml-1';
+    } else {
+        desc.textContent = 'Solo descuenta el stock. No aparece como ingreso.';
+        desc.className = 'text-[10px] text-gray-500 mt-2 ml-1';
+    }
+    document.getElementById('pm-motivo-wrap').classList.toggle('hidden', esVenta);
+};
+
 window.openMovimientoProducto = (productoId, productoName, tipo) => {
     currentProductoMovement = { productoId, productoName, tipo };
     const isEntrada = tipo === 'entrada';
     document.getElementById('pm-title').textContent = isEntrada ? `Entrada — ${productoName}` : `Salida — ${productoName}`;
-    document.getElementById('pm-subtitle').textContent = isEntrada ? 'Unidades que ingresaron al stock' : 'Unidades que salieron (regalo, muestra, uso, etc.)';
-    document.getElementById('pm-qty-label').textContent = isEntrada ? 'Cantidad que ingresó' : 'Cantidad que salió';
-    const btn = document.getElementById('btn-submit-pm');
-    btn.textContent = isEntrada ? 'REGISTRAR ENTRADA' : 'REGISTRAR SALIDA';
-    btn.className = `w-full text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest bg-gradient-to-r ${isEntrada ? 'from-emerald-600 to-teal-600' : 'from-red-600 to-rose-600'}`;
+    document.getElementById('pm-subtitle').textContent = isEntrada ? 'Unidades que ingresaron al stock' : '';
+    document.getElementById('pm-qty-label').textContent = isEntrada ? 'Cantidad que ingresó' : 'Cantidad';
     document.getElementById('pm-qty').value = '';
     document.getElementById('pm-motivo').value = '';
-    document.getElementById('pm-motivo-wrap').classList.toggle('hidden', isEntrada);
+    document.getElementById('pm-tipo-wrap').classList.toggle('hidden', isEntrada);
+    document.getElementById('pm-motivo-wrap').classList.add('hidden');
+    const btn = document.getElementById('btn-submit-pm');
+    btn.className = `w-full text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest bg-gradient-to-r ${isEntrada ? 'from-emerald-600 to-teal-600' : 'from-red-600 to-rose-600'}`;
+    btn.textContent = isEntrada ? 'REGISTRAR ENTRADA' : 'CONFIRMAR SALIDA';
+    if (!isEntrada) { salidaTipo = 'venta'; window.setSalidaTipo('venta'); }
     showModal('producto-movement-modal');
 };
 
@@ -1030,17 +1061,31 @@ document.getElementById('producto-movement-form').addEventListener('submit', asy
         const { productoId, productoName, tipo } = currentProductoMovement;
         const delta = tipo === 'entrada' ? qty : -qty;
         await updateDoc(doc(db, PATH_PRODUCTOS, productoId), { stock: increment(delta) });
-        await addDoc(collection(db, 'productos_movimientos'), {
-            productoId, producto: productoName, tipo, cantidad: qty,
-            motivo: motivo || null,
-            userEmail: currentUser.email,
-            fecha: new Date().toISOString().split('T')[0],
-            creadoEn: serverTimestamp()
-        });
+        const hoy = new Date().toISOString().split('T')[0];
+        if (tipo === 'salida' && salidaTipo === 'venta') {
+            const prod = PRODUCTOS_BARBER.find(p => p.id === productoId);
+            await addDoc(collection(db, PATH_VENTAS), {
+                producto: productoName,
+                precio: prod?.precio || 0,
+                cantidad: qty,
+                total: (prod?.precio || 0) * qty,
+                barbero: currentUser.email,
+                userEmail: currentUser.email,
+                fecha: hoy,
+                creadoEn: serverTimestamp()
+            });
+        } else {
+            await addDoc(collection(db, 'productos_movimientos'), {
+                productoId, producto: productoName, tipo,
+                cantidad: qty, motivo: motivo || null,
+                userEmail: currentUser.email, fecha: hoy,
+                creadoEn: serverTimestamp()
+            });
+        }
         closeModals();
     } catch { alert('Error al guardar'); }
     btn.disabled = false;
-    btn.textContent = currentProductoMovement.tipo === 'entrada' ? 'REGISTRAR ENTRADA' : 'REGISTRAR SALIDA';
+    btn.textContent = currentProductoMovement.tipo === 'entrada' ? 'REGISTRAR ENTRADA' : 'CONFIRMAR SALIDA';
 });
 
 // ---- AUTH ----
