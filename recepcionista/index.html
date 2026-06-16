@@ -292,6 +292,10 @@
                     <label id="pm-qty-label" class="text-[10px] font-bold text-gray-500 uppercase ml-1">Cantidad</label>
                     <input type="number" id="pm-qty" placeholder="0" min="1" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-indigo-500 outline-none transition text-white placeholder-gray-500 mt-1">
                 </div>
+                <div id="pm-motivo-wrap" class="hidden">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Motivo (opcional)</label>
+                    <input type="text" id="pm-motivo" placeholder="Ej: regalo, muestra, uso propio..." class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-indigo-500 outline-none transition text-white placeholder-gray-500 mt-1">
+                </div>
                 <button type="submit" id="btn-submit-pm" class="w-full text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest">Confirmar</button>
             </form>
         </div>
@@ -870,15 +874,17 @@ function renderProductoStock() {
 }
 
 window.openMovimientoProducto = (productoId, productoName, tipo) => {
-    currentProductoMovement = { productoId, tipo };
+    currentProductoMovement = { productoId, productoName, tipo };
     const isEntrada = tipo === 'entrada';
     document.getElementById('pm-title').textContent = isEntrada ? `Entrada — ${productoName}` : `Salida — ${productoName}`;
-    document.getElementById('pm-subtitle').textContent = isEntrada ? 'Unidades que ingresaron al stock' : 'Unidades que salieron del stock';
+    document.getElementById('pm-subtitle').textContent = isEntrada ? 'Unidades que ingresaron al stock' : 'Unidades que salieron (regalo, muestra, uso, etc.)';
     document.getElementById('pm-qty-label').textContent = isEntrada ? 'Cantidad que ingresó' : 'Cantidad que salió';
     const btn = document.getElementById('btn-submit-pm');
     btn.textContent = isEntrada ? 'REGISTRAR ENTRADA' : 'REGISTRAR SALIDA';
     btn.className = `w-full text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest bg-gradient-to-r ${isEntrada ? 'from-emerald-600 to-teal-600' : 'from-red-600 to-rose-600'}`;
     document.getElementById('pm-qty').value = '';
+    document.getElementById('pm-motivo').value = '';
+    document.getElementById('pm-motivo-wrap').classList.toggle('hidden', isEntrada);
     showModal('producto-movement-modal');
 };
 
@@ -886,11 +892,20 @@ document.getElementById('producto-movement-form').addEventListener('submit', asy
     e.preventDefault();
     const qty = Number(document.getElementById('pm-qty').value);
     if (!qty || qty < 1) return alert('Ingresá una cantidad válida');
+    const motivo = document.getElementById('pm-motivo').value.trim();
     const btn = document.getElementById('btn-submit-pm');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
-        const delta = currentProductoMovement.tipo === 'entrada' ? qty : -qty;
-        await updateDoc(doc(db, PATH_PRODUCTOS, currentProductoMovement.productoId), { stock: increment(delta) });
+        const { productoId, productoName, tipo } = currentProductoMovement;
+        const delta = tipo === 'entrada' ? qty : -qty;
+        await updateDoc(doc(db, PATH_PRODUCTOS, productoId), { stock: increment(delta) });
+        await addDoc(collection(db, 'productos_movimientos'), {
+            productoId, producto: productoName, tipo, cantidad: qty,
+            motivo: motivo || null,
+            userEmail: currentUser.email,
+            fecha: new Date().toISOString().split('T')[0],
+            creadoEn: serverTimestamp()
+        });
         closeModals();
     } catch { alert('Error al guardar'); }
     btn.disabled = false;
