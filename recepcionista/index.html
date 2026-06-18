@@ -162,8 +162,8 @@
                 <div class="glass-card rounded-2xl p-5 animate-enter">
                     <div class="flex justify-between items-center mb-4">
                         <div>
-                            <h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-shopping-bag text-indigo-400 text-xs"></i> Ventas de productos</h3>
-                            <p class="text-[10px] text-gray-500 mt-0.5">Pomadas, aftershave, etc.</p>
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-shopping-bag text-indigo-400 text-xs"></i> Ventas de hoy</h3>
+                            <p class="text-[10px] text-gray-500 mt-0.5">Productos y bebidas</p>
                         </div>
                         <button onclick="window.openVentaModal()" class="bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-indigo-600/30 transition flex items-center gap-1.5">
                             <i class="fas fa-plus text-[10px]"></i> Vender
@@ -219,6 +219,16 @@
                     </div>
                     <div id="stock-list" class="space-y-2">
                         <p class="text-xs text-gray-600 text-center py-4">Cargando...</p>
+                    </div>
+                </div>
+
+                <!-- Historial de ventas por día -->
+                <div class="glass-card rounded-2xl p-5 animate-enter">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-4">
+                        <i class="fas fa-history text-cyan-400 text-xs"></i> Historial de ventas
+                    </h3>
+                    <div id="sales-history-list" class="space-y-3">
+                        <p class="text-xs text-gray-600 text-center py-2">Sin historial aún</p>
                     </div>
                 </div>
 
@@ -779,8 +789,20 @@ document.getElementById('movement-form').addEventListener('submit', async e => {
     const btn = document.getElementById('btn-submit-movement');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
-        const delta = currentMovement.type === 'compra' ? qty : -qty;
-        await updateDoc(doc(db, PATH_STOCK, currentMovement.itemId), { quantity: increment(delta) });
+        const { itemId, itemName, type } = currentMovement;
+        const delta = type === 'compra' ? qty : -qty;
+        await updateDoc(doc(db, PATH_STOCK, itemId), { quantity: increment(delta) });
+        if (type === 'venta' && drinkSalidaTipo === 'venta') {
+            const item = allStock.find(i => i.id === itemId);
+            const precio = item?.price || 0;
+            const hoy = new Date().toISOString().split('T')[0];
+            await addDoc(collection(db, PATH_VENTAS), {
+                producto: itemName, tipo: 'bebida',
+                precio, cantidad: qty, total: precio * qty,
+                barbero: 'Recepción', userEmail: currentUser.email,
+                fecha: hoy, creadoEn: serverTimestamp()
+            });
+        }
         closeModals();
     } catch { alert('Error al guardar'); }
     btn.disabled = false;
@@ -893,17 +915,27 @@ window.openQuickSaleModal = () => {
 window.quickSale = async id => {
     const item = allStock.find(i => i.id === id);
     if (!item || (item.quantity || 0) < 1) return alert('Sin stock');
-    try { await updateDoc(doc(db, PATH_STOCK, id), { quantity: increment(-1) }); closeModals(); }
-    catch { alert('Error'); }
+    try {
+        const hoy = new Date().toISOString().split('T')[0];
+        await updateDoc(doc(db, PATH_STOCK, id), { quantity: increment(-1) });
+        await addDoc(collection(db, PATH_VENTAS), {
+            producto: item.name, tipo: 'bebida',
+            precio: item.price || 0, cantidad: 1, total: item.price || 0,
+            barbero: 'Recepción', userEmail: currentUser.email,
+            fecha: hoy, creadoEn: serverTimestamp()
+        });
+        closeModals();
+    } catch { alert('Error'); }
 };
 
 // ---- VENTAS DE PRODUCTOS ----
 function listenToVentas() {
     onSnapshot(
-        query(collection(db, PATH_VENTAS), orderBy('creadoEn', 'desc'), limit(200)),
+        query(collection(db, PATH_VENTAS), orderBy('creadoEn', 'desc'), limit(500)),
         snap => {
             allVentas = snap.docs.map(d => ({ ...d.data(), id: d.id }));
             renderVentas();
+            renderSalesHistory();
         }
     );
 }
@@ -920,17 +952,73 @@ function renderVentas() {
     }
     list.innerHTML = ventasHoy.map(v => {
         const time = v.creadoEn ? v.creadoEn.toDate().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : '';
-        return `<div class="flex justify-between items-center bg-black/30 p-3 rounded-xl border-l-2 border-indigo-500/40">
-            <div>
-                <div class="text-xs font-bold text-white">${v.producto}${v.cantidad > 1 ? ` <span class="text-indigo-300">×${v.cantidad}</span>` : ''}</div>
-                <div class="text-[10px] text-gray-500">${v.barbero} · ${time}</div>
+        const icon = v.tipo === 'bebida' ? '🥤' : '💈';
+        const border = v.tipo === 'bebida' ? 'border-cyan-500/40' : 'border-indigo-500/40';
+        const totalStr = (v.total || 0) > 0 ? `<span class="text-sm font-bold text-indigo-300">$${v.total.toLocaleString('es-AR')}</span>` : `<span class="text-xs text-gray-500">—</span>`;
+        return `<div class="flex justify-between items-center bg-black/30 p-3 rounded-xl border-l-2 ${border}">
+            <div class="flex items-center gap-2">
+                <span class="text-base leading-none">${icon}</span>
+                <div>
+                    <div class="text-xs font-bold text-white">${v.producto}${v.cantidad > 1 ? ` <span class="text-indigo-300">×${v.cantidad}</span>` : ''}</div>
+                    <div class="text-[10px] text-gray-500">${time}</div>
+                </div>
             </div>
-            <span class="text-sm font-bold text-indigo-300">$${v.total.toLocaleString('es-AR')}</span>
+            ${totalStr}
         </div>`;
     }).join('');
-    const total = ventasHoy.reduce((s, v) => s + v.total, 0);
+    const total = ventasHoy.reduce((s, v) => s + (v.total || 0), 0);
     document.getElementById('ventas-total').textContent = `$${total.toLocaleString('es-AR')}`;
     totalRow.classList.remove('hidden');
+}
+
+function formatFecha(fecha) {
+    if (!fecha) return 'Fecha desconocida';
+    const [y, m, d] = fecha.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    const hoy = new Date().toISOString().split('T')[0];
+    const ayer = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    if (fecha === hoy) return 'Hoy';
+    if (fecha === ayer) return 'Ayer';
+    return date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function renderSalesHistory() {
+    const list = document.getElementById('sales-history-list');
+    if (!list) return;
+    const hoy = new Date().toISOString().split('T')[0];
+    const pasadas = allVentas.filter(v => v.fecha && v.fecha !== hoy);
+    if (pasadas.length === 0) {
+        list.innerHTML = '<p class="text-xs text-gray-600 text-center py-2">Sin historial de días anteriores</p>';
+        return;
+    }
+    const byDate = {};
+    pasadas.forEach(v => {
+        if (!byDate[v.fecha]) byDate[v.fecha] = [];
+        byDate[v.fecha].push(v);
+    });
+    const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a)).slice(0, 14);
+    list.innerHTML = dates.map(fecha => {
+        const items = byDate[fecha];
+        const total = items.reduce((s, v) => s + (v.total || 0), 0);
+        const rows = items.map(v => {
+            const icon = v.tipo === 'bebida' ? '🥤' : '💈';
+            const cant = v.cantidad > 1 ? ` ×${v.cantidad}` : '';
+            return `<div class="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm leading-none">${icon}</span>
+                    <span class="text-xs text-gray-200">${v.producto}${cant}</span>
+                </div>
+                ${(v.total||0) > 0 ? `<span class="text-xs font-bold text-indigo-300">$${v.total.toLocaleString('es-AR')}</span>` : ''}
+            </div>`;
+        }).join('');
+        return `<div class="bg-black/30 rounded-xl p-3 border border-white/5">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-[11px] font-bold text-gray-300 capitalize">${formatFecha(fecha)}</span>
+                ${total > 0 ? `<span class="text-[10px] font-bold text-indigo-300">$${total.toLocaleString('es-AR')}</span>` : ''}
+            </div>
+            ${rows}
+        </div>`;
+    }).join('');
 }
 
 window.openVentaModal = () => {
@@ -1009,7 +1097,7 @@ function renderProductoStock() {
         const qty = data.stock || 0;
         const isLow = qty > 0 && qty <= 3;
         const qtyColor = qty === 0 ? 'text-red-400' : isLow ? 'text-yellow-400' : 'text-indigo-300';
-        const border = qty === 0 ? 'border-red-500/30' : isLow ? 'border-yellow-500/20' : 'border-indigo-500/10';
+        const border = qty === 0 ? 'border-red-500/40 stock-low' : isLow ? 'border-yellow-500/30 stock-low' : 'border-indigo-500/10';
         const badge = qty === 0
             ? '<div class="text-[10px] text-red-500 font-bold">Sin stock</div>'
             : isLow ? '<div class="text-[10px] text-yellow-500 font-bold">Stock bajo</div>' : '';
