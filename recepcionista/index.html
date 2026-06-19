@@ -270,6 +270,14 @@
                     <input type="hidden" id="svc-price">
                 </div>
                 <input type="text" id="client-name" placeholder="Nombre del cliente (opcional)" class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none transition text-white placeholder-gray-500">
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-2">Método de pago</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" id="mp-efectivo" onclick="window.setMetodoPago('efectivo',this)" class="p-3 bg-emerald-600/20 border border-emerald-500 rounded-xl font-bold text-sm text-emerald-300 transition">💵 Efectivo</button>
+                        <button type="button" id="mp-transferencia" onclick="window.setMetodoPago('transferencia',this)" class="p-3 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition">📲 Transferencia</button>
+                    </div>
+                </div>
+                <input type="hidden" id="metodo-pago" value="efectivo">
                 <button type="submit" id="btn-submit-cut" class="w-full bg-white text-black p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest">Confirmar</button>
             </form>
         </div>
@@ -601,7 +609,7 @@ function renderCuts() {
                 <div class="w-9 h-9 rounded-full ${theme.bg} flex items-center justify-center text-white font-bold text-sm flex-shrink-0">${theme.initial}</div>
                 <div>
                     <div class="text-sm font-bold text-white">${c.service || ''}${clientText}</div>
-                    <div class="text-[10px] text-gray-400">${c.barber} · ${time}</div>
+                    <div class="text-[10px] text-gray-400">${c.barber} · ${time} · ${c.metodoPago === 'transferencia' ? '📲' : '💵'}</div>
                 </div>
             </div>
             <div class="flex items-center">
@@ -619,7 +627,17 @@ window.openAddCutModal = () => {
     document.getElementById('svc-name').value = '';
     document.getElementById('svc-price').value = '';
     document.getElementById('client-name').value = '';
+    document.getElementById('metodo-pago').value = 'efectivo';
+    document.getElementById('mp-efectivo').className = 'p-3 bg-emerald-600/20 border border-emerald-500 rounded-xl font-bold text-sm text-emerald-300 transition';
+    document.getElementById('mp-transferencia').className = 'p-3 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition';
     showModal('add-cut-modal');
+};
+
+window.setMetodoPago = (tipo, el) => {
+    document.getElementById('metodo-pago').value = tipo;
+    const esEfectivo = tipo === 'efectivo';
+    document.getElementById('mp-efectivo').className = `p-3 rounded-xl border font-bold text-sm transition ${esEfectivo ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    document.getElementById('mp-transferencia').className = `p-3 rounded-xl border font-bold text-sm transition ${!esEfectivo ? 'bg-blue-600/20 border-blue-500 text-blue-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
 };
 
 function renderBarberGrid() {
@@ -665,9 +683,10 @@ document.getElementById('add-cut-form').addEventListener('submit', async e => {
     const btn = document.getElementById('btn-submit-cut');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
+        const metodoPago = document.getElementById('metodo-pago').value || 'efectivo';
         await addDoc(collection(db, PATH_CUTS), {
             barber, service: serviceName, price: servicePrice,
-            clientName, userEmail: currentUser.email, createdAt: serverTimestamp()
+            clientName, metodoPago, userEmail: currentUser.email, createdAt: serverTimestamp()
         });
         closeModals();
         document.getElementById('add-cut-form').reset();
