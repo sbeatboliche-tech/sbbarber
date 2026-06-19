@@ -1171,6 +1171,17 @@ document.getElementById('stock-item-form').addEventListener('submit', async e=>{
         } else {
             const delta=currentStockAction.type==='compra'?qty:-qty;
             await updateDoc(doc(db,PATH_STOCK,currentStockAction.itemId),{quantity:increment(delta)});
+            if(currentStockAction.type==='venta'){
+                const item=allStock.find(i=>i.id===currentStockAction.itemId);
+                const precio=item?.price||0;
+                const hoy=new Date().toISOString().split('T')[0];
+                await addDoc(collection(db,PATH_VENTAS),{
+                    producto:currentStockAction.itemName, tipo:'bebida',
+                    precio, cantidad:qty, total:precio*qty,
+                    barbero:'Admin', userEmail:currentUser.email,
+                    fecha:hoy, creadoEn:serverTimestamp()
+                });
+            }
         }
         window.closeModals();
     } catch{ alert('Error al guardar'); }
@@ -1443,18 +1454,23 @@ function renderVentasCard(ventasFiltradas) {
     } else {
         ventasFiltradas.forEach(v => {
             const time = v.creadoEn ? v.creadoEn.toDate().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : v.fecha||'';
-            rows += `<div class="flex justify-between items-center bg-black/30 p-3 rounded-xl border-l-2 border-indigo-500/40">
-                <div>
-                    <div class="text-xs font-bold text-white">${v.producto}${v.cantidad>1?` <span class="text-indigo-300">×${v.cantidad}</span>`:''}</div>
-                    <div class="text-[10px] text-gray-500">${isAdmin?v.barbero+' · ':''}${time}</div>
+            const icon = v.tipo==='bebida' ? '🥤' : '💈';
+            const border = v.tipo==='bebida' ? 'border-cyan-500/40' : 'border-indigo-500/40';
+            rows += `<div class="flex justify-between items-center bg-black/30 p-3 rounded-xl border-l-2 ${border}">
+                <div class="flex items-center gap-2">
+                    <span class="text-base leading-none">${icon}</span>
+                    <div>
+                        <div class="text-xs font-bold text-white">${v.producto}${v.cantidad>1?` <span class="text-indigo-300">×${v.cantidad}</span>`:''}</div>
+                        <div class="text-[10px] text-gray-500">${isAdmin&&v.barbero?v.barbero+' · ':''}${time}</div>
+                    </div>
                 </div>
-                <span class="text-sm font-bold text-indigo-300">$${v.total.toLocaleString('es-AR')}</span>
+                ${(v.total||0)>0?`<span class="text-sm font-bold text-indigo-300">$${v.total.toLocaleString('es-AR')}</span>`:''}
             </div>`;
         });
     }
     return `<div class="glass-card rounded-2xl p-5">
         <div class="flex justify-between items-center mb-3">
-            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2"><i class="fas fa-shopping-bag text-indigo-400"></i> Ventas de productos</div>
+            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2"><i class="fas fa-shopping-bag text-indigo-400"></i> Ventas 💈 productos · 🥤 bebidas</div>
             <button onclick="window.openVentaModal()" class="bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-indigo-600/30 transition flex items-center gap-1.5"><i class="fas fa-plus text-[9px]"></i> Vender</button>
         </div>
         <div class="space-y-2 mb-3">${rows}</div>
