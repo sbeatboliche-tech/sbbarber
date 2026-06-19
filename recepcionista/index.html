@@ -83,6 +83,12 @@
                 <button onclick="window.openVentaModal()" class="hidden md:flex items-center gap-2 bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-600/50 transition">
                     <i class="fas fa-shopping-bag text-xs"></i> Venta producto
                 </button>
+                <!-- Botón cierre de caja: siempre visible -->
+                <button onclick="window.openCierreCaja()" class="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-lg hover:scale-[1.02] transition active:scale-95">
+                    <i class="fas fa-cash-register text-xs"></i>
+                    <span class="hidden sm:inline">CIERRE DE CAJA</span>
+                    <span class="sm:hidden">CIERRE</span>
+                </button>
                 <button onclick="window.logout()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-red-400 transition">
                     <i class="fas fa-power-off text-xs"></i>
                 </button>
@@ -248,6 +254,29 @@
         </button>
 
     </div><!-- /dashboard-view -->
+
+    <!-- ============================================================
+         CIERRE DE CAJA
+    ============================================================ -->
+    <div id="cierre-caja-view" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+
+        <header class="px-5 py-4 glass flex items-center justify-between flex-shrink-0">
+            <div class="flex items-center gap-4">
+                <button onclick="window.closeCierreCaja()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition">
+                    <i class="fas fa-arrow-left text-sm"></i>
+                </button>
+                <div>
+                    <h1 class="text-sm font-bold text-white leading-none">CIERRE DE CAJA</h1>
+                    <span id="cierre-caja-fecha" class="text-[10px] text-emerald-400 font-medium"></span>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-4 pb-10" id="cierre-caja-content">
+            <p class="text-xs text-gray-600 text-center py-6">Cargando...</p>
+        </div>
+
+    </div><!-- /cierre-caja-view -->
 
     <!-- ===== MODALES ===== -->
 
@@ -554,6 +583,7 @@ function listenToCuts() {
         snap => {
             allCuts = snap.docs.map(d => ({ ...d.data(), id: d.id }));
             renderCuts();
+            if (!document.getElementById('cierre-caja-view').classList.contains('hidden')) renderCierreCaja();
             document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
         }
     );
@@ -955,6 +985,7 @@ function listenToVentas() {
             allVentas = snap.docs.map(d => ({ ...d.data(), id: d.id }));
             renderVentas();
             renderSalesHistory();
+            if (!document.getElementById('cierre-caja-view').classList.contains('hidden')) renderCierreCaja();
         }
     );
 }
@@ -1225,6 +1256,136 @@ document.getElementById('login-form').addEventListener('submit', async e => {
 });
 
 window.logout = () => signOut(auth);
+
+// ---- CIERRE DE CAJA ----
+window.openCierreCaja = () => {
+    const v = document.getElementById('cierre-caja-view');
+    v.classList.remove('hidden'); v.classList.add('flex', 'flex-col');
+    renderCierreCaja();
+};
+window.closeCierreCaja = () => {
+    const v = document.getElementById('cierre-caja-view');
+    v.classList.add('hidden'); v.classList.remove('flex', 'flex-col');
+};
+
+function renderCierreCaja() {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const hoy = now.toISOString().split('T')[0];
+
+    document.getElementById('cierre-caja-fecha').textContent =
+        today.toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+    const cuts = allCuts.filter(c => c.createdAt && c.createdAt.toDate() >= today);
+    const ventasHoy = allVentas.filter(v => v.fecha === hoy);
+    const ventasProductos = ventasHoy.filter(v => v.tipo !== 'bebida');
+    const ventasBebidas  = ventasHoy.filter(v => v.tipo === 'bebida');
+
+    const totalCortes   = cuts.reduce((s, c) => s + (c.price || 0), 0);
+    const efectivo      = cuts.filter(c => c.metodoPago !== 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
+    const transferencia = cuts.filter(c => c.metodoPago === 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
+    const totalProductos = ventasProductos.reduce((s, v) => s + (v.total || 0), 0);
+    const totalBebidas   = ventasBebidas.reduce((s, v) => s + (v.total || 0), 0);
+    const totalGeneral   = totalCortes + totalProductos + totalBebidas;
+
+    // Cortes por barbero
+    const byBarber = {};
+    cuts.forEach(c => {
+        if (!byBarber[c.barber]) byBarber[c.barber] = { count:0, total:0, efectivo:0, transferencia:0 };
+        byBarber[c.barber].count++;
+        byBarber[c.barber].total += c.price || 0;
+        if (c.metodoPago === 'transferencia') byBarber[c.barber].transferencia += c.price || 0;
+        else byBarber[c.barber].efectivo += c.price || 0;
+    });
+
+    const barberRows = BARBERS.filter(b => byBarber[b]).map(b => {
+        const d = byBarber[b];
+        const t = BARBER_THEME[b];
+        return `<div class="flex items-center justify-between bg-black/20 p-3 rounded-xl border border-white/5">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-full ${t.bg} flex items-center justify-center text-white font-bold text-xs">${t.initial}</div>
+                <div>
+                    <div class="text-xs font-bold ${t.text}">${b}</div>
+                    <div class="text-[10px] text-gray-500">${d.count} corte${d.count!==1?'s':''} ${d.transferencia>0?`· 📲 $${d.transferencia.toLocaleString('es-AR')}`:''}</div>
+                </div>
+            </div>
+            <span class="text-sm font-bold text-white">$${d.total.toLocaleString('es-AR')}</span>
+        </div>`;
+    }).join('');
+
+    // Filas ventas
+    const makeVentaRows = list => list.length === 0
+        ? '<p class="text-xs text-gray-600 text-center py-2">Sin ventas</p>'
+        : list.map(v => `<div class="flex justify-between items-center py-1.5 border-b border-white/5 last:border-0">
+            <span class="text-xs text-gray-200">${v.producto}${v.cantidad>1?` <span class="text-indigo-300 font-bold">×${v.cantidad}</span>`:''}</span>
+            ${(v.total||0)>0?`<span class="text-xs font-bold text-white">$${v.total.toLocaleString('es-AR')}</span>`:'<span class="text-[10px] text-gray-600">sin precio</span>'}
+          </div>`).join('');
+
+    const html = `
+        <!-- Cortes -->
+        <div class="glass-card rounded-2xl p-5">
+            <div class="text-[10px] font-bold text-cyan-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <i class="fas fa-cut"></i> Cortes del día
+            </div>
+            ${cuts.length === 0
+                ? '<p class="text-xs text-gray-600 text-center py-3">Sin cortes hoy</p>'
+                : `<div class="space-y-2 mb-4">${barberRows}</div>
+                   <div class="border-t border-white/10 pt-3 space-y-1.5">
+                       <div class="flex justify-between text-sm"><span class="text-gray-400">💵 Efectivo</span><span class="font-bold text-emerald-300">$${efectivo.toLocaleString('es-AR')}</span></div>
+                       <div class="flex justify-between text-sm"><span class="text-gray-400">📲 Transferencia</span><span class="font-bold text-blue-300">$${transferencia.toLocaleString('es-AR')}</span></div>
+                       <div class="flex justify-between text-sm border-t border-white/10 pt-2"><span class="text-gray-200 font-semibold">Subtotal cortes</span><span class="font-bold text-white text-base">$${totalCortes.toLocaleString('es-AR')}</span></div>
+                   </div>`
+            }
+        </div>
+
+        <!-- Ventas productos -->
+        <div class="glass-card rounded-2xl p-5">
+            <div class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <span class="text-base">💈</span> Productos barber
+            </div>
+            <div class="space-y-0">${makeVentaRows(ventasProductos)}</div>
+            ${totalProductos>0?`<div class="flex justify-between items-center pt-2 border-t border-white/10 mt-2"><span class="text-[10px] text-gray-500 uppercase font-bold">Subtotal</span><span class="font-bold text-indigo-300">$${totalProductos.toLocaleString('es-AR')}</span></div>`:''}
+        </div>
+
+        <!-- Ventas bebidas -->
+        <div class="glass-card rounded-2xl p-5">
+            <div class="text-[10px] font-bold text-cyan-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <span class="text-base">🥤</span> Bebidas
+            </div>
+            <div class="space-y-0">${makeVentaRows(ventasBebidas)}</div>
+            ${totalBebidas>0?`<div class="flex justify-between items-center pt-2 border-t border-white/10 mt-2"><span class="text-[10px] text-gray-500 uppercase font-bold">Subtotal</span><span class="font-bold text-cyan-300">$${totalBebidas.toLocaleString('es-AR')}</span></div>`:''}
+        </div>
+
+        <!-- Total general -->
+        <div class="glass-card rounded-2xl p-5 border border-emerald-500/30 bg-emerald-500/5">
+            <div class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <i class="fas fa-cash-register"></i> Total general
+            </div>
+            <div class="space-y-2 mb-3">
+                <div class="flex justify-between text-sm"><span class="text-gray-400">✂️ Cortes</span><span class="font-bold text-white">$${totalCortes.toLocaleString('es-AR')}</span></div>
+                ${totalProductos>0?`<div class="flex justify-between text-sm"><span class="text-gray-400">💈 Productos</span><span class="font-bold text-white">$${totalProductos.toLocaleString('es-AR')}</span></div>`:''}
+                ${totalBebidas>0?`<div class="flex justify-between text-sm"><span class="text-gray-400">🥤 Bebidas</span><span class="font-bold text-white">$${totalBebidas.toLocaleString('es-AR')}</span></div>`:''}
+            </div>
+            <div class="border-t border-emerald-500/30 pt-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm font-bold text-emerald-200">TOTAL DEL DÍA</span>
+                    <span class="text-3xl font-extrabold text-emerald-400 tracking-tight">$${totalGeneral.toLocaleString('es-AR')}</span>
+                </div>
+                <div class="mt-2 flex gap-3">
+                    <div class="flex-1 bg-black/30 rounded-xl p-2.5 text-center">
+                        <div class="text-[10px] text-gray-500 mb-0.5">💵 Efectivo</div>
+                        <div class="text-sm font-bold text-emerald-300">$${efectivo.toLocaleString('es-AR')}</div>
+                    </div>
+                    <div class="flex-1 bg-black/30 rounded-xl p-2.5 text-center">
+                        <div class="text-[10px] text-gray-500 mb-0.5">📲 Transferencia</div>
+                        <div class="text-sm font-bold text-blue-300">$${transferencia.toLocaleString('es-AR')}</div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+    document.getElementById('cierre-caja-content').innerHTML = html;
+}
 
 // ---- MODALES ----
 const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal'];
