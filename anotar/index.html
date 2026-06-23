@@ -613,8 +613,10 @@ async function init() {
             }
             document.getElementById('retiros-fab').classList.remove('hidden');
             document.getElementById('retiros-fab').classList.add('flex');
-            document.getElementById('cierre-fab').classList.remove('hidden');
-            document.getElementById('cierre-fab').classList.add('flex');
+            if (ADMINS.includes(user.email)) {
+                document.getElementById('cierre-fab').classList.remove('hidden');
+                document.getElementById('cierre-fab').classList.add('flex');
+            }
             listenToRetiros();
             listenToPropinas();
             listenToVentas();
@@ -1601,7 +1603,10 @@ function renderCierreDia() {
     }
 
     const ventasHoy = allVentas.filter(v => v.fecha === new Date().toISOString().split('T')[0]);
-    html += renderVentasCard(ventasHoy);
+
+    if (isAdmin) {
+        html += renderVentasCard(ventasHoy);
+    }
 
     if (isAdmin) {
         const totalBebidas = ventasHoy.filter(v => v.tipo==='bebida').reduce((s,v) => s+(v.total||0), 0);
