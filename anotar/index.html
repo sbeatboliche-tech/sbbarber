@@ -260,6 +260,9 @@
             <!-- Panel pendientes (admin) -->
             <div id="retiros-pending-panel" class="hidden"></div>
 
+            <!-- Totales semanales por barbero (admin) -->
+            <div id="retiros-weekly-totals"></div>
+
             <!-- Balance (barbero) -->
             <div id="retiros-balance" class="hidden glass-card rounded-2xl p-5"></div>
 
@@ -682,6 +685,7 @@ function renderRetirosView() {
         document.getElementById('retiros-balance').classList.add('hidden');
         document.getElementById('retiros-actions').classList.add('hidden');
         renderPendingPanel();
+        renderWeeklyTotalsAdmin();
         renderHistoryAdmin();
     } else {
         sub.textContent=myName||'Mi cuenta';
@@ -693,12 +697,16 @@ function renderRetirosView() {
 
 function renderBalanceCard(barberName) {
     const hoy=new Date().toISOString().split('T')[0];
+    const today=new Date(); const wd=today.getDay()||7;
+    const ws=new Date(today); if(wd!==1) ws.setDate(today.getDate()-(wd-1)); ws.setHours(0,0,0,0);
+    const weekStartStr=ws.toISOString().split('T')[0];
     const retiradoHoy=allRetiros.filter(r=>r.barbero===barberName&&r.fecha===hoy&&r.estado!=='rechazado').reduce((s,r)=>s+r.monto,0);
     const disponible=RETIRO_LIMITE-retiradoHoy;
     const totalRetiros=allRetiros.filter(r=>r.barbero===barberName&&r.estado==='confirmado').reduce((s,r)=>s+r.monto,0);
     const totalPropinas=allPropinas.filter(p=>p.barbero===barberName&&p.estado==='confirmado').reduce((s,p)=>s+p.monto,0);
     const pendRetiros=allRetiros.filter(r=>r.barbero===barberName&&r.estado==='pendiente').reduce((s,r)=>s+r.monto,0);
     const pendPropinas=allPropinas.filter(p=>p.barbero===barberName&&p.estado==='pendiente').reduce((s,p)=>s+p.monto,0);
+    const retiradoSemana=allRetiros.filter(r=>r.barbero===barberName&&r.fecha>=weekStartStr&&r.estado!=='rechazado').reduce((s,r)=>s+r.monto,0);
     const el=document.getElementById('retiros-balance');
     el.innerHTML=`
         <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -713,6 +721,10 @@ function renderBalanceCard(barberName) {
                 <div class="text-xl font-extrabold text-yellow-300">$${totalPropinas.toLocaleString('es-AR')}</div>
                 <div class="text-[10px] text-gray-500 mt-0.5">propinas</div>
             </div>
+        </div>
+        <div class="bg-violet-900/20 border border-violet-500/20 rounded-xl p-3 mb-3 flex justify-between items-center">
+            <span class="text-xs text-gray-400 flex items-center gap-2"><i class="fas fa-calendar-week text-violet-400 text-xs"></i> Esta semana</span>
+            <span class="text-sm font-bold text-violet-300">$${retiradoSemana.toLocaleString('es-AR')}</span>
         </div>
         ${(pendRetiros+pendPropinas)>0?`
         <div class="bg-yellow-900/20 border border-yellow-500/20 rounded-xl p-3 mb-3 flex justify-between items-center">
@@ -765,6 +777,33 @@ function renderHistoryAdmin() {
             <div class="flex items-center gap-3"><span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span></div>
         </div>`;
     }).join('');
+}
+
+function renderWeeklyTotalsAdmin() {
+    const today = new Date();
+    const day = today.getDay() || 7;
+    const weekStart = new Date(today);
+    if (day !== 1) weekStart.setDate(today.getDate() - (day - 1));
+    weekStart.setHours(0,0,0,0);
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+    const totals = {};
+    allRetiros.filter(r => r.fecha >= weekStartStr && r.estado !== 'rechazado')
+        .forEach(r => { totals[r.barbero] = (totals[r.barbero] || 0) + r.monto; });
+    const el = document.getElementById('retiros-weekly-totals');
+    const entries = Object.entries(totals);
+    if (!entries.length) { el.innerHTML = ''; return; }
+    el.innerHTML = `<div class="glass-card rounded-2xl p-5">
+        <h3 class="text-[10px] font-bold text-violet-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <i class="fas fa-calendar-week"></i> Retiros esta semana
+        </h3>
+        <div class="grid grid-cols-2 gap-2">
+            ${entries.map(([barbero, total]) => `
+            <div class="bg-black/30 rounded-xl p-3 text-center">
+                <div class="text-xs text-gray-400 mb-1">${barbero}</div>
+                <div class="text-base font-extrabold text-violet-300">$${total.toLocaleString('es-AR')}</div>
+            </div>`).join('')}
+        </div>
+    </div>`;
 }
 
 function renderPendingPanel() {
