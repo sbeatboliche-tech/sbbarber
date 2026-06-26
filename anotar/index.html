@@ -679,9 +679,10 @@ function listenToRetiros() {
     const isAdmin=ADMINS.includes(currentUser.email);
     const q=isAdmin
         ? query(collection(db,PATH_RETIROS), orderBy('creadoEn','desc'), limit(300))
-        : query(collection(db,PATH_RETIROS), where('userEmail','==',currentUser.email), orderBy('creadoEn','desc'), limit(100));
+        : query(collection(db,PATH_RETIROS), where('userEmail','==',currentUser.email), limit(100));
     onSnapshot(q, snap => {
-        allRetiros=snap.docs.map(d=>({...d.data(),id:d.id}));
+        const docs=snap.docs.map(d=>({...d.data(),id:d.id}));
+        allRetiros=isAdmin ? docs : docs.sort((a,b)=>(b.creadoEn?.seconds||0)-(a.creadoEn?.seconds||0));
         updateRetirosBadge();
         if(!document.getElementById('retiros-view').classList.contains('hidden')) renderRetirosView();
     });
@@ -691,9 +692,10 @@ function listenToPropinas() {
     const isAdmin=ADMINS.includes(currentUser.email);
     const q=isAdmin
         ? query(collection(db,PATH_PROPINAS), orderBy('creadoEn','desc'), limit(300))
-        : query(collection(db,PATH_PROPINAS), where('userEmail','==',currentUser.email), orderBy('creadoEn','desc'), limit(100));
+        : query(collection(db,PATH_PROPINAS), where('userEmail','==',currentUser.email), limit(100));
     onSnapshot(q, snap => {
-        allPropinas=snap.docs.map(d=>({...d.data(),id:d.id}));
+        const docs=snap.docs.map(d=>({...d.data(),id:d.id}));
+        allPropinas=isAdmin ? docs : docs.sort((a,b)=>(b.creadoEn?.seconds||0)-(a.creadoEn?.seconds||0));
         updateRetirosBadge();
         if(!document.getElementById('retiros-view').classList.contains('hidden')) renderRetirosView();
     });
