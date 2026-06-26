@@ -278,6 +278,20 @@
         </div>
         <div id="shipping-detail" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:none;padding:12px 14px;margin-bottom:20px;font-size:12px;color:#737373;line-height:1.6;">
             <span id="shipping-detail-text">📍 Dávila 951, Parque Chacabuco · Lun–Sáb 12:00–19:30 · <strong style="color:#a3a3a3;">Gratis</strong></span>
+            <div id="zone-selector" style="display:none;margin-top:10px;">
+                <div style="font-size:9px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#525252;margin-bottom:8px;">Zona de envío</div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <button onclick="setZone('caba')" id="zone-caba" class="zone-btn" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#a3a3a3;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;text-align:left;">
+                        <span>📦 Ciudad de Buenos Aires</span><span style="font-weight:800;color:#fff;">$3.500</span>
+                    </button>
+                    <button onclick="setZone('gba')" id="zone-gba" class="zone-btn" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#a3a3a3;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;text-align:left;">
+                        <span>📦 Gran Buenos Aires</span><span style="font-weight:800;color:#fff;">$4.500</span>
+                    </button>
+                    <button onclick="setZone('interior')" id="zone-interior" class="zone-btn" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#a3a3a3;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;text-align:left;">
+                        <span>📦 Interior del país</span><span style="font-weight:800;color:#fff;">$6.500</span>
+                    </button>
+                </div>
+            </div>
             <input id="buyer-address" class="field" type="text" placeholder="Dirección completa (calle, número, piso, depto)" autocomplete="street-address" style="margin-top:8px;display:none;height:44px;font-size:15px;">
         </div>
 
@@ -391,10 +405,13 @@ const PRODUCTS = [
 ];
 
 const TRANSFER_DISCOUNT = 0.20;
+const SHIPPING_ZONES = { caba: 3500, gba: 4500, interior: 6500 };
+const SHIPPING_ZONE_LABELS = { caba: 'CABA', gba: 'Gran Buenos Aires', interior: 'Interior del país' };
 let productConfig = {};
 let courseConfig = {};
 let shippingMode = 'pickup';
 let shippingCost = 0;
+let selectedZone = null;
 let cart = JSON.parse(localStorage.getItem('sb_cart')||'[]');
 let activeTab = 'mp';
 
@@ -412,14 +429,31 @@ function setShipping(mode) {
     document.getElementById('ship-delivery').classList.toggle('active', mode==='delivery');
     const addr = document.getElementById('buyer-address');
     const txt = document.getElementById('shipping-detail-text');
+    const zoneSelector = document.getElementById('zone-selector');
     if (mode==='pickup') {
         addr.style.display = 'none';
+        zoneSelector.style.display = 'none';
+        txt.style.display = 'inline';
         txt.innerHTML = '📍 Dávila 951, Parque Chacabuco · Lun–Sáb 12:00–19:30 · <strong style="color:#a3a3a3;">Gratis</strong>';
+        shippingCost = 0; selectedZone = null;
     } else {
+        txt.style.display = 'none';
+        zoneSelector.style.display = 'block';
         addr.style.display = 'block';
-        const cost = shippingCost > 0 ? '$'+shippingCost.toLocaleString('es-AR') : 'a coordinar';
-        txt.innerHTML = 'Costo de envío: <strong style="color:#a3a3a3;">'+cost+'</strong>';
     }
+    renderSummary();
+}
+
+function setZone(zone) {
+    selectedZone = zone;
+    shippingCost = SHIPPING_ZONES[zone];
+    document.querySelectorAll('.zone-btn').forEach(b => {
+        b.style.borderColor = 'rgba(255,255,255,.1)';
+        b.style.background = 'rgba(255,255,255,.04)';
+    });
+    const btn = document.getElementById('zone-'+zone);
+    btn.style.borderColor = 'rgba(255,255,255,.5)';
+    btn.style.background = 'rgba(255,255,255,.09)';
     renderSummary();
 }
 
@@ -576,7 +610,7 @@ function renderSummary() {
     const discountAmt = activeTab==='transfer' ? base-Math.round(base*(1-TRANSFER_DISCOUNT)) : 0;
     const discRow = discountAmt>0 ? `<div class="summary-item"><span class="summary-key" style="color:#4ade80;">Descuento transferencia (20%)</span><span style="font-weight:700;flex-shrink:0;color:#4ade80;">− $${discountAmt.toLocaleString('es-AR')}</span></div>` : '';
     const shipRow = shippingMode==='delivery'
-        ? `<div class="summary-item"><span class="summary-key">Envío a domicilio</span><span style="font-weight:700;flex-shrink:0">${shippingCost>0?'$'+shippingCost.toLocaleString('es-AR'):'A coordinar'}</span></div>`
+        ? `<div class="summary-item"><span class="summary-key">Envío · ${selectedZone ? SHIPPING_ZONE_LABELS[selectedZone] : 'seleccioná zona'}</span><span style="font-weight:700;flex-shrink:0">${shippingCost>0?'$'+shippingCost.toLocaleString('es-AR'):'—'}</span></div>`
         : `<div class="summary-item"><span class="summary-key">Retiro en local</span><span style="color:#525252;font-weight:700;flex-shrink:0">Gratis</span></div>`;
     document.getElementById('order-summary').innerHTML =
         cart.map(i=>`<div class="summary-item"><span class="summary-key">${i.qty}× ${i.name} <span style="opacity:.4">${i.variant}</span></span><span style="font-weight:700;flex-shrink:0">$${(i.price*i.qty).toLocaleString('es-AR')}</span></div>`).join('')+
