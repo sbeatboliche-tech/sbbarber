@@ -992,7 +992,7 @@ function listenToVentas() {
 
 function renderVentas() {
     const hoy = new Date().toISOString().split('T')[0];
-    const ventasHoy = allVentas.filter(v => v.fecha === hoy).sort((a,b) => (a.creadoEn?.seconds||0) - (b.creadoEn?.seconds||0));
+    const ventasHoy = allVentas.filter(v => v.fecha === hoy).sort((a,b) => (b.creadoEn?.seconds||0) - (a.creadoEn?.seconds||0));
     const list = document.getElementById('ventas-list');
     const totalRow = document.getElementById('ventas-total-row');
     if (ventasHoy.length === 0) {
@@ -1048,17 +1048,18 @@ function renderSalesHistory() {
     });
     const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a)).slice(0, 14);
     list.innerHTML = dates.map(fecha => {
-        const items = byDate[fecha].sort((a, b) => (a.creadoEn?.seconds||0) - (b.creadoEn?.seconds||0));
+        const items = byDate[fecha].sort((a, b) => (b.creadoEn?.seconds||0) - (a.creadoEn?.seconds||0));
         const total = items.reduce((s, v) => s + (v.total || 0), 0);
         const rows = items.map(v => {
             const icon = v.tipo === 'bebida' ? '🥤' : '💈';
             const cant = v.cantidad > 1 ? ` ×${v.cantidad}` : '';
+            const valColor = v.tipo === 'bebida' ? 'text-cyan-300' : 'text-indigo-300';
             return `<div class="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
                 <div class="flex items-center gap-2">
                     <span class="text-sm leading-none">${icon}</span>
                     <span class="text-xs text-gray-200">${v.producto}${cant}</span>
                 </div>
-                ${(v.total||0) > 0 ? `<span class="text-xs font-bold text-indigo-300">$${v.total.toLocaleString('es-AR')}</span>` : ''}
+                ${(v.total||0) > 0 ? `<span class="text-xs font-bold ${valColor}">$${v.total.toLocaleString('es-AR')}</span>` : ''}
             </div>`;
         }).join('');
         return `<div class="bg-black/30 rounded-xl p-3 border border-white/5">
