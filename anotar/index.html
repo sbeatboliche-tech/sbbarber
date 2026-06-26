@@ -289,6 +289,25 @@
         </div>
     </div><!-- /retiros-view -->
 
+    <!-- Panel historial por barbero (admin) -->
+    <div id="barber-detail-panel" class="absolute inset-0 z-50 bg-[#0f1115] flex-col hidden slide-in">
+        <header class="px-5 py-4 glass flex items-center gap-4 flex-shrink-0">
+            <button onclick="window.closeBarberDetail()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition">
+                <i class="fas fa-arrow-left text-sm"></i>
+            </button>
+            <div id="barber-detail-header" class="flex items-center gap-3">
+                <div id="barber-detail-avatar" class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white"></div>
+                <div>
+                    <div id="barber-detail-name" class="text-sm font-bold text-white leading-none"></div>
+                    <div id="barber-detail-sub" class="text-[10px] text-violet-400 font-medium">Historial completo</div>
+                </div>
+            </div>
+        </header>
+        <div class="flex-1 overflow-y-auto p-4 space-y-4 pb-10" id="barber-detail-content">
+            <p class="text-xs text-gray-600 text-center py-6">Cargando...</p>
+        </div>
+    </div><!-- /barber-detail-panel -->
+
 
     <!-- ============================================================
          PANTALLA DE CIERRE (día / semana)
@@ -686,6 +705,8 @@ function listenToRetiros() {
         allRetiros=isAdmin ? docs : docs.sort((a,b)=>(b.creadoEn?.seconds||0)-(a.creadoEn?.seconds||0));
         updateRetirosBadge();
         if(!document.getElementById('retiros-view').classList.contains('hidden')) renderRetirosView();
+        const dp = document.getElementById('barber-detail-panel');
+        if(!dp.classList.contains('hidden')) renderBarberDetail(document.getElementById('barber-detail-name').textContent);
     });
 }
 
@@ -700,6 +721,8 @@ function listenToPropinas() {
         allPropinas=isAdmin ? docs : docs.sort((a,b)=>(b.creadoEn?.seconds||0)-(a.creadoEn?.seconds||0));
         updateRetirosBadge();
         if(!document.getElementById('retiros-view').classList.contains('hidden')) renderRetirosView();
+        const dp = document.getElementById('barber-detail-panel');
+        if(!dp.classList.contains('hidden')) renderBarberDetail(document.getElementById('barber-detail-name').textContent);
     });
 }
 
@@ -836,11 +859,14 @@ function renderWeeklyTotalsAdmin() {
             <button onclick="window.openRetiroManualModal()" class="text-[10px] font-bold text-violet-300 bg-violet-600/20 border border-violet-500/30 px-3 py-1 rounded-lg hover:bg-violet-600/30 transition">+ Manual</button>
         </div>
         <div class="grid grid-cols-2 gap-2">
-            ${entries.map(([barbero, total]) => `
-            <div class="bg-black/30 rounded-xl p-3 text-center">
-                <div class="text-xs text-gray-400 mb-1">${barbero}</div>
-                <div class="text-base font-extrabold text-violet-300">$${total.toLocaleString('es-AR')}</div>
-            </div>`).join('')}
+            ${entries.map(([barbero, total]) => {
+                const t = BARBER_THEME[barbero] || {};
+                return `<button onclick="window.openBarberDetail('${barbero}')" class="bg-black/30 rounded-xl p-3 text-center hover:bg-white/5 active:scale-95 transition w-full">
+                    <div class="text-xs font-bold ${t.text||'text-gray-400'} mb-1">${barbero}</div>
+                    <div class="text-base font-extrabold text-violet-300">$${total.toLocaleString('es-AR')}</div>
+                    <div class="text-[9px] text-gray-600 mt-0.5">ver historial →</div>
+                </button>`;
+            }).join('')}
         </div>
     </div>`;
 }
@@ -880,6 +906,85 @@ function renderPendingPanel() {
             }).join('')}
         </div>
     </div>`;
+}
+
+window.openBarberDetail = (name) => {
+    const t = BARBER_THEME[name] || { bg:'bg-gray-600', text:'text-gray-400', initial: name[0] };
+    document.getElementById('barber-detail-name').textContent = name;
+    document.getElementById('barber-detail-avatar').className = `w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white ${t.bg}`;
+    document.getElementById('barber-detail-avatar').textContent = t.initial;
+    const panel = document.getElementById('barber-detail-panel');
+    panel.classList.remove('hidden'); panel.classList.add('flex', 'flex-col');
+    renderBarberDetail(name);
+};
+window.closeBarberDetail = () => {
+    const panel = document.getElementById('barber-detail-panel');
+    panel.classList.add('hidden'); panel.classList.remove('flex', 'flex-col');
+};
+
+function renderBarberDetail(name) {
+    const myRetiros = allRetiros.filter(r => r.barbero === name);
+    const myPropinas = allPropinas.filter(p => p.barbero === name);
+
+    const totalRetirado = myRetiros.filter(r => r.estado === 'confirmado').reduce((s,r) => s+r.monto, 0);
+    const totalPropinas = myPropinas.filter(p => p.estado === 'confirmado').reduce((s,p) => s+p.monto, 0);
+    const pendiente = myRetiros.filter(r => r.estado === 'pendiente').reduce((s,r) => s+r.monto, 0);
+
+    const today = new Date(); const wd = today.getDay()||7;
+    const ws = new Date(today); if(wd!==1) ws.setDate(today.getDate()-(wd-1)); ws.setHours(0,0,0,0);
+    const weekStartStr = ws.toISOString().split('T')[0];
+    const semana = myRetiros.filter(r => r.fecha >= weekStartStr && r.estado !== 'rechazado').reduce((s,r) => s+r.monto, 0);
+
+    const combined = [
+        ...myRetiros.map(r => ({...r, tipo:'retiro'})),
+        ...myPropinas.map(p => ({...p, tipo:'propina'}))
+    ].sort((a,b) => (b.creadoEn?.seconds||0) - (a.creadoEn?.seconds||0));
+
+    const histRows = combined.length === 0
+        ? '<p class="text-xs text-gray-600 text-center py-3">Sin actividad registrada</p>'
+        : combined.map(item => {
+            const ec = item.estado==='confirmado' ? 'text-emerald-400' : item.estado==='rechazado' ? 'text-red-400' : 'text-yellow-400';
+            const ei = item.estado==='confirmado' ? '✓' : item.estado==='rechazado' ? '✗' : '⏳';
+            const bdr = item.tipo==='retiro' ? 'border-violet-500/20' : 'border-yellow-500/20';
+            const lbl = item.tipo==='retiro' ? 'Retiro' : `Propina${item.descripcion?' · '+item.descripcion:''}`;
+            const f = item.creadoEn ? item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : item.fecha||'';
+            return `<div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${bdr}">
+                <div class="flex items-center gap-2">
+                    <span class="${ec} text-base leading-none">${ei}</span>
+                    <div>
+                        <div class="text-xs font-bold text-gray-200">${lbl}</div>
+                        <div class="text-[10px] text-gray-500">${f}</div>
+                    </div>
+                </div>
+                <span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span>
+            </div>`;
+        }).join('');
+
+    document.getElementById('barber-detail-content').innerHTML = `
+        <div class="grid grid-cols-2 gap-3">
+            <div class="glass-card rounded-2xl p-4 text-center">
+                <div class="text-xl font-extrabold text-violet-300">$${totalRetirado.toLocaleString('es-AR')}</div>
+                <div class="text-[10px] text-gray-500 mt-0.5">total retirado</div>
+            </div>
+            <div class="glass-card rounded-2xl p-4 text-center">
+                <div class="text-xl font-extrabold text-yellow-300">$${totalPropinas.toLocaleString('es-AR')}</div>
+                <div class="text-[10px] text-gray-500 mt-0.5">propinas</div>
+            </div>
+        </div>
+        <div class="glass-card rounded-2xl p-4 flex justify-between items-center">
+            <span class="text-xs text-gray-400 flex items-center gap-2"><i class="fas fa-calendar-week text-violet-400 text-xs"></i> Esta semana</span>
+            <span class="text-sm font-bold text-violet-300">$${semana.toLocaleString('es-AR')}</span>
+        </div>
+        ${pendiente > 0 ? `<div class="glass-card rounded-2xl p-4 flex justify-between items-center border border-yellow-500/20">
+            <span class="text-xs text-yellow-400 flex items-center gap-2"><i class="fas fa-clock text-xs"></i> Pendiente</span>
+            <span class="text-sm font-bold text-yellow-300">$${pendiente.toLocaleString('es-AR')}</span>
+        </div>` : ''}
+        <div class="glass-card rounded-2xl p-4">
+            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <i class="fas fa-clock text-violet-400"></i> Historial
+            </div>
+            <div class="space-y-2">${histRows}</div>
+        </div>`;
 }
 
 window.approveItem = async (path, id) => {
