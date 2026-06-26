@@ -992,7 +992,7 @@ function listenToVentas() {
 
 function renderVentas() {
     const hoy = new Date().toISOString().split('T')[0];
-    const ventasHoy = allVentas.filter(v => v.fecha === hoy);
+    const ventasHoy = allVentas.filter(v => v.fecha === hoy).sort((a,b) => (a.creadoEn?.seconds||0) - (b.creadoEn?.seconds||0));
     const list = document.getElementById('ventas-list');
     const totalRow = document.getElementById('ventas-total-row');
     if (ventasHoy.length === 0) {
@@ -1048,7 +1048,7 @@ function renderSalesHistory() {
     });
     const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a)).slice(0, 14);
     list.innerHTML = dates.map(fecha => {
-        const items = byDate[fecha];
+        const items = byDate[fecha].sort((a, b) => (a.creadoEn?.seconds||0) - (b.creadoEn?.seconds||0));
         const total = items.reduce((s, v) => s + (v.total || 0), 0);
         const rows = items.map(v => {
             const icon = v.tipo === 'bebida' ? '🥤' : '💈';
