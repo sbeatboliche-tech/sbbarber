@@ -729,7 +729,7 @@ function listenToPropinas() {
 function updateRetirosBadge() {
     if(!ADMINS.includes(currentUser.email)) return;
     const badge=document.getElementById('retiros-badge');
-    const n=allRetiros.filter(i=>i.estado==='pendiente').length;
+    const n=[...allRetiros,...allPropinas].filter(i=>i.estado==='pendiente').length;
     if(n>0){ badge.textContent=n; badge.classList.remove('hidden'); badge.classList.add('flex'); }
     else { badge.classList.add('hidden'); badge.classList.remove('flex'); }
 }
@@ -791,8 +791,11 @@ function renderBalanceCard(barberName) {
             <span class="text-sm font-bold text-yellow-300">$${(pendRetiros+pendPropinas).toLocaleString('es-AR')}</span>
         </div>`:''}
         <div class="bg-violet-900/20 border border-violet-500/20 rounded-xl p-3 flex justify-between items-center">
-            <span class="text-xs text-gray-400">Disponible hoy</span>
-            <span class="text-sm font-bold ${disponible>0?'text-violet-300':'text-red-400'}">$${retiradoHoy.toLocaleString('es-AR')} / $${RETIRO_LIMITE.toLocaleString('es-AR')}</span>
+            <div>
+                <span class="text-xs text-gray-400">Límite diario</span>
+                <div class="text-[10px] text-gray-600">Retirado hoy: $${retiradoHoy.toLocaleString('es-AR')}</div>
+            </div>
+            <span class="text-sm font-bold ${disponible>0?'text-violet-300':'text-red-400'}">${disponible>0?'Disponible: $'+disponible.toLocaleString('es-AR'):'Límite alcanzado'}</span>
         </div>`;
     el.classList.remove('hidden');
     document.getElementById('retiros-actions').classList.remove('hidden');
@@ -848,22 +851,29 @@ function renderWeeklyTotalsAdmin() {
     const totals = {};
     allRetiros.filter(r => r.fecha >= weekStartStr && r.estado !== 'rechazado')
         .forEach(r => { totals[r.barbero] = (totals[r.barbero] || 0) + r.monto; });
+    const propTotals = {};
+    allPropinas.filter(p => p.fecha >= weekStartStr && p.estado === 'confirmado')
+        .forEach(p => { propTotals[p.barbero] = (propTotals[p.barbero] || 0) + p.monto; });
+    const allBarbers = new Set([...Object.keys(totals), ...Object.keys(propTotals)]);
     const el = document.getElementById('retiros-weekly-totals');
-    const entries = Object.entries(totals);
-    if (!entries.length) { el.innerHTML = ''; return; }
+    if (!allBarbers.size) { el.innerHTML = ''; return; }
     el.innerHTML = `<div class="glass-card rounded-2xl p-5">
         <div class="flex items-center justify-between mb-3">
             <h3 class="text-[10px] font-bold text-violet-400 uppercase tracking-widest flex items-center gap-2">
-                <i class="fas fa-calendar-week"></i> Retiros esta semana
+                <i class="fas fa-calendar-week"></i> Retiros y propinas — semana
             </h3>
             <button onclick="window.openRetiroManualModal()" class="text-[10px] font-bold text-violet-300 bg-violet-600/20 border border-violet-500/30 px-3 py-1 rounded-lg hover:bg-violet-600/30 transition">+ Manual</button>
         </div>
         <div class="grid grid-cols-2 gap-2">
-            ${entries.map(([barbero, total]) => {
+            ${[...allBarbers].map(barbero => {
                 const t = BARBER_THEME[barbero] || {};
+                const ret = totals[barbero] || 0;
+                const prop = propTotals[barbero] || 0;
+                const total = ret + prop;
                 return `<button onclick="window.openBarberDetail('${barbero}')" class="bg-black/30 rounded-xl p-3 text-center hover:bg-white/5 active:scale-95 transition w-full">
                     <div class="text-xs font-bold ${t.text||'text-gray-400'} mb-1">${barbero}</div>
                     <div class="text-base font-extrabold text-violet-300">$${total.toLocaleString('es-AR')}</div>
+                    ${prop > 0 ? `<div class="text-[9px] text-yellow-500 mt-0.5">+ $${prop.toLocaleString('es-AR')} propinas</div>` : ''}
                     <div class="text-[9px] text-gray-600 mt-0.5">ver historial →</div>
                 </button>`;
             }).join('')}
@@ -873,7 +883,8 @@ function renderWeeklyTotalsAdmin() {
 
 function renderPendingPanel() {
     const pending=[
-        ...allRetiros.filter(r=>r.estado==='pendiente').map(r=>({...r,tipo:'retiro'}))
+        ...allRetiros.filter(r=>r.estado==='pendiente').map(r=>({...r,tipo:'retiro'})),
+        ...allPropinas.filter(p=>p.estado==='pendiente').map(p=>({...p,tipo:'propina'}))
     ].sort((a,b)=>(a.creadoEn?.seconds||0)-(b.creadoEn?.seconds||0));
     const panel=document.getElementById('retiros-pending-panel');
     panel.classList.remove('hidden');

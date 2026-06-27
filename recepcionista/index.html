@@ -102,7 +102,7 @@
                     <i class="fas fa-cut text-[9px]"></i> CORTES
                 </button>
                 <button onclick="window.switchTab('stock', this)" id="tab-btn-stock" class="tab-btn flex-1 py-2 rounded-lg text-[11px] font-medium text-gray-500 hover:text-gray-300 transition-all flex items-center justify-center gap-1.5">
-                    <i class="fas fa-wine-bottle text-[9px]"></i> STOCK Y VENTAS
+                    <i class="fas fa-shopping-bag text-[9px]"></i> VENTAS
                 </button>
             </nav>
         </div>
@@ -138,8 +138,16 @@
                                 <span class="text-gray-500 text-sm">$</span>
                                 <span id="stat-cuts-billing" class="text-2xl font-extrabold text-white">0</span>
                             </div>
-                            <div class="text-[10px] text-gray-500 mt-0.5">facturación</div>
+                            <div class="text-[10px] text-gray-500 mt-0.5">cortes</div>
                         </div>
+                    </div>
+                    <div id="stat-ventas-row" class="hidden mt-3 pt-3 border-t border-white/5 flex justify-between items-center">
+                        <span class="text-[10px] text-gray-500">+ Ventas productos y bebidas</span>
+                        <span id="stat-ventas-billing" class="text-sm font-bold text-indigo-300">$0</span>
+                    </div>
+                    <div id="stat-total-row" class="hidden mt-1 flex justify-between items-center">
+                        <span class="text-[10px] font-bold text-gray-300 uppercase tracking-wide">Total del día</span>
+                        <span id="stat-total-billing" class="text-base font-extrabold text-white">$0</span>
                     </div>
                 </div>
 
@@ -597,6 +605,7 @@ function renderCuts() {
     const totalBilling = todayCuts.reduce((s, c) => s + (c.price || 0), 0);
     document.getElementById('stat-cuts-count').textContent = todayCuts.length;
     document.getElementById('stat-cuts-billing').textContent = totalBilling.toLocaleString('es-AR');
+    updateDailyTotalStat(totalBilling);
 
     const byBarber = {};
     todayCuts.forEach(c => {
@@ -1019,6 +1028,26 @@ function renderVentas() {
     const total = ventasHoy.reduce((s, v) => s + (v.total || 0), 0);
     document.getElementById('ventas-total').textContent = `$${total.toLocaleString('es-AR')}`;
     totalRow.classList.remove('hidden');
+    const cuts = allCuts.filter(c => c.createdAt && c.createdAt.toDate() >= new Date(new Date().setHours(0,0,0,0)));
+    updateDailyTotalStat(cuts.reduce((s,c) => s+(c.price||0), 0), total);
+}
+
+function updateDailyTotalStat(cutsBilling, ventasTotal = null) {
+    if (ventasTotal === null) {
+        const hoy = new Date().toISOString().split('T')[0];
+        ventasTotal = allVentas.filter(v => v.fecha === hoy).reduce((s,v) => s+(v.total||0), 0);
+    }
+    const ventasRow = document.getElementById('stat-ventas-row');
+    const totalRow = document.getElementById('stat-total-row');
+    if (ventasTotal > 0) {
+        document.getElementById('stat-ventas-billing').textContent = `$${ventasTotal.toLocaleString('es-AR')}`;
+        document.getElementById('stat-total-billing').textContent = `$${(cutsBilling + ventasTotal).toLocaleString('es-AR')}`;
+        ventasRow.classList.remove('hidden'); ventasRow.classList.add('flex');
+        totalRow.classList.remove('hidden'); totalRow.classList.add('flex');
+    } else {
+        ventasRow.classList.add('hidden'); ventasRow.classList.remove('flex');
+        totalRow.classList.add('hidden'); totalRow.classList.remove('flex');
+    }
 }
 
 function formatFecha(fecha) {
