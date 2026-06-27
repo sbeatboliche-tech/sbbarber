@@ -887,11 +887,15 @@ function renderWeeklyTotalsAdmin() {
                 const ret = totals[barbero] || 0;
                 const prop = propTotals[barbero] || 0;
                 const total = ret + prop;
-                return `<button onclick="window.openBarberDetail('${barbero}')" class="bg-black/30 rounded-xl p-3 text-center hover:bg-white/5 active:scale-95 transition w-full">
-                    <div class="text-xs font-bold ${t.text||'text-gray-400'} mb-1">${barbero}</div>
-                    <div class="text-base font-extrabold text-violet-300">$${ret.toLocaleString('es-AR')}</div>
-                    ${prop > 0 ? `<div class="text-[9px] text-yellow-500 mt-0.5">propinas: $${prop.toLocaleString('es-AR')}</div>` : ''}
-                    <div class="text-[9px] text-gray-600 mt-0.5">ver historial →</div>
+                const neto = ret - prop;
+                return `<button onclick="window.openBarberDetail('${barbero}')" class="bg-black/30 rounded-xl p-3 text-left hover:bg-white/5 active:scale-95 transition w-full">
+                    <div class="text-xs font-bold ${t.text||'text-gray-400'} mb-2">${barbero}</div>
+                    <div class="space-y-0.5">
+                        <div class="flex justify-between items-center"><span class="text-[9px] text-gray-500">Retirado</span><span class="text-[11px] font-bold text-violet-300">$${ret.toLocaleString('es-AR')}</span></div>
+                        ${prop > 0 ? `<div class="flex justify-between items-center"><span class="text-[9px] text-yellow-500">Propinas</span><span class="text-[11px] font-bold text-yellow-400">− $${prop.toLocaleString('es-AR')}</span></div>
+                        <div class="flex justify-between items-center border-t border-white/10 pt-1 mt-1"><span class="text-[9px] text-gray-300 font-bold">Neto</span><span class="text-sm font-extrabold ${neto>=0?'text-white':'text-emerald-300'}">$${neto.toLocaleString('es-AR')}</span></div>` : ''}
+                    </div>
+                    <div class="text-[9px] text-gray-600 mt-1.5">ver historial →</div>
                 </button>`;
             }).join('')}
         </div>
