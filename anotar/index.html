@@ -754,10 +754,10 @@ function renderRetirosView() {
 }
 
 function renderBalanceCard(barberName) {
-    const hoy=new Date().toISOString().split('T')[0];
+    const hoy=new Date().toLocaleDateString('en-CA');
     const today=new Date(); const wd=today.getDay()||7;
     const ws=new Date(today); if(wd!==1) ws.setDate(today.getDate()-(wd-1)); ws.setHours(0,0,0,0);
-    const weekStartStr=ws.toISOString().split('T')[0];
+    const weekStartStr=ws.toLocaleDateString('en-CA');
     // allRetiros ya viene filtrado por userEmail para barberos, no hace falta filtrar por barbero
     const retiradoHoy=allRetiros.filter(r=>r.fecha===hoy&&r.estado!=='rechazado').reduce((s,r)=>s+r.monto,0);
     const disponible=RETIRO_LIMITE-retiradoHoy;
@@ -847,7 +847,7 @@ function renderWeeklyTotalsAdmin() {
     const weekStart = new Date(today);
     if (day !== 1) weekStart.setDate(today.getDate() - (day - 1));
     weekStart.setHours(0,0,0,0);
-    const weekStartStr = weekStart.toISOString().split('T')[0];
+    const weekStartStr = weekStart.toLocaleDateString('en-CA');
     const totals = {};
     allRetiros.filter(r => r.fecha >= weekStartStr && r.estado !== 'rechazado')
         .forEach(r => { totals[r.barbero] = (totals[r.barbero] || 0) + r.monto; });
@@ -943,7 +943,7 @@ function renderBarberDetail(name) {
 
     const today = new Date(); const wd = today.getDay()||7;
     const ws = new Date(today); if(wd!==1) ws.setDate(today.getDate()-(wd-1)); ws.setHours(0,0,0,0);
-    const weekStartStr = ws.toISOString().split('T')[0];
+    const weekStartStr = ws.toLocaleDateString('en-CA');
     const semana = myRetiros.filter(r => r.fecha >= weekStartStr && r.estado !== 'rechazado').reduce((s,r) => s+r.monto, 0);
 
     const combined = [
@@ -1014,7 +1014,7 @@ window.openRetiroManualModal = () => {
     const wd = today.getDay() || 7;
     const ws = new Date(today);
     if (wd !== 1) ws.setDate(today.getDate() - (wd - 1));
-    document.getElementById('retiro-manual-fecha').value = ws.toISOString().split('T')[0];
+    document.getElementById('retiro-manual-fecha').value = ws.toLocaleDateString('en-CA');
     document.getElementById('retiro-manual-monto').value = '';
     document.getElementById('retiro-manual-barbero').value = '';
     showModal('retiro-manual-modal');
@@ -1046,7 +1046,7 @@ document.getElementById('retiro-manual-form').addEventListener('submit', async e
 
 window.openRetiroModal = () => {
     const myName=BARBER_EMAIL_MAP[currentUser.email];
-    const hoy=new Date().toISOString().split('T')[0];
+    const hoy=new Date().toLocaleDateString('en-CA');
     const retiradoHoy=allRetiros.filter(r=>r.barbero===myName&&r.fecha===hoy&&r.estado!=='rechazado').reduce((s,r)=>s+r.monto,0);
     const disponible=RETIRO_LIMITE-retiradoHoy;
     document.getElementById('retiro-limit-info').textContent=`Límite diario: $${RETIRO_LIMITE.toLocaleString('es-AR')} — Disponible hoy: $${disponible.toLocaleString('es-AR')}`;
@@ -1065,7 +1065,7 @@ document.getElementById('retiro-form').addEventListener('submit', async e => {
     if(!myName) return alert('Solo los barberos pueden solicitar retiros');
     const monto=Number(document.getElementById('retiro-monto').value);
     if(!monto||monto<1) return alert('Ingresá un monto válido');
-    const hoy=new Date().toISOString().split('T')[0];
+    const hoy=new Date().toLocaleDateString('en-CA');
     const retiradoHoy=allRetiros.filter(r=>r.barbero===myName&&r.fecha===hoy&&r.estado!=='rechazado').reduce((s,r)=>s+r.monto,0);
     if(retiradoHoy+monto>RETIRO_LIMITE) return alert(`Límite diario: $${RETIRO_LIMITE.toLocaleString('es-AR')}. Ya solicitaste $${retiradoHoy.toLocaleString('es-AR')} hoy.`);
     const btn=document.getElementById('btn-submit-retiro');
@@ -1087,7 +1087,7 @@ document.getElementById('propina-form').addEventListener('submit', async e => {
     const btn=document.getElementById('btn-submit-propina');
     btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
     try {
-        const hoy=new Date().toISOString().split('T')[0];
+        const hoy=new Date().toLocaleDateString('en-CA');
         await addDoc(collection(db,PATH_PROPINAS),{barbero:myName,userEmail:currentUser.email,monto,descripcion:desc||null,fecha:hoy,estado:'confirmado',creadoEn:serverTimestamp()});
         window.closeModals();
     } catch { alert('Error al guardar'); }
@@ -1126,8 +1126,8 @@ function renderVentasHistorial() {
         byDate[f].push(v);
     });
     const dates = Object.keys(byDate).sort((a,b) => b.localeCompare(a)).slice(0,21);
-    const hoy = new Date().toISOString().split('T')[0];
-    const ayer = new Date(Date.now()-86400000).toISOString().split('T')[0];
+    const hoy = new Date().toLocaleDateString('en-CA');
+    const ayer = new Date(Date.now()-86400000).toLocaleDateString('en-CA');
     const fmtFecha = f => {
         if (f===hoy) return 'Hoy';
         if (f===ayer) return 'Ayer';
@@ -1407,7 +1407,7 @@ document.getElementById('stock-item-form').addEventListener('submit', async e=>{
             if(currentStockAction.type==='venta'){
                 const item=allStock.find(i=>i.id===currentStockAction.itemId);
                 const precio=item?.price||0;
-                const hoy=new Date().toISOString().split('T')[0];
+                const hoy=new Date().toLocaleDateString('en-CA');
                 await addDoc(collection(db,PATH_VENTAS),{
                     producto:currentStockAction.itemName, tipo:'bebida',
                     precio, cantidad:qty, total:precio*qty,
@@ -1661,7 +1661,7 @@ window.submitVenta = async () => {
     const btn = document.getElementById('btn-submit-venta');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
-        const hoy = new Date().toISOString().split('T')[0];
+        const hoy = new Date().toLocaleDateString('en-CA');
         const myName = BARBER_EMAIL_MAP[currentUser.email] || currentUser.email;
         await addDoc(collection(db,PATH_VENTAS), {
             producto: selectedProducto.name,
@@ -1833,7 +1833,7 @@ function renderCierreDia() {
         html += `<div class="text-center py-10 text-gray-600"><i class="fas fa-moon text-3xl mb-3 block opacity-40"></i><p class="text-sm">Nada registrado hoy todavía</p></div>`;
     }
 
-    const ventasHoy = allVentas.filter(v => v.fecha === new Date().toISOString().split('T')[0]);
+    const ventasHoy = allVentas.filter(v => v.fecha === new Date().toLocaleDateString('en-CA'));
 
     if (isAdmin) {
         html += renderVentasCard(ventasHoy);

@@ -853,7 +853,7 @@ document.getElementById('movement-form').addEventListener('submit', async e => {
         if (type === 'venta' && drinkSalidaTipo === 'venta') {
             const item = allStock.find(i => i.id === itemId);
             const precio = item?.price || 0;
-            const hoy = new Date().toISOString().split('T')[0];
+            const hoy = new Date().toLocaleDateString('en-CA');
             await addDoc(collection(db, PATH_VENTAS), {
                 producto: itemName, tipo: 'bebida',
                 precio, cantidad: qty, total: precio * qty,
@@ -974,7 +974,7 @@ window.quickSale = async id => {
     const item = allStock.find(i => i.id === id);
     if (!item || (item.quantity || 0) < 1) return alert('Sin stock');
     try {
-        const hoy = new Date().toISOString().split('T')[0];
+        const hoy = new Date().toLocaleDateString('en-CA');
         await updateDoc(doc(db, PATH_STOCK, id), { quantity: increment(-1) });
         await addDoc(collection(db, PATH_VENTAS), {
             producto: item.name, tipo: 'bebida',
@@ -1000,7 +1000,7 @@ function listenToVentas() {
 }
 
 function renderVentas() {
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = new Date().toLocaleDateString('en-CA');
     const ventasHoy = allVentas.filter(v => v.fecha === hoy).sort((a,b) => (b.creadoEn?.seconds||0) - (a.creadoEn?.seconds||0));
     const list = document.getElementById('ventas-list');
     const totalRow = document.getElementById('ventas-total-row');
@@ -1034,7 +1034,7 @@ function renderVentas() {
 
 function updateDailyTotalStat(cutsBilling, ventasTotal = null) {
     if (ventasTotal === null) {
-        const hoy = new Date().toISOString().split('T')[0];
+        const hoy = new Date().toLocaleDateString('en-CA');
         ventasTotal = allVentas.filter(v => v.fecha === hoy).reduce((s,v) => s+(v.total||0), 0);
     }
     const ventasRow = document.getElementById('stat-ventas-row');
@@ -1054,8 +1054,8 @@ function formatFecha(fecha) {
     if (!fecha) return 'Fecha desconocida';
     const [y, m, d] = fecha.split('-').map(Number);
     const date = new Date(y, m - 1, d);
-    const hoy = new Date().toISOString().split('T')[0];
-    const ayer = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const hoy = new Date().toLocaleDateString('en-CA');
+    const ayer = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
     if (fecha === hoy) return 'Hoy';
     if (fecha === ayer) return 'Ayer';
     return date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -1064,7 +1064,7 @@ function formatFecha(fecha) {
 function renderSalesHistory() {
     const list = document.getElementById('sales-history-list');
     if (!list) return;
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = new Date().toLocaleDateString('en-CA');
     const todas = allVentas.filter(v => v.fecha);
     if (todas.length === 0) {
         list.innerHTML = '<p class="text-xs text-gray-600 text-center py-2">Sin historial aún</p>';
@@ -1137,7 +1137,7 @@ window.submitVenta = async () => {
     const btn = document.getElementById('btn-submit-venta');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
-        const hoy = new Date().toISOString().split('T')[0];
+        const hoy = new Date().toLocaleDateString('en-CA');
         await addDoc(collection(db, PATH_VENTAS), {
             producto: selectedProducto.name,
             precio: selectedProducto.precio,
@@ -1246,7 +1246,7 @@ document.getElementById('producto-movement-form').addEventListener('submit', asy
         const { productoId, productoName, tipo } = currentProductoMovement;
         const delta = tipo === 'entrada' ? qty : -qty;
         await updateDoc(doc(db, PATH_PRODUCTOS, productoId), { stock: increment(delta) });
-        const hoy = new Date().toISOString().split('T')[0];
+        const hoy = new Date().toLocaleDateString('en-CA');
         if (tipo === 'salida' && salidaTipo === 'venta') {
             const prod = PRODUCTOS_BARBER.find(p => p.id === productoId);
             await addDoc(collection(db, PATH_VENTAS), {
@@ -1302,7 +1302,7 @@ window.closeCierreCaja = () => {
 function renderCierreCaja() {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const hoy = now.toISOString().split('T')[0];
+    const hoy = now.toLocaleDateString('en-CA');
 
     document.getElementById('cierre-caja-fecha').textContent =
         today.toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
