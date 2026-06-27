@@ -535,6 +535,21 @@
         </div>
     </div>
 
+    <!-- Modal: Nota en retiro -->
+    <div id="retiro-nota-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
+        <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl rounded-t-3xl">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-xl font-bold text-white">Nota del retiro</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <p id="retiro-nota-info" class="text-xs text-gray-500 mb-5"></p>
+            <input type="hidden" id="retiro-nota-id">
+            <input type="text" id="retiro-nota-text" placeholder="Ej: materiales, adelanto, semana..." maxlength="80"
+                class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-violet-500 outline-none transition text-white placeholder-gray-500 mb-4">
+            <button onclick="window.saveRetiroNota()" id="btn-save-retiro-nota" class="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest">Guardar nota</button>
+        </div>
+    </div>
+
     <!-- Modal: Anotar Propina -->
     <div id="propina-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
         <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl rounded-t-3xl">
@@ -832,10 +847,12 @@ function renderHistoryAdmin() {
         const ec=item.estado==='confirmado'?'text-emerald-400':'text-red-400';
         const ei=item.estado==='confirmado'?'✓':'✗';
         const bdr=item.tipo==='retiro'?'border-violet-500/20':'border-yellow-500/20';
-        const lbl=item.tipo==='retiro'?`Retiro · ${item.barbero}`:`Propina · ${item.barbero}${item.descripcion?' · '+item.descripcion:''}`;
+        const desc=item.descripcion?`<span class="text-gray-500"> · ${item.descripcion}</span>`:'';
+        const lbl=item.tipo==='retiro'?`Retiro · ${item.barbero}${desc}`:`Propina · ${item.barbero}${item.descripcion?' · '+item.descripcion:''}`;
         const f=item.creadoEn?item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
+        const notaBtn=item.tipo==='retiro'?`<button onclick="window.openRetiroNota('${item.id}','${item.descripcion||''}',${item.monto},'${item.barbero}')" class="text-gray-600 hover:text-violet-400 transition ml-1" title="Agregar nota"><i class="fas fa-pencil-alt text-[10px]"></i></button>`:'';
         return `<div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${bdr}">
-            <div><div class="text-xs font-bold text-gray-200">${lbl}</div><div class="text-[10px] text-gray-500">${f}</div></div>
+            <div><div class="text-xs font-bold text-gray-200 flex items-center gap-1">${lbl}${notaBtn}</div><div class="text-[10px] text-gray-500">${f}</div></div>
             <div class="flex items-center gap-3"><span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span></div>
         </div>`;
     }).join('');
@@ -957,13 +974,15 @@ function renderBarberDetail(name) {
             const ec = item.estado==='confirmado' ? 'text-emerald-400' : item.estado==='rechazado' ? 'text-red-400' : 'text-yellow-400';
             const ei = item.estado==='confirmado' ? '✓' : item.estado==='rechazado' ? '✗' : '⏳';
             const bdr = item.tipo==='retiro' ? 'border-violet-500/20' : 'border-yellow-500/20';
-            const lbl = item.tipo==='retiro' ? 'Retiro' : `Propina${item.descripcion?' · '+item.descripcion:''}`;
+            const desc = item.descripcion ? ` · <span class="text-gray-500 font-normal">${item.descripcion}</span>` : '';
+            const lbl = item.tipo==='retiro' ? `Retiro${desc}` : `Propina${item.descripcion?' · '+item.descripcion:''}`;
+            const notaBtn = item.tipo==='retiro' ? `<button onclick="window.openRetiroNota('${item.id}','${(item.descripcion||'').replace(/'/g,"\\'")}',${item.monto},'${name}')" class="ml-1 text-gray-600 hover:text-violet-400 transition" title="Agregar nota"><i class="fas fa-pencil-alt text-[10px]"></i></button>` : '';
             const f = item.creadoEn ? item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : item.fecha||'';
             return `<div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${bdr}">
                 <div class="flex items-center gap-2">
                     <span class="${ec} text-base leading-none">${ei}</span>
                     <div>
-                        <div class="text-xs font-bold text-gray-200">${lbl}</div>
+                        <div class="text-xs font-bold text-gray-200 flex items-center gap-1">${lbl}${notaBtn}</div>
                         <div class="text-[10px] text-gray-500">${f}</div>
                     </div>
                 </div>
@@ -1569,7 +1588,26 @@ window.setPeriod = (p,el)=>{
 window.openSettingsModal = ()=>showModal('settings-modal');
 window.openAddModal = ()=>{ showModal('add-modal'); renderBarberSelection(); };
 
-const ALL_MODALS=['settings-modal','add-modal','expense-modal','date-search-modal','admin-settings-modal','updates-modal','fixed-expenses-modal','stock-item-modal','retiro-modal','propina-modal','ventas-modal','retiro-manual-modal'];
+const ALL_MODALS=['settings-modal','add-modal','expense-modal','date-search-modal','admin-settings-modal','updates-modal','fixed-expenses-modal','stock-item-modal','retiro-modal','propina-modal','ventas-modal','retiro-manual-modal','retiro-nota-modal'];
+
+window.openRetiroNota = (retiroId, currentDesc, monto, barbero) => {
+    document.getElementById('retiro-nota-id').value = retiroId;
+    document.getElementById('retiro-nota-text').value = currentDesc || '';
+    document.getElementById('retiro-nota-info').textContent = `Retiro ${barbero ? barbero + ' · ' : ''}$${Number(monto).toLocaleString('es-AR')}`;
+    showModal('retiro-nota-modal');
+    setTimeout(() => document.getElementById('retiro-nota-text').focus(), 100);
+};
+window.saveRetiroNota = async () => {
+    const id = document.getElementById('retiro-nota-id').value;
+    const nota = document.getElementById('retiro-nota-text').value.trim();
+    const btn = document.getElementById('btn-save-retiro-nota');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        await updateDoc(doc(db, PATH_RETIROS, id), { descripcion: nota || null });
+        window.closeModals();
+    } catch { alert('Error al guardar'); }
+    btn.disabled = false; btn.textContent = 'Guardar nota';
+};
 function showModal(id){ document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
 window.closeModals = ()=>ALL_MODALS.forEach(id=>{ document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); });
 window.logout = ()=>signOut(auth);
