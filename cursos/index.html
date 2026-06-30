@@ -288,30 +288,15 @@
         <p class="section-label">Qué ofrecemos</p>
         <div class="cursos-grid">
 
-            <!-- CURSO 1 -->
-            <div class="curso-card">
-                <div class="curso-nombre">Curso Inicial</div>
-                <div class="curso-duracion">4 semanas · Presencial</div>
-                <p class="curso-desc">Ideal para empezar desde cero. Aprendés las bases del corte masculino, uso de máquinas y tijera.</p>
-                <ul class="curso-incluye">
-                    <li>Técnica de máquina y degradado</li>
-                    <li>Uso de tijera y navaja</li>
-                    <li>Perfilado y terminaciones</li>
-                    <li>Kit de herramientas incluido</li>
-                </ul>
-                <div class="curso-footer">
-                    <span class="curso-precio" id="cp-curso-inicial">Consultá</span>
-                    <a href="#inscripcion" class="btn-inscribir" onclick="preseleccionarCurso('Curso Inicial')">Me interesa</a>
-                </div>
-            </div>
-
-            <!-- CURSO 2 (destacado) -->
+            <!-- CURSO COMPLETO -->
             <div class="curso-card featured">
                 <div class="curso-nombre">Curso Completo</div>
-                <div class="curso-duracion">8 semanas · Presencial</div>
-                <p class="curso-desc">Formación completa para trabajar como barbero profesional. Desde técnicas básicas hasta estilos avanzados y atención al cliente.</p>
+                <div class="curso-duracion">3 meses · Presencial</div>
+                <p class="curso-desc">Formación completa para trabajar como barbero profesional. Desde técnicas básicas hasta estilos avanzados y atención al cliente. Las primeras 2 clases son teóricas, el resto 100% práctico.</p>
                 <ul class="curso-incluye">
-                    <li>Todo el contenido del Curso Inicial</li>
+                    <li>Clases 1 y 2: teoría y fundamentos del oficio</li>
+                    <li>Técnica de máquina y degradado</li>
+                    <li>Uso de tijera y navaja</li>
                     <li>Estilos avanzados y cortes con diseño</li>
                     <li>Afeitado y tratamientos de barba</li>
                     <li>Gestión del cliente</li>
@@ -321,22 +306,6 @@
                 <div class="curso-footer">
                     <span class="curso-precio" id="cp-curso-completo">Consultá</span>
                     <a href="#inscripcion" class="btn-inscribir" onclick="preseleccionarCurso('Curso Completo')">Me interesa</a>
-                </div>
-            </div>
-
-            <!-- CURSO 3 -->
-            <div class="curso-card">
-                <div class="curso-nombre">Taller de Barba</div>
-                <div class="curso-duracion">1 día · Presencial</div>
-                <p class="curso-desc">Jornada intensiva enfocada en técnicas de perfilado, afeitado a navaja y tratamientos de barba.</p>
-                <ul class="curso-incluye">
-                    <li>Perfilado profesional</li>
-                    <li>Afeitado a navaja</li>
-                    <li>Productos y tratamientos</li>
-                </ul>
-                <div class="curso-footer">
-                    <span class="curso-precio" id="cp-taller-barba">Consultá</span>
-                    <a href="#inscripcion" class="btn-inscribir" onclick="preseleccionarCurso('Taller de Barba')">Me interesa</a>
                 </div>
             </div>
 
@@ -358,15 +327,6 @@
                 <div class="form-group">
                     <label>Teléfono / WhatsApp *</label>
                     <input type="tel" id="f-tel" placeholder="Ej: 1167891234" inputmode="tel" autocomplete="tel" required>
-                </div>
-                <div class="form-group">
-                    <label>Curso que te interesa *</label>
-                    <select id="f-curso" required>
-                        <option value="" disabled selected>Elegí un curso</option>
-                        <option value="Curso Inicial">Curso Inicial</option>
-                        <option value="Curso Completo">Curso Completo</option>
-                        <option value="Taller de Barba">Taller de Barba</option>
-                    </select>
                 </div>
                 <div class="form-group">
                     <label>¿Tenés experiencia previa?</label>
@@ -418,7 +378,7 @@
         const db  = getFirestore(app);
 
         // Precios de cursos desde Firestore
-        const cursoMap = { 'curso-inicial':'cp-curso-inicial', 'curso-completo':'cp-curso-completo', 'taller-barba':'cp-taller-barba' };
+        const cursoMap = { 'curso-completo':'cp-curso-completo' };
         onSnapshot(collection(db, 'tienda_cursos'), snap => {
             snap.forEach(d => {
                 const el = document.getElementById(cursoMap[d.id]);
@@ -430,13 +390,13 @@
             e.preventDefault();
             const nombre  = document.getElementById('f-nombre').value.trim();
             const tel     = document.getElementById('f-tel').value.trim();
-            const curso   = document.getElementById('f-curso').value;
+            const curso   = 'Curso Completo';
             const exp     = document.getElementById('f-exp').value;
             const mensaje = document.getElementById('f-mensaje').value.trim();
 
             // Validación básica
             let err = false;
-            ['f-nombre','f-tel','f-curso'].forEach(id => {
+            ['f-nombre','f-tel'].forEach(id => {
                 const el = document.getElementById(id);
                 if (!el.value.trim()) { el.classList.add('input-error'); err = true; }
                 else el.classList.remove('input-error');
@@ -464,7 +424,7 @@
         });
 
         // Limpiar error al escribir
-        ['f-nombre','f-tel','f-curso'].forEach(id => {
+        ['f-nombre','f-tel'].forEach(id => {
             document.getElementById(id).addEventListener('input', () => {
                 document.getElementById(id).classList.remove('input-error');
             });
