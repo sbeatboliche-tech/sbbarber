@@ -774,38 +774,22 @@ function renderBalanceCard(barberName) {
     const ws=new Date(today); if(wd!==1) ws.setDate(today.getDate()-(wd-1)); ws.setHours(0,0,0,0);
     const weekStartStr=ws.toLocaleDateString('en-CA');
     const totalRetiros=allRetiros.filter(r=>r.fecha>=weekStartStr&&r.estado==='confirmado').reduce((s,r)=>s+r.monto,0);
-    const totalPropinas=allPropinas.filter(p=>p.fecha>=weekStartStr&&p.estado==='confirmado').reduce((s,p)=>s+p.monto,0);
     const pendRetiros=allRetiros.filter(r=>r.fecha>=weekStartStr&&r.estado==='pendiente').reduce((s,r)=>s+r.monto,0);
     const pendPropinas=allPropinas.filter(p=>p.fecha>=weekStartStr&&p.estado==='pendiente').reduce((s,p)=>s+p.monto,0);
-    const retiradoSemana=allRetiros.filter(r=>r.fecha>=weekStartStr&&r.estado!=='rechazado').reduce((s,r)=>s+r.monto,0);
-    const disponible=RETIRO_LIMITE-retiradoSemana;
     const el=document.getElementById('retiros-balance');
     el.innerHTML=`
         <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
             <i class="fas fa-wallet text-violet-400"></i> Mi Balance
         </div>
-        <div class="grid grid-cols-2 gap-3 mb-3">
-            <div class="bg-black/30 rounded-xl p-3 text-center">
-                <div class="text-xl font-extrabold text-violet-300">$${totalRetiros.toLocaleString('es-AR')}</div>
-                <div class="text-[10px] text-gray-500 mt-0.5">retirado esta semana</div>
-            </div>
-            <div class="bg-black/30 rounded-xl p-3 text-center">
-                <div class="text-xl font-extrabold text-yellow-300">$${totalPropinas.toLocaleString('es-AR')}</div>
-                <div class="text-[10px] text-gray-500 mt-0.5">propinas esta semana</div>
-            </div>
+        <div class="bg-black/30 rounded-xl p-4 text-center mb-3">
+            <div class="text-2xl font-extrabold text-violet-300">$${totalRetiros.toLocaleString('es-AR')}</div>
+            <div class="text-[10px] text-gray-500 mt-0.5">retirado lunes a domingo</div>
         </div>
         ${(pendRetiros+pendPropinas)>0?`
-        <div class="bg-yellow-900/20 border border-yellow-500/20 rounded-xl p-3 mb-3 flex justify-between items-center">
+        <div class="bg-yellow-900/20 border border-yellow-500/20 rounded-xl p-3 flex justify-between items-center">
             <span class="text-xs text-yellow-400 flex items-center gap-2"><i class="fas fa-clock text-xs"></i> Pendiente confirmación</span>
             <span class="text-sm font-bold text-yellow-300">$${(pendRetiros+pendPropinas).toLocaleString('es-AR')}</span>
-        </div>`:''}
-        <div class="bg-violet-900/20 border border-violet-500/20 rounded-xl p-3 flex justify-between items-center">
-            <div>
-                <span class="text-xs text-gray-400">Límite semanal</span>
-                <div class="text-[10px] text-gray-600">Retirado esta semana: $${retiradoSemana.toLocaleString('es-AR')}</div>
-            </div>
-            <span class="text-sm font-bold ${disponible>0?'text-violet-300':'text-red-400'}">${disponible>0?'Disponible: $'+disponible.toLocaleString('es-AR'):'Límite alcanzado'}</span>
-        </div>`;
+        </div>`:''}`;
     el.classList.remove('hidden');
     document.getElementById('retiros-actions').classList.remove('hidden');
 }
@@ -826,9 +810,10 @@ function renderHistoryBarber(barberName) {
         const bdr=item.tipo==='retiro'?'border-violet-500/20':'border-yellow-500/20';
         const lbl=item.tipo==='retiro'?'Retiro':`Propina${item.descripcion?' · '+item.descripcion:''}`;
         const f=item.creadoEn?item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
+        const delPath=`${item.tipo==='retiro'?PATH_RETIROS:PATH_PROPINAS}/${item.id}`;
         return `<div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${bdr}">
             <div><div class="text-xs font-bold text-gray-200">${lbl}</div><div class="text-[10px] text-gray-500">${f}</div></div>
-            <div class="flex items-center gap-3"><span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span></div>
+            <div class="flex items-center gap-3"><span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span><button class="btn-delete-action text-gray-600 hover:text-red-400 transition" data-path="${delPath}" title="Eliminar"><i class="fas fa-trash-alt text-[10px]"></i></button></div>
         </div>`;
     }).join('');
 }
@@ -851,9 +836,10 @@ function renderHistoryAdmin() {
         const lbl=item.tipo==='retiro'?`Retiro · ${item.barbero}${desc}`:`Propina · ${item.barbero}${item.descripcion?' · '+item.descripcion:''}`;
         const f=item.creadoEn?item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
         const notaBtn=item.tipo==='retiro'?`<button onclick="window.openRetiroNota('${item.id}','${item.descripcion||''}',${item.monto},'${item.barbero}')" class="text-gray-600 hover:text-violet-400 transition ml-1" title="Agregar nota"><i class="fas fa-pencil-alt text-[10px]"></i></button>`:'';
+        const delPath=`${item.tipo==='retiro'?PATH_RETIROS:PATH_PROPINAS}/${item.id}`;
         return `<div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${bdr}">
             <div><div class="text-xs font-bold text-gray-200 flex items-center gap-1">${lbl}${notaBtn}</div><div class="text-[10px] text-gray-500">${f}</div></div>
-            <div class="flex items-center gap-3"><span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span></div>
+            <div class="flex items-center gap-3"><span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span><button class="btn-delete-action text-gray-600 hover:text-red-400 transition" data-path="${delPath}" title="Eliminar"><i class="fas fa-trash-alt text-[10px]"></i></button></div>
         </div>`;
     }).join('');
 }
@@ -929,9 +915,10 @@ function renderPendingPanel() {
                         </div>
                         <span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-3 gap-2">
                         <button onclick="window.approveItem('${path}','${item.id}')" class="bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold py-2 rounded-lg hover:bg-emerald-600/30 transition">✓ Confirmar</button>
                         <button onclick="window.rejectItem('${path}','${item.id}')" class="bg-red-600/20 border border-red-500/30 text-red-400 text-xs font-bold py-2 rounded-lg hover:bg-red-600/30 transition">✗ Rechazar</button>
+                        <button class="btn-delete-action bg-gray-800/50 border border-gray-600/30 text-gray-500 hover:text-red-400 hover:border-red-500/30 text-xs font-bold py-2 rounded-lg transition" data-path="${path}/${item.id}" title="Eliminar"><i class="fas fa-trash-alt"></i></button>
                     </div>
                 </div>`;
             }).join('')}
@@ -1067,12 +1054,10 @@ document.getElementById('retiro-manual-form').addEventListener('submit', async e
 
 window.openRetiroModal = () => {
     const myName=BARBER_EMAIL_MAP[currentUser.email];
-    const today=new Date(); const wd=today.getDay()||7;
-    const ws=new Date(today); if(wd!==1) ws.setDate(today.getDate()-(wd-1)); ws.setHours(0,0,0,0);
-    const weekStartStr=ws.toLocaleDateString('en-CA');
-    const retiradoSemana=allRetiros.filter(r=>r.barbero===myName&&r.fecha>=weekStartStr&&r.estado!=='rechazado').reduce((s,r)=>s+r.monto,0);
-    const disponible=RETIRO_LIMITE-retiradoSemana;
-    document.getElementById('retiro-limit-info').textContent=`Límite semanal: $${RETIRO_LIMITE.toLocaleString('es-AR')} — Disponible esta semana: $${disponible.toLocaleString('es-AR')}`;
+    const hoy=new Date().toLocaleDateString('en-CA');
+    const retiradoHoy=allRetiros.filter(r=>r.barbero===myName&&r.fecha===hoy&&r.estado!=='rechazado').reduce((s,r)=>s+r.monto,0);
+    const disponible=RETIRO_LIMITE-retiradoHoy;
+    document.getElementById('retiro-limit-info').textContent=`Límite diario: $${RETIRO_LIMITE.toLocaleString('es-AR')} — Disponible hoy: $${disponible.toLocaleString('es-AR')}`;
     document.getElementById('retiro-monto').value='';
     showModal('retiro-modal');
 };
@@ -1089,11 +1074,8 @@ document.getElementById('retiro-form').addEventListener('submit', async e => {
     const monto=Number(document.getElementById('retiro-monto').value);
     if(!monto||monto<1) return alert('Ingresá un monto válido');
     const hoy=new Date().toLocaleDateString('en-CA');
-    const today2=new Date(); const wd2=today2.getDay()||7;
-    const ws2=new Date(today2); if(wd2!==1) ws2.setDate(today2.getDate()-(wd2-1)); ws2.setHours(0,0,0,0);
-    const weekStartStr2=ws2.toLocaleDateString('en-CA');
-    const retiradoSemana=allRetiros.filter(r=>r.barbero===myName&&r.fecha>=weekStartStr2&&r.estado!=='rechazado').reduce((s,r)=>s+r.monto,0);
-    if(retiradoSemana+monto>RETIRO_LIMITE) return alert(`Límite semanal: $${RETIRO_LIMITE.toLocaleString('es-AR')}. Ya solicitaste $${retiradoSemana.toLocaleString('es-AR')} esta semana.`);
+    const retiradoHoy=allRetiros.filter(r=>r.barbero===myName&&r.fecha===hoy&&r.estado!=='rechazado').reduce((s,r)=>s+r.monto,0);
+    if(retiradoHoy+monto>RETIRO_LIMITE) return alert(`Límite diario: $${RETIRO_LIMITE.toLocaleString('es-AR')}. Ya solicitaste $${retiradoHoy.toLocaleString('es-AR')} hoy.`);
     const btn=document.getElementById('btn-submit-retiro');
     btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
     try {
