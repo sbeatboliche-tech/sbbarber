@@ -29,6 +29,7 @@
         .drag-handle { cursor:grab; touch-action:none; }
         .drag-handle:active { cursor:grabbing; }
         .sortable-ghost { opacity:0.3; border:2px dashed rgba(6,182,212,0.4) !important; }
+        @keyframes slideIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
         /* Desktop: both columns always visible */
         @media (min-width:768px) {
             ::-webkit-scrollbar { display:block; width:4px; }
@@ -113,7 +114,7 @@
                 <span class="text-[10px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-2"><i class="fas fa-cut"></i> Cortes del día</span>
             </div>
             <div class="px-6 py-2">
-                <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-2"><i class="fas fa-shopping-bag"></i> Stock y ventas</span>
+                <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-2"><i class="fas fa-shopping-bag"></i> Ventas</span>
             </div>
         </div>
 
@@ -138,14 +139,14 @@
                                 <span class="text-gray-500 text-sm">$</span>
                                 <span id="stat-cuts-billing" class="text-2xl font-extrabold text-white">0</span>
                             </div>
-                            <div class="text-[10px] text-gray-500 mt-0.5">cortes</div>
+                            <div class="text-[10px] text-gray-500 mt-0.5">facturado</div>
                         </div>
                     </div>
-                    <div id="stat-ventas-row" class="hidden mt-3 pt-3 border-t border-white/5 flex justify-between items-center">
+                    <div id="stat-ventas-row" class="hidden mt-3 pt-3 border-t border-white/5 justify-between items-center">
                         <span class="text-[10px] text-gray-500">+ Ventas productos y bebidas</span>
                         <span id="stat-ventas-billing" class="text-sm font-bold text-indigo-300">$0</span>
                     </div>
-                    <div id="stat-total-row" class="hidden mt-1 flex justify-between items-center">
+                    <div id="stat-total-row" class="hidden mt-1 justify-between items-center">
                         <span class="text-[10px] font-bold text-gray-300 uppercase tracking-wide">Total del día</span>
                         <span id="stat-total-billing" class="text-base font-extrabold text-white">$0</span>
                     </div>
@@ -191,7 +192,7 @@
                     <div id="ventas-list" class="space-y-2">
                         <p class="text-xs text-gray-600 text-center py-2">Sin ventas hoy</p>
                     </div>
-                    <div id="ventas-total-row" class="hidden flex justify-between items-center pt-3 border-t border-white/10 mt-2">
+                    <div id="ventas-total-row" class="hidden justify-between items-center pt-3 border-t border-white/10 mt-2">
                         <span class="text-[10px] text-gray-500 uppercase font-bold">Total hoy</span>
                         <span id="ventas-total" class="text-sm font-extrabold text-indigo-300">$0</span>
                     </div>
@@ -544,9 +545,6 @@ async function init() {
             document.getElementById('dashboard-view').classList.remove('hidden');
             document.getElementById('login-view').classList.add('hidden');
             if (isAdmin) document.getElementById('btn-add-stock-item').classList.remove('hidden');
-            // FAB venta visible en mobile para todos
-            const fabV = document.getElementById('fab-venta');
-            fabV.classList.remove('hidden'); fabV.classList.add('flex');
             listenToCuts();
             listenToStock();
             listenToVentas();
@@ -731,7 +729,7 @@ document.getElementById('add-cut-form').addEventListener('submit', async e => {
         closeModals();
         document.getElementById('add-cut-form').reset();
     } catch { alert('Error al guardar'); }
-    btn.disabled = false; btn.textContent = 'CONFIRMAR';
+    btn.disabled = false; btn.textContent = 'Confirmar';
 });
 
 // ---- STOCK ----
@@ -1008,7 +1006,7 @@ function renderVentas() {
     const totalRow = document.getElementById('ventas-total-row');
     if (ventasHoy.length === 0) {
         list.innerHTML = '<p class="text-xs text-gray-600 text-center py-2">Sin ventas hoy</p>';
-        totalRow.classList.add('hidden');
+        totalRow.classList.add('hidden'); totalRow.classList.remove('flex');
         return;
     }
     list.innerHTML = ventasHoy.map(v => {
@@ -1029,7 +1027,7 @@ function renderVentas() {
     }).join('');
     const total = ventasHoy.reduce((s, v) => s + (v.total || 0), 0);
     document.getElementById('ventas-total').textContent = `$${total.toLocaleString('es-AR')}`;
-    totalRow.classList.remove('hidden');
+    totalRow.classList.remove('hidden'); totalRow.classList.add('flex');
     const cuts = allCuts.filter(c => c.createdAt && c.createdAt.toDate() >= new Date(new Date().setHours(0,0,0,0)));
     updateDailyTotalStat(cuts.reduce((s,c) => s+(c.price||0), 0), total);
 }
@@ -1145,7 +1143,7 @@ window.submitVenta = async () => {
             precio: selectedProducto.precio,
             cantidad: cantVenta,
             total: selectedProducto.precio * cantVenta,
-            barbero: currentUser.email,
+            barbero: 'Recepción',
             userEmail: currentUser.email,
             fecha: hoy,
             creadoEn: serverTimestamp()
@@ -1159,13 +1157,11 @@ window.submitVenta = async () => {
 // ---- STOCK DE PRODUCTOS BARBER ----
 async function listenToProductos() {
     // Solo crear el doc si no existe todavía (nunca pisar el stock existente)
-    for (const p of PRODUCTOS_BARBER) {
+    await Promise.all(PRODUCTOS_BARBER.map(async p => {
         const ref = doc(db, PATH_PRODUCTOS, p.id);
         const snap = await getDoc(ref);
-        if (!snap.exists()) {
-            await setDoc(ref, { name: p.name, precio: p.precio, stock: 0 });
-        }
-    }
+        if (!snap.exists()) await setDoc(ref, { name: p.name, precio: p.precio, stock: 0 });
+    }));
     onSnapshot(collection(db, PATH_PRODUCTOS), snap => {
         productoStock = {};
         snap.docs.forEach(d => { productoStock[d.id] = d.data(); });
@@ -1256,7 +1252,7 @@ document.getElementById('producto-movement-form').addEventListener('submit', asy
                 precio: prod?.precio || 0,
                 cantidad: qty,
                 total: (prod?.precio || 0) * qty,
-                barbero: currentUser.email,
+                barbero: 'Recepción',
                 userEmail: currentUser.email,
                 fecha: hoy,
                 creadoEn: serverTimestamp()
@@ -1370,7 +1366,7 @@ function renderCierreCaja() {
 
         ${section('<i class="fas fa-cut"></i>', 'Cortes', 'text-cyan-400',
             cuts.length === 0 ? '<p class="text-[10px] text-gray-600 py-1">Sin cortes hoy</p>' : barberRows,
-            cuts.length > 0 ? 0 : null
+            cuts.length > 0 ? totalCortes : null
         )}
 
         ${cuts.length > 0 ? `<div class="bg-black/20 rounded-xl p-2.5 grid grid-cols-2 gap-2">
