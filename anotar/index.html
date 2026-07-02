@@ -836,10 +836,10 @@ function renderHistoryAdmin() {
         const lbl=item.tipo==='retiro'?`Retiro · ${item.barbero}${desc}`:`Propina · ${item.barbero}${item.descripcion?' · '+item.descripcion:''}`;
         const f=item.creadoEn?item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
         const notaBtn=item.tipo==='retiro'?`<button onclick="window.openRetiroNota('${item.id}','${item.descripcion||''}',${item.monto},'${item.barbero}')" class="text-gray-600 hover:text-violet-400 transition ml-1" title="Agregar nota"><i class="fas fa-pencil-alt text-[10px]"></i></button>`:'';
-        const delPath=`${item.tipo==='retiro'?PATH_RETIROS:PATH_PROPINAS}/${item.id}`;
+        const delBtn=item.tipo==='retiro'?`<button onclick="window.deleteRetiro('${item.id}')" class="text-gray-700 hover:text-red-400 transition" title="Eliminar retiro"><i class="fas fa-trash text-[10px]"></i></button>`:'';
         return `<div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${bdr}">
             <div><div class="text-xs font-bold text-gray-200 flex items-center gap-1">${lbl}${notaBtn}</div><div class="text-[10px] text-gray-500">${f}</div></div>
-            <div class="flex items-center gap-3"><span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span><button class="btn-delete-action text-gray-600 hover:text-red-400 transition" data-path="${delPath}" title="Eliminar"><i class="fas fa-trash-alt text-[10px]"></i></button></div>
+            <div class="flex items-center gap-3">${delBtn}<span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span></div>
         </div>`;
     }).join('');
 }
@@ -966,12 +966,13 @@ function renderBarberDetail(name) {
             const desc = item.descripcion ? ` · <span class="text-gray-500 font-normal">${item.descripcion}</span>` : '';
             const lbl = item.tipo==='retiro' ? `Retiro${desc}` : `Propina${item.descripcion?' · '+item.descripcion:''}`;
             const notaBtn = item.tipo==='retiro' ? `<button onclick="window.openRetiroNota('${item.id}','${(item.descripcion||'').replace(/'/g,"\\'")}',${item.monto},'${name}')" class="ml-1 text-gray-600 hover:text-violet-400 transition" title="Agregar nota"><i class="fas fa-pencil-alt text-[10px]"></i></button>` : '';
+            const delBtn = item.tipo==='retiro' ? `<button onclick="window.deleteRetiro('${item.id}')" class="ml-1 text-gray-700 hover:text-red-400 transition" title="Eliminar retiro"><i class="fas fa-trash text-[10px]"></i></button>` : '';
             const f = item.creadoEn ? item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : item.fecha||'';
             return `<div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${bdr}">
                 <div class="flex items-center gap-2">
                     <span class="${ec} text-base leading-none">${ei}</span>
                     <div>
-                        <div class="text-xs font-bold text-gray-200 flex items-center gap-1">${lbl}${notaBtn}</div>
+                        <div class="text-xs font-bold text-gray-200 flex items-center gap-1">${lbl}${notaBtn}${delBtn}</div>
                         <div class="text-[10px] text-gray-500">${f}</div>
                     </div>
                 </div>
@@ -1578,6 +1579,11 @@ window.openSettingsModal = ()=>showModal('settings-modal');
 window.openAddModal = ()=>{ showModal('add-modal'); renderBarberSelection(); };
 
 const ALL_MODALS=['settings-modal','add-modal','expense-modal','date-search-modal','admin-settings-modal','updates-modal','fixed-expenses-modal','stock-item-modal','retiro-modal','propina-modal','ventas-modal','retiro-manual-modal','retiro-nota-modal'];
+
+window.deleteRetiro = async (id) => {
+    if (!confirm('¿Eliminar este retiro?')) return;
+    try { await deleteDoc(doc(db, PATH_RETIROS, id)); } catch { alert('Error al eliminar'); }
+};
 
 window.openRetiroNota = (retiroId, currentDesc, monto, barbero) => {
     document.getElementById('retiro-nota-id').value = retiroId;
