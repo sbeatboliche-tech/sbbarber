@@ -261,19 +261,19 @@
     ============================================================ -->
     <div id="cierre-caja-view" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
 
-        <header class="px-5 py-4 glass flex items-center justify-between flex-shrink-0">
+        <header class="px-5 md:px-8 py-4 md:py-5 glass flex items-center justify-between flex-shrink-0 border-b border-white/5">
             <div class="flex items-center gap-4">
-                <button onclick="window.closeCierreCaja()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition">
+                <button onclick="window.closeCierreCaja()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
                     <i class="fas fa-arrow-left text-sm"></i>
                 </button>
                 <div>
-                    <h1 class="text-sm font-bold text-white leading-none">CIERRE DE CAJA</h1>
-                    <span id="cierre-caja-fecha" class="text-[10px] text-emerald-400 font-medium"></span>
+                    <h1 class="text-base md:text-xl font-bold text-white leading-none tracking-wide">Cierre de Caja</h1>
+                    <span id="cierre-caja-fecha" class="text-[10px] md:text-xs text-emerald-400 font-medium capitalize"></span>
                 </div>
             </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-4 space-y-4 pb-10" id="cierre-caja-content">
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-10 max-w-4xl md:mx-auto w-full" id="cierre-caja-content">
             <p class="text-xs text-gray-600 text-center py-6">Cargando...</p>
         </div>
 
@@ -305,42 +305,54 @@
          PANEL RETIROS Y PROPINAS
     ============================================================ -->
     <div id="retiros-panel" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
-        <header class="px-5 py-4 glass flex items-center justify-between flex-shrink-0">
+        <!-- Header -->
+        <header class="px-5 md:px-8 py-4 md:py-5 glass flex items-center justify-between flex-shrink-0 border-b border-white/5">
             <div class="flex items-center gap-4">
-                <button onclick="window.closeRetirosPanel()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition">
+                <button onclick="window.closeRetirosPanel()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
                     <i class="fas fa-arrow-left text-sm"></i>
                 </button>
                 <div>
-                    <h1 class="text-sm font-bold text-white leading-none">RETIROS Y PROPINAS</h1>
-                    <span class="text-[10px] text-violet-400 font-medium">Semana actual</span>
+                    <h1 class="text-base md:text-xl font-bold text-white leading-none tracking-wide">Retiros y Propinas</h1>
+                    <span class="text-[10px] md:text-xs text-violet-400 font-medium">Semana actual</span>
                 </div>
             </div>
-            <button onclick="window.openRetiroManualModal()" class="text-[10px] font-bold text-violet-300 bg-violet-600/20 border border-violet-500/30 px-3 py-1.5 rounded-lg hover:bg-violet-600/30 transition flex items-center gap-1.5">
-                <i class="fas fa-plus text-[9px]"></i> Manual
+            <button onclick="window.openRetiroManualModal()" class="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white font-bold px-4 py-2 rounded-xl text-xs md:text-sm transition shadow-lg shadow-violet-900/40">
+                <i class="fas fa-plus text-[10px] md:text-xs"></i>
+                <span>Retiro manual</span>
             </button>
         </header>
-        <div class="flex-1 overflow-y-auto p-4 pb-10 space-y-4">
-            <div id="ret-pending-panel"></div>
-            <div id="ret-weekly-totals"></div>
-            <div id="ret-history-wrap" class="glass-card rounded-2xl p-5 hidden">
-                <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fas fa-history"></i> Historial esta semana</h3>
-                <div id="ret-history" class="space-y-2"></div>
+
+        <!-- Contenido: 1 col mobile / 2 col desktop -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-8 md:grid md:grid-cols-2 md:gap-6 md:items-start space-y-4 md:space-y-0 pb-10 max-w-5xl md:mx-auto w-full">
+                <!-- Columna izquierda: pendientes -->
+                <div class="space-y-4">
+                    <div id="ret-pending-panel"></div>
+                </div>
+                <!-- Columna derecha: totales + historial -->
+                <div class="space-y-4">
+                    <div id="ret-weekly-totals"></div>
+                    <div id="ret-history-wrap" class="glass-card rounded-2xl p-5 hidden">
+                        <h3 class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fas fa-history"></i> Historial esta semana</h3>
+                        <div id="ret-history" class="space-y-2"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Sub-panel: detalle barbero -->
         <div id="barber-detail-panel" class="absolute inset-0 z-50 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.3s cubic-bezier(0.16,1,0.3,1)">
-            <header class="px-5 py-4 glass flex items-center gap-4 flex-shrink-0">
-                <button onclick="window.closeBarberDetail()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition">
+            <header class="px-5 md:px-8 py-4 md:py-5 glass flex items-center gap-4 flex-shrink-0 border-b border-white/5">
+                <button onclick="window.closeBarberDetail()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
                     <i class="fas fa-arrow-left text-sm"></i>
                 </button>
-                <div id="barber-detail-avatar" class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white bg-gray-600"></div>
+                <div id="barber-detail-avatar" class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-base text-white bg-gray-600"></div>
                 <div>
-                    <h1 id="barber-detail-name" class="text-sm font-bold text-white leading-none"></h1>
-                    <span class="text-[10px] text-violet-400 font-medium">Esta semana</span>
+                    <h1 id="barber-detail-name" class="text-base md:text-lg font-bold text-white leading-none"></h1>
+                    <span class="text-[10px] md:text-xs text-violet-400 font-medium">Esta semana</span>
                 </div>
             </header>
-            <div class="flex-1 overflow-y-auto p-4 pb-10 space-y-3" id="barber-detail-content"></div>
+            <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-10 max-w-2xl md:mx-auto w-full space-y-3" id="barber-detail-content"></div>
         </div>
     </div><!-- /retiros-panel -->
 
@@ -1424,9 +1436,9 @@ function renderCierreCaja() {
     });
 
     const row = (label, value, labelCls='text-gray-400', valCls='text-white') =>
-        `<div class="grid grid-cols-[1fr_auto] gap-2 items-baseline py-1 border-b border-white/5 last:border-0">
-            <span class="text-xs ${labelCls} truncate">${label}</span>
-            <span class="text-xs font-bold ${valCls} whitespace-nowrap">${value}</span>
+        `<div class="grid grid-cols-[1fr_auto] gap-2 items-baseline py-1.5 md:py-2 border-b border-white/5 last:border-0">
+            <span class="text-xs md:text-sm ${labelCls} truncate">${label}</span>
+            <span class="text-xs md:text-sm font-bold ${valCls} whitespace-nowrap">${value}</span>
         </div>`;
 
     const barberRows = BARBERS.filter(b => byBarber[b]).map(b => {
@@ -1436,80 +1448,77 @@ function renderCierreCaja() {
             d.transferencia > 0 ? `📲 $${d.transferencia.toLocaleString('es-AR')}` : ''
         ].filter(Boolean).join(' · ');
         return row(
-            `<span class="font-bold ${t.text}">${b}</span> <span class="text-gray-500 text-[10px]">${d.count} corte${d.count!==1?'s':''} · ${detail}</span>`,
+            `<span class="font-bold ${t.text}">${b}</span> <span class="text-gray-500 text-[10px] md:text-xs">${d.count} corte${d.count!==1?'s':''} · ${detail}</span>`,
             `$${d.total.toLocaleString('es-AR')}`
         );
     }).join('');
 
     const makeVentaRows = list => list.length === 0
-        ? '<p class="text-[10px] text-gray-600 text-center py-1">Sin ventas</p>'
+        ? '<p class="text-xs text-gray-600 text-center py-2">Sin ventas</p>'
         : list.map(v => row(
             `${v.producto}${v.cantidad>1?` <span class="text-indigo-300">×${v.cantidad}</span>`:''}`,
             (v.total||0)>0 ? `$${v.total.toLocaleString('es-AR')}` : '—'
         )).join('');
 
     const section = (icon, title, color, content, subtotal) => `
-        <div class="mb-1">
-            <div class="text-[9px] font-bold ${color} uppercase tracking-widest mb-1 flex items-center gap-1.5">${icon} ${title}</div>
+        <div>
+            <div class="text-[10px] md:text-xs font-bold ${color} uppercase tracking-widest mb-2 flex items-center gap-1.5">${icon} ${title}</div>
             ${content}
-            ${subtotal ? `<div class="grid grid-cols-[1fr_auto] gap-2 items-baseline pt-1.5 mt-0.5 border-t border-white/10">
-                <span class="text-[10px] text-gray-500 font-bold uppercase">Subtotal</span>
-                <span class="text-xs font-bold text-white whitespace-nowrap">$${subtotal.toLocaleString('es-AR')}</span>
+            ${subtotal ? `<div class="grid grid-cols-[1fr_auto] gap-2 items-baseline pt-2 mt-1 border-t border-white/10">
+                <span class="text-xs md:text-sm text-gray-500 font-bold uppercase">Subtotal</span>
+                <span class="text-sm md:text-base font-bold text-white whitespace-nowrap">$${subtotal.toLocaleString('es-AR')}</span>
             </div>` : ''}
         </div>`;
 
-    const html = `<div class="glass-card rounded-2xl p-4 space-y-3">
-
-        ${section('<i class="fas fa-cut"></i>', 'Cortes', 'text-cyan-400',
-            cuts.length === 0 ? '<p class="text-[10px] text-gray-600 py-1">Sin cortes hoy</p>' : barberRows,
-            cuts.length > 0 ? totalCortes : null
-        )}
-
-        ${cuts.length > 0 ? `<div class="bg-black/20 rounded-xl p-2.5 grid grid-cols-2 gap-2">
-            <div class="text-center">
-                <div class="text-[9px] text-gray-500 mb-0.5">💵 Efectivo</div>
-                <div class="text-sm font-bold text-emerald-300">$${efectivo.toLocaleString('es-AR')}</div>
+    const html = `
+        <!-- Resumen superior: tiles grandes -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div class="glass-card rounded-2xl p-4 md:p-5 text-center">
+                <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mb-1">Cortes</div>
+                <div class="text-xl md:text-3xl font-extrabold text-white">$${totalCortes.toLocaleString('es-AR')}</div>
+                <div class="text-[10px] md:text-xs text-gray-600 mt-1">${cuts.length} corte${cuts.length!==1?'s':''}</div>
             </div>
-            <div class="text-center border-l border-white/10">
-                <div class="text-[9px] text-gray-500 mb-0.5">📲 Transferencia</div>
-                <div class="text-sm font-bold text-blue-300">$${transferencia.toLocaleString('es-AR')}</div>
+            <div class="glass-card rounded-2xl p-4 md:p-5 text-center">
+                <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mb-1">Efectivo</div>
+                <div class="text-xl md:text-3xl font-extrabold text-emerald-300">$${efectivo.toLocaleString('es-AR')}</div>
+                <div class="text-[10px] md:text-xs text-emerald-800 mt-1">💵</div>
             </div>
-        </div>` : ''}
-
-        <div class="border-t border-white/10 pt-3">
-        ${section('💈', 'Productos barber', 'text-indigo-400',
-            makeVentaRows(ventasProductos),
-            totalProductos > 0 ? totalProductos : null
-        )}
-        </div>
-
-        <div class="border-t border-white/10 pt-3">
-        ${section('🥤', 'Bebidas', 'text-cyan-400',
-            makeVentaRows(ventasBebidas),
-            totalBebidas > 0 ? totalBebidas : null
-        )}
-        </div>
-
-        <div class="border-t-2 border-emerald-500/40 pt-3">
-            <div class="grid grid-cols-[1fr_auto] gap-2 items-center">
-                <span class="text-xs font-bold text-emerald-200 uppercase tracking-wide">✂️ Cortes</span>
-                <span class="text-xs font-bold text-white">$${totalCortes.toLocaleString('es-AR')}</span>
+            <div class="glass-card rounded-2xl p-4 md:p-5 text-center">
+                <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mb-1">Transferencia</div>
+                <div class="text-xl md:text-3xl font-extrabold text-blue-300">$${transferencia.toLocaleString('es-AR')}</div>
+                <div class="text-[10px] md:text-xs text-blue-800 mt-1">📲</div>
             </div>
-            ${totalProductos>0?`<div class="grid grid-cols-[1fr_auto] gap-2 items-center mt-1">
-                <span class="text-xs font-bold text-emerald-200 uppercase tracking-wide">💈 Productos</span>
-                <span class="text-xs font-bold text-white">$${totalProductos.toLocaleString('es-AR')}</span>
-            </div>`:''}
-            ${totalBebidas>0?`<div class="grid grid-cols-[1fr_auto] gap-2 items-center mt-1">
-                <span class="text-xs font-bold text-emerald-200 uppercase tracking-wide">🥤 Bebidas</span>
-                <span class="text-xs font-bold text-white">$${totalBebidas.toLocaleString('es-AR')}</span>
-            </div>`:''}
-            <div class="grid grid-cols-[1fr_auto] gap-2 items-center mt-2 pt-2 border-t border-emerald-500/30">
-                <span class="text-sm font-bold text-emerald-300 uppercase tracking-wide">TOTAL DEL DÍA</span>
-                <span class="text-2xl font-extrabold text-emerald-400 tracking-tight">$${totalGeneral.toLocaleString('es-AR')}</span>
+            <div class="glass-card rounded-2xl p-4 md:p-5 text-center col-span-2 md:col-span-1">
+                <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mb-1">Total del día</div>
+                <div class="text-2xl md:text-3xl font-extrabold text-emerald-400">$${totalGeneral.toLocaleString('es-AR')}</div>
+                <div class="text-[10px] md:text-xs text-emerald-700 mt-1">general</div>
             </div>
         </div>
 
-    </div>`;
+        <!-- Detalle: 1 col mobile / 3 cols desktop -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Cortes por barbero -->
+            <div class="glass-card rounded-2xl p-5">
+                ${section('<i class="fas fa-cut"></i>', 'Cortes por barbero', 'text-cyan-400',
+                    cuts.length === 0 ? '<p class="text-xs text-gray-600 py-2 text-center">Sin cortes hoy</p>' : barberRows,
+                    null
+                )}
+            </div>
+            <!-- Productos -->
+            <div class="glass-card rounded-2xl p-5">
+                ${section('💈', 'Productos barber', 'text-indigo-400',
+                    makeVentaRows(ventasProductos),
+                    totalProductos > 0 ? totalProductos : null
+                )}
+            </div>
+            <!-- Bebidas -->
+            <div class="glass-card rounded-2xl p-5">
+                ${section('🥤', 'Bebidas', 'text-cyan-400',
+                    makeVentaRows(ventasBebidas),
+                    totalBebidas > 0 ? totalBebidas : null
+                )}
+            </div>
+        </div>`;
 
     document.getElementById('cierre-caja-content').innerHTML = html;
 }
