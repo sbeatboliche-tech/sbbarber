@@ -1,0 +1,79 @@
+/* ==========================================================================
+   SB BARBER — Capa de movimiento (estilo ctrlrecovery)
+   Solo efectos/animaciones. No cambia colores ni estructura.
+   Se activa cuando <html> tiene la clase .sb-js (la agrega sb-motion.js),
+   así si el JS no carga, el contenido queda 100% visible.
+   ========================================================================== */
+
+:root {
+  --sb-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --sb-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@keyframes sbReveal {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+
+  /* ---- Transiciones suaves en elementos interactivos ---- */
+  .sb-js button,
+  .sb-js a,
+  .sb-js input,
+  .sb-js select,
+  .sb-js textarea,
+  .sb-js .field,
+  .sb-js [class*="card"],
+  .sb-js [class*="btn"] {
+    transition: transform 0.3s var(--sb-ease-out),
+                box-shadow 0.3s var(--sb-ease-out),
+                background-color 0.2s ease,
+                border-color 0.2s ease,
+                color 0.2s ease,
+                opacity 0.2s ease;
+  }
+
+  /* ---- Micro-interacción: botones y links "sobresalen" ---- */
+  .sb-js button:not(:disabled):hover,
+  .sb-js a:not(.no-lift):hover {
+    transform: translateY(-2px);
+  }
+  .sb-js button:not(:disabled):active,
+  .sb-js a:not(.no-lift):active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  /* ---- Tarjetas: se elevan con sombra al pasar el mouse ---- */
+  .sb-js [class*="card"]:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px -18px rgba(0, 0, 0, 0.75);
+  }
+
+  /* ---- Reveal de entrada: hijos directos de [data-motion] ---- */
+  .sb-js [data-motion] > * {
+    opacity: 0;
+    transform: translateY(20px);
+    will-change: transform, opacity;
+  }
+  .sb-js [data-motion].sb-in > * {
+    animation: sbReveal 0.65s var(--sb-ease-out) forwards;
+  }
+
+  /* Cascada escalonada */
+  .sb-js [data-motion].sb-in > *:nth-child(1)  { animation-delay: 0.03s; }
+  .sb-js [data-motion].sb-in > *:nth-child(2)  { animation-delay: 0.08s; }
+  .sb-js [data-motion].sb-in > *:nth-child(3)  { animation-delay: 0.13s; }
+  .sb-js [data-motion].sb-in > *:nth-child(4)  { animation-delay: 0.18s; }
+  .sb-js [data-motion].sb-in > *:nth-child(5)  { animation-delay: 0.23s; }
+  .sb-js [data-motion].sb-in > *:nth-child(6)  { animation-delay: 0.28s; }
+  .sb-js [data-motion].sb-in > *:nth-child(7)  { animation-delay: 0.33s; }
+  .sb-js [data-motion].sb-in > *:nth-child(8)  { animation-delay: 0.38s; }
+  .sb-js [data-motion].sb-in > *:nth-child(9)  { animation-delay: 0.43s; }
+  .sb-js [data-motion].sb-in > *:nth-child(10) { animation-delay: 0.48s; }
+  .sb-js [data-motion].sb-in > *:nth-child(n+11) { animation-delay: 0.52s; }
+
+  /* ---- Reveal individual opcional (.reveal) ---- */
+  .sb-js .reveal { opacity: 0; transform: translateY(20px); }
+  .sb-js .reveal.sb-in { animation: sbReveal 0.65s var(--sb-ease-out) forwards; }
+}

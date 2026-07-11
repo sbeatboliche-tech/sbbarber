@@ -188,6 +188,7 @@
         .admin-trigger { font-size:11px; color:var(--g950); background:none; border:none; cursor:pointer; font-family:'Inter',sans-serif; padding:8px; user-select:none; }
         .admin-trigger:hover { color:var(--g800); }
     </style>
+    <link rel="stylesheet" href="../assets/sb-motion.css">
 </head>
 <body>
 
@@ -223,7 +224,7 @@
         <span class="section-title">Productos</span>
         <span class="product-count">10 productos</span>
     </div>
-    <div class="products-grid" id="products-grid"></div>
+    <div class="products-grid" id="products-grid" data-motion></div>
 </section>
 
 <!-- MOBILE CART BAR -->
@@ -929,5 +930,6 @@ window.saveCursos = async () => {
     } catch(e) { btn.textContent = 'Error — intentá de nuevo'; btn.disabled = false; }
 };
 </script>
+    <script src="../assets/sb-motion.js"></script>
 </body>
 </html>

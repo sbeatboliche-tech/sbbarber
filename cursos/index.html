@@ -274,10 +274,11 @@
         }
         footer a { color: var(--muted); }
     </style>
+    <link rel="stylesheet" href="../assets/sb-motion.css">
 </head>
 <body>
 
-    <header>
+    <header data-motion>
         <img src="https://i.imgur.com/xyjMT6X.png" alt="SB Barber">
         <h1>Cursos de<br>Barbería</h1>
         <p>Aprendé el oficio con quienes lo hacen todos los días. Clases presenciales en nuestro local.</p>
@@ -286,7 +287,7 @@
     <!-- CURSOS -->
     <div class="section">
         <p class="section-label">Qué ofrecemos</p>
-        <div class="cursos-grid">
+        <div class="cursos-grid" data-motion>
 
             <!-- CURSO COMPLETO -->
             <div class="curso-card featured">
@@ -315,7 +316,7 @@
     <!-- FORMULARIO -->
     <div class="section" id="inscripcion">
         <p class="section-label">Inscripción</p>
-        <div class="form-card">
+        <div class="form-card" data-motion>
             <h2 class="form-title">¿Te anotás?</h2>
             <p class="form-subtitle">Completá el formulario y te contactamos para confirmar fecha y cupo.</p>
 
@@ -439,5 +440,6 @@
         }
     </script>
 
+    <script src="../assets/sb-motion.js"></script>
 </body>
 </html>
