@@ -283,6 +283,10 @@
                     <span id="cierre-caja-fecha" class="text-[10px] md:text-xs text-emerald-400 font-medium capitalize"></span>
                 </div>
             </div>
+            <div class="flex bg-gray-900/80 p-1 rounded-xl border border-gray-800 text-[11px] font-bold">
+                <button id="cc-tab-diario" onclick="window.setCierreCajaTab('diario')" class="px-3 py-1.5 rounded-lg text-white bg-gradient-to-r from-emerald-600 to-green-600 shadow transition">Diario</button>
+                <button id="cc-tab-semanal" onclick="window.setCierreCajaTab('semanal')" class="px-3 py-1.5 rounded-lg text-gray-500 hover:text-gray-300 transition">Semanal</button>
+            </div>
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-10 max-w-4xl md:mx-auto w-full" id="cierre-caja-content">
@@ -1481,14 +1485,25 @@ document.getElementById('login-form').addEventListener('submit', async e => {
 window.logout = () => signOut(auth);
 
 // ---- CIERRE DE CAJA ----
+let cierreCajaTab = 'diario';
 window.openCierreCaja = () => {
     const v = document.getElementById('cierre-caja-view');
     v.classList.remove('hidden'); v.classList.add('flex', 'flex-col');
-    renderCierreCaja();
+    cierreCajaTab = 'diario';
+    setCierreCajaTab('diario');
 };
 window.closeCierreCaja = () => {
     const v = document.getElementById('cierre-caja-view');
     v.classList.add('hidden'); v.classList.remove('flex', 'flex-col');
+};
+window.setCierreCajaTab = (tab) => {
+    cierreCajaTab = tab;
+    const active = 'px-3 py-1.5 rounded-lg text-white bg-gradient-to-r from-emerald-600 to-green-600 shadow transition';
+    const inactive = 'px-3 py-1.5 rounded-lg text-gray-500 hover:text-gray-300 transition';
+    document.getElementById('cc-tab-diario').className = tab === 'diario' ? active : inactive;
+    document.getElementById('cc-tab-semanal').className = tab === 'semanal' ? active : inactive;
+    if (tab === 'diario') renderCierreCaja();
+    else renderCierreCajaSemanal();
 };
 
 function renderCierreCaja() {
@@ -1610,6 +1625,71 @@ function renderCierreCaja() {
                 )}
             </div>
         </div>`;
+
+    document.getElementById('cierre-caja-content').innerHTML = html;
+}
+
+function renderCierreCajaSemanal() {
+    const now = new Date();
+    const wd = now.getDay() || 7;
+    const ws = new Date(now); ws.setDate(now.getDate() - (wd - 1)); ws.setHours(0, 0, 0, 0);
+    const weekStartStr = ws.toLocaleDateString('en-CA');
+
+    const lunes = ws.toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
+    const hoy = now.toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
+    document.getElementById('cierre-caja-fecha').textContent = `${lunes} — ${hoy}`;
+
+    // Cortes de la semana por barbero
+    const cortesW = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= ws);
+    const byBarber = {};
+    BARBERS.forEach(b => { byBarber[b] = { cortes: 0, retiros: 0, propinas: 0 }; });
+    cortesW.forEach(c => {
+        if (byBarber[c.barber]) byBarber[c.barber].cortes += c.price || 0;
+    });
+    allRetiros.filter(r => !r.eliminado && r.fecha >= weekStartStr && r.estado === 'confirmado')
+        .forEach(r => { if (byBarber[r.barbero]) byBarber[r.barbero].retiros += r.monto || 0; });
+    allPropinas.filter(p => !p.eliminado && p.fecha >= weekStartStr && p.estado === 'confirmado')
+        .forEach(p => { if (byBarber[p.barbero]) byBarber[p.barbero].propinas += p.monto || 0; });
+
+    const totalSemana = BARBERS.reduce((s, b) => s + byBarber[b].cortes, 0);
+
+    const barberCards = BARBERS.map(b => {
+        const d = byBarber[b], t = BARBER_THEME[b];
+        const neto = d.cortes - d.retiros + d.propinas;
+        const netoColor = neto >= 0 ? 'text-emerald-400' : 'text-red-400';
+        return `
+        <div class="glass-card rounded-2xl p-5 md:p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full ${t.bg} flex items-center justify-center font-extrabold text-white text-base">${t.initial}</div>
+                <span class="font-extrabold text-white text-base md:text-lg">${b}</span>
+            </div>
+            <div class="space-y-2">
+                <div class="flex justify-between text-xs md:text-sm">
+                    <span class="text-gray-400">Facturado</span>
+                    <span class="font-bold text-white">$${d.cortes.toLocaleString('es-AR')}</span>
+                </div>
+                ${d.retiros > 0 ? `<div class="flex justify-between text-xs md:text-sm">
+                    <span class="text-gray-400">Retiros</span>
+                    <span class="font-bold text-red-400">−$${d.retiros.toLocaleString('es-AR')}</span>
+                </div>` : ''}
+                ${d.propinas > 0 ? `<div class="flex justify-between text-xs md:text-sm">
+                    <span class="text-gray-400">Propinas</span>
+                    <span class="font-bold text-violet-400">+$${d.propinas.toLocaleString('es-AR')}</span>
+                </div>` : ''}
+                <div class="flex justify-between text-sm md:text-base pt-2 mt-1 border-t border-white/10">
+                    <span class="font-bold text-gray-300 uppercase tracking-wide text-xs md:text-sm">A cobrar</span>
+                    <span class="font-extrabold ${netoColor}">$${neto.toLocaleString('es-AR')}</span>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    const html = `
+        <div class="glass-card rounded-2xl p-4 md:p-5 text-center mb-6">
+            <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mb-1">Total facturado semana</div>
+            <div class="text-2xl md:text-4xl font-extrabold text-emerald-400">$${totalSemana.toLocaleString('es-AR')}</div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">${barberCards}</div>`;
 
     document.getElementById('cierre-caja-content').innerHTML = html;
 }
