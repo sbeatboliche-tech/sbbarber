@@ -1534,7 +1534,7 @@ function renderCierreCaja() {
             d.transferencia > 0 ? `📲 $${d.transferencia.toLocaleString('es-AR')}` : ''
         ].filter(Boolean).join(' · ');
         return row(
-            `<span class="font-bold ${t.text}">${b}</span>${detail ? ` <span class="text-gray-500 text-[10px] md:text-xs">${detail}</span>` : ''}`,
+            `<span class="font-bold ${t.text}">${b}</span>`,
             `$${d.total.toLocaleString('es-AR')}`
         );
     }).join('');
