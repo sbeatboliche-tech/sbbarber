@@ -1666,7 +1666,7 @@ function renderRetirosPanel() {
 
 function renderPendingRetiros() {
     const pending = [
-        ...allRetiros.filter(r => r.estado === 'pendiente').map(r => ({...r, tipo:'retiro'})),
+        ...allRetiros.filter(r => !r.eliminado && r.estado === 'pendiente').map(r => ({...r, tipo:'retiro'})),
         ...allPropinas.filter(p => p.estado === 'pendiente').map(p => ({...p, tipo:'propina'}))
     ].sort((a,b) => (a.creadoEn?.seconds||0) - (b.creadoEn?.seconds||0));
     const panel = document.getElementById('ret-pending-panel');
