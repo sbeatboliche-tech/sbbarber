@@ -1655,7 +1655,8 @@ function renderCierreCajaSemanal() {
 
     const barberCards = BARBERS.map(b => {
         const d = byBarber[b], t = BARBER_THEME[b];
-        const neto = d.cortes - d.retiros + d.propinas;
+        const suParte = Math.round(d.cortes * 0.5);
+        const neto = suParte - d.retiros + d.propinas;
         const netoColor = neto >= 0 ? 'text-emerald-400' : 'text-red-400';
         return `
         <div class="glass-card rounded-2xl p-5 md:p-6">
@@ -1666,7 +1667,11 @@ function renderCierreCajaSemanal() {
             <div class="space-y-2">
                 <div class="flex justify-between text-xs md:text-sm">
                     <span class="text-gray-400">Facturado</span>
-                    <span class="font-bold text-white">$${d.cortes.toLocaleString('es-AR')}</span>
+                    <span class="font-bold text-gray-300">$${d.cortes.toLocaleString('es-AR')}</span>
+                </div>
+                <div class="flex justify-between text-xs md:text-sm">
+                    <span class="text-gray-400">Su parte (50%)</span>
+                    <span class="font-bold text-white">$${suParte.toLocaleString('es-AR')}</span>
                 </div>
                 ${d.retiros > 0 ? `<div class="flex justify-between text-xs md:text-sm">
                     <span class="text-gray-400">Retiros</span>
