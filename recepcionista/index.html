@@ -19,6 +19,9 @@
         .glass-modal { background:rgba(20,25,35,0.97); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.1); }
         .animate-enter { animation:enter 0.35s cubic-bezier(0.16,1,0.3,1); }
         @keyframes enter { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes slideUp { from{opacity:0;transform:translateY(40px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeInScale { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+        .svc-appear { animation:fadeInScale 0.2s cubic-bezier(0.16,1,0.3,1) both; }
         .stock-low { animation:pulse-red 2s infinite; }
         @keyframes pulse-red { 0%,100%{border-color:rgba(239,68,68,0.4)} 50%{border-color:rgba(239,68,68,0.9)} }
         body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
@@ -369,33 +372,47 @@
     <!-- ===== MODALES ===== -->
 
     <!-- Agregar corte -->
-    <div id="add-cut-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
-        <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl max-h-[90vh] overflow-y-auto">
+    <div id="add-cut-modal" class="absolute inset-0 bg-black/75 backdrop-blur-md z-50 hidden flex-col justify-end md:justify-center">
+        <div class="glass-modal md:rounded-3xl md:max-w-md md:mx-auto w-full border-t md:border border-white/10 pt-3 pb-8 px-5 shadow-2xl rounded-t-3xl max-h-[92vh] overflow-y-auto" style="animation:slideUp 0.32s cubic-bezier(0.16,1,0.3,1)">
+            <!-- Handle mobile -->
+            <div class="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5 md:hidden"></div>
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-white">Nuevo Corte</h2>
-                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+                <h2 class="text-xl font-extrabold text-white tracking-tight">Nuevo Corte</h2>
+                <button onclick="window.closeModals()" class="w-9 h-9 rounded-full bg-white/8 flex items-center justify-center text-gray-400 hover:bg-white/15 transition active:scale-90">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
             </div>
-            <form id="add-cut-form" class="space-y-5">
+            <form id="add-cut-form" class="space-y-6">
+                <!-- Barbero -->
                 <div>
-                    <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-2">Barbero</p>
-                    <div id="barber-grid" class="grid grid-cols-2 gap-3"></div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">Barbero</p>
+                    <div id="barber-grid" class="grid grid-cols-3 gap-3"></div>
                 </div>
-                <div>
-                    <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-2">Servicio</p>
-                    <div id="services-grid" class="space-y-2 max-h-52 overflow-y-auto pr-1"></div>
+                <!-- Servicio -->
+                <div id="services-section" class="overflow-hidden transition-all duration-300" style="max-height:0;opacity:0">
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">Servicio</p>
+                    <div id="services-grid" class="grid grid-cols-2 gap-2"></div>
                     <input type="hidden" id="svc-name">
                     <input type="hidden" id="svc-price">
                 </div>
-                <input type="text" id="client-name" placeholder="Nombre del cliente (opcional)" class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none transition text-white placeholder-gray-500">
+                <!-- Cliente -->
+                <input type="text" id="client-name" placeholder="Nombre del cliente (opcional)"
+                    class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-cyan-500/60 focus:bg-cyan-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
+                <!-- Pago -->
                 <div>
-                    <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-2">Método de pago</p>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">Método de pago</p>
                     <div class="grid grid-cols-2 gap-3">
-                        <button type="button" id="mp-efectivo" onclick="window.setMetodoPago('efectivo',this)" class="p-3 bg-emerald-600/20 border border-emerald-500 rounded-xl font-bold text-sm text-emerald-300 transition">💵 Efectivo</button>
-                        <button type="button" id="mp-transferencia" onclick="window.setMetodoPago('transferencia',this)" class="p-3 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition">📲 Transferencia</button>
+                        <button type="button" id="mp-efectivo" onclick="window.setMetodoPago('efectivo',this)"
+                            class="py-3.5 rounded-2xl font-bold text-sm transition-all bg-emerald-500/15 border border-emerald-500/60 text-emerald-300 active:scale-95">💵 Efectivo</button>
+                        <button type="button" id="mp-transferencia" onclick="window.setMetodoPago('transferencia',this)"
+                            class="py-3.5 rounded-2xl font-bold text-sm transition-all bg-white/5 border border-white/10 text-gray-500 hover:border-white/20 active:scale-95">📲 Transferencia</button>
                     </div>
                 </div>
                 <input type="hidden" id="metodo-pago" value="efectivo">
-                <button type="submit" id="btn-submit-cut" class="w-full bg-white text-black p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest">Confirmar</button>
+                <button type="submit" id="btn-submit-cut"
+                    class="w-full bg-gradient-to-r from-cyan-500 to-teal-500 text-white py-4 rounded-2xl font-extrabold text-base shadow-lg shadow-cyan-900/40 uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all">
+                    Confirmar
+                </button>
             </form>
         </div>
     </div>
@@ -821,29 +838,34 @@ window.openAddCutModal = () => {
     document.getElementById('svc-price').value = '';
     document.getElementById('client-name').value = '';
     document.getElementById('metodo-pago').value = 'efectivo';
-    document.getElementById('mp-efectivo').className = 'p-3 bg-emerald-600/20 border border-emerald-500 rounded-xl font-bold text-sm text-emerald-300 transition';
-    document.getElementById('mp-transferencia').className = 'p-3 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition';
+    const sec = document.getElementById('services-section');
+    sec.style.maxHeight = '0'; sec.style.opacity = '0';
+    document.getElementById('mp-efectivo').className = 'py-3.5 rounded-2xl font-bold text-sm transition-all bg-emerald-500/15 border border-emerald-500/60 text-emerald-300 active:scale-95';
+    document.getElementById('mp-transferencia').className = 'py-3.5 rounded-2xl font-bold text-sm transition-all bg-white/5 border border-white/10 text-gray-500 hover:border-white/20 active:scale-95';
     showModal('add-cut-modal');
 };
 
 window.setMetodoPago = (tipo, el) => {
     document.getElementById('metodo-pago').value = tipo;
     const esEfectivo = tipo === 'efectivo';
-    document.getElementById('mp-efectivo').className = `p-3 rounded-xl border font-bold text-sm transition ${esEfectivo ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
-    document.getElementById('mp-transferencia').className = `p-3 rounded-xl border font-bold text-sm transition ${!esEfectivo ? 'bg-blue-600/20 border-blue-500 text-blue-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    document.getElementById('mp-efectivo').className = `py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95 ${esEfectivo ? 'bg-emerald-500/15 border border-emerald-500/60 text-emerald-300' : 'bg-white/5 border border-white/10 text-gray-500 hover:border-white/20'}`;
+    document.getElementById('mp-transferencia').className = `py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95 ${!esEfectivo ? 'bg-blue-500/15 border border-blue-500/60 text-blue-300' : 'bg-white/5 border border-white/10 text-gray-500 hover:border-white/20'}`;
 };
 
 function renderBarberGrid() {
     document.getElementById('barber-grid').innerHTML = BARBERS.map(b => {
         const t = BARBER_THEME[b];
         return `
-        <label class="cursor-pointer group relative">
+        <label class="cursor-pointer select-none">
             <input type="radio" name="barber" value="${b}" class="peer sr-only" onchange="window.renderServices('${b}')">
-            <div class="p-3 bg-gray-800/50 rounded-xl border border-gray-700 peer-checked:border-${t.color}-500 peer-checked:bg-${t.color}-500/10 transition text-center h-16 flex items-center justify-center gap-2">
-                <div class="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">${barberAvatar(b, 7)}</div>
-                <span class="font-bold text-sm text-gray-400 peer-checked:text-${t.color}-400">${b}</span>
+            <div class="flex flex-col items-center gap-2 p-4 rounded-2xl border-2 border-transparent
+                peer-checked:border-${t.color}-500 peer-checked:bg-${t.color}-500/10
+                bg-white/5 hover:bg-white/8 transition-all duration-200 active:scale-95">
+                <div class="w-16 h-16 rounded-full overflow-hidden ring-2 ring-transparent peer-checked:ring-${t.color}-400 transition-all duration-200 shadow-lg">
+                    ${barberAvatar(b, 16)}
+                </div>
+                <span class="font-bold text-sm text-gray-400 peer-checked:text-${t.color}-300 transition-colors">${b}</span>
             </div>
-            <i class="fas fa-check-circle absolute top-2 right-2 text-${t.color}-500 opacity-0 peer-checked:opacity-100 transition text-xs"></i>
         </label>`;
     }).join('');
 }
@@ -852,18 +874,25 @@ window.renderServices = (selectedBarber) => {
     document.getElementById('svc-name').value = '';
     document.getElementById('svc-price').value = '';
     const filtered = SERVICES.filter(s => ['Mechas','Global'].includes(s.name) ? selectedBarber === 'Maxi' : true);
-    document.getElementById('services-grid').innerHTML = filtered.map(s => `
-        <div onclick="window.selectSvc('${s.name}', ${s.price}, this)" class="svc-card p-3 bg-gray-800/40 border border-gray-700/50 rounded-xl flex justify-between items-center cursor-pointer transition-all hover:bg-gray-800">
-            <span class="font-medium text-sm text-gray-300">${s.name}</span>
-            <span class="text-white font-bold text-sm bg-black/30 px-2 py-1 rounded-md">$${s.price.toLocaleString('es-AR')}</span>
-        </div>`).join('');
+    document.getElementById('services-grid').innerHTML = filtered.map((s, i) => `
+        <button type="button" onclick="window.selectSvc('${s.name}', ${s.price}, this)"
+            class="svc-card svc-appear text-left p-4 bg-white/5 border-2 border-transparent rounded-2xl cursor-pointer transition-all duration-150 hover:bg-white/8 active:scale-[0.97]"
+            style="animation-delay:${i * 35}ms">
+            <div class="font-bold text-sm text-gray-200 leading-tight">${s.name}</div>
+            <div class="text-xs text-gray-500 mt-1 font-semibold">$${s.price.toLocaleString('es-AR')}</div>
+        </button>`).join('');
+    const sec = document.getElementById('services-section');
+    sec.style.maxHeight = '600px';
+    sec.style.opacity = '1';
 };
 
 window.selectSvc = (name, price, el) => {
     document.getElementById('svc-name').value = name;
     document.getElementById('svc-price').value = price;
-    document.querySelectorAll('.svc-card').forEach(c => c.className = 'svc-card p-3 bg-gray-800/40 border border-gray-700/50 rounded-xl flex justify-between items-center cursor-pointer transition-all hover:bg-gray-800');
-    el.className = 'svc-card p-3 bg-cyan-600/10 border border-cyan-500 rounded-xl flex justify-between items-center cursor-pointer transition-all scale-[1.02] shadow-lg';
+    document.querySelectorAll('.svc-card').forEach(c => {
+        c.className = 'svc-card text-left p-4 bg-white/5 border-2 border-transparent rounded-2xl cursor-pointer transition-all duration-150 hover:bg-white/8 active:scale-[0.97]';
+    });
+    el.className = 'svc-card text-left p-4 bg-cyan-500/15 border-2 border-cyan-500/70 rounded-2xl cursor-pointer transition-all duration-150 shadow-lg shadow-cyan-900/20 scale-[1.02]';
 };
 
 document.getElementById('add-cut-form').addEventListener('submit', async e => {
