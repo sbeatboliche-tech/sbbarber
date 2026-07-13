@@ -1187,7 +1187,7 @@ function renderVentas() {
 function updateDailyTotalStat(cutsBilling, ventasTotal = null) {
     if (ventasTotal === null) {
         const hoy = new Date().toLocaleDateString('en-CA');
-        ventasTotal = allVentas.filter(v => v.fecha === hoy).reduce((s,v) => s+(v.total||0), 0);
+        ventasTotal = allVentas.filter(v => v.fecha === hoy && !v.eliminado).reduce((s,v) => s+(v.total||0), 0);
     }
     const ventasRow = document.getElementById('stat-ventas-row');
     const totalRow = document.getElementById('stat-total-row');
