@@ -50,6 +50,18 @@
         <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-500"></div>
     </div>
 
+    <!-- Password Gate -->
+    <div id="gate-view" class="absolute inset-0 z-[60] bg-[#0f1115] flex flex-col justify-center items-center p-8">
+        <img src="https://i.imgur.com/xyjMT6X.png" alt="SB BARBER" class="h-24 mx-auto mb-8 drop-shadow-2xl">
+        <div class="w-full max-w-xs">
+            <p class="text-xs text-gray-500 uppercase tracking-widest text-center mb-4 font-bold">Acceso recepción</p>
+            <input type="password" id="gate-input" placeholder="Contraseña" autocomplete="off"
+                class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none transition text-white placeholder-gray-500 text-center text-lg tracking-widest mb-3">
+            <button onclick="window.checkGate()" class="w-full bg-gradient-to-r from-cyan-600 to-teal-600 p-4 rounded-xl font-bold text-white uppercase tracking-widest hover:scale-[1.02] transition">Entrar</button>
+            <p id="gate-error" class="hidden text-red-400 text-sm text-center mt-3">Contraseña incorrecta</p>
+        </div>
+    </div>
+
     <!-- Login -->
     <div id="login-view" class="flex-1 flex flex-col justify-center p-8 hidden" data-motion>
         <div class="text-center mb-10">
@@ -504,11 +516,20 @@
     <!-- Venta rápida de bebida -->
     <div id="quick-sale-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
         <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl">
-            <div class="flex justify-between items-center mb-6">
+            <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold text-white"><i class="fas fa-bolt text-cyan-400 mr-2"></i>Venta Rápida</h2>
                 <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
             </div>
-            <div id="quick-sale-list" class="space-y-2 max-h-72 overflow-y-auto mb-4"></div>
+            <!-- Método de pago bebida -->
+            <div class="mb-4">
+                <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-2">Método de pago</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" id="qs-mp-efectivo" onclick="window.setQsMetodo('efectivo')" class="p-3 bg-emerald-600/20 border border-emerald-500 rounded-xl font-bold text-sm text-emerald-300 transition">💵 Efectivo</button>
+                    <button type="button" id="qs-mp-transferencia" onclick="window.setQsMetodo('transferencia')" class="p-3 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition">📲 Transferencia</button>
+                </div>
+                <input type="hidden" id="qs-metodo-pago" value="efectivo">
+            </div>
+            <div id="quick-sale-list" class="space-y-2 max-h-60 overflow-y-auto mb-3"></div>
             <p class="text-[10px] text-gray-600 text-center">Tocá una bebida para descontar 1 unidad</p>
         </div>
     </div>
@@ -1061,7 +1082,21 @@ window.deleteStockItem = async id => {
     try { await deleteDoc(doc(db, PATH_STOCK, id)); } catch { alert('Error al eliminar'); }
 };
 
+window.setQsMetodo = (metodo) => {
+    document.getElementById('qs-metodo-pago').value = metodo;
+    const efBtn = document.getElementById('qs-mp-efectivo');
+    const trBtn = document.getElementById('qs-mp-transferencia');
+    if (metodo === 'efectivo') {
+        efBtn.className = 'p-3 bg-emerald-600/20 border border-emerald-500 rounded-xl font-bold text-sm text-emerald-300 transition';
+        trBtn.className = 'p-3 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition';
+    } else {
+        trBtn.className = 'p-3 bg-blue-600/20 border border-blue-500 rounded-xl font-bold text-sm text-blue-300 transition';
+        efBtn.className = 'p-3 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition';
+    }
+};
+
 window.openQuickSaleModal = () => {
+    window.setQsMetodo('efectivo');
     const withStock = allStock.filter(i => (i.quantity || 0) > 0);
     document.getElementById('quick-sale-list').innerHTML = withStock.length === 0
         ? '<p class="text-xs text-gray-500 text-center py-4">Sin stock disponible</p>'
@@ -1076,12 +1111,14 @@ window.openQuickSaleModal = () => {
 window.quickSale = async id => {
     const item = allStock.find(i => i.id === id);
     if (!item || (item.quantity || 0) < 1) return alert('Sin stock');
+    const metodo = document.getElementById('qs-metodo-pago').value;
     try {
         const hoy = new Date().toLocaleDateString('en-CA');
         await updateDoc(doc(db, PATH_STOCK, id), { quantity: increment(-1) });
         await addDoc(collection(db, PATH_VENTAS), {
             producto: item.name, tipo: 'bebida',
             precio: item.price || 0, cantidad: 1, total: item.price || 0,
+            metodoPago: metodo,
             barbero: 'Recepción', userEmail: currentUser.email,
             fecha: hoy, creadoEn: serverTimestamp()
         });
@@ -1374,6 +1411,21 @@ document.getElementById('producto-movement-form').addEventListener('submit', asy
     btn.textContent = currentProductoMovement.tipo === 'entrada' ? 'REGISTRAR ENTRADA' : 'CONFIRMAR SALIDA';
 });
 
+// ---- PASSWORD GATE ----
+window.checkGate = () => {
+    const val = document.getElementById('gate-input').value;
+    if (val === 'femesb') {
+        sessionStorage.setItem('rec-gate', '1');
+        document.getElementById('gate-view').classList.add('hidden');
+    } else {
+        document.getElementById('gate-error').classList.remove('hidden');
+        document.getElementById('gate-input').value = '';
+        document.getElementById('gate-input').focus();
+    }
+};
+document.getElementById('gate-input').addEventListener('keydown', e => { if (e.key === 'Enter') window.checkGate(); });
+if (sessionStorage.getItem('rec-gate') === '1') document.getElementById('gate-view').classList.add('hidden');
+
 // ---- AUTH ----
 document.getElementById('login-form').addEventListener('submit', async e => {
     e.preventDefault();
@@ -1450,10 +1502,15 @@ function renderCierreCaja() {
 
     const makeVentaRows = list => list.length === 0
         ? '<p class="text-xs text-gray-600 text-center py-2">Sin ventas</p>'
-        : list.map(v => row(
-            `${v.producto}${v.cantidad>1?` <span class="text-indigo-300">×${v.cantidad}</span>`:''}`,
-            (v.total||0)>0 ? `$${v.total.toLocaleString('es-AR')}` : '—'
-        )).join('');
+        : list.map(v => {
+            const metodoTag = v.tipo === 'bebida' && v.metodoPago
+                ? ` <span class="text-[10px] font-normal ${v.metodoPago==='transferencia'?'text-blue-400':'text-emerald-400'}">${v.metodoPago==='transferencia'?'📲':'💵'}</span>`
+                : '';
+            return row(
+                `${v.producto}${v.cantidad>1?` <span class="text-indigo-300">×${v.cantidad}</span>`:''}${metodoTag}`,
+                (v.total||0)>0 ? `$${v.total.toLocaleString('es-AR')}` : '—'
+            );
+        }).join('');
 
     const section = (icon, title, color, content, subtotal) => `
         <div>
@@ -1668,17 +1725,20 @@ function renderHistoryRec() {
     if (!combined.length) { wrap.classList.add('hidden'); return; }
     wrap.classList.remove('hidden');
     list.innerHTML = combined.map(item => {
-        const ec = item.estado === 'confirmado' ? 'text-emerald-400' : 'text-red-400';
-        const ei = item.estado === 'confirmado' ? '✓' : '✗';
-        const bdr = item.tipo === 'retiro' ? 'border-violet-500/20' : 'border-yellow-500/20';
-        const desc = item.descripcion ? ` · <span class="text-gray-500 font-normal">${item.descripcion}</span>` : '';
+        const eliminado = item.eliminado === true;
+        const ec = eliminado ? 'text-gray-600' : item.estado === 'confirmado' ? 'text-emerald-400' : 'text-red-400';
+        const ei = eliminado ? '🗑' : item.estado === 'confirmado' ? '✓' : '✗';
+        const bdr = eliminado ? 'border-gray-700/30' : item.tipo === 'retiro' ? 'border-violet-500/20' : 'border-yellow-500/20';
+        const textCls = eliminado ? 'line-through text-gray-600' : 'text-gray-100';
+        const montoCls = eliminado ? 'line-through text-gray-600' : 'text-white';
+        const desc = item.descripcion ? ` · <span class="font-normal">${item.descripcion}</span>` : '';
         const lbl = item.tipo === 'retiro' ? `Retiro · ${item.barbero}${desc}` : `Propina · ${item.barbero}${item.descripcion ? ' · '+item.descripcion : ''}`;
         const f = item.creadoEn ? item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) : '';
-        const notaBtn = item.tipo === 'retiro' ? `<button onclick="window.openRetiroNotaRec('${item.id}','${(item.descripcion||'').replace(/'/g,"\\'")}',${item.monto},'${item.barbero}')" class="text-gray-600 hover:text-violet-400 transition ml-2"><i class="fas fa-pencil-alt text-xs"></i></button>` : '';
-        const delBtn = item.tipo === 'retiro' ? `<button onclick="window.deleteRetiroRec('${item.id}')" class="text-gray-700 hover:text-red-400 transition ml-1"><i class="fas fa-trash text-xs"></i></button>` : '';
-        return `<div class="flex items-center justify-between bg-black/30 p-3 md:p-4 rounded-xl border ${bdr}">
-            <div><div class="text-sm md:text-base font-bold text-gray-100 flex items-center gap-1">${lbl}${notaBtn}${delBtn}</div><div class="text-xs text-gray-500 mt-0.5">${f}</div></div>
-            <div class="flex items-center gap-3 md:gap-4"><span class="${ec} text-base font-bold">${ei}</span><span class="text-base md:text-lg font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span></div>
+        const notaBtn = (!eliminado && item.tipo === 'retiro') ? `<button onclick="window.openRetiroNotaRec('${item.id}','${(item.descripcion||'').replace(/'/g,"\\'")}',${item.monto},'${item.barbero}')" class="text-gray-600 hover:text-violet-400 transition ml-2"><i class="fas fa-pencil-alt text-xs"></i></button>` : '';
+        const delBtn = (!eliminado && item.tipo === 'retiro') ? `<button onclick="window.deleteRetiroRec('${item.id}')" class="text-gray-700 hover:text-red-400 transition ml-1"><i class="fas fa-trash text-xs"></i></button>` : '';
+        return `<div class="flex items-center justify-between bg-black/30 p-3 md:p-4 rounded-xl border ${bdr} ${eliminado ? 'opacity-50' : ''}">
+            <div><div class="text-sm md:text-base font-bold ${textCls} flex items-center gap-1">${lbl}${notaBtn}${delBtn}</div><div class="text-xs text-gray-500 mt-0.5">${f}${eliminado ? ' · <span class="text-red-700 text-[10px]">eliminado</span>' : ''}</div></div>
+            <div class="flex items-center gap-3 md:gap-4"><span class="${ec} text-base font-bold">${ei}</span><span class="text-base md:text-lg font-bold ${montoCls}">$${item.monto.toLocaleString('es-AR')}</span></div>
         </div>`;
     }).join('');
 }
@@ -1714,17 +1774,20 @@ function renderBarberDetail(name) {
     const histRows = combined.length === 0
         ? '<p class="text-sm text-gray-600 text-center py-4">Sin actividad esta semana</p>'
         : combined.map(item => {
-            const ec = item.estado==='confirmado' ? 'text-emerald-400' : item.estado==='rechazado' ? 'text-red-400' : 'text-yellow-400';
-            const ei = item.estado==='confirmado' ? '✓' : item.estado==='rechazado' ? '✗' : '⏳';
-            const bdr = item.tipo==='retiro' ? 'border-violet-500/20' : 'border-yellow-500/20';
-            const desc = item.descripcion ? ` · <span class="text-gray-500 font-normal">${item.descripcion}</span>` : '';
+            const eliminado = item.eliminado === true;
+            const ec = eliminado ? 'text-gray-600' : item.estado==='confirmado' ? 'text-emerald-400' : item.estado==='rechazado' ? 'text-red-400' : 'text-yellow-400';
+            const ei = eliminado ? '🗑' : item.estado==='confirmado' ? '✓' : item.estado==='rechazado' ? '✗' : '⏳';
+            const bdr = eliminado ? 'border-gray-700/30' : item.tipo==='retiro' ? 'border-violet-500/20' : 'border-yellow-500/20';
+            const textCls = eliminado ? 'line-through text-gray-600' : 'text-gray-100';
+            const montoCls = eliminado ? 'line-through text-gray-600' : 'text-white';
+            const desc = item.descripcion ? ` · <span class="font-normal">${item.descripcion}</span>` : '';
             const lbl = item.tipo==='retiro' ? `Retiro${desc}` : `Propina${item.descripcion?' · '+item.descripcion:''}`;
-            const notaBtn = item.tipo==='retiro' ? `<button onclick="window.openRetiroNotaRec('${item.id}','${(item.descripcion||'').replace(/'/g,"\\'")}',${item.monto},'${name}')" class="ml-2 text-gray-600 hover:text-violet-400 transition"><i class="fas fa-pencil-alt text-xs"></i></button>` : '';
-            const delBtn = item.tipo==='retiro' ? `<button onclick="window.deleteRetiroRec('${item.id}')" class="ml-1 text-gray-700 hover:text-red-400 transition"><i class="fas fa-trash text-xs"></i></button>` : '';
+            const notaBtn = (!eliminado && item.tipo==='retiro') ? `<button onclick="window.openRetiroNotaRec('${item.id}','${(item.descripcion||'').replace(/'/g,"\\'")}',${item.monto},'${name}')" class="ml-2 text-gray-600 hover:text-violet-400 transition"><i class="fas fa-pencil-alt text-xs"></i></button>` : '';
+            const delBtn = (!eliminado && item.tipo==='retiro') ? `<button onclick="window.deleteRetiroRec('${item.id}')" class="ml-1 text-gray-700 hover:text-red-400 transition"><i class="fas fa-trash text-xs"></i></button>` : '';
             const f = item.creadoEn ? item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) : '';
-            return `<div class="flex items-center justify-between bg-black/30 p-3 md:p-4 rounded-xl border ${bdr}">
-                <div><div class="text-sm md:text-base font-bold text-gray-100 flex items-center gap-1">${lbl}${notaBtn}${delBtn}</div><div class="text-xs text-gray-500 mt-0.5">${f}</div></div>
-                <div class="flex items-center gap-3 md:gap-4"><span class="${ec} text-base font-bold">${ei}</span><span class="text-base md:text-lg font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span></div>
+            return `<div class="flex items-center justify-between bg-black/30 p-3 md:p-4 rounded-xl border ${bdr} ${eliminado ? 'opacity-50' : ''}">
+                <div><div class="text-sm md:text-base font-bold ${textCls} flex items-center gap-1">${lbl}${notaBtn}${delBtn}</div><div class="text-xs text-gray-500 mt-0.5">${f}${eliminado ? ' · <span class="text-red-700 text-[10px]">eliminado</span>' : ''}</div></div>
+                <div class="flex items-center gap-3 md:gap-4"><span class="${ec} text-base font-bold">${ei}</span><span class="text-base md:text-lg font-bold ${montoCls}">$${item.monto.toLocaleString('es-AR')}</span></div>
             </div>`;
         }).join('');
     document.getElementById('barber-detail-content').innerHTML = `
@@ -1754,8 +1817,8 @@ window.rejectItem = async (path, id) => {
     try { await updateDoc(doc(db, path, id), { estado: 'rechazado' }); } catch { alert('Error'); }
 };
 window.deleteRetiroRec = async (id) => {
-    if (!confirm('¿Eliminar este retiro?')) return;
-    try { await deleteDoc(doc(db, PATH_RETIROS, id)); } catch { alert('Error al eliminar'); }
+    if (!confirm('¿Marcar como eliminado?')) return;
+    try { await updateDoc(doc(db, PATH_RETIROS, id), { eliminado: true }); } catch { alert('Error al eliminar'); }
 };
 
 window.openRetiroManualModal = () => {
