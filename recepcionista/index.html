@@ -683,7 +683,7 @@ async function init() {
     document.getElementById('cuts-list').addEventListener('click', async e => {
         const btn = e.target.closest('.btn-delete-cut');
         if (btn && isAdmin && confirm('¿Eliminar este corte?')) {
-            await deleteDoc(doc(db, PATH_CUTS, btn.dataset.id));
+            await updateDoc(doc(db, PATH_CUTS, btn.dataset.id), { eliminado: true });
         }
     });
 }
@@ -723,7 +723,7 @@ function listenToCuts() {
 function renderCuts() {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todayCuts = allCuts.filter(c => c.createdAt && c.createdAt.toDate() >= today);
+    const todayCuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today);
 
     const totalBilling = todayCuts.reduce((s, c) => s + (c.price || 0), 0);
     document.getElementById('stat-cuts-count').textContent = todayCuts.length;
@@ -1168,7 +1168,7 @@ function renderVentas() {
     const total = ventasHoy.reduce((s, v) => s + (v.total || 0), 0);
     document.getElementById('ventas-total').textContent = `$${total.toLocaleString('es-AR')}`;
     totalRow.classList.remove('hidden'); totalRow.classList.add('flex');
-    const cuts = allCuts.filter(c => c.createdAt && c.createdAt.toDate() >= new Date(new Date().setHours(0,0,0,0)));
+    const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= new Date(new Date().setHours(0,0,0,0)));
     updateDailyTotalStat(cuts.reduce((s,c) => s+(c.price||0), 0), total);
 }
 
@@ -1460,7 +1460,7 @@ function renderCierreCaja() {
     document.getElementById('cierre-caja-fecha').textContent =
         today.toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
-    const cuts = allCuts.filter(c => c.createdAt && c.createdAt.toDate() >= today);
+    const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today);
     const ventasHoy = allVentas.filter(v => v.fecha === hoy);
     const ventasProductos = ventasHoy.filter(v => v.tipo !== 'bebida');
     const ventasBebidas  = ventasHoy.filter(v => v.tipo === 'bebida');
@@ -1674,7 +1674,7 @@ function renderWeeklyTotalsRec() {
     const ws = new Date(today); if(wd!==1) ws.setDate(today.getDate()-(wd-1)); ws.setHours(0,0,0,0);
     const weekStartStr = ws.toLocaleDateString('en-CA');
     const totals = {};
-    allRetiros.filter(r => r.fecha >= weekStartStr && r.estado !== 'rechazado')
+    allRetiros.filter(r => !r.eliminado && r.fecha >= weekStartStr && r.estado !== 'rechazado')
         .forEach(r => { totals[r.barbero] = (totals[r.barbero]||0) + r.monto; });
     const propTotals = {};
     allPropinas.filter(p => p.fecha >= weekStartStr && p.estado === 'confirmado')
@@ -1764,7 +1764,7 @@ function renderBarberDetail(name) {
     const weekStartStr = ws.toLocaleDateString('en-CA');
     const myRetiros = allRetiros.filter(r => r.barbero === name && r.fecha >= weekStartStr);
     const myPropinas = allPropinas.filter(p => p.barbero === name && p.fecha >= weekStartStr);
-    const totalRet = myRetiros.filter(r => r.estado === 'confirmado').reduce((s,r) => s+r.monto, 0);
+    const totalRet = myRetiros.filter(r => !r.eliminado && r.estado === 'confirmado').reduce((s,r) => s+r.monto, 0);
     const totalProp = myPropinas.filter(p => p.estado === 'confirmado').reduce((s,p) => s+p.monto, 0);
     const neto = totalRet - totalProp;
     const combined = [
