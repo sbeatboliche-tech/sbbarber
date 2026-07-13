@@ -516,7 +516,6 @@
                     <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Barbero</label>
                     <select id="retiro-manual-barbero" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-violet-500 outline-none transition text-white mt-1">
                         <option value="">Seleccioná un barbero</option>
-                        <option value="Bauti">Bauti</option>
                         <option value="Maxi">Maxi</option>
                         <option value="Tony">Tony</option>
                         <option value="Stefa">Stefa</option>
@@ -614,11 +613,10 @@ const FIXED_CATEGORIES = [
 ];
 
 const ADMINS = ['abalo7272@gmail.com','carusomanu21@gmail.com'];
-const BARBER_EMAIL_MAP = { 'yorleanyerbautista@gmail.com':'Bauti', 'gomezmaximilianorodrigo@gmail.com':'Maxi', 'ap1773508@gmail.com':'Tony', 'stefanoacostasla@gmail.com':'Stefa' };
+const BARBER_EMAIL_MAP = { 'gomezmaximilianorodrigo@gmail.com':'Maxi', 'ap1773508@gmail.com':'Tony', 'stefanoacostasla@gmail.com':'Stefa' };
 const BARBER_THEME = {
     Tony:  { color:'blue',   text:'text-blue-400',   border:'border-blue-500',   bg:'bg-blue-500',   initial:'T' },
     Maxi:  { color:'emerald',text:'text-emerald-400', border:'border-emerald-500', bg:'bg-emerald-500', initial:'M' },
-    Bauti: { color:'red',    text:'text-red-400',    border:'border-red-500',    bg:'bg-red-500',    initial:'B' },
     Stefa: { color:'purple', text:'text-purple-400', border:'border-purple-500', bg:'bg-purple-500', initial:'S' }
 };
 
@@ -645,7 +643,7 @@ let allCuts=[], allExpenses=[], allStock=[];
 let allRetiros=[], allPropinas=[], allVentas=[];
 let activePeriod='dia', customDateFilter=null;
 let barberProfilesData={}, currentBase64Image=null;
-let barberCommissions={ Tony:0.5, Maxi:0.5, Bauti:0.5, Stefa:0.5 };
+let barberCommissions={ Tony:0.5, Maxi:0.5, Stefa:0.5 };
 let fixedExpenses={};
 let expensePeriod='semanal';
 let currentStockAction=null;
@@ -1189,12 +1187,12 @@ window.openUpdatesModal = () => {
 // ---- COMISIONES ----
 function listenToSettings() {
     onSnapshot(doc(db,PATH_SETTINGS,'commissions'), snap=>{
-        if(snap.exists()){ const d=snap.data(); ['Tony','Maxi','Bauti','Stefa'].forEach(b=>barberCommissions[b]=(d[b]??50)/100); }
+        if(snap.exists()){ const d=snap.data(); ['Tony','Maxi','Stefa'].forEach(b=>barberCommissions[b]=(d[b]??50)/100); }
         render();
     });
 }
 window.openAdminSettingsModal = () => {
-    document.getElementById('admin-settings-list').innerHTML=['Tony','Maxi','Bauti','Stefa'].map(b=>`
+    document.getElementById('admin-settings-list').innerHTML=['Tony','Maxi','Stefa'].map(b=>`
         <div class="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-gray-700">
             <span class="font-bold text-sm ${BARBER_THEME[b].text}">${b}</span>
             <div class="flex items-center gap-2">
@@ -1208,7 +1206,7 @@ window.saveCommissions = async () => {
     const btn=document.getElementById('btn-save-commissions');
     btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
     const data={};
-    ['Tony','Maxi','Bauti','Stefa'].forEach(b=>data[b]=Number(document.getElementById(`comm-${b}`).value));
+    ['Tony','Maxi','Stefa'].forEach(b=>data[b]=Number(document.getElementById(`comm-${b}`).value));
     try{ await setDoc(doc(db,PATH_SETTINGS,'commissions'),data,{merge:true}); window.closeModals(); }
     catch{ alert('Error al guardar'); }
     btn.disabled=false; btn.innerHTML='GUARDAR CAMBIOS';
@@ -1495,7 +1493,7 @@ function render() {
         const totalBilling=globals.reduce((s,c)=>s+c.price,0);
         const totalComm=globals.reduce((s,c)=>s+c.price*(barberCommissions[c.barber]||0.5),0);
         const bizProfit=totalBilling-totalComm;
-        const barberRows=['Tony','Maxi','Bauti','Stefa'].map(b=>`
+        const barberRows=['Tony','Maxi','Stefa'].map(b=>`
             <div class="flex items-center justify-between bg-black/20 p-3 rounded-lg border border-white/5 no-select">
                 <span class="text-xs font-bold ${BARBER_THEME[b].text}">${b}</span>
                 <span class="text-sm font-mono font-bold text-emerald-400">$${(revs[b]||0).toLocaleString('es-AR')}</span>
@@ -1530,7 +1528,7 @@ function renderServiceStats(filtered) {
     const container=document.getElementById('service-stats-container'); container.innerHTML='';
     const stats={};
     filtered.forEach(c=>{ if(!stats[c.barber])stats[c.barber]={}; if(!stats[c.barber][c.service])stats[c.barber][c.service]=0; stats[c.barber][c.service]++; });
-    ['Tony','Maxi','Bauti','Stefa'].filter(b=>stats[b]).forEach(b=>{
+    ['Tony','Maxi','Stefa'].filter(b=>stats[b]).forEach(b=>{
         let h=`<div class="bg-[#1a1d24]/80 rounded-xl p-3 border border-gray-800 mb-2 no-select"><div class="flex justify-between items-center mb-2 pb-2 border-b border-gray-700/50"><span class="font-bold uppercase text-[10px] ${BARBER_THEME[b].text}">${b}</span></div><div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">`;
         Object.keys(stats[b]).forEach(s=>h+=`<div class="flex justify-between py-0.5"><span class="text-gray-400 truncate">${s}</span><span class="text-white font-bold bg-white/5 px-1.5 rounded">${stats[b][s]}</span></div>`);
         container.innerHTML+=h+`</div></div>`;
@@ -1550,7 +1548,7 @@ window.selectSvc = (n,p,el) => {
 };
 function renderBarberSelection() {
     const g=document.getElementById('barber-selection-grid'); g.innerHTML='';
-    ['Tony','Maxi','Bauti','Stefa'].forEach(b=>{
+    ['Tony','Maxi','Stefa'].forEach(b=>{
         const t=BARBER_THEME[b], p=barberProfilesData[b];
         const pic=p?`<img src="${p}" class="w-full h-full rounded-full object-cover">`:`<div class="w-full h-full rounded-full ${t.bg} flex items-center justify-center text-white font-bold">${t.initial}</div>`;
         const l=document.createElement('label'); l.className="cursor-pointer group relative no-select";
@@ -1773,7 +1771,7 @@ function renderCierreView() {
 
 function buildBarberRows(barberData) {
     let html = '';
-    ['Tony','Maxi','Bauti','Stefa'].filter(b => barberData[b]).forEach(b => {
+    ['Tony','Maxi','Stefa'].filter(b => barberData[b]).forEach(b => {
         const d = barberData[b], t = BARBER_THEME[b];
         const av = barberProfilesData[b]
             ? `<img src="${barberProfilesData[b]}" class="w-8 h-8 rounded-full object-cover">`

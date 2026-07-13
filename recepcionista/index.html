@@ -546,7 +546,7 @@
                     <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Barbero</label>
                     <select id="ret-man-barbero" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-violet-500 outline-none transition text-white mt-1">
                         <option value="" disabled selected>Elegí un barbero</option>
-                        <option>Tony</option><option>Maxi</option><option>Bauti</option><option>Stefa</option>
+                        <option>Tony</option><option>Maxi</option><option>Stefa</option>
                     </select>
                 </div>
                 <div>
@@ -637,11 +637,10 @@ const SERVICES = [
     { name:'Global',          price:60000 }
 ];
 
-const BARBERS = ['Tony', 'Maxi', 'Bauti', 'Stefa'];
+const BARBERS = ['Tony', 'Maxi', 'Stefa'];
 const BARBER_THEME = {
     Tony:  { color:'blue',    text:'text-blue-400',    border:'border-blue-500',    bg:'bg-blue-500',    initial:'T' },
     Maxi:  { color:'emerald', text:'text-emerald-400', border:'border-emerald-500', bg:'bg-emerald-500', initial:'M' },
-    Bauti: { color:'red',     text:'text-red-400',     border:'border-red-500',     bg:'bg-red-500',     initial:'B' },
     Stefa: { color:'purple',  text:'text-purple-400',  border:'border-purple-500',  bg:'bg-purple-500',  initial:'S' }
 };
 
@@ -690,7 +689,7 @@ async function init() {
 
     document.getElementById('cuts-list').addEventListener('click', async e => {
         const btn = e.target.closest('.btn-delete-cut');
-        if (btn && isAdmin && confirm('¿Eliminar este corte?')) {
+        if (btn && confirm('¿Eliminar este corte?')) {
             await updateDoc(doc(db, PATH_CUTS, btn.dataset.id), { eliminado: true });
         }
     });
@@ -770,9 +769,7 @@ function renderCuts() {
         const theme = BARBER_THEME[c.barber] || { border: 'border-gray-600', bg: 'bg-gray-600', initial: '?' };
         const time = c.createdAt ? c.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
         const clientText = c.clientName ? `<span class="text-cyan-300"> (${c.clientName})</span>` : '';
-        const deleteBtn = isAdmin
-            ? `<button class="btn-delete-cut text-gray-600 hover:text-red-400 transition ml-2" data-id="${c.id}"><i class="fas fa-trash text-xs"></i></button>`
-            : '';
+        const deleteBtn = `<button class="btn-delete-cut text-gray-600 hover:text-red-400 transition ml-2" data-id="${c.id}"><i class="fas fa-trash text-xs"></i></button>`;
         return `
         <div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border-l-[3px] ${theme.border}">
             <div class="flex items-center gap-3">
