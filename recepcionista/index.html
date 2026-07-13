@@ -97,12 +97,6 @@
                 <button onclick="window.openVentaModal()" class="hidden md:flex items-center gap-2 bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-600/50 transition">
                     <i class="fas fa-shopping-bag text-xs"></i> Venta producto
                 </button>
-                <!-- Botón retiros: siempre visible -->
-                <button onclick="window.openRetirosPanel()" class="relative flex items-center gap-1.5 bg-violet-600/20 border border-violet-500/30 text-violet-300 px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-violet-600/30 transition active:scale-95">
-                    <i class="fas fa-wallet text-xs"></i>
-                    <span class="hidden sm:inline">Retiros</span>
-                    <span id="retiros-badge-header" class="hidden w-4 h-4 bg-red-500 rounded-full text-[9px] font-bold flex items-center justify-center leading-none text-white">0</span>
-                </button>
                 <!-- Botón cierre de caja: siempre visible -->
                 <button onclick="window.openCierreCaja()" class="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-lg hover:scale-[1.02] transition active:scale-95">
                     <i class="fas fa-cash-register text-xs"></i>
@@ -262,7 +256,7 @@
         <button id="fab-venta" onclick="window.openVentaModal()" class="md:hidden absolute bottom-6 left-6 w-14 h-14 bg-gradient-to-tr from-indigo-600 to-slate-700 rounded-full shadow-[0_0_20px_rgba(99,102,241,0.4)] hidden items-center justify-center text-lg text-white transition-all active:scale-90 hover:scale-105 z-30 border-2 border-white/10">
             <i class="fas fa-shopping-bag"></i>
         </button>
-        <button id="fab-retiros" onclick="window.openRetirosPanel()" class="absolute bottom-6 left-1/2 -translate-x-1/2 w-14 h-14 bg-gradient-to-tr from-violet-600 to-purple-600 rounded-full shadow-[0_0_20px_rgba(139,92,246,0.4)] flex items-center justify-center text-lg text-white transition-all active:scale-90 hover:scale-105 z-30 border-2 border-white/10">
+        <button id="fab-retiros" onclick="window.openRetirosPanel()" class="md:hidden absolute bottom-6 left-6 w-14 h-14 bg-gradient-to-tr from-violet-600 to-purple-500 rounded-full shadow-[0_0_24px_rgba(139,92,246,0.45)] flex items-center justify-center text-lg text-white transition-all active:scale-90 hover:scale-105 z-30 border-2 border-white/10">
             <i class="fas fa-wallet"></i>
             <span id="retiros-badge" class="hidden absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-[#0f1115] text-[9px] font-bold flex items-center justify-center leading-none">0</span>
         </button>
@@ -710,10 +704,14 @@ window.switchTab = (tab, el) => {
     // FABs mobile
     document.getElementById('fab-cortes').classList.toggle('hidden', tab !== 'cortes');
     const fabV = document.getElementById('fab-venta');
+    const fabR = document.getElementById('fab-retiros');
     if (tab === 'stock') {
         fabV.classList.remove('hidden'); fabV.classList.add('flex');
+        // Retiros se corre al centro cuando venta ocupa la izquierda
+        fabR.classList.remove('left-6'); fabR.classList.add('left-1/2', '-translate-x-1/2');
     } else {
         fabV.classList.add('hidden'); fabV.classList.remove('flex');
+        fabR.classList.add('left-6'); fabR.classList.remove('left-1/2', '-translate-x-1/2');
     }
 };
 
@@ -1636,15 +1634,12 @@ function listenToRetiros() {
 }
 
 function updateRetirosBadge() {
-    const n = [...allRetiros, ...allPropinas].filter(i => i.estado === 'pendiente').length;
+    const n = [...allRetiros, ...allPropinas].filter(i => !i.eliminado && i.estado === 'pendiente').length;
     const badge = document.getElementById('retiros-badge');
-    const badgeH = document.getElementById('retiros-badge-header');
     if (n > 0) {
         badge.textContent = n; badge.classList.remove('hidden'); badge.classList.add('flex');
-        badgeH.textContent = n; badgeH.classList.remove('hidden'); badgeH.classList.add('flex');
     } else {
         badge.classList.add('hidden'); badge.classList.remove('flex');
-        badgeH.classList.add('hidden'); badgeH.classList.remove('flex');
     }
 }
 
