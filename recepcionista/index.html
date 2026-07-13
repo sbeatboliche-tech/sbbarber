@@ -628,6 +628,9 @@ const PATH_CUTS = `artifacts/sb-barber-6dc16/public/data/all_cuts`;
 const PATH_STOCK   = `stock_items`;
 const PATH_VENTAS    = `ventas_productos`;
 const PATH_PRODUCTOS = `productos_barber`;
+const PATH_PROFILES  = `barber_profiles`;
+const BARBER_EMAIL_MAP = { 'gomezmaximilianorodrigo@gmail.com':'Maxi', 'ap1773508@gmail.com':'Tony', 'stefanoacostasla@gmail.com':'Stefa' };
+let barberProfilesData = {};
 
 const SERVICES = [
     { name:'Corte Promo 50%', price:12000 },
@@ -679,6 +682,7 @@ async function init() {
             document.getElementById('login-view').classList.add('hidden');
             if (isAdmin) document.getElementById('btn-add-stock-item').classList.remove('hidden');
             listenToCuts();
+            listenToProfiles();
             listenToStock();
             listenToVentas();
             listenToProductos();
@@ -824,7 +828,7 @@ function renderBarberGrid() {
         <label class="cursor-pointer group relative">
             <input type="radio" name="barber" value="${b}" class="peer sr-only" onchange="window.renderServices('${b}')">
             <div class="p-3 bg-gray-800/50 rounded-xl border border-gray-700 peer-checked:border-${t.color}-500 peer-checked:bg-${t.color}-500/10 transition text-center h-16 flex items-center justify-center gap-2">
-                <div class="w-7 h-7 rounded-full ${t.bg} flex items-center justify-center text-white font-bold text-sm">${t.initial}</div>
+                <div class="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">${barberAvatar(b, 7)}</div>
                 <span class="font-bold text-sm text-gray-400 peer-checked:text-${t.color}-400">${b}</span>
             </div>
             <i class="fas fa-check-circle absolute top-2 right-2 text-${t.color}-500 opacity-0 peer-checked:opacity-100 transition text-xs"></i>
@@ -1661,7 +1665,7 @@ function renderCierreCajaSemanal() {
         return `
         <div class="glass-card rounded-2xl p-5 md:p-6">
             <div class="flex items-center gap-3 mb-4">
-                <div class="w-10 h-10 rounded-full ${t.bg} flex items-center justify-center font-extrabold text-white text-base">${t.initial}</div>
+                ${barberAvatar(b, 10)}
                 <span class="font-extrabold text-white text-base md:text-lg">${b}</span>
             </div>
             <div class="space-y-2">
@@ -1688,6 +1692,21 @@ function renderCierreCajaSemanal() {
     const html = `<div class="grid grid-cols-1 md:grid-cols-3 gap-4">${barberCards}</div>`;
 
     document.getElementById('cierre-caja-content').innerHTML = html;
+}
+
+function listenToProfiles() {
+    onSnapshot(collection(db, PATH_PROFILES), s => {
+        barberProfilesData = {};
+        s.forEach(d => { const n = BARBER_EMAIL_MAP[d.id]; if (n) barberProfilesData[n] = d.data().photoURL; });
+    });
+}
+
+function barberAvatar(name, size = 10) {
+    const t = BARBER_THEME[name];
+    const px = `w-${size} h-${size}`;
+    return barberProfilesData[name]
+        ? `<img src="${barberProfilesData[name]}" class="${px} rounded-full object-cover">`
+        : `<div class="${px} rounded-full ${t.bg} flex items-center justify-center font-extrabold text-white text-base">${t.initial}</div>`;
 }
 
 // ---- RETIROS Y PROPINAS ----
@@ -1862,8 +1881,8 @@ window.openBarberDetail = (name) => {
     const t = BARBER_THEME[name] || { bg:'bg-gray-600', text:'text-gray-400', initial: name[0] };
     document.getElementById('barber-detail-name').textContent = name;
     const av = document.getElementById('barber-detail-avatar');
-    av.className = `w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white ${t.bg}`;
-    av.textContent = t.initial;
+    av.className = 'w-10 h-10 rounded-full overflow-hidden';
+    av.innerHTML = barberAvatar(name, 10);
     const panel = document.getElementById('barber-detail-panel');
     panel.classList.remove('hidden'); panel.classList.add('flex', 'flex-col');
     renderBarberDetail(name);
