@@ -97,6 +97,11 @@
                 <button onclick="window.openVentaModal()" class="hidden md:flex items-center gap-2 bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-600/50 transition">
                     <i class="fas fa-shopping-bag text-xs"></i> Venta producto
                 </button>
+                <!-- Botón retiros: solo desktop -->
+                <button onclick="window.openRetirosPanel()" class="hidden md:flex items-center gap-2 bg-violet-600/20 border border-violet-500/40 text-violet-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-violet-600/40 transition relative">
+                    <i class="fas fa-wallet text-xs"></i> Retiros
+                    <span id="retiros-badge-header" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border border-[#0f1115] text-[8px] font-bold items-center justify-center leading-none">0</span>
+                </button>
                 <!-- Botón cierre de caja: siempre visible -->
                 <button onclick="window.openCierreCaja()" class="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-lg hover:scale-[1.02] transition active:scale-95">
                     <i class="fas fa-cash-register text-xs"></i>
@@ -1636,10 +1641,13 @@ function listenToRetiros() {
 function updateRetirosBadge() {
     const n = [...allRetiros, ...allPropinas].filter(i => !i.eliminado && i.estado === 'pendiente').length;
     const badge = document.getElementById('retiros-badge');
+    const badgeH = document.getElementById('retiros-badge-header');
     if (n > 0) {
         badge.textContent = n; badge.classList.remove('hidden'); badge.classList.add('flex');
+        badgeH.textContent = n; badgeH.classList.remove('hidden'); badgeH.classList.add('flex');
     } else {
         badge.classList.add('hidden'); badge.classList.remove('flex');
+        badgeH.classList.add('hidden'); badgeH.classList.remove('flex');
     }
 }
 
