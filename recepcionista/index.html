@@ -690,7 +690,10 @@ async function init() {
     document.getElementById('cuts-list').addEventListener('click', async e => {
         const btn = e.target.closest('.btn-delete-cut');
         if (btn && confirm('¿Eliminar este corte?')) {
-            await updateDoc(doc(db, PATH_CUTS, btn.dataset.id), { eliminado: true });
+            const id = btn.dataset.id;
+            allCuts = allCuts.map(c => c.id === id ? {...c, eliminado: true} : c);
+            renderCuts();
+            await updateDoc(doc(db, PATH_CUTS, id), { eliminado: true });
         }
     });
 }
@@ -1267,6 +1270,8 @@ window.setVentaMetodo = (m) => {
 
 window.deleteVenta = async (id) => {
     if (!confirm('¿Eliminar esta venta?')) return;
+    allVentas = allVentas.map(v => v.id === id ? {...v, eliminado: true} : v);
+    renderVentas(); renderSalesHistory();
     try { await updateDoc(doc(db, PATH_VENTAS, id), { eliminado: true }); } catch { alert('Error'); }
 };
 
@@ -1849,6 +1854,8 @@ window.rejectItem = async (path, id) => {
 };
 window.deleteRetiroRec = async (id) => {
     if (!confirm('¿Marcar como eliminado?')) return;
+    allRetiros = allRetiros.map(r => r.id === id ? {...r, eliminado: true} : r);
+    renderRetirosPanel();
     try { await updateDoc(doc(db, PATH_RETIROS, id), { eliminado: true }); } catch { alert('Error al eliminar'); }
 };
 
