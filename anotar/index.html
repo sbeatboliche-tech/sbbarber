@@ -19,6 +19,9 @@
         .glass-modal { background:rgba(20,25,35,0.95); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.1); }
         .animate-enter { animation:enter 0.4s cubic-bezier(0.16,1,0.3,1); }
         @keyframes enter { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes slideUp { from{opacity:0;transform:translateY(40px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeInScale { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+        .svc-appear { animation:fadeInScale 0.2s cubic-bezier(0.16,1,0.3,1) both; }
         .shine-effect { position:relative; overflow:hidden; }
         .shine-effect::after { content:''; position:absolute; top:0; left:-100%; width:50%; height:100%; background:linear-gradient(to right,transparent,rgba(255,255,255,0.1),transparent); animation:shine 3s infinite; }
         @keyframes shine { 0%{left:-100%} 20%{left:200%} 100%{left:200%} }
@@ -384,17 +387,36 @@
     </div>
 
     <!-- Nuevo Corte -->
-    <div id="add-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
-        <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl flex flex-col rounded-t-3xl">
+    <div id="add-modal" class="absolute inset-0 bg-black/75 backdrop-blur-md z-50 hidden flex-col justify-end sm:justify-center">
+        <div class="glass-modal sm:rounded-3xl sm:max-w-md sm:mx-auto w-full border-t sm:border border-white/10 pt-3 pb-8 px-5 shadow-2xl rounded-t-3xl max-h-[92vh] overflow-y-auto" style="animation:slideUp 0.32s cubic-bezier(0.16,1,0.3,1)">
+            <div class="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5 sm:hidden"></div>
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-white">Nuevo Corte</h2>
-                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+                <h2 class="text-xl font-extrabold text-white tracking-tight">Nuevo Corte</h2>
+                <button onclick="window.closeModals()" class="w-9 h-9 rounded-full bg-white/8 flex items-center justify-center text-gray-400 hover:bg-white/15 transition active:scale-90">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
             </div>
-            <form id="add-form" class="flex-1 flex flex-col space-y-5">
-                <div id="barber-selection-grid" class="grid grid-cols-2 gap-3 no-select"></div>
-                <div><div id="services-grid" class="space-y-2 max-h-48 overflow-y-auto pr-1 no-select"></div><input type="hidden" id="svc-name"><input type="hidden" id="svc-price"></div>
-                <input type="text" id="client-name" placeholder="Nombre, aspecto o detalles del cliente" class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-blue-500 outline-none transition text-white placeholder-gray-500 no-select">
-                <button type="submit" id="btn-submit-cut" class="w-full bg-white text-black p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest no-select">Confirmar</button>
+            <form id="add-form" class="space-y-6">
+                <!-- Barbero -->
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">Barbero</p>
+                    <div id="barber-selection-grid" class="grid grid-cols-3 gap-3 no-select"></div>
+                </div>
+                <!-- Servicio -->
+                <div id="services-section-anotar" class="overflow-hidden transition-all duration-300" style="max-height:0;opacity:0">
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">Servicio</p>
+                    <div id="services-grid" class="grid grid-cols-2 gap-2 no-select"></div>
+                    <input type="hidden" id="svc-name">
+                    <input type="hidden" id="svc-price">
+                </div>
+                <!-- Cliente -->
+                <input type="text" id="client-name" placeholder="Nombre, aspecto o detalles del cliente"
+                    class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-blue-500/60 focus:bg-blue-500/5 outline-none transition text-white placeholder-gray-600 text-sm no-select">
+                <!-- Submit -->
+                <button type="submit" id="btn-submit-cut"
+                    class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-4 rounded-2xl font-extrabold text-base shadow-lg shadow-blue-900/40 uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all no-select">
+                    Confirmar
+                </button>
             </form>
         </div>
     </div>
@@ -1535,26 +1557,44 @@ function renderServiceStats(filtered) {
     });
 }
 window.renderServices = (selectedBarber) => {
-    document.getElementById('services-grid').innerHTML=SERVICES.filter(s=>['Mechas','Global'].includes(s.name)?selectedBarber==='Maxi':true).map(s=>`
-        <div onclick="window.selectSvc('${s.name}',${s.price},this)" class="svc-card group p-3 bg-gray-800/40 border border-gray-700/50 rounded-xl flex justify-between items-center cursor-pointer transition-all hover:bg-gray-800 no-select">
-            <div class="flex items-center gap-3"><div class="w-8 h-8 rounded-lg bg-gray-700/50 flex items-center justify-center text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition"><i class="fas fa-cut text-xs"></i></div><span class="font-medium text-sm text-gray-300 group-hover:text-white">${s.name}</span></div>
-            <span class="text-white font-bold text-sm bg-black/30 px-2 py-1 rounded-md">$${s.price.toLocaleString('es-AR')}</span>
-        </div>`).join('');
+    document.getElementById('svc-name').value = '';
+    document.getElementById('svc-price').value = '';
+    document.getElementById('services-grid').innerHTML = SERVICES.filter(s => ['Mechas','Global'].includes(s.name) ? selectedBarber === 'Maxi' : true).map((s, i) => `
+        <button type="button" onclick="window.selectSvc('${s.name}',${s.price},this)"
+            class="svc-card svc-appear text-left p-4 bg-white/5 border-2 border-transparent rounded-2xl cursor-pointer transition-all duration-150 hover:bg-white/8 active:scale-[0.97] no-select"
+            style="animation-delay:${i * 35}ms">
+            <div class="font-bold text-sm text-gray-200 leading-tight">${s.name}</div>
+            <div class="text-xs text-gray-500 mt-1 font-semibold">$${s.price.toLocaleString('es-AR')}</div>
+        </button>`).join('');
+    const sec = document.getElementById('services-section-anotar');
+    sec.style.maxHeight = '600px'; sec.style.opacity = '1';
 };
-window.selectSvc = (n,p,el) => {
-    document.getElementById('svc-name').value=n; document.getElementById('svc-price').value=p;
-    document.querySelectorAll('.svc-card').forEach(c=>c.className='svc-card group p-3 bg-gray-800/40 border border-gray-700/50 rounded-xl flex justify-between items-center cursor-pointer transition-all no-select');
-    el.className='svc-card p-3 bg-blue-600/10 border border-blue-500 rounded-xl flex justify-between items-center cursor-pointer transition-all scale-[1.02] shadow-lg no-select';
+window.selectSvc = (n, p, el) => {
+    document.getElementById('svc-name').value = n; document.getElementById('svc-price').value = p;
+    document.querySelectorAll('.svc-card').forEach(c => {
+        c.className = 'svc-card text-left p-4 bg-white/5 border-2 border-transparent rounded-2xl cursor-pointer transition-all duration-150 hover:bg-white/8 active:scale-[0.97] no-select';
+    });
+    el.className = 'svc-card text-left p-4 bg-blue-500/15 border-2 border-blue-500/70 rounded-2xl cursor-pointer transition-all duration-150 shadow-lg shadow-blue-900/20 scale-[1.02] no-select';
 };
 function renderBarberSelection() {
-    const g=document.getElementById('barber-selection-grid'); g.innerHTML='';
-    ['Tony','Maxi','Stefa'].forEach(b=>{
-        const t=BARBER_THEME[b], p=barberProfilesData[b];
-        const pic=p?`<img src="${p}" class="w-full h-full rounded-full object-cover">`:`<div class="w-full h-full rounded-full ${t.bg} flex items-center justify-center text-white font-bold">${t.initial}</div>`;
-        const l=document.createElement('label'); l.className="cursor-pointer group relative no-select";
-        l.innerHTML=`<input type="radio" name="barber" value="${b}" class="peer sr-only" onchange="window.renderServices('${b}')"><div class="p-3 bg-gray-800/50 rounded-xl border border-gray-700 peer-checked:border-${t.color}-500 peer-checked:bg-${t.color}-500/10 transition text-center h-20 flex flex-col items-center justify-center gap-1"><div class="w-7 h-7 p-0.5">${pic}</div><span class="font-bold text-xs text-gray-400 peer-checked:text-${t.color}-400">${b}</span></div><i class="fas fa-check-circle absolute top-2 right-2 text-${t.color}-500 opacity-0 peer-checked:opacity-100 transition"></i>`;
-        g.appendChild(l);
-    });
+    document.getElementById('barber-selection-grid').innerHTML = ['Tony','Maxi','Stefa'].map(b => {
+        const t = BARBER_THEME[b], p = barberProfilesData[b];
+        const pic = p
+            ? `<img src="${p}" class="w-full h-full rounded-full object-cover">`
+            : `<div class="w-full h-full rounded-full ${t.bg} flex items-center justify-center text-white font-bold text-base">${t.initial}</div>`;
+        return `
+        <label class="cursor-pointer select-none">
+            <input type="radio" name="barber" value="${b}" class="peer sr-only" onchange="window.renderServices('${b}')">
+            <div class="flex flex-col items-center gap-2 p-4 rounded-2xl border-2 border-transparent
+                peer-checked:border-${t.color}-500 peer-checked:bg-${t.color}-500/10
+                bg-white/5 hover:bg-white/8 transition-all duration-200 active:scale-95">
+                <div class="w-16 h-16 rounded-full overflow-hidden ring-2 ring-transparent peer-checked:ring-${t.color}-400 transition-all duration-200 shadow-lg">
+                    ${pic}
+                </div>
+                <span class="font-bold text-sm text-gray-400 peer-checked:text-${t.color}-300 transition-colors">${b}</span>
+            </div>
+        </label>`;
+    }).join('');
 }
 function handleFileSelect(e) {
     const f=e.target.files[0]; if(!f)return;
@@ -1574,7 +1614,16 @@ window.setPeriod = (p,el)=>{
     render();
 };
 window.openSettingsModal = ()=>showModal('settings-modal');
-window.openAddModal = ()=>{ showModal('add-modal'); renderBarberSelection(); };
+window.openAddModal = () => {
+    const sec = document.getElementById('services-section-anotar');
+    sec.style.maxHeight = '0'; sec.style.opacity = '0';
+    document.getElementById('services-grid').innerHTML = '';
+    document.getElementById('svc-name').value = '';
+    document.getElementById('svc-price').value = '';
+    document.getElementById('client-name').value = '';
+    showModal('add-modal');
+    renderBarberSelection();
+};
 
 const ALL_MODALS=['settings-modal','add-modal','expense-modal','date-search-modal','admin-settings-modal','updates-modal','fixed-expenses-modal','stock-item-modal','retiro-modal','propina-modal','ventas-modal','retiro-manual-modal','retiro-nota-modal'];
 
@@ -1627,7 +1676,7 @@ document.getElementById('add-form').addEventListener('submit', async e=>{
         window.closeModals();
         document.getElementById('add-form').reset();
         ['svc-name','svc-price','client-name'].forEach(id=>document.getElementById(id).value='');
-        document.querySelectorAll('.svc-card').forEach(c=>c.className='svc-card group p-3 bg-gray-800/40 border border-gray-700/50 rounded-xl flex justify-between items-center cursor-pointer transition-all hover:bg-gray-800 no-select');
+        document.querySelectorAll('.svc-card').forEach(c=>c.className='svc-card text-left p-4 bg-white/5 border-2 border-transparent rounded-2xl cursor-pointer transition-all duration-150 hover:bg-white/8 active:scale-[0.97] no-select');
     } catch{ alert('Error al guardar'); }
     btn.disabled=false; btn.innerHTML='CONFIRMAR';
 });
