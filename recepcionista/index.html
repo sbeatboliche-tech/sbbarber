@@ -535,10 +535,16 @@
 
     <!-- Venta rápida de bebida -->
     <div id="quick-sale-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
-        <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl">
+        <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold text-white"><i class="fas fa-bolt text-cyan-400 mr-2"></i>Venta Rápida</h2>
                 <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <!-- Barbero -->
+            <div class="mb-4">
+                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-2">¿A quién se le descuenta?</p>
+                <div class="grid grid-cols-3 gap-2" id="qs-barber-grid"></div>
+                <input type="hidden" id="qs-barbero" value="">
             </div>
             <!-- Método de pago bebida -->
             <div class="mb-4">
@@ -549,7 +555,7 @@
                 </div>
                 <input type="hidden" id="qs-metodo-pago" value="efectivo">
             </div>
-            <div id="quick-sale-list" class="space-y-2 max-h-60 overflow-y-auto mb-3"></div>
+            <div id="quick-sale-list" class="space-y-2 max-h-52 overflow-y-auto mb-3"></div>
             <p class="text-[10px] text-gray-600 text-center">Tocá una bebida para descontar 1 unidad</p>
         </div>
     </div>
@@ -1171,6 +1177,20 @@ window.setQsMetodo = (metodo) => {
 
 window.openQuickSaleModal = () => {
     window.setQsMetodo('efectivo');
+    document.getElementById('qs-barbero').value = '';
+    document.getElementById('qs-barber-grid').innerHTML = BARBERS.map(b => {
+        const t = BARBER_THEME[b];
+        return `
+        <label class="cursor-pointer select-none">
+            <input type="radio" name="qs-barber" value="${b}" class="peer sr-only" onchange="document.getElementById('qs-barbero').value='${b}'">
+            <div class="flex flex-col items-center gap-1.5 p-2.5 rounded-xl border-2 border-transparent
+                peer-checked:border-${t.color}-500 peer-checked:bg-${t.color}-500/10
+                bg-white/5 hover:bg-white/8 transition-all duration-150 active:scale-95">
+                <div class="w-11 h-11 rounded-full overflow-hidden shadow">${barberAvatar(b, 11)}</div>
+                <span class="font-bold text-xs text-gray-400 peer-checked:text-${t.color}-300 transition-colors">${b}</span>
+            </div>
+        </label>`;
+    }).join('');
     const withStock = allStock.filter(i => (i.quantity || 0) > 0);
     document.getElementById('quick-sale-list').innerHTML = withStock.length === 0
         ? '<p class="text-xs text-gray-500 text-center py-4">Sin stock disponible</p>'
@@ -1183,6 +1203,8 @@ window.openQuickSaleModal = () => {
 };
 
 window.quickSale = async id => {
+    const barbero = document.getElementById('qs-barbero').value;
+    if (!barbero) return alert('Seleccioná un barbero primero');
     const item = allStock.find(i => i.id === id);
     if (!item || (item.quantity || 0) < 1) return alert('Sin stock');
     const metodo = document.getElementById('qs-metodo-pago').value;
@@ -1193,7 +1215,7 @@ window.quickSale = async id => {
             producto: item.name, tipo: 'bebida',
             precio: item.price || 0, cantidad: 1, total: item.price || 0,
             metodoPago: metodo,
-            barbero: 'Recepción', userEmail: currentUser.email,
+            barbero, userEmail: currentUser.email,
             fecha: hoy, creadoEn: serverTimestamp()
         });
         closeModals();
