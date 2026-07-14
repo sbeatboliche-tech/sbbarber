@@ -803,14 +803,28 @@ function renderCuts() {
         barberSummary.classList.add('hidden');
     }
 
+    const allTodayCuts = allCuts.filter(c => c.createdAt && c.createdAt.toDate() >= today);
     const list = document.getElementById('cuts-list');
-    if (todayCuts.length === 0) {
+    if (allTodayCuts.length === 0) {
         list.innerHTML = '<p class="text-xs text-gray-600 text-center py-4">Sin cortes registrados hoy</p>';
         return;
     }
-    list.innerHTML = todayCuts.map(c => {
+    list.innerHTML = allTodayCuts.map(c => {
         const theme = BARBER_THEME[c.barber] || { border: 'border-gray-600', bg: 'bg-gray-600', initial: '?' };
         const time = c.createdAt ? c.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        if (c.eliminado) {
+            return `
+            <div class="flex items-center justify-between bg-black/10 p-3 rounded-xl border-l-[3px] border-gray-700/40 opacity-40">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 grayscale">${barberAvatar(c.barber, 9)}</div>
+                    <div>
+                        <div class="text-sm font-bold text-gray-500 line-through">${c.service || ''}</div>
+                        <div class="text-[10px] text-gray-600">${c.barber} · ${time}</div>
+                    </div>
+                </div>
+                <span class="font-bold text-gray-600 text-sm line-through">$${(c.price || 0).toLocaleString('es-AR')}</span>
+            </div>`;
+        }
         const clientText = c.clientName ? `<span class="text-cyan-300"> (${c.clientName})</span>` : '';
         const deleteBtn = `<button class="btn-delete-cut text-gray-600 hover:text-red-400 transition ml-2" data-id="${c.id}"><i class="fas fa-trash text-xs"></i></button>`;
         return `
