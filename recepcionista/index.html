@@ -1230,7 +1230,10 @@ function listenToVentas() {
             allVentas = snap.docs.map(d => ({ ...d.data(), id: d.id }));
             renderVentas();
             renderSalesHistory();
-            if (!document.getElementById('cierre-caja-view').classList.contains('hidden')) renderCierreCaja();
+            if (!document.getElementById('cierre-caja-view').classList.contains('hidden')) {
+                if (cierreCajaTab === 'semanal') renderCierreCajaSemanal();
+                else renderCierreCaja();
+            }
         }
     );
 }
