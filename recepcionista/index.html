@@ -438,6 +438,40 @@
                         </button>
                     </div>
                 </div>
+                <!-- ¿Para quién? (solo cuando es venta) -->
+                <div id="mv-comprador-wrap" class="hidden">
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-2">¿Para quién?</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="window.setDrinkComprador('cliente', this)" id="mv-comp-cliente"
+                            class="p-3 rounded-xl border text-sm font-bold transition bg-cyan-600/20 border-cyan-500 text-cyan-300">
+                            🧔 Cliente
+                        </button>
+                        <button type="button" onclick="window.setDrinkComprador('Tony', this)" id="mv-comp-Tony"
+                            class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
+                            Tony
+                        </button>
+                        <button type="button" onclick="window.setDrinkComprador('Maxi', this)" id="mv-comp-Maxi"
+                            class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
+                            Maxi
+                        </button>
+                        <button type="button" onclick="window.setDrinkComprador('Stefa', this)" id="mv-comp-Stefa"
+                            class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
+                            Stefa
+                        </button>
+                    </div>
+                    <input type="hidden" id="mv-comprador" value="cliente">
+                    <!-- Método de pago (solo venta a cliente) -->
+                    <div id="mv-metodo-wrap" class="mt-3">
+                        <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-2">Método de pago</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" id="mv-mp-efectivo" onclick="window.setDrinkMetodo('efectivo')"
+                                class="p-3 rounded-xl border text-sm font-bold transition bg-emerald-600/20 border-emerald-500 text-emerald-300">💵 Efectivo</button>
+                            <button type="button" id="mv-mp-transferencia" onclick="window.setDrinkMetodo('transferencia')"
+                                class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">📲 Transferencia</button>
+                        </div>
+                        <input type="hidden" id="mv-metodo-pago" value="efectivo">
+                    </div>
+                </div>
                 <div>
                     <label id="movement-qty-label" class="text-[10px] font-bold text-gray-500 uppercase ml-1">Cantidad</label>
                     <input type="number" id="movement-qty" placeholder="0" min="1" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none transition text-white placeholder-gray-500 mt-1">
@@ -1027,6 +1061,30 @@ window.setDrinkSalidaTipo = (tipo) => {
     const esVenta = tipo === 'venta';
     document.getElementById('mv-tipo-venta').className = `p-3 rounded-xl border text-sm font-bold transition ${esVenta ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
     document.getElementById('mv-tipo-regalo').className = `p-3 rounded-xl border text-sm font-bold transition ${!esVenta ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    document.getElementById('mv-comprador-wrap').classList.toggle('hidden', !esVenta);
+    if (esVenta) { window.setDrinkComprador('cliente', document.getElementById('mv-comp-cliente')); }
+};
+
+window.setDrinkComprador = (quien, el) => {
+    document.getElementById('mv-comprador').value = quien;
+    const esBarber = BARBERS.includes(quien);
+    ['cliente', ...BARBERS].forEach(k => {
+        const btn = document.getElementById(`mv-comp-${k}`);
+        if (!btn) return;
+        const t = BARBER_THEME[k];
+        const isSelected = k === quien;
+        btn.className = `p-3 rounded-xl border text-sm font-bold transition ${isSelected
+            ? (t ? `bg-${t.color}-600/20 border-${t.color}-500 text-${t.color}-300` : 'bg-cyan-600/20 border-cyan-500 text-cyan-300')
+            : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    });
+    document.getElementById('mv-metodo-wrap').classList.toggle('hidden', esBarber);
+};
+
+window.setDrinkMetodo = (metodo) => {
+    document.getElementById('mv-metodo-pago').value = metodo;
+    const esEfectivo = metodo === 'efectivo';
+    document.getElementById('mv-mp-efectivo').className = `p-3 rounded-xl border text-sm font-bold transition ${esEfectivo ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    document.getElementById('mv-mp-transferencia').className = `p-3 rounded-xl border text-sm font-bold transition ${!esEfectivo ? 'bg-blue-600/20 border-blue-500 text-blue-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
 };
 
 window.openMovement = (itemId, itemName, type) => {
@@ -1040,6 +1098,7 @@ window.openMovement = (itemId, itemName, type) => {
     btn.className = `w-full text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest bg-gradient-to-r ${isCompra ? 'from-emerald-600 to-teal-600' : 'from-red-600 to-rose-600'}`;
     document.getElementById('movement-qty').value = '';
     document.getElementById('mv-tipo-wrap').classList.toggle('hidden', isCompra);
+    document.getElementById('mv-comprador-wrap').classList.add('hidden');
     if (!isCompra) { drinkSalidaTipo = 'venta'; window.setDrinkSalidaTipo('venta'); }
     showModal('movement-modal');
 };
@@ -1058,10 +1117,14 @@ document.getElementById('movement-form').addEventListener('submit', async e => {
             const item = allStock.find(i => i.id === itemId);
             const precio = item?.price || 0;
             const hoy = new Date().toLocaleDateString('en-CA');
+            const comprador = document.getElementById('mv-comprador').value || 'cliente';
+            const metodo = BARBERS.includes(comprador) ? null : (document.getElementById('mv-metodo-pago').value || 'efectivo');
             await addDoc(collection(db, PATH_VENTAS), {
                 producto: itemName, tipo: 'bebida',
                 precio, cantidad: qty, total: precio * qty,
-                barbero: 'Recepción', userEmail: currentUser.email,
+                barbero: comprador,
+                ...(metodo ? { metodoPago: metodo } : {}),
+                userEmail: currentUser.email,
                 fecha: hoy, creadoEn: serverTimestamp()
             });
         }
