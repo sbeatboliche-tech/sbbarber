@@ -412,6 +412,12 @@
                 <!-- Cliente -->
                 <input type="text" id="client-name" placeholder="Nombre, aspecto o detalles del cliente"
                     class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-blue-500/60 focus:bg-blue-500/5 outline-none transition text-white placeholder-gray-600 text-sm no-select">
+                <!-- Propina -->
+                <div class="flex items-center gap-3 px-4 py-3 bg-yellow-500/5 rounded-2xl border border-yellow-500/20">
+                    <i class="fas fa-coins text-yellow-400 text-sm flex-shrink-0"></i>
+                    <input type="number" id="cut-propina" placeholder="Propina (opcional)" min="0"
+                        class="flex-1 bg-transparent outline-none text-white placeholder-yellow-700/60 text-sm no-select">
+                </div>
                 <!-- Submit -->
                 <button type="submit" id="btn-submit-cut"
                     class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-4 rounded-2xl font-extrabold text-base shadow-lg shadow-blue-900/40 uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all no-select">
@@ -1621,6 +1627,7 @@ window.openAddModal = () => {
     document.getElementById('svc-name').value = '';
     document.getElementById('svc-price').value = '';
     document.getElementById('client-name').value = '';
+    document.getElementById('cut-propina').value = '';
     showModal('add-modal');
     renderBarberSelection();
 };
@@ -1669,13 +1676,18 @@ document.getElementById('add-form').addEventListener('submit', async e=>{
     const serviceName=document.getElementById('svc-name').value;
     const servicePrice=Number(document.getElementById('svc-price').value);
     const clientName=document.getElementById('client-name').value.trim();
+    const propinaMonto=Number(document.getElementById('cut-propina').value)||0;
     if(!barber||!serviceName) return alert('Selecciona barbero y servicio');
     btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
     try{
+        const hoy=new Date().toLocaleDateString('en-CA');
         await addDoc(collection(db,PATH_MAIN),{barber,service:serviceName,price:servicePrice,clientName,userEmail:currentUser.email,createdAt:serverTimestamp()});
+        if(propinaMonto>0){
+            await addDoc(collection(db,PATH_PROPINAS),{barbero:barber,userEmail:currentUser.email,monto:propinaMonto,descripcion:`Propina corte${clientName?' — '+clientName:''}`,fecha:hoy,estado:'confirmado',creadoEn:serverTimestamp()});
+        }
         window.closeModals();
         document.getElementById('add-form').reset();
-        ['svc-name','svc-price','client-name'].forEach(id=>document.getElementById(id).value='');
+        ['svc-name','svc-price','client-name','cut-propina'].forEach(id=>document.getElementById(id).value='');
         document.querySelectorAll('.svc-card').forEach(c=>c.className='svc-card text-left p-4 bg-white/5 border-2 border-transparent rounded-2xl cursor-pointer transition-all duration-150 hover:bg-white/8 active:scale-[0.97] no-select');
     } catch{ alert('Error al guardar'); }
     btn.disabled=false; btn.innerHTML='CONFIRMAR';
