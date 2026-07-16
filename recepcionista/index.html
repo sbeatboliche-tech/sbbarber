@@ -105,6 +105,10 @@
                     <i class="fas fa-wallet text-xs"></i> Retiros
                     <span id="retiros-badge-header" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border border-[#0f1115] text-[8px] font-bold items-center justify-center leading-none">0</span>
                 </button>
+                <!-- Botón turnos: solo desktop -->
+                <button onclick="window.openTurnosPanel()" class="hidden md:flex items-center gap-2 bg-amber-600/20 border border-amber-500/40 text-amber-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-amber-600/40 transition">
+                    <i class="fas fa-calendar-alt text-xs"></i> Turnos
+                </button>
                 <!-- Botón cierre de caja: siempre visible -->
                 <button onclick="window.openCierreCaja()" class="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-lg hover:scale-[1.02] transition active:scale-95">
                     <i class="fas fa-cash-register text-xs"></i>
@@ -125,6 +129,9 @@
                 </button>
                 <button onclick="window.switchTab('stock', this)" id="tab-btn-stock" class="tab-btn flex-1 py-2 rounded-lg text-[11px] font-medium text-gray-500 hover:text-gray-300 transition-all flex items-center justify-center gap-1.5">
                     <i class="fas fa-shopping-bag text-[9px]"></i> VENTAS
+                </button>
+                <button onclick="window.openTurnosPanel()" id="tab-btn-turnos" class="tab-btn flex-1 py-2 rounded-lg text-[11px] font-medium text-gray-500 hover:text-gray-300 transition-all flex items-center justify-center gap-1.5">
+                    <i class="fas fa-calendar-alt text-[9px]"></i> TURNOS
                 </button>
             </nav>
         </div>
@@ -368,6 +375,40 @@
             <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-10 max-w-2xl md:mx-auto w-full space-y-3" id="barber-detail-content"></div>
         </div>
     </div><!-- /retiros-panel -->
+
+    <!-- ============================================================
+         PANEL TURNOS
+    ============================================================ -->
+    <div id="turnos-panel" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+        <!-- Header -->
+        <header class="px-5 md:px-8 py-4 md:py-5 glass flex items-center justify-between flex-shrink-0 border-b border-white/5">
+            <div class="flex items-center gap-4">
+                <button onclick="window.closeTurnosPanel()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
+                    <i class="fas fa-arrow-left text-sm"></i>
+                </button>
+                <div>
+                    <h1 class="text-base md:text-xl font-bold text-white leading-none tracking-wide">Turnos</h1>
+                    <span class="text-[10px] md:text-xs text-amber-400 font-medium">Próximos 4 días</span>
+                </div>
+            </div>
+            <button onclick="window.openNuevoTurnoModal()" class="flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-xl text-xs md:text-sm transition shadow-lg shadow-amber-900/40">
+                <i class="fas fa-plus text-[10px] md:text-xs"></i>
+                <span>Nuevo turno</span>
+            </button>
+        </header>
+        <!-- Day selector -->
+        <div class="px-4 md:px-8 pt-4 flex-shrink-0">
+            <div class="flex bg-gray-900/80 p-1 rounded-xl border border-gray-800 gap-1" id="turnos-day-tabs"></div>
+        </div>
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-8 pb-10 max-w-2xl md:mx-auto w-full">
+                <div id="turnos-list" class="space-y-3">
+                    <p class="text-xs text-gray-600 text-center py-6">Cargando...</p>
+                </div>
+            </div>
+        </div>
+    </div><!-- /turnos-panel -->
 
     <!-- ===== MODALES ===== -->
 
@@ -636,6 +677,48 @@
         </div>
     </div>
 
+    <!-- Nuevo Turno -->
+    <div id="nuevo-turno-modal" class="absolute inset-0 bg-black/75 backdrop-blur-md z-50 hidden flex-col justify-end md:justify-center">
+        <div class="glass-modal md:rounded-3xl md:max-w-md md:mx-auto w-full border-t md:border border-white/10 pt-3 pb-8 px-5 shadow-2xl rounded-t-3xl max-h-[92vh] overflow-y-auto" style="animation:slideUp 0.32s cubic-bezier(0.16,1,0.3,1)">
+            <div class="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5 md:hidden"></div>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-extrabold text-white tracking-tight">Nuevo Turno</h2>
+                <button onclick="window.closeModals()" class="w-9 h-9 rounded-full bg-white/8 flex items-center justify-center text-gray-400 hover:bg-white/15 transition active:scale-90">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+            <form id="nuevo-turno-form" class="space-y-5">
+                <!-- Día -->
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">Día</p>
+                    <div class="grid grid-cols-2 gap-2" id="turno-dia-grid"></div>
+                    <input type="hidden" id="turno-dia" value="">
+                </div>
+                <!-- Barbero -->
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">Barbero</p>
+                    <div class="grid grid-cols-3 gap-3" id="turno-barber-grid"></div>
+                    <input type="hidden" id="turno-barbero" value="">
+                </div>
+                <!-- Hora -->
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-2">Hora</p>
+                    <input type="time" id="turno-hora" required class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-amber-500/60 focus:bg-amber-500/5 outline-none transition text-white text-sm">
+                </div>
+                <!-- Cliente -->
+                <input type="text" id="turno-cliente" placeholder="Nombre del cliente (opcional)"
+                    class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-amber-500/60 focus:bg-amber-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
+                <!-- Servicio -->
+                <input type="text" id="turno-servicio" placeholder="Servicio (ej: Corte y Barba)"
+                    class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-amber-500/60 focus:bg-amber-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
+                <button type="submit" id="btn-submit-turno"
+                    class="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-4 rounded-2xl font-extrabold text-base shadow-lg shadow-amber-900/40 uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all">
+                    Guardar turno
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Venta de producto de barber -->
     <div id="ventas-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
         <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl">
@@ -715,14 +798,17 @@ const PRODUCTOS_BARBER = [
     { id:'matizador-violeta',  name:'Matizador Violeta Opción', precio:10000 },
 ];
 
+const PATH_TURNOS = 'turnos';
+
 let app, auth, db, currentUser;
-let allCuts = [], allStock = [], allVentas = [];
+let allCuts = [], allStock = [], allVentas = [], allTurnos = [];
 let productoStock = {};
 let currentMovement = null, currentProductoMovement = null, salidaTipo = 'venta', drinkSalidaTipo = 'venta';
 let newItemPhoto = null, editItemPhoto = null, editItemId = null;
 let isAdmin = false;
 let activeTab = 'cortes';
 let selectedProducto = null, cantVenta = 1;
+let turnosSelectedDay = 0, turnoModalSelectedDay = 0, turnoModalSelectedBarber = '';
 
 // ---- INIT ----
 async function init() {
@@ -744,6 +830,7 @@ async function init() {
             listenToVentas();
             listenToProductos();
             listenToRetiros();
+            listenToTurnos();
         } else {
             document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
             document.getElementById('dashboard-view').classList.add('hidden');
@@ -2163,8 +2250,185 @@ window.closeStockProductosPanel = () => {
     p.classList.add('hidden'); p.classList.remove('flex', 'flex-col');
 };
 
+// ---- TURNOS ----
+function getTodayStr(daysOffset = 0) {
+    const d = new Date();
+    d.setDate(d.getDate() + daysOffset);
+    return d.toLocaleDateString('en-CA');
+}
+
+function getDayLabel(offset) {
+    return ['Hoy', 'Mañana', 'Pasado', 'En 3 días'][offset] || '';
+}
+
+function listenToTurnos() {
+    onSnapshot(
+        query(collection(db, PATH_TURNOS), orderBy('fecha'), orderBy('hora')),
+        snap => {
+            allTurnos = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+            if (!document.getElementById('turnos-panel').classList.contains('hidden')) renderTurnosPanel();
+        }
+    );
+}
+
+window.openTurnosPanel = () => {
+    turnosSelectedDay = 0;
+    const p = document.getElementById('turnos-panel');
+    p.classList.remove('hidden'); p.classList.add('flex', 'flex-col');
+    renderTurnosPanel();
+};
+window.closeTurnosPanel = () => {
+    const p = document.getElementById('turnos-panel');
+    p.classList.add('hidden'); p.classList.remove('flex', 'flex-col');
+};
+window.setTurnosDay = (n) => {
+    turnosSelectedDay = n;
+    renderTurnosDayTabs();
+    renderTurnosList();
+};
+
+function renderTurnosPanel() {
+    renderTurnosDayTabs();
+    renderTurnosList();
+}
+
+function renderTurnosDayTabs() {
+    const container = document.getElementById('turnos-day-tabs');
+    container.innerHTML = [0,1,2,3].map(i => {
+        const dateStr = getTodayStr(i);
+        const d = new Date(dateStr + 'T12:00:00');
+        const dateLabel = d.toLocaleDateString('es-AR', { day:'numeric', month:'short' });
+        const active = turnosSelectedDay === i;
+        return `<button onclick="window.setTurnosDay(${i})" class="flex-1 py-2 px-1 rounded-lg text-[10px] font-bold transition-all text-center ${active ? 'text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow' : 'text-gray-500 hover:text-gray-300'}">
+            <div>${getDayLabel(i)}</div>
+            <div class="text-[9px] ${active ? 'text-amber-100' : 'text-gray-600'} mt-0.5">${dateLabel}</div>
+        </button>`;
+    }).join('');
+}
+
+function renderTurnosList() {
+    const targetDate = getTodayStr(turnosSelectedDay);
+    const dayTurnos = allTurnos
+        .filter(t => t.fecha === targetDate && !t.eliminado)
+        .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
+
+    const el = document.getElementById('turnos-list');
+    if (dayTurnos.length === 0) {
+        el.innerHTML = `<div class="text-center py-12">
+            <i class="fas fa-calendar-times text-gray-700 text-3xl mb-3 block"></i>
+            <p class="text-sm text-gray-600">Sin turnos para ${getDayLabel(turnosSelectedDay).toLowerCase()}</p>
+        </div>`;
+        return;
+    }
+    el.innerHTML = dayTurnos.map(t => {
+        const done = t.estado === 'completado';
+        return `<div class="glass-card rounded-2xl p-4 flex items-center gap-4 ${done ? 'opacity-50' : ''}">
+            <div class="text-center flex-shrink-0 w-12">
+                <div class="text-base font-extrabold text-amber-300">${t.hora || '--:--'}</div>
+            </div>
+            ${barberAvatar(t.barbero, 9)}
+            <div class="flex-1 min-w-0">
+                <div class="font-bold text-white text-sm truncate">${t.clientName || 'Sin nombre'}</div>
+                <div class="text-[10px] text-gray-500 mt-0.5">${t.barbero || ''}${t.servicio ? ' · ' + t.servicio : ''}</div>
+            </div>
+            <div class="flex gap-2 flex-shrink-0">
+                ${!done
+                    ? `<button onclick="window.completarTurno('${t.id}')" class="w-8 h-8 rounded-full bg-emerald-600/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center hover:bg-emerald-600/40 transition" title="Completado"><i class="fas fa-check text-xs"></i></button>`
+                    : `<span class="text-[10px] text-emerald-500 font-bold self-center">✓</span>`}
+                <button onclick="window.deleteTurno('${t.id}')" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-gray-500 flex items-center justify-center hover:bg-red-600/20 hover:border-red-500/30 hover:text-red-400 transition"><i class="fas fa-trash text-xs"></i></button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+window.completarTurno = async (id) => {
+    allTurnos = allTurnos.map(t => t.id === id ? {...t, estado:'completado'} : t);
+    renderTurnosList();
+    try { await updateDoc(doc(db, PATH_TURNOS, id), { estado: 'completado' }); } catch { alert('Error'); }
+};
+window.deleteTurno = async (id) => {
+    if (!confirm('¿Eliminar este turno?')) return;
+    allTurnos = allTurnos.map(t => t.id === id ? {...t, eliminado:true} : t);
+    renderTurnosList();
+    try { await updateDoc(doc(db, PATH_TURNOS, id), { eliminado: true }); } catch { alert('Error'); }
+};
+
+// ---- NUEVO TURNO MODAL ----
+window.openNuevoTurnoModal = () => {
+    turnoModalSelectedDay = turnosSelectedDay;
+    turnoModalSelectedBarber = '';
+    document.getElementById('turno-barbero').value = '';
+    document.getElementById('turno-hora').value = '';
+    document.getElementById('turno-cliente').value = '';
+    document.getElementById('turno-servicio').value = '';
+    renderTurnoDiaGrid();
+    renderTurnoBarberGrid();
+    showModal('nuevo-turno-modal');
+};
+
+function renderTurnoDiaGrid() {
+    document.getElementById('turno-dia').value = getTodayStr(turnoModalSelectedDay);
+    document.getElementById('turno-dia-grid').innerHTML = [0,1,2,3].map(i => {
+        const dateStr = getTodayStr(i);
+        const d = new Date(dateStr + 'T12:00:00');
+        const dateLabel = d.toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short' });
+        const active = turnoModalSelectedDay === i;
+        return `<button type="button" onclick="window.setTurnoDia(${i})" class="p-3 rounded-xl border text-sm font-bold transition text-center ${active ? 'bg-amber-600/20 border-amber-500 text-amber-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}">
+            <div>${getDayLabel(i)}</div>
+            <div class="text-[10px] ${active ? 'text-amber-200' : 'text-gray-600'} mt-0.5">${dateLabel}</div>
+        </button>`;
+    }).join('');
+}
+window.setTurnoDia = (i) => {
+    turnoModalSelectedDay = i;
+    document.getElementById('turno-dia').value = getTodayStr(i);
+    renderTurnoDiaGrid();
+};
+
+function renderTurnoBarberGrid() {
+    document.getElementById('turno-barber-grid').innerHTML = BARBERS.map(name => {
+        const t = BARBER_THEME[name];
+        const selected = turnoModalSelectedBarber === name;
+        const photo = barberProfilesData[name];
+        return `<button type="button" onclick="window.selectTurnoBarber('${name}')" class="flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all active:scale-95 ${selected ? `${t.border} bg-white/10 scale-[1.04]` : 'border-white/10 bg-white/5 hover:border-white/20'}">
+            ${photo ? `<img src="${photo}" class="w-14 h-14 rounded-full object-cover">` : `<div class="w-14 h-14 rounded-full ${t.bg} flex items-center justify-center font-extrabold text-white text-2xl">${t.initial}</div>`}
+            <span class="text-xs font-bold ${selected ? t.text : 'text-gray-400'}">${name}</span>
+        </button>`;
+    }).join('');
+}
+window.selectTurnoBarber = (name) => {
+    turnoModalSelectedBarber = name;
+    document.getElementById('turno-barbero').value = name;
+    renderTurnoBarberGrid();
+};
+
+document.getElementById('nuevo-turno-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const fecha = document.getElementById('turno-dia').value;
+    const barbero = document.getElementById('turno-barbero').value;
+    const hora = document.getElementById('turno-hora').value;
+    const clientName = document.getElementById('turno-cliente').value.trim();
+    const servicio = document.getElementById('turno-servicio').value.trim();
+    if (!fecha || !barbero || !hora) { alert('Completá día, barbero y hora'); return; }
+    const btn = document.getElementById('btn-submit-turno');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        await addDoc(collection(db, PATH_TURNOS), {
+            barbero, clientName: clientName || null, servicio: servicio || null,
+            fecha, hora, estado: 'pendiente',
+            userEmail: currentUser.email, creadoEn: serverTimestamp()
+        });
+        closeModals();
+        if (!document.getElementById('turnos-panel').classList.contains('hidden')) {
+            turnosSelectedDay = turnoModalSelectedDay;
+            renderTurnosPanel();
+        }
+    } catch { alert('Error al guardar'); }
+    btn.disabled = false; btn.textContent = 'Guardar turno';
+});
+
 // ---- MODALES ----
-const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal'];
+const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal'];
 function showModal(id) {
     document.getElementById(id).classList.remove('hidden');
     document.getElementById(id).classList.add('flex', 'flex-col');
