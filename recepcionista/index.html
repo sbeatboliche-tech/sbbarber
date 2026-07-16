@@ -2263,7 +2263,7 @@ function getDayLabel(offset) {
 
 function listenToTurnos() {
     onSnapshot(
-        query(collection(db, PATH_TURNOS), orderBy('fecha'), orderBy('hora')),
+        query(collection(db, PATH_TURNOS), orderBy('fecha')),
         snap => {
             allTurnos = snap.docs.map(d => ({ ...d.data(), id: d.id }));
             if (!document.getElementById('turnos-panel').classList.contains('hidden')) renderTurnosPanel();
