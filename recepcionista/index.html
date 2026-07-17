@@ -788,8 +788,6 @@
                     <div class="grid grid-cols-2 gap-3">
                         <select id="turno-hora-h" class="px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-amber-500/60 outline-none transition text-white text-sm appearance-none text-center">
                             <option value="" class="bg-gray-900">Hora</option>
-                            <option value="9" class="bg-gray-900">09:00</option>
-                            <option value="10" class="bg-gray-900">10:00</option>
                             <option value="11" class="bg-gray-900">11:00</option>
                             <option value="12" class="bg-gray-900">12:00</option>
                             <option value="13" class="bg-gray-900">13:00</option>
@@ -2617,6 +2615,10 @@ function renderTurnosDayTabs() {
     }).join('');
 }
 
+function quienAnoто(email) {
+    return BARBER_EMAIL_MAP[email] || 'Recepción';
+}
+
 function renderTurnosList() {
     const targetDate = getTodayStr(turnosSelectedDay);
     const dayTurnos = allTurnos
@@ -2633,6 +2635,7 @@ function renderTurnosList() {
     }
     el.innerHTML = dayTurnos.map(t => {
         const done = t.estado === 'completado';
+        const anotadoPor = quienAnoто(t.userEmail);
         return `<div class="glass-card rounded-2xl p-4 flex items-center gap-4 ${done ? 'opacity-50' : ''}">
             <div class="text-center flex-shrink-0 w-12">
                 <div class="text-base font-extrabold text-amber-300">${t.hora || '--:--'}</div>
@@ -2641,6 +2644,7 @@ function renderTurnosList() {
             <div class="flex-1 min-w-0">
                 <div class="font-bold text-white text-sm truncate">${t.clientName || 'Sin nombre'}</div>
                 <div class="text-[10px] text-gray-500 mt-0.5">${t.barbero || ''}${t.servicio ? ' · ' + t.servicio : ''}</div>
+                <div class="text-[9px] text-gray-700 mt-0.5">anotado por ${anotadoPor}</div>
             </div>
             <div class="flex gap-2 flex-shrink-0">
                 ${!done
