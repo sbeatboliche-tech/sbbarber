@@ -109,6 +109,11 @@
                 <button onclick="window.openTurnosPanel()" class="hidden md:flex items-center gap-2 bg-amber-600/20 border border-amber-500/40 text-amber-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-amber-600/40 transition">
                     <i class="fas fa-calendar-alt text-xs"></i> Turnos
                 </button>
+                <!-- Botón gastos -->
+                <button onclick="window.openGastosPanel()" class="flex items-center gap-1.5 bg-rose-600/20 border border-rose-500/40 text-rose-300 px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-rose-600/40 transition">
+                    <i class="fas fa-receipt text-xs"></i>
+                    <span class="hidden md:inline">Gastos</span>
+                </button>
                 <!-- Botón cierre de caja: siempre visible -->
                 <button onclick="window.openCierreCaja()" class="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-lg hover:scale-[1.02] transition active:scale-95">
                     <i class="fas fa-cash-register text-xs"></i>
@@ -410,6 +415,40 @@
         </div>
     </div><!-- /turnos-panel -->
 
+    <!-- ============================================================
+         PANEL GASTOS
+    ============================================================ -->
+    <div id="gastos-panel" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+        <header class="px-5 md:px-8 py-4 md:py-5 glass flex items-center justify-between flex-shrink-0 border-b border-white/5">
+            <div class="flex items-center gap-4">
+                <button onclick="window.closeGastosPanel()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
+                    <i class="fas fa-arrow-left text-sm"></i>
+                </button>
+                <div>
+                    <h1 class="text-base md:text-xl font-bold text-white leading-none tracking-wide">Gastos</h1>
+                    <span class="text-[10px] md:text-xs text-rose-400 font-medium">Egresos de la barbería</span>
+                </div>
+            </div>
+            <button onclick="window.openNuevoGastoModal()" class="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white font-bold px-4 py-2 rounded-xl text-xs md:text-sm transition shadow-lg shadow-rose-900/40">
+                <i class="fas fa-plus text-[10px] md:text-xs"></i>
+                <span>Nuevo gasto</span>
+            </button>
+        </header>
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-8 pb-10 max-w-2xl md:mx-auto w-full space-y-4">
+                <!-- Resumen -->
+                <div id="gastos-resumen" class="hidden glass-card rounded-2xl p-5"></div>
+                <!-- Lista -->
+                <div class="glass-card rounded-2xl p-5">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fas fa-receipt text-rose-400"></i> Últimos gastos</h3>
+                    <div id="gastos-list" class="space-y-2">
+                        <p class="text-xs text-gray-600 text-center py-4">Sin gastos registrados</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><!-- /gastos-panel -->
+
     <!-- ===== MODALES ===== -->
 
     <!-- Agregar corte -->
@@ -677,6 +716,49 @@
         </div>
     </div>
 
+    <!-- Nuevo Gasto -->
+    <div id="nuevo-gasto-modal" class="absolute inset-0 bg-black/75 backdrop-blur-md z-50 hidden flex-col justify-end md:justify-center">
+        <div class="glass-modal md:rounded-3xl md:max-w-md md:mx-auto w-full border-t md:border border-white/10 pt-3 pb-8 px-5 shadow-2xl rounded-t-3xl max-h-[90vh] overflow-y-auto" style="animation:slideUp 0.32s cubic-bezier(0.16,1,0.3,1)">
+            <div class="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5 md:hidden"></div>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-extrabold text-white tracking-tight">Nuevo Gasto</h2>
+                <button onclick="window.closeModals()" class="w-9 h-9 rounded-full bg-white/8 flex items-center justify-center text-gray-400 hover:bg-white/15 transition active:scale-90">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+            <form id="nuevo-gasto-form" class="space-y-5">
+                <!-- Categoría -->
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">Categoría</p>
+                    <div class="flex flex-wrap gap-2" id="gasto-cat-grid"></div>
+                    <input type="hidden" id="gasto-categoria" value="otro">
+                </div>
+                <!-- Descripción -->
+                <input type="text" id="gasto-descripcion" placeholder="Descripción (ej: Gas, materiales...)" required
+                    class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-rose-500/60 focus:bg-rose-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
+                <!-- Monto -->
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-2">Monto</p>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                        <input type="number" id="gasto-monto" placeholder="0" min="1" required
+                            class="w-full pl-8 pr-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-rose-500/60 focus:bg-rose-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
+                    </div>
+                </div>
+                <!-- Fecha -->
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-2">Fecha</p>
+                    <input type="date" id="gasto-fecha" required
+                        class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-rose-500/60 outline-none transition text-white text-sm">
+                </div>
+                <button type="submit" id="btn-submit-gasto"
+                    class="w-full bg-gradient-to-r from-rose-500 to-red-500 text-white py-4 rounded-2xl font-extrabold text-base shadow-lg shadow-rose-900/40 uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all">
+                    Registrar gasto
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Nuevo Turno -->
     <div id="nuevo-turno-modal" class="absolute inset-0 bg-black/75 backdrop-blur-md z-50 hidden flex-col justify-end md:justify-center">
         <div class="glass-modal md:rounded-3xl md:max-w-md md:mx-auto w-full border-t md:border border-white/10 pt-3 pb-8 px-5 shadow-2xl rounded-t-3xl max-h-[92vh] overflow-y-auto" style="animation:slideUp 0.32s cubic-bezier(0.16,1,0.3,1)">
@@ -703,7 +785,29 @@
                 <!-- Hora -->
                 <div>
                     <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-2">Hora</p>
-                    <input type="time" id="turno-hora" required class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-amber-500/60 focus:bg-amber-500/5 outline-none transition text-white text-sm">
+                    <div class="grid grid-cols-2 gap-3">
+                        <select id="turno-hora-h" class="px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-amber-500/60 outline-none transition text-white text-sm appearance-none text-center">
+                            <option value="" class="bg-gray-900">Hora</option>
+                            <option value="9" class="bg-gray-900">09:00</option>
+                            <option value="10" class="bg-gray-900">10:00</option>
+                            <option value="11" class="bg-gray-900">11:00</option>
+                            <option value="12" class="bg-gray-900">12:00</option>
+                            <option value="13" class="bg-gray-900">13:00</option>
+                            <option value="14" class="bg-gray-900">14:00</option>
+                            <option value="15" class="bg-gray-900">15:00</option>
+                            <option value="16" class="bg-gray-900">16:00</option>
+                            <option value="17" class="bg-gray-900">17:00</option>
+                            <option value="18" class="bg-gray-900">18:00</option>
+                            <option value="19" class="bg-gray-900">19:00</option>
+                            <option value="20" class="bg-gray-900">20:00</option>
+                        </select>
+                        <select id="turno-hora-m" class="px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-amber-500/60 outline-none transition text-white text-sm appearance-none text-center">
+                            <option value="00" class="bg-gray-900">:00</option>
+                            <option value="15" class="bg-gray-900">:15</option>
+                            <option value="30" class="bg-gray-900">:30</option>
+                            <option value="45" class="bg-gray-900">:45</option>
+                        </select>
+                    </div>
                 </div>
                 <!-- Cliente -->
                 <input type="text" id="turno-cliente" placeholder="Nombre del cliente (opcional)"
@@ -799,9 +903,17 @@ const PRODUCTOS_BARBER = [
 ];
 
 const PATH_TURNOS = 'turnos';
+const PATH_GASTOS = 'gastos';
+const GASTOS_CATS = [
+    { id:'insumos',   label:'Insumos',   icon:'🧴' },
+    { id:'servicios', label:'Servicios', icon:'💡' },
+    { id:'alquiler',  label:'Alquiler',  icon:'🏠' },
+    { id:'limpieza',  label:'Limpieza',  icon:'🧹' },
+    { id:'otro',      label:'Otro',      icon:'📦' },
+];
 
 let app, auth, db, currentUser;
-let allCuts = [], allStock = [], allVentas = [], allTurnos = [];
+let allCuts = [], allStock = [], allVentas = [], allTurnos = [], allGastos = [];
 let productoStock = {};
 let currentMovement = null, currentProductoMovement = null, salidaTipo = 'venta', drinkSalidaTipo = 'venta';
 let newItemPhoto = null, editItemPhoto = null, editItemId = null;
@@ -809,6 +921,7 @@ let isAdmin = false;
 let activeTab = 'cortes';
 let selectedProducto = null, cantVenta = 1;
 let turnosSelectedDay = 0, turnoModalSelectedDay = 0, turnoModalSelectedBarber = '';
+let gastosCatSelected = 'otro';
 
 // ---- INIT ----
 async function init() {
@@ -831,6 +944,7 @@ async function init() {
             listenToProductos();
             listenToRetiros();
             listenToTurnos();
+            listenToGastos();
         } else {
             document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
             document.getElementById('dashboard-view').classList.add('hidden');
@@ -1759,6 +1873,9 @@ function renderCierreCaja() {
     const totalProductos = ventasProductos.reduce((s, v) => s + (v.total || 0), 0);
     const totalBebidas   = ventasBebidas.reduce((s, v) => s + (v.total || 0), 0);
     const totalGeneral   = totalCortes + totalProductos + totalBebidas;
+    const gastosHoy = allGastos.filter(g => !g.eliminado && g.fecha === hoy);
+    const totalGastos = gastosHoy.reduce((s, g) => s + (g.monto || 0), 0);
+    const netoReal = totalGeneral - totalGastos;
 
     // Cortes por barbero
     const byBarber = {};
@@ -1833,6 +1950,18 @@ function renderCierreCaja() {
                 <div class="text-2xl md:text-3xl font-extrabold text-emerald-400">$${totalGeneral.toLocaleString('es-AR')}</div>
                 <div class="text-[10px] md:text-xs text-emerald-700 mt-1">general</div>
             </div>
+            ${totalGastos > 0 ? `
+            <div class="glass-card rounded-2xl p-4 md:p-5 col-span-2 md:col-span-4 border border-rose-500/20 flex items-center justify-between gap-4">
+                <div class="text-center flex-1">
+                    <div class="text-[10px] text-rose-400 uppercase tracking-widest mb-1">Gastos</div>
+                    <div class="text-xl font-bold text-rose-400">−$${totalGastos.toLocaleString('es-AR')}</div>
+                </div>
+                <div class="text-gray-600 text-xl">→</div>
+                <div class="text-center flex-1">
+                    <div class="text-[10px] text-emerald-400 uppercase tracking-widest mb-1">Neto real</div>
+                    <div class="text-2xl font-extrabold ${netoReal >= 0 ? 'text-emerald-400' : 'text-red-400'}">$${netoReal.toLocaleString('es-AR')}</div>
+                </div>
+            </div>` : ''}
         </div>
 
         <!-- Detalle: 1 col mobile / 3 cols desktop -->
@@ -1856,6 +1985,18 @@ function renderCierreCaja() {
                 ${section('🥤', 'Bebidas', 'text-cyan-400',
                     makeVentaRows(ventasBebidas),
                     totalBebidas > 0 ? totalBebidas : null
+                )}
+            </div>
+            <!-- Gastos -->
+            <div class="glass-card rounded-2xl p-5 ${gastosHoy.length > 0 ? 'border border-rose-500/15' : ''}">
+                ${section('🧾', 'Gastos del día', 'text-rose-400',
+                    gastosHoy.length === 0
+                        ? '<p class="text-xs text-gray-600 py-2 text-center">Sin gastos hoy</p>'
+                        : gastosHoy.map(g => {
+                            const cat = GASTOS_CATS.find(c => c.id === g.categoria) || GASTOS_CATS[4];
+                            return row(`${cat.icon} ${g.descripcion}`, `−$${(g.monto||0).toLocaleString('es-AR')}`, 'text-gray-400', 'text-rose-400');
+                          }).join(''),
+                    totalGastos > 0 ? totalGastos : null
                 )}
             </div>
         </div>`;
@@ -1888,6 +2029,8 @@ function renderCierreCajaSemanal() {
         .forEach(v => { byBarber[v.barbero].bebidas += v.total || 0; });
 
     const totalSemana = BARBERS.reduce((s, b) => s + byBarber[b].cortes, 0);
+    const gastosW = allGastos.filter(g => !g.eliminado && g.fecha >= weekStartStr);
+    const totalGastosW = gastosW.reduce((s, g) => s + (g.monto || 0), 0);
 
     const barberCards = BARBERS.map(b => {
         const d = byBarber[b], t = BARBER_THEME[b];
@@ -1925,7 +2068,34 @@ function renderCierreCajaSemanal() {
         </div>`;
     }).join('');
 
-    const html = `<div class="grid grid-cols-1 md:grid-cols-3 gap-4">${barberCards}</div>`;
+    const gastosCard = totalGastosW > 0 ? `
+        <div class="glass-card rounded-2xl p-5 md:p-6 border border-rose-500/20">
+            <div class="text-xs font-bold text-rose-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <i class="fas fa-receipt"></i> Gastos de la semana
+            </div>
+            <div class="space-y-2">
+                ${gastosW.map(g => {
+                    const cat = GASTOS_CATS.find(c => c.id === g.categoria) || GASTOS_CATS[4];
+                    const d = new Date(g.fecha + 'T12:00:00');
+                    const fechaLabel = d.toLocaleDateString('es-AR', { weekday:'short', day:'numeric' });
+                    return `<div class="flex items-center gap-2 text-xs">
+                        <span class="text-gray-600 w-14 flex-shrink-0">${fechaLabel}</span>
+                        <span class="text-base">${cat.icon}</span>
+                        <span class="text-gray-400 flex-1 truncate">${g.descripcion}</span>
+                        <span class="text-rose-400 font-bold whitespace-nowrap">−$${(g.monto||0).toLocaleString('es-AR')}</span>
+                    </div>`;
+                }).join('')}
+                <div class="flex justify-between text-sm font-bold pt-2 mt-1 border-t border-white/10">
+                    <span class="text-gray-300">Total gastos</span>
+                    <span class="text-rose-400">−$${totalGastosW.toLocaleString('es-AR')}</span>
+                </div>
+            </div>
+        </div>` : '';
+
+    const html = `
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">${barberCards}</div>
+        ${gastosCard ? `<div class="mt-4">${gastosCard}</div>` : ''}
+    `;
 
     document.getElementById('cierre-caja-content').innerHTML = html;
 }
@@ -2250,6 +2420,147 @@ window.closeStockProductosPanel = () => {
     p.classList.add('hidden'); p.classList.remove('flex', 'flex-col');
 };
 
+// ---- GASTOS ----
+function listenToGastos() {
+    onSnapshot(
+        query(collection(db, PATH_GASTOS), orderBy('fecha', 'desc'), limit(300)),
+        snap => {
+            allGastos = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+            if (!document.getElementById('gastos-panel').classList.contains('hidden')) renderGastosPanel();
+            if (!document.getElementById('cierre-caja-view').classList.contains('hidden')) {
+                if (cierreCajaTab === 'semanal') renderCierreCajaSemanal();
+                else renderCierreCaja();
+            }
+        }
+    );
+}
+
+window.openGastosPanel = () => {
+    const p = document.getElementById('gastos-panel');
+    p.classList.remove('hidden'); p.classList.add('flex', 'flex-col');
+    renderGastosPanel();
+};
+window.closeGastosPanel = () => {
+    const p = document.getElementById('gastos-panel');
+    p.classList.add('hidden'); p.classList.remove('flex', 'flex-col');
+};
+
+function renderGastosPanel() {
+    const gastos = allGastos.filter(g => !g.eliminado);
+    const hoy = new Date().toLocaleDateString('en-CA');
+    const gastosHoy = gastos.filter(g => g.fecha === hoy);
+    const totalHoy = gastosHoy.reduce((s, g) => s + (g.monto || 0), 0);
+
+    // Resumen
+    const resumen = document.getElementById('gastos-resumen');
+    if (totalHoy > 0) {
+        resumen.classList.remove('hidden');
+        resumen.innerHTML = `<div class="flex items-center justify-between">
+            <span class="text-xs text-rose-400 font-bold uppercase tracking-widest">Gastos de hoy</span>
+            <span class="text-xl font-extrabold text-rose-400">$${totalHoy.toLocaleString('es-AR')}</span>
+        </div>`;
+    } else {
+        resumen.classList.add('hidden');
+    }
+
+    // Lista
+    const list = document.getElementById('gastos-list');
+    if (gastos.length === 0) {
+        list.innerHTML = '<p class="text-xs text-gray-600 text-center py-4">Sin gastos registrados</p>';
+        return;
+    }
+
+    // Agrupar por fecha
+    const grouped = {};
+    gastos.forEach(g => { if (!grouped[g.fecha]) grouped[g.fecha] = []; grouped[g.fecha].push(g); });
+
+    list.innerHTML = Object.keys(grouped).sort((a,b)=>b.localeCompare(a)).map(fecha => {
+        const d = new Date(fecha + 'T12:00:00');
+        const fechaLabel = d.toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short' });
+        const items = grouped[fecha];
+        const subtotal = items.reduce((s, g) => s + (g.monto || 0), 0);
+        return `<div class="mb-4">
+            <div class="flex justify-between items-baseline mb-2">
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wide capitalize">${fechaLabel}</span>
+                <span class="text-xs text-rose-400 font-bold">−$${subtotal.toLocaleString('es-AR')}</span>
+            </div>
+            <div class="space-y-2">
+                ${items.map(g => {
+                    const cat = GASTOS_CATS.find(c => c.id === g.categoria) || GASTOS_CATS[4];
+                    return `<div class="flex items-center gap-3 bg-black/20 rounded-xl px-3 py-2.5">
+                        <span class="text-base">${cat.icon}</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm text-white truncate">${g.descripcion}</div>
+                            <div class="text-[10px] text-gray-500">${cat.label}</div>
+                        </div>
+                        <span class="text-sm font-bold text-rose-400 whitespace-nowrap">−$${(g.monto||0).toLocaleString('es-AR')}</span>
+                        <button onclick="window.deleteGasto('${g.id}')" class="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-600/20 transition flex-shrink-0">
+                            <i class="fas fa-trash text-[10px]"></i>
+                        </button>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+window.deleteGasto = async (id) => {
+    if (!confirm('¿Eliminar este gasto?')) return;
+    allGastos = allGastos.map(g => g.id === id ? {...g, eliminado:true} : g);
+    renderGastosPanel();
+    if (!document.getElementById('cierre-caja-view').classList.contains('hidden')) {
+        if (cierreCajaTab === 'semanal') renderCierreCajaSemanal();
+        else renderCierreCaja();
+    }
+    try { await updateDoc(doc(db, PATH_GASTOS, id), { eliminado: true }); } catch { alert('Error'); }
+};
+
+// ---- NUEVO GASTO MODAL ----
+window.openNuevoGastoModal = () => {
+    gastosCatSelected = 'otro';
+    document.getElementById('gasto-categoria').value = 'otro';
+    document.getElementById('gasto-descripcion').value = '';
+    document.getElementById('gasto-monto').value = '';
+    document.getElementById('gasto-fecha').value = new Date().toLocaleDateString('en-CA');
+    renderGastoCatGrid();
+    showModal('nuevo-gasto-modal');
+};
+
+function renderGastoCatGrid() {
+    document.getElementById('gasto-cat-grid').innerHTML = GASTOS_CATS.map(c => {
+        const active = gastosCatSelected === c.id;
+        return `<button type="button" onclick="window.selectGastoCat('${c.id}')"
+            class="px-3 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 ${active ? 'bg-rose-600/30 border-rose-500 text-rose-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}">
+            ${c.icon} ${c.label}
+        </button>`;
+    }).join('');
+}
+
+window.selectGastoCat = (id) => {
+    gastosCatSelected = id;
+    document.getElementById('gasto-categoria').value = id;
+    renderGastoCatGrid();
+};
+
+document.getElementById('nuevo-gasto-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const descripcion = document.getElementById('gasto-descripcion').value.trim();
+    const monto = parseInt(document.getElementById('gasto-monto').value);
+    const categoria = document.getElementById('gasto-categoria').value || 'otro';
+    const fecha = document.getElementById('gasto-fecha').value;
+    if (!descripcion || !monto || !fecha) return;
+    const btn = document.getElementById('btn-submit-gasto');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        await addDoc(collection(db, PATH_GASTOS), {
+            descripcion, monto, categoria, fecha,
+            userEmail: currentUser.email, creadoEn: serverTimestamp()
+        });
+        closeModals();
+    } catch { alert('Error al guardar'); }
+    btn.disabled = false; btn.textContent = 'Registrar gasto';
+});
+
 // ---- TURNOS ----
 function getTodayStr(daysOffset = 0) {
     const d = new Date();
@@ -2358,7 +2669,8 @@ window.openNuevoTurnoModal = () => {
     turnoModalSelectedDay = turnosSelectedDay;
     turnoModalSelectedBarber = '';
     document.getElementById('turno-barbero').value = '';
-    document.getElementById('turno-hora').value = '';
+    document.getElementById('turno-hora-h').value = '';
+    document.getElementById('turno-hora-m').value = '00';
     document.getElementById('turno-cliente').value = '';
     document.getElementById('turno-servicio').value = '';
     renderTurnoDiaGrid();
@@ -2406,7 +2718,9 @@ document.getElementById('nuevo-turno-form').addEventListener('submit', async e =
     e.preventDefault();
     const fecha = document.getElementById('turno-dia').value;
     const barbero = document.getElementById('turno-barbero').value;
-    const hora = document.getElementById('turno-hora').value;
+    const hH = document.getElementById('turno-hora-h').value;
+    const hM = document.getElementById('turno-hora-m').value;
+    const hora = hH ? `${hH.padStart(2,'0')}:${hM}` : '';
     const clientName = document.getElementById('turno-cliente').value.trim();
     const servicio = document.getElementById('turno-servicio').value.trim();
     if (!fecha || !barbero || !hora) { alert('Completá día, barbero y hora'); return; }
@@ -2428,7 +2742,7 @@ document.getElementById('nuevo-turno-form').addEventListener('submit', async e =
 });
 
 // ---- MODALES ----
-const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal'];
+const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal', 'nuevo-gasto-modal'];
 function showModal(id) {
     document.getElementById(id).classList.remove('hidden');
     document.getElementById(id).classList.add('flex', 'flex-col');
