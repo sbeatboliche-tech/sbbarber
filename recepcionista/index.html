@@ -417,6 +417,7 @@
             <div class="flex bg-gray-900/80 p-1 rounded-xl border border-gray-800 gap-1" id="turnos-day-tabs"></div>
             <div class="flex gap-1" id="turnos-barber-tabs"></div>
         </div>
+        <input type="date" id="turnos-custom-date-input" class="absolute opacity-0 pointer-events-none w-0 h-0" onchange="window.onTurnosCustomDateSelected(this.value)">
         <!-- Content -->
         <div class="flex-1 overflow-y-auto">
             <div class="p-4 md:p-8 pb-10 max-w-2xl md:mx-auto w-full">
@@ -786,6 +787,7 @@
                 <div>
                     <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">Día</p>
                     <div class="grid grid-cols-2 gap-2" id="turno-dia-grid"></div>
+                    <input type="date" id="turno-dia-custom-vis" class="hidden mt-2 w-full px-4 py-3 bg-white/5 rounded-2xl border border-amber-500/60 outline-none text-white text-sm" onchange="window.onTurnoDiaCustomChange(this.value)">
                     <input type="hidden" id="turno-dia" value="">
                 </div>
                 <!-- Barbero -->
@@ -931,6 +933,7 @@ let isAdmin = false;
 let activeTab = 'cortes';
 let selectedProducto = null, cantVenta = 1;
 let turnosSelectedDay = 0, turnoModalSelectedDay = 0, turnoModalSelectedBarber = '', turnosBarberFilter = 'todos';
+let turnosCustomDate = null, turnoModalCustomDate = null;
 let gastosCatSelected = 'otro';
 
 // ---- INIT ----
@@ -2589,7 +2592,11 @@ function getTodayStr(daysOffset = 0) {
 }
 
 function getDayLabel(offset) {
-    return ['Hoy', 'Mañana', 'Pasado', 'En 3 días'][offset] || '';
+    if (offset === 0) return 'Hoy';
+    if (offset === 1) return 'Mañana';
+    const d = new Date(); d.setDate(d.getDate() + offset);
+    const name = d.toLocaleDateString('es-AR', { weekday: 'long' });
+    return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
 function listenToTurnos() {
@@ -2605,6 +2612,7 @@ function listenToTurnos() {
 window.openTurnosPanel = () => {
     turnosSelectedDay = 0;
     turnosBarberFilter = 'todos';
+    turnosCustomDate = null;
     const p = document.getElementById('turnos-panel');
     p.classList.remove('hidden'); p.classList.add('flex', 'flex-col');
     renderTurnosPanel();
@@ -2628,7 +2636,7 @@ function renderTurnosPanel() {
 
 function renderTurnosBarberTabs() {
     const container = document.getElementById('turnos-barber-tabs');
-    const targetDate = getTodayStr(turnosSelectedDay);
+    const targetDate = turnosSelectedDay === -1 ? (turnosCustomDate || '') : getTodayStr(turnosSelectedDay);
     const options = ['todos', ...BARBERS];
     container.innerHTML = options.map(name => {
         const active = turnosBarberFilter === name;
@@ -2651,7 +2659,7 @@ window.setTurnosBarber = (name) => {
 
 function renderTurnosDayTabs() {
     const container = document.getElementById('turnos-day-tabs');
-    container.innerHTML = [0,1,2,3].map(i => {
+    const fixed = [0,1,2].map(i => {
         const dateStr = getTodayStr(i);
         const d = new Date(dateStr + 'T12:00:00');
         const dateLabel = d.toLocaleDateString('es-AR', { day:'numeric', month:'short' });
@@ -2661,23 +2669,60 @@ function renderTurnosDayTabs() {
             <div class="text-[9px] ${active ? 'text-amber-100' : 'text-gray-600'} mt-0.5">${dateLabel}</div>
         </button>`;
     }).join('');
+    const customActive = turnosSelectedDay === -1;
+    let cTop = '📅', cBot = 'Elegir';
+    if (turnosCustomDate) {
+        const d = new Date(turnosCustomDate + 'T12:00:00');
+        cTop = d.toLocaleDateString('es-AR', { weekday: 'short' });
+        cTop = cTop.charAt(0).toUpperCase() + cTop.slice(1);
+        cBot = d.toLocaleDateString('es-AR', { day:'numeric', month:'short' });
+    }
+    const custom = `<button onclick="window.openTurnosCustomPicker()" class="flex-1 py-2 px-1 rounded-lg text-[10px] font-bold transition-all text-center ${customActive ? 'text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow' : 'text-gray-500 hover:text-gray-300'}">
+        <div>${cTop}</div>
+        <div class="text-[9px] ${customActive ? 'text-amber-100' : 'text-gray-600'} mt-0.5">${cBot}</div>
+    </button>`;
+    container.innerHTML = fixed + custom;
 }
+
+window.openTurnosCustomPicker = () => {
+    const input = document.getElementById('turnos-custom-date-input');
+    if (turnosCustomDate) input.value = turnosCustomDate;
+    try { input.showPicker(); } catch { input.click(); }
+};
+window.onTurnosCustomDateSelected = (val) => {
+    if (!val) return;
+    turnosCustomDate = val;
+    turnosSelectedDay = -1;
+    renderTurnosDayTabs();
+    renderTurnosBarberTabs();
+    renderTurnosList();
+};
 
 function quienAnoто(email) {
     return BARBER_EMAIL_MAP[email] || 'Recepción';
 }
 
 function renderTurnosList() {
-    const targetDate = getTodayStr(turnosSelectedDay);
+    const targetDate = turnosSelectedDay === -1 ? turnosCustomDate : getTodayStr(turnosSelectedDay);
+    const el = document.getElementById('turnos-list');
+    if (!targetDate) {
+        el.innerHTML = `<div class="text-center py-12 md:col-span-2">
+            <i class="fas fa-calendar text-gray-700 text-3xl mb-3 block"></i>
+            <p class="text-sm text-gray-600">Elegí una fecha para ver los turnos</p>
+        </div>`;
+        return;
+    }
     const dayTurnos = allTurnos
         .filter(t => t.fecha === targetDate && !t.eliminado && (turnosBarberFilter === 'todos' || t.barbero === turnosBarberFilter))
         .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
 
-    const el = document.getElementById('turnos-list');
     if (dayTurnos.length === 0) {
+        const dayName = turnosSelectedDay === -1
+            ? new Date(targetDate + 'T12:00:00').toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'short' })
+            : getDayLabel(turnosSelectedDay).toLowerCase();
         el.innerHTML = `<div class="text-center py-12 md:col-span-2">
             <i class="fas fa-calendar-times text-gray-700 text-3xl mb-3 block"></i>
-            <p class="text-sm text-gray-600">Sin turnos${turnosBarberFilter !== 'todos' ? ' de ' + turnosBarberFilter : ''} para ${getDayLabel(turnosSelectedDay).toLowerCase()}</p>
+            <p class="text-sm text-gray-600">Sin turnos${turnosBarberFilter !== 'todos' ? ' de ' + turnosBarberFilter : ''} para ${dayName}</p>
         </div>`;
         return;
     }
@@ -2718,7 +2763,8 @@ window.deleteTurno = async (id) => {
 
 // ---- NUEVO TURNO MODAL ----
 window.openNuevoTurnoModal = () => {
-    turnoModalSelectedDay = turnosSelectedDay;
+    turnoModalSelectedDay = turnosSelectedDay; // puede ser -1
+    turnoModalCustomDate = turnosCustomDate;
     turnoModalSelectedBarber = '';
     document.getElementById('turno-barbero').value = '';
     document.getElementById('turno-hora-h').value = '';
@@ -2731,10 +2777,16 @@ window.openNuevoTurnoModal = () => {
 };
 
 function renderTurnoDiaGrid() {
-    document.getElementById('turno-dia').value = getTodayStr(turnoModalSelectedDay);
-    document.getElementById('turno-dia-grid').innerHTML = [0,1,2,3].map(i => {
-        const dateStr = getTodayStr(i);
-        const d = new Date(dateStr + 'T12:00:00');
+    const customActive = turnoModalSelectedDay === -1;
+    const dateVal = customActive ? (turnoModalCustomDate || '') : getTodayStr(turnoModalSelectedDay);
+    document.getElementById('turno-dia').value = dateVal;
+    const visInput = document.getElementById('turno-dia-custom-vis');
+    visInput.classList.toggle('hidden', !customActive);
+    if (customActive && turnoModalCustomDate) visInput.value = turnoModalCustomDate;
+
+    const fixedBtns = [0,1,2].map(i => {
+        const ds = getTodayStr(i);
+        const d = new Date(ds + 'T12:00:00');
         const dateLabel = d.toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short' });
         const active = turnoModalSelectedDay === i;
         return `<button type="button" onclick="window.setTurnoDia(${i})" class="p-3 rounded-xl border text-sm font-bold transition text-center ${active ? 'bg-amber-600/20 border-amber-500 text-amber-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}">
@@ -2742,10 +2794,36 @@ function renderTurnoDiaGrid() {
             <div class="text-[10px] ${active ? 'text-amber-200' : 'text-gray-600'} mt-0.5">${dateLabel}</div>
         </button>`;
     }).join('');
+    let cLabel = '📅', cSub = 'Otra fecha';
+    if (customActive && turnoModalCustomDate) {
+        const d = new Date(turnoModalCustomDate + 'T12:00:00');
+        cLabel = d.toLocaleDateString('es-AR', { weekday:'short' });
+        cLabel = cLabel.charAt(0).toUpperCase() + cLabel.slice(1);
+        cSub = d.toLocaleDateString('es-AR', { day:'numeric', month:'short' });
+    }
+    const customBtn = `<button type="button" onclick="window.setTurnoDiaCustom()" class="p-3 rounded-xl border text-sm font-bold transition text-center ${customActive ? 'bg-amber-600/20 border-amber-500 text-amber-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}">
+        <div>${cLabel}</div>
+        <div class="text-[10px] ${customActive ? 'text-amber-200' : 'text-gray-600'} mt-0.5">${cSub}</div>
+    </button>`;
+    document.getElementById('turno-dia-grid').innerHTML = fixedBtns + customBtn;
 }
 window.setTurnoDia = (i) => {
     turnoModalSelectedDay = i;
+    turnoModalCustomDate = null;
     document.getElementById('turno-dia').value = getTodayStr(i);
+    renderTurnoDiaGrid();
+};
+window.setTurnoDiaCustom = () => {
+    turnoModalSelectedDay = -1;
+    renderTurnoDiaGrid();
+    const vis = document.getElementById('turno-dia-custom-vis');
+    try { vis.showPicker(); } catch { vis.focus(); }
+};
+window.onTurnoDiaCustomChange = (val) => {
+    if (!val) return;
+    turnoModalCustomDate = val;
+    turnoModalSelectedDay = -1;
+    document.getElementById('turno-dia').value = val;
     renderTurnoDiaGrid();
 };
 
@@ -2787,6 +2865,7 @@ document.getElementById('nuevo-turno-form').addEventListener('submit', async e =
         closeModals();
         if (!document.getElementById('turnos-panel').classList.contains('hidden')) {
             turnosSelectedDay = turnoModalSelectedDay;
+            if (turnoModalSelectedDay === -1) turnosCustomDate = turnoModalCustomDate;
             renderTurnosPanel();
         }
     } catch { alert('Error al guardar'); }
