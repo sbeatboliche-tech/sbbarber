@@ -340,8 +340,9 @@
             </button>
         </header>
         <!-- Day selector -->
-        <div class="px-4 pt-4 flex-shrink-0">
+        <div class="px-4 pt-4 flex-shrink-0 space-y-2">
             <div class="flex bg-gray-900/80 p-1 rounded-xl border border-gray-800 gap-1" id="anotar-turnos-day-tabs"></div>
+            <div class="flex gap-1" id="anotar-turnos-barber-tabs"></div>
         </div>
         <!-- Content -->
         <div class="flex-1 overflow-y-auto p-4 pb-10">
@@ -772,7 +773,7 @@ const PRODUCTOS_BARBER = [
 let app, auth, db, currentUser;
 let allCuts=[], allExpenses=[], allStock=[];
 let allRetiros=[], allPropinas=[], allVentas=[], allTurnos=[];
-let anotarTurnosDay=0, anotarTurnoModalDay=0, anotarTurnoModalBarber='';
+let anotarTurnosDay=0, anotarTurnoModalDay=0, anotarTurnoModalBarber='', anotarTurnosBarber='todos';
 let activePeriod='dia', customDateFilter=null;
 let barberProfilesData={}, currentBase64Image=null;
 let barberCommissions={ Tony:0.5, Maxi:0.5, Stefa:0.5 };
@@ -2163,6 +2164,8 @@ function listenToAnotarTurnos() {
 
 window.openTurnosView = () => {
     anotarTurnosDay = 0;
+    const myName = BARBER_EMAIL_MAP[currentUser?.email];
+    anotarTurnosBarber = myName || 'todos';
     const v = document.getElementById('turnos-view');
     v.classList.remove('hidden'); v.classList.add('flex','flex-col');
     renderAnotarTurnosView();
@@ -2179,8 +2182,26 @@ window.setAnotarTurnosDay = (n) => {
 
 function renderAnotarTurnosView() {
     renderAnotarTurnosDayTabs();
+    renderAnotarTurnosBarberTabs();
     renderAnotarTurnosList();
 }
+
+function renderAnotarTurnosBarberTabs() {
+    const container = document.getElementById('anotar-turnos-barber-tabs');
+    if (!container) return;
+    const options = ['todos', ...BARBERS_LIST];
+    container.innerHTML = options.map(name => {
+        const active = anotarTurnosBarber === name;
+        const label = name === 'todos' ? 'Todos' : name;
+        return `<button onclick="window.setAnotarTurnosBarber('${name}')" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all text-center ${active ? 'text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow' : 'text-gray-500 hover:text-gray-300 bg-white/5'}">${label}</button>`;
+    }).join('');
+}
+
+window.setAnotarTurnosBarber = (name) => {
+    anotarTurnosBarber = name;
+    renderAnotarTurnosBarberTabs();
+    renderAnotarTurnosList();
+};
 
 function renderAnotarTurnosDayTabs() {
     const c = document.getElementById('anotar-turnos-day-tabs');
@@ -2199,13 +2220,13 @@ function renderAnotarTurnosDayTabs() {
 function renderAnotarTurnosList() {
     const targetDate = getTurnoDateStr(anotarTurnosDay);
     const dayTurnos = allTurnos
-        .filter(t => t.fecha === targetDate && !t.eliminado)
+        .filter(t => t.fecha === targetDate && !t.eliminado && (anotarTurnosBarber === 'todos' || t.barbero === anotarTurnosBarber))
         .sort((a,b) => (a.hora||'').localeCompare(b.hora||''));
     const el = document.getElementById('anotar-turnos-list');
     if (dayTurnos.length === 0) {
         el.innerHTML = `<div class="text-center py-12">
             <i class="fas fa-calendar-times text-gray-700 text-3xl mb-3 block"></i>
-            <p class="text-sm text-gray-600">Sin turnos para ${getTurnoDayLabel(anotarTurnosDay).toLowerCase()}</p>
+            <p class="text-sm text-gray-600">Sin turnos${anotarTurnosBarber !== 'todos' ? ' de ' + anotarTurnosBarber : ''} para ${getTurnoDayLabel(anotarTurnosDay).toLowerCase()}</p>
         </div>`;
         return;
     }

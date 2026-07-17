@@ -413,8 +413,9 @@
             </button>
         </header>
         <!-- Day selector -->
-        <div class="px-4 md:px-8 pt-4 flex-shrink-0">
+        <div class="px-4 md:px-8 pt-4 flex-shrink-0 space-y-2">
             <div class="flex bg-gray-900/80 p-1 rounded-xl border border-gray-800 gap-1" id="turnos-day-tabs"></div>
+            <div class="flex gap-1" id="turnos-barber-tabs"></div>
         </div>
         <!-- Content -->
         <div class="flex-1 overflow-y-auto">
@@ -929,7 +930,7 @@ let newItemPhoto = null, editItemPhoto = null, editItemId = null;
 let isAdmin = false;
 let activeTab = 'cortes';
 let selectedProducto = null, cantVenta = 1;
-let turnosSelectedDay = 0, turnoModalSelectedDay = 0, turnoModalSelectedBarber = '';
+let turnosSelectedDay = 0, turnoModalSelectedDay = 0, turnoModalSelectedBarber = '', turnosBarberFilter = 'todos';
 let gastosCatSelected = 'otro';
 
 // ---- INIT ----
@@ -943,6 +944,7 @@ async function init() {
         if (user) {
             currentUser = user;
             isAdmin = ADMINS.includes(user.email);
+            document.getElementById('gate-view').classList.add('hidden');
             document.getElementById('dashboard-view').classList.remove('hidden');
             document.getElementById('login-view').classList.add('hidden');
             if (isAdmin) document.getElementById('btn-add-stock-item').classList.remove('hidden');
@@ -957,7 +959,8 @@ async function init() {
         } else {
             document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
             document.getElementById('dashboard-view').classList.add('hidden');
-            document.getElementById('login-view').classList.remove('hidden');
+            localStorage.removeItem('rec-gate');
+            document.getElementById('gate-view').classList.remove('hidden');
         }
     });
 
@@ -1812,11 +1815,18 @@ document.getElementById('producto-movement-form').addEventListener('submit', asy
 });
 
 // ---- PASSWORD GATE ----
-window.checkGate = () => {
+const REC_EMAIL = 'abalo7272@gmail.com';
+const REC_PASS  = 'femesb'; // Cambiá la contraseña Firebase de REC_EMAIL a este valor (o actualizá esta constante)
+
+window.checkGate = async () => {
     const val = document.getElementById('gate-input').value;
     if (val === 'femesb') {
-        sessionStorage.setItem('rec-gate', '1');
+        localStorage.setItem('rec-gate', '1');
         document.getElementById('gate-view').classList.add('hidden');
+        if (auth && !auth.currentUser) {
+            try { await signInWithEmailAndPassword(auth, REC_EMAIL, REC_PASS); }
+            catch { /* Si falla, onAuthStateChanged lo maneja */ }
+        }
     } else {
         document.getElementById('gate-error').classList.remove('hidden');
         document.getElementById('gate-input').value = '';
@@ -1824,7 +1834,7 @@ window.checkGate = () => {
     }
 };
 document.getElementById('gate-input').addEventListener('keydown', e => { if (e.key === 'Enter') window.checkGate(); });
-if (sessionStorage.getItem('rec-gate') === '1') document.getElementById('gate-view').classList.add('hidden');
+if (localStorage.getItem('rec-gate') === '1') document.getElementById('gate-view').classList.add('hidden');
 
 // ---- AUTH ----
 document.getElementById('login-form').addEventListener('submit', async e => {
@@ -2593,6 +2603,7 @@ function listenToTurnos() {
 
 window.openTurnosPanel = () => {
     turnosSelectedDay = 0;
+    turnosBarberFilter = 'todos';
     const p = document.getElementById('turnos-panel');
     p.classList.remove('hidden'); p.classList.add('flex', 'flex-col');
     renderTurnosPanel();
@@ -2609,8 +2620,25 @@ window.setTurnosDay = (n) => {
 
 function renderTurnosPanel() {
     renderTurnosDayTabs();
+    renderTurnosBarberTabs();
     renderTurnosList();
 }
+
+function renderTurnosBarberTabs() {
+    const container = document.getElementById('turnos-barber-tabs');
+    const options = ['todos', ...BARBERS];
+    container.innerHTML = options.map(name => {
+        const active = turnosBarberFilter === name;
+        const label = name === 'todos' ? 'Todos' : name;
+        return `<button onclick="window.setTurnosBarber('${name}')" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all text-center ${active ? 'text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow' : 'text-gray-500 hover:text-gray-300 bg-white/5'}">${label}</button>`;
+    }).join('');
+}
+
+window.setTurnosBarber = (name) => {
+    turnosBarberFilter = name;
+    renderTurnosBarberTabs();
+    renderTurnosList();
+};
 
 function renderTurnosDayTabs() {
     const container = document.getElementById('turnos-day-tabs');
@@ -2633,14 +2661,14 @@ function quienAnoто(email) {
 function renderTurnosList() {
     const targetDate = getTodayStr(turnosSelectedDay);
     const dayTurnos = allTurnos
-        .filter(t => t.fecha === targetDate && !t.eliminado)
+        .filter(t => t.fecha === targetDate && !t.eliminado && (turnosBarberFilter === 'todos' || t.barbero === turnosBarberFilter))
         .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
 
     const el = document.getElementById('turnos-list');
     if (dayTurnos.length === 0) {
         el.innerHTML = `<div class="text-center py-12">
             <i class="fas fa-calendar-times text-gray-700 text-3xl mb-3 block"></i>
-            <p class="text-sm text-gray-600">Sin turnos para ${getDayLabel(turnosSelectedDay).toLowerCase()}</p>
+            <p class="text-sm text-gray-600">Sin turnos${turnosBarberFilter !== 'todos' ? ' de ' + turnosBarberFilter : ''} para ${getDayLabel(turnosSelectedDay).toLowerCase()}</p>
         </div>`;
         return;
     }
