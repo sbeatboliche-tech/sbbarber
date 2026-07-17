@@ -2189,7 +2189,8 @@ function renderAnotarTurnosView() {
 function renderAnotarTurnosBarberTabs() {
     const container = document.getElementById('anotar-turnos-barber-tabs');
     if (!container) return;
-    const options = ['todos', ...BARBERS_LIST];
+    const myName = BARBER_EMAIL_MAP[currentUser?.email];
+    const options = myName ? ['todos', myName] : ['todos', ...BARBERS_LIST];
     container.innerHTML = options.map(name => {
         const active = anotarTurnosBarber === name;
         const label = name === 'todos' ? 'Todos' : name;
