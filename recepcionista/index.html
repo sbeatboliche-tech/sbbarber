@@ -9,11 +9,20 @@
     <meta name="apple-mobile-web-app-title" content="SB Recepción">
     <link rel="apple-touch-icon" href="https://i.imgur.com/PzcD4W2.jpeg">
     <link rel="icon" type="image/jpeg" href="https://i.imgur.com/PzcD4W2.jpeg">
+    <!-- Preconnect: resuelve DNS y negocia TLS antes de que el parser llegue a los recursos -->
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://www.gstatic.com">
+    <link rel="dns-prefetch" href="https://i.imgur.com">
+    <!-- Fuente: link directo en lugar de @import (evita cadena de 2 requests) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Font Awesome async: no bloquea el primer render -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         body { font-family:'Inter',sans-serif; -webkit-tap-highlight-color:transparent; }
         ::-webkit-scrollbar { display:none; }
         .glass { background:rgba(17,24,39,0.85); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border-bottom:1px solid rgba(255,255,255,0.08); }
