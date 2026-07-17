@@ -963,8 +963,7 @@ async function init() {
         } else {
             document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
             document.getElementById('dashboard-view').classList.add('hidden');
-            localStorage.removeItem('rec-gate');
-            document.getElementById('gate-view').classList.remove('hidden');
+            document.getElementById('login-view').classList.remove('hidden');
         }
     });
 
@@ -1819,18 +1818,11 @@ document.getElementById('producto-movement-form').addEventListener('submit', asy
 });
 
 // ---- PASSWORD GATE ----
-const REC_EMAIL = 'abalo7272@gmail.com';
-const REC_PASS  = 'femesb'; // Cambiá la contraseña Firebase de REC_EMAIL a este valor (o actualizá esta constante)
-
-window.checkGate = async () => {
+window.checkGate = () => {
     const val = document.getElementById('gate-input').value;
     if (val === 'femesb') {
         localStorage.setItem('rec-gate', '1');
         document.getElementById('gate-view').classList.add('hidden');
-        if (auth && !auth.currentUser) {
-            try { await signInWithEmailAndPassword(auth, REC_EMAIL, REC_PASS); }
-            catch { /* Si falla, onAuthStateChanged lo maneja */ }
-        }
     } else {
         document.getElementById('gate-error').classList.remove('hidden');
         document.getElementById('gate-input').value = '';
