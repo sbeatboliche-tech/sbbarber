@@ -867,7 +867,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, signInAnonymously, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, query, orderBy, where, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, getDoc, doc, increment, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -946,7 +946,8 @@ async function init() {
     onAuthStateChanged(auth, user => {
         if (user) {
             currentUser = user;
-            isAdmin = ADMINS.includes(user.email);
+            // Anónimos con gate válido tienen acceso admin completo
+            isAdmin = ADMINS.includes(user.email) || (user.isAnonymous && localStorage.getItem('rec-gate') === '1');
             document.getElementById('gate-view').classList.add('hidden');
             document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
             document.getElementById('dashboard-view').classList.remove('hidden');
@@ -961,9 +962,19 @@ async function init() {
             listenToTurnos();
             listenToGastos();
         } else {
-            document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
-            document.getElementById('dashboard-view').classList.add('hidden');
-            document.getElementById('login-view').classList.remove('hidden');
+            if (localStorage.getItem('rec-gate') === '1') {
+                // Gate ya pasado — entrar anónimamente sin pedir contraseña
+                signInAnonymously(auth).catch(() => {
+                    // Si anon auth no está habilitado, mostrar login como fallback
+                    document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
+                    document.getElementById('dashboard-view').classList.add('hidden');
+                    document.getElementById('login-view').classList.remove('hidden');
+                });
+            } else {
+                document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
+                document.getElementById('dashboard-view').classList.add('hidden');
+                document.getElementById('login-view').classList.remove('hidden');
+            }
         }
     });
 
@@ -1821,8 +1832,14 @@ document.getElementById('producto-movement-form').addEventListener('submit', asy
 function afterGatePassed() {
     document.getElementById('gate-view').classList.add('hidden');
     document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
-    // Si Firebase aún no respondió, mostrar login de inmediato como fallback
-    if (document.getElementById('dashboard-view').classList.contains('hidden')) {
+    // Si auth ya está listo y no hay usuario, entrar anónimamente
+    if (typeof auth !== 'undefined' && auth && !auth.currentUser) {
+        signInAnonymously(auth).catch(() => {
+            document.getElementById('login-view').classList.remove('hidden');
+        });
+    } else if (document.getElementById('dashboard-view').classList.contains('hidden')) {
+        // auth aún no inicializado (localStorage check en page load) → mostrar login como fallback
+        // onAuthStateChanged lo va a resolver cuando auth esté listo
         document.getElementById('login-view').classList.remove('hidden');
     }
 }
@@ -2728,7 +2745,7 @@ function renderTurnosList() {
     }
     el.innerHTML = dayTurnos.map(t => {
         const done = t.estado === 'completado';
-        const anotadoPor = quienAnoто(t.userEmail);
+        const anotadoPor = t.anotadoPor || quienAnoто(t.userEmail);
         return `<div class="glass-card rounded-2xl p-4 flex items-center gap-4 ${done ? 'opacity-50' : ''}">
             <div class="text-center flex-shrink-0 w-12">
                 <div class="text-base font-extrabold text-amber-300">${t.hora || '--:--'}</div>
@@ -2860,7 +2877,8 @@ document.getElementById('nuevo-turno-form').addEventListener('submit', async e =
         await addDoc(collection(db, PATH_TURNOS), {
             barbero, clientName: clientName || null, servicio: servicio || null,
             fecha, hora, estado: 'pendiente',
-            userEmail: currentUser.email, creadoEn: serverTimestamp()
+            anotadoPor: 'Recepción',
+            userEmail: currentUser?.email || null, creadoEn: serverTimestamp()
         });
         closeModals();
         if (!document.getElementById('turnos-panel').classList.contains('hidden')) {

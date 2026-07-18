@@ -2291,7 +2291,7 @@ function renderAnotarTurnosList() {
             ? `<img src="${photo}" class="w-9 h-9 rounded-full object-cover flex-shrink-0">`
             : `<div class="w-9 h-9 rounded-full ${th.bg} flex items-center justify-center font-bold text-white text-sm flex-shrink-0">${th.initial}</div>`;
         const done = t.estado === 'completado';
-        const anotadoPor = BARBER_EMAIL_MAP[t.userEmail] || 'Recepción';
+        const anotadoPor = t.anotadoPor || BARBER_EMAIL_MAP[t.userEmail] || 'Recepción';
         return `<div class="glass-card rounded-2xl p-4 flex items-center gap-3 ${done ? 'opacity-50' : ''}">
             <div class="text-center w-12 flex-shrink-0">
                 <div class="text-sm font-extrabold text-amber-300">${t.hora||'--:--'}</div>
@@ -2424,6 +2424,7 @@ document.getElementById('nuevo-turno-form').addEventListener('submit', async e =
         await addDoc(collection(db, PATH_TURNOS), {
             barbero, clientName: clientName||null, servicio: servicio||null,
             fecha, hora, estado: 'pendiente',
+            anotadoPor: BARBER_EMAIL_MAP[currentUser.email] || 'Barbero',
             userEmail: currentUser.email, creadoEn: serverTimestamp()
         });
         window.closeModals();
