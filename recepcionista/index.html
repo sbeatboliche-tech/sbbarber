@@ -1818,11 +1818,19 @@ document.getElementById('producto-movement-form').addEventListener('submit', asy
 });
 
 // ---- PASSWORD GATE ----
+function afterGatePassed() {
+    document.getElementById('gate-view').classList.add('hidden');
+    document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
+    // Si Firebase aún no respondió, mostrar login de inmediato como fallback
+    if (document.getElementById('dashboard-view').classList.contains('hidden')) {
+        document.getElementById('login-view').classList.remove('hidden');
+    }
+}
 window.checkGate = () => {
     const val = document.getElementById('gate-input').value;
     if (val === 'femesb') {
         localStorage.setItem('rec-gate', '1');
-        document.getElementById('gate-view').classList.add('hidden');
+        afterGatePassed();
     } else {
         document.getElementById('gate-error').classList.remove('hidden');
         document.getElementById('gate-input').value = '';
@@ -1830,7 +1838,7 @@ window.checkGate = () => {
     }
 };
 document.getElementById('gate-input').addEventListener('keydown', e => { if (e.key === 'Enter') window.checkGate(); });
-if (localStorage.getItem('rec-gate') === '1') document.getElementById('gate-view').classList.add('hidden');
+if (localStorage.getItem('rec-gate') === '1') afterGatePassed();
 
 // ---- AUTH ----
 document.getElementById('login-form').addEventListener('submit', async e => {
