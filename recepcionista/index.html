@@ -764,6 +764,21 @@
                     <input type="date" id="gasto-fecha" required
                         class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-rose-500/60 outline-none transition text-white text-sm">
                 </div>
+                <!-- Método de pago -->
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">Método de pago</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" id="gasto-mp-efectivo" onclick="window.setGastoMetodo('efectivo')"
+                            class="py-3.5 rounded-2xl font-bold text-sm transition-all bg-emerald-500/15 border border-emerald-500/60 text-emerald-300 active:scale-95">
+                            💵 Efectivo
+                        </button>
+                        <button type="button" id="gasto-mp-transferencia" onclick="window.setGastoMetodo('transferencia')"
+                            class="py-3.5 rounded-2xl font-bold text-sm transition-all bg-white/5 border border-white/10 text-gray-500 hover:border-white/20 active:scale-95">
+                            📲 Transferencia
+                        </button>
+                    </div>
+                    <input type="hidden" id="gasto-metodo-pago" value="efectivo">
+                </div>
                 <button type="submit" id="btn-submit-gasto"
                     class="w-full bg-gradient-to-r from-rose-500 to-red-500 text-white py-4 rounded-2xl font-extrabold text-base shadow-lg shadow-rose-900/40 uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all">
                     Registrar gasto
@@ -2527,11 +2542,13 @@ function renderGastosPanel() {
             <div class="space-y-2">
                 ${items.map(g => {
                     const cat = GASTOS_CATS.find(c => c.id === g.categoria) || GASTOS_CATS[4];
+                    const metodoIcon = g.metodoPago === 'transferencia' ? '📲' : '💵';
+                    const metodoLabel = g.metodoPago === 'transferencia' ? 'Transferencia' : 'Efectivo';
                     return `<div class="flex items-center gap-3 bg-black/20 rounded-xl px-3 py-2.5">
                         <span class="text-base">${cat.icon}</span>
                         <div class="flex-1 min-w-0">
                             <div class="text-sm text-white truncate">${g.descripcion}</div>
-                            <div class="text-[10px] text-gray-500">${cat.label}</div>
+                            <div class="text-[10px] text-gray-500">${cat.label} · ${metodoIcon} ${metodoLabel}</div>
                         </div>
                         <span class="text-sm font-bold text-rose-400 whitespace-nowrap">−$${(g.monto||0).toLocaleString('es-AR')}</span>
                         <button onclick="window.deleteGasto('${g.id}')" class="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-600/20 transition flex-shrink-0">
@@ -2562,8 +2579,16 @@ window.openNuevoGastoModal = () => {
     document.getElementById('gasto-descripcion').value = '';
     document.getElementById('gasto-monto').value = '';
     document.getElementById('gasto-fecha').value = new Date().toLocaleDateString('en-CA');
+    window.setGastoMetodo('efectivo');
     renderGastoCatGrid();
     showModal('nuevo-gasto-modal');
+};
+
+window.setGastoMetodo = (tipo) => {
+    document.getElementById('gasto-metodo-pago').value = tipo;
+    const esEfectivo = tipo === 'efectivo';
+    document.getElementById('gasto-mp-efectivo').className = `py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95 ${esEfectivo ? 'bg-emerald-500/15 border border-emerald-500/60 text-emerald-300' : 'bg-white/5 border border-white/10 text-gray-500 hover:border-white/20'}`;
+    document.getElementById('gasto-mp-transferencia').className = `py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95 ${!esEfectivo ? 'bg-blue-500/15 border border-blue-500/60 text-blue-300' : 'bg-white/5 border border-white/10 text-gray-500 hover:border-white/20'}`;
 };
 
 function renderGastoCatGrid() {
@@ -2588,13 +2613,14 @@ document.getElementById('nuevo-gasto-form').addEventListener('submit', async e =
     const monto = parseInt(document.getElementById('gasto-monto').value);
     const categoria = document.getElementById('gasto-categoria').value || 'otro';
     const fecha = document.getElementById('gasto-fecha').value;
+    const metodoPago = document.getElementById('gasto-metodo-pago').value || 'efectivo';
     if (!descripcion || !monto || !fecha) return;
     const btn = document.getElementById('btn-submit-gasto');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
         await addDoc(collection(db, PATH_GASTOS), {
-            descripcion, monto, categoria, fecha,
-            userEmail: currentUser.email, creadoEn: serverTimestamp()
+            descripcion, monto, categoria, fecha, metodoPago,
+            userEmail: currentUser?.email || null, creadoEn: serverTimestamp()
         });
         closeModals();
     } catch { alert('Error al guardar'); }
