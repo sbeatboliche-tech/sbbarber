@@ -111,6 +111,9 @@
                 <button onclick="window.openVentaModal()" class="hidden md:flex items-center gap-2 bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-600/50 transition">
                     <i class="fas fa-shopping-bag text-xs"></i> Venta producto
                 </button>
+                <button onclick="window.openMLListModal()" class="hidden md:flex items-center gap-2 bg-yellow-600/20 border border-yellow-500/40 text-yellow-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-yellow-600/40 transition">
+                    🛒 ML
+                </button>
                 <!-- Botón retiros: solo desktop -->
                 <button onclick="window.openRetirosPanel()" class="hidden md:flex items-center gap-2 bg-violet-600/20 border border-violet-500/40 text-violet-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-violet-600/40 transition relative">
                     <i class="fas fa-wallet text-xs"></i> Retiros
@@ -230,6 +233,9 @@
                             </button>
                             <button onclick="window.openQuickSaleModal()" class="bg-cyan-700/20 border border-cyan-500/30 text-cyan-300 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-cyan-700/30 transition flex items-center gap-1.5">
                                 🥤 Bebida
+                            </button>
+                            <button onclick="window.openMLListModal()" class="bg-yellow-600/20 border border-yellow-500/30 text-yellow-300 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-yellow-600/30 transition flex items-center gap-1.5">
+                                🛒 ML
                             </button>
                         </div>
                     </div>
@@ -883,6 +889,18 @@
         </div>
     </div>
 
+    <!-- Panel stock MercadoLibre rápido -->
+    <div id="ml-list-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
+        <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 p-5 shadow-2xl rounded-t-3xl max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center mb-1 flex-shrink-0">
+                <h2 class="text-xl font-bold text-white">🛒 Stock MercadoLibre</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <p class="text-[10px] text-gray-500 uppercase font-bold mb-3 flex-shrink-0">No afecta facturación del local · −1/+1 rápido</p>
+            <div id="ml-list-modal-items" class="overflow-y-auto flex-1 pr-1"></div>
+        </div>
+    </div>
+
     <!-- Venta de producto de barber -->
     <div id="ventas-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
         <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl">
@@ -1005,6 +1023,7 @@ const PRODUCTOS_ML = [
     { id: 'ml-cepillo-naranja',      name: 'Cepillo naranja',              stock: 10 },
     { id: 'ml-clipper-spray',        name: 'Clipper spray',                stock: 4 },
     { id: 'ml-polvo-black-80g',      name: 'Polvo texturizador Black 80g', stock: 2 },
+    { id: 'ml-placer-pomelo',        name: 'Placer Pomelo',                stock: 0 },
 ];
 let mlStock = {};
 let mlCurrentMovement = null, mlCant = 1;
@@ -2248,6 +2267,7 @@ function listenToProfiles() {
         barberProfilesData = {};
         s.forEach(d => { const n = BARBER_EMAIL_MAP[d.id]; if (n) barberProfilesData[n] = d.data().photoURL; });
         if (!document.getElementById('add-cut-modal').classList.contains('hidden')) renderBarberGrid();
+        renderCuts();
     });
 }
 
@@ -3016,6 +3036,7 @@ async function listenToMLProductos() {
         mlStock = {};
         snap.docs.forEach(d => { mlStock[d.id] = d.data(); });
         renderMLStock();
+        renderMLListModal();
     });
 }
 
@@ -3037,6 +3058,50 @@ function renderMLStock() {
         </div>`;
     }).join('');
 }
+
+window.openMLListModal = () => {
+    renderMLListModal();
+    showModal('ml-list-modal');
+};
+
+function renderMLListModal() {
+    const list = document.getElementById('ml-list-modal-items');
+    if (!list) return;
+    list.innerHTML = PRODUCTOS_ML.map(p => {
+        const qty = mlStock[p.id]?.stock ?? 0;
+        const qtyColor = qty === 0 ? 'text-red-400' : qty <= 2 ? 'text-yellow-400' : 'text-white';
+        const sinStock = qty === 0;
+        const nameSafe = p.name.replace(/'/g, "\\'");
+        return `<div class="flex items-center gap-2 py-2.5 border-b border-white/5 last:border-0">
+            <span class="text-xs text-gray-300 flex-1 min-w-0 leading-tight">${p.name}</span>
+            <span class="${qtyColor} font-bold text-sm w-7 text-center flex-shrink-0">${qty}</span>
+            <button onclick="window.mlQuickAct('${p.id}','${nameSafe}','venta')"
+                class="w-9 h-9 rounded-xl flex items-center justify-center text-base font-bold transition flex-shrink-0 ${sinStock ? 'bg-gray-800 text-gray-600 cursor-not-allowed' : 'bg-yellow-600/20 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-600/40'}"
+                ${sinStock ? 'disabled' : ''}>−</button>
+            <button onclick="window.mlQuickAct('${p.id}','${nameSafe}','restock')"
+                class="w-9 h-9 rounded-xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 hover:bg-emerald-600/40 text-base font-bold transition flex-shrink-0">+</button>
+        </div>`;
+    }).join('');
+}
+
+window.mlQuickAct = async (id, name, type) => {
+    const esVenta = type === 'venta';
+    const stockActual = mlStock[id]?.stock ?? 0;
+    if (esVenta && stockActual < 1) return;
+    try {
+        await setDoc(doc(db, PATH_ML, id), { stock: increment(esVenta ? -1 : 1) }, { merge: true });
+        if (esVenta) {
+            const hoy = new Date().toLocaleDateString('en-CA');
+            await addDoc(collection(db, PATH_VENTAS), {
+                producto: name, precio: 0, cantidad: 1, total: 0,
+                tipo: 'producto', canal: 'ml',
+                barbero: 'Recepción',
+                userEmail: currentUser?.email || null,
+                fecha: hoy, creadoEn: serverTimestamp()
+            });
+        }
+    } catch(err) { console.error('mlQuickAct:', err); alert('Error: ' + err?.message); }
+};
 
 window.openMLMovement = (id, name, type) => {
     mlCurrentMovement = { id, name, type };
@@ -3084,7 +3149,7 @@ window.confirmMLMovement = async () => {
 };
 
 // ---- MODALES ----
-const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal', 'nuevo-gasto-modal', 'ml-movement-modal'];
+const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal', 'nuevo-gasto-modal', 'ml-movement-modal', 'ml-list-modal'];
 function showModal(id) {
     document.getElementById(id).classList.remove('hidden');
     document.getElementById(id).classList.add('flex', 'flex-col');
