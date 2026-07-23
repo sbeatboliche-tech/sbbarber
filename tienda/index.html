@@ -293,10 +293,9 @@
         <div id="shipping-detail" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:none;padding:12px 14px;margin-bottom:20px;font-size:12px;color:#737373;line-height:1.6;">
             <span id="shipping-detail-text">📍 Dávila 951, Parque Chacabuco · Lun–Sáb 12:00–19:30 · <strong style="color:#a3a3a3;">Gratis</strong></span>
             <div id="zone-selector" style="display:none;margin-top:4px;">
-                <div style="font-size:9px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#525252;margin-bottom:8px;">Transportista</div>
-                <div style="display:flex;gap:6px;margin-bottom:12px;">
-                    <button id="carrier-andreani" onclick="setCarrier('andreani')" style="flex:1;height:38px;background:var(--white);color:var(--black);border:none;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;font-family:'Inter',sans-serif;">Andreani</button>
-                    <button id="carrier-correo" onclick="setCarrier('correo')" style="flex:1;height:38px;background:none;color:#525252;border:1px solid rgba(255,255,255,.12);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;font-family:'Inter',sans-serif;">Correo Arg.</button>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);">
+                    <span style="font-size:18px;">📬</span>
+                    <span style="font-size:11px;font-weight:700;color:#a3a3a3;">Correo Argentino</span>
                 </div>
                 <div style="font-size:9px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#525252;margin-bottom:8px;">Código postal de destino</div>
                 <div style="display:flex;gap:8px;">
@@ -426,8 +425,8 @@ const PRODUCTS = [
 
 const TRANSFER_DISCOUNT = 0.20;
 let correoLabel = '';
-let carrierLabel = '';
-let carrierId = 'andreani';
+let carrierLabel = 'Correo Argentino';
+let carrierId = 'correo';
 let productConfig = {};
 let courseConfig = {};
 let shippingMode = 'pickup';
@@ -455,29 +454,17 @@ function setShipping(mode) {
         zoneSelector.style.display = 'none';
         txt.style.display = 'inline';
         txt.innerHTML = '📍 Dávila 951, Parque Chacabuco · Lun–Sáb 12:00–19:30 · <strong style="color:#a3a3a3;">Gratis</strong>';
-        shippingCost = 0; correoLabel = ''; carrierLabel = '';
+        shippingCost = 0; correoLabel = '';
     } else {
         txt.style.display = 'none';
         zoneSelector.style.display = 'block';
         addr.style.display = 'block';
         document.getElementById('shipping-result').innerHTML = '';
-        shippingCost = 0; correoLabel = ''; carrierLabel = '';
+        shippingCost = 0; correoLabel = '';
     }
     renderSummary();
 }
 
-function setCarrier(id) {
-    carrierId = id;
-    shippingCost = 0; correoLabel = ''; carrierLabel = '';
-    document.getElementById('shipping-result').innerHTML = '';
-    const aBtn = document.getElementById('carrier-andreani');
-    const cBtn = document.getElementById('carrier-correo');
-    const activeStyle = 'flex:1;height:38px;background:var(--white);color:var(--black);border:none;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;font-family:\'Inter\',sans-serif;';
-    const inactiveStyle = 'flex:1;height:38px;background:none;color:#525252;border:1px solid rgba(255,255,255,.12);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;font-family:\'Inter\',sans-serif;';
-    aBtn.style.cssText = id === 'andreani' ? activeStyle : inactiveStyle;
-    cBtn.style.cssText = id === 'correo' ? activeStyle : inactiveStyle;
-    renderSummary();
-}
 
 async function calcularEnvio() {
     const cp = document.getElementById('buyer-postal').value.trim();
@@ -486,8 +473,8 @@ async function calcularEnvio() {
     if (!cp) return result.textContent = 'Ingresá tu código postal';
     btn.textContent = '...'; btn.disabled = true;
     result.textContent = 'Calculando...';
-    const endpoint = carrierId === 'andreani' ? '/api/andreani-rates' : '/api/correo-rates';
-    const name = carrierId === 'andreani' ? 'Andreani' : 'Correo Argentino';
+    const endpoint = '/api/correo-rates';
+    const name = 'Correo Argentino';
     try {
         const res = await fetch(endpoint, {
             method: 'POST',
@@ -711,7 +698,8 @@ async function submitCheckout() {
 
     const orderId='SBB-'+Date.now();
     const buyer={name,email};
-    const shipping={mode:shippingMode,address,cost:shippingMode==='delivery'?shippingCost:0,carrier:shippingMode==='delivery'?carrierId:null,carrierLabel:shippingMode==='delivery'?carrierLabel:null};
+    const postalCode = shippingMode==='delivery' ? (document.getElementById('buyer-postal').value.trim()||null) : null;
+    const shipping={mode:shippingMode,address,cost:shippingMode==='delivery'?shippingCost:0,carrier:shippingMode==='delivery'?carrierId:null,carrierLabel:shippingMode==='delivery'?carrierLabel:null,postalCode};
     const items=cart.map(i=>({id:i.id,name:`${i.name} ${i.variant}`,price:i.price,quantity:i.qty}));
 
     try {

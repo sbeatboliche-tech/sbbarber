@@ -37,10 +37,30 @@ export default async function handler(req, res) {
 }
 
 function sellerHtml(name, email, items, total, discount, orderId, ship) {
-    const discountRow = discount > 0 ? `<tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Descuento 5%</td><td style="padding:8px 0;color:#f1f5f9;">− $${Number(discount).toLocaleString('es-AR')}</td></tr>` : '';
-    const shipRow = ship.mode === 'delivery'
-        ? `<tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Entrega</td><td style="padding:8px 0;color:#f1f5f9;">Envío — ${ship.address}</td></tr>`
-        : `<tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Entrega</td><td style="padding:8px 0;color:#f1f5f9;">Retiro en local</td></tr>`;
+    const discountRow = discount > 0
+        ? `<tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Descuento 20%</td><td style="padding:8px 0;color:#f1f5f9;">− $${Number(discount).toLocaleString('es-AR')}</td></tr>`
+        : '';
+
+    let shipRows = '';
+    if (ship.mode === 'delivery') {
+        const carrierName = ship.carrierLabel || (ship.carrier === 'andreani' ? 'Andreani' : ship.carrier === 'correo' ? 'Correo Argentino' : 'A definir');
+        shipRows = `
+            <tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Entrega</td><td style="padding:8px 0;color:#f1f5f9;">Envío a domicilio</td></tr>
+            <tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Dirección</td><td style="padding:8px 0;color:#f1f5f9;font-weight:600;">${ship.address}</td></tr>
+            <tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Transportista</td><td style="padding:8px 0;color:#fbbf24;font-weight:700;">${carrierName}</td></tr>
+            ${ship.postalCode ? `<tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Código postal</td><td style="padding:8px 0;color:#f1f5f9;">${ship.postalCode}</td></tr>` : ''}
+            ${ship.cost > 0 ? `<tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Costo de envío</td><td style="padding:8px 0;color:#f1f5f9;">$${Number(ship.cost).toLocaleString('es-AR')} (ya incluido en el total)</td></tr>` : ''}
+        `;
+    } else {
+        shipRows = `<tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Entrega</td><td style="padding:8px 0;color:#f1f5f9;">Retiro en local</td></tr>`;
+    }
+
+    const shippingAlert = ship.mode === 'delivery' ? `
+        <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:10px;padding:14px;margin-top:16px;">
+            <p style="color:#93c5fd;font-size:12px;font-weight:700;margin:0 0 6px;text-transform:uppercase;letter-spacing:.08em;">📦 Acción requerida — Envío</p>
+            <p style="color:#bfdbfe;font-size:13px;margin:0;">Confirmada la transferencia, generar etiqueta en el sitio de <strong>${ship.carrierLabel || 'la transportista'}</strong> y enviar el número de seguimiento al comprador.</p>
+        </div>` : '';
+
     return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#080b12;margin:0;padding:24px;">
 <div style="max-width:480px;margin:0 auto;background:#0d1320;border-radius:16px;padding:32px;border:1px solid rgba(255,255,255,0.08);">
   <p style="color:#f59e0b;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:0 0 8px;">⏳ Pendiente de transferencia</p>
@@ -49,7 +69,7 @@ function sellerHtml(name, email, items, total, discount, orderId, ship) {
     <tr><td style="padding:8px 0;color:#64748b;font-size:13px;width:40%;">Cliente</td><td style="padding:8px 0;color:#f1f5f9;font-weight:600;">${name}</td></tr>
     <tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Email</td><td style="padding:8px 0;color:#f1f5f9;">${email || '—'}</td></tr>
     <tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Productos</td><td style="padding:8px 0;color:#f1f5f9;">${items}</td></tr>
-    ${shipRow}
+    ${shipRows}
     ${discountRow}
     <tr style="border-top:1px solid rgba(255,255,255,0.06);">
       <td style="padding:14px 0;color:#f59e0b;font-size:18px;font-weight:800;">Total a recibir</td>
@@ -59,14 +79,31 @@ function sellerHtml(name, email, items, total, discount, orderId, ship) {
   <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:12px;margin-top:16px;">
     <p style="color:#fbbf24;font-size:12px;margin:0;">Esperá la transferencia al alias <strong>sbeat.ar</strong> antes de ${ship.mode==='delivery'?'enviar':'entregar'} el producto.</p>
   </div>
+  ${shippingAlert}
   <p style="color:#334155;font-size:11px;margin-top:16px;">Orden: ${orderId}</p>
-</div></body></html>`;}
+</div></body></html>`;
+}
 
 function buyerHtml(name, items, total, discount, orderId, ship) {
-    const discountLine = discount > 0 ? `<p style="color:#15803d;font-size:13px;font-weight:700;margin:4px 0 0;">Descuento 5% transferencia: − $${Number(discount).toLocaleString('es-AR')}</p>` : '';
-    const shipBlock = ship.mode === 'delivery'
-        ? `<div style="background:#eff6ff;border-radius:12px;padding:16px 20px;margin-bottom:16px;border:1px solid #bfdbfe;"><p style="color:#1d4ed8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;">Envío a domicilio</p><p style="color:#1e40af;font-size:13px;margin:0;">${ship.address}</p></div>`
-        : `<div style="background:#f0fdf4;border-radius:12px;padding:16px 20px;margin-bottom:16px;border:1px solid #bbf7d0;"><p style="color:#166534;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;">Retiro en local</p><p style="color:#15803d;font-size:13px;margin:0;">Dávila 951, Parque Chacabuco · Lun–Sáb 12:00–19:30</p></div>`;
+    const discountLine = discount > 0
+        ? `<p style="color:#15803d;font-size:13px;font-weight:700;margin:4px 0 0;">Descuento 20% transferencia: − $${Number(discount).toLocaleString('es-AR')}</p>`
+        : '';
+
+    let shipBlock = '';
+    if (ship.mode === 'delivery') {
+        const carrierName = ship.carrierLabel || (ship.carrier === 'andreani' ? 'Andreani' : ship.carrier === 'correo' ? 'Correo Argentino' : 'la transportista');
+        shipBlock = `<div style="background:#eff6ff;border-radius:12px;padding:16px 20px;margin-bottom:16px;border:1px solid #bfdbfe;">
+            <p style="color:#1d4ed8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;">Envío a domicilio — ${carrierName}</p>
+            <p style="color:#1e40af;font-size:13px;margin:0 0 4px;">${ship.address}</p>
+            <p style="color:#3b82f6;font-size:12px;margin:4px 0 0;">Una vez confirmado el pago te enviamos el número de seguimiento.</p>
+        </div>`;
+    } else {
+        shipBlock = `<div style="background:#f0fdf4;border-radius:12px;padding:16px 20px;margin-bottom:16px;border:1px solid #bbf7d0;">
+            <p style="color:#166534;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;">Retiro en local</p>
+            <p style="color:#15803d;font-size:13px;margin:0;">Dávila 951, Parque Chacabuco · Lun–Sáb 12:00–19:30</p>
+        </div>`;
+    }
+
     return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f1f5f9;margin:0;padding:24px;">
 <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.08);">
   <div style="text-align:center;margin-bottom:28px;">

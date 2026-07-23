@@ -1369,6 +1369,14 @@ document.getElementById('movement-form').addEventListener('submit', async e => {
                 userEmail: currentUser.email,
                 fecha: hoy, creadoEn: serverTimestamp()
             });
+            if (BARBERS.includes(comprador)) {
+                await addDoc(collection(db, PATH_RETIROS), {
+                    barbero: comprador, monto: precio * qty, fecha: hoy,
+                    estado: 'confirmado', tipo: 'retiro',
+                    descripcion: `Bebida: ${itemName}${qty > 1 ? ' ×' + qty : ''}`,
+                    userEmail: currentUser.email, creadoEn: serverTimestamp()
+                });
+            }
         }
         closeModals();
     } catch { alert('Error al guardar'); }
@@ -1522,6 +1530,12 @@ window.quickSale = async id => {
             metodoPago: metodo,
             barbero, userEmail: currentUser.email,
             fecha: hoy, creadoEn: serverTimestamp()
+        });
+        await addDoc(collection(db, PATH_RETIROS), {
+            barbero, monto: item.price || 0, fecha: hoy,
+            estado: 'confirmado', tipo: 'retiro',
+            descripcion: `Bebida: ${item.name}`,
+            userEmail: currentUser.email, creadoEn: serverTimestamp()
         });
         closeModals();
     } catch { alert('Error'); }
