@@ -1371,15 +1371,15 @@ document.getElementById('movement-form').addEventListener('submit', async e => {
             });
             if (BARBERS.includes(comprador)) {
                 await addDoc(collection(db, PATH_RETIROS), {
-                    barbero: comprador, monto: precio * qty, fecha: hoy,
+                    barbero: comprador, monto: Number(precio) * qty, fecha: hoy,
                     estado: 'confirmado', tipo: 'retiro',
                     descripcion: `Bebida: ${itemName}${qty > 1 ? ' ×' + qty : ''}`,
-                    userEmail: currentUser.email, creadoEn: serverTimestamp()
+                    userEmail: currentUser?.email || null, creadoEn: serverTimestamp()
                 });
             }
         }
         closeModals();
-    } catch { alert('Error al guardar'); }
+    } catch(err) { console.error('movement error:', err); alert('Error al guardar: ' + (err?.message || err)); }
     btn.disabled = false;
     btn.textContent = currentMovement.type === 'compra' ? 'REGISTRAR COMPRA' : 'REGISTRAR VENTA';
 });
@@ -1532,13 +1532,13 @@ window.quickSale = async id => {
             fecha: hoy, creadoEn: serverTimestamp()
         });
         await addDoc(collection(db, PATH_RETIROS), {
-            barbero, monto: item.price || 0, fecha: hoy,
+            barbero, monto: Number(item.price) || 0, fecha: hoy,
             estado: 'confirmado', tipo: 'retiro',
             descripcion: `Bebida: ${item.name}`,
-            userEmail: currentUser.email, creadoEn: serverTimestamp()
+            userEmail: currentUser?.email || null, creadoEn: serverTimestamp()
         });
         closeModals();
-    } catch { alert('Error'); }
+    } catch(err) { console.error('quickSale error:', err); alert('Error: ' + (err?.message || err)); }
 };
 
 // ---- VENTAS DE PRODUCTOS ----
