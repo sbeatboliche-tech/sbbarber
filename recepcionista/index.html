@@ -867,6 +867,14 @@
                 </div>
             </div>
             <div class="mb-4">
+                <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-2">Canal de venta</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" id="venta-canal-local" onclick="window.setVentaCanal('local')" class="p-3 bg-indigo-600/20 border border-indigo-500 rounded-xl font-bold text-sm text-indigo-300 transition">🏪 Local</button>
+                    <button type="button" id="venta-canal-ml" onclick="window.setVentaCanal('ml')" class="p-3 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition">🛒 MercadoLibre</button>
+                </div>
+                <input type="hidden" id="venta-canal" value="local">
+            </div>
+            <div id="venta-metodo-wrap" class="mb-4">
                 <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-2">Método de pago</p>
                 <div class="grid grid-cols-2 gap-2">
                     <button type="button" id="venta-mp-efectivo" onclick="window.setVentaMetodo('efectivo')" class="p-3 bg-emerald-600/20 border border-emerald-500 rounded-xl font-bold text-sm text-emerald-300 transition">💵 Efectivo</button>
@@ -1569,10 +1577,11 @@ function renderVentas() {
     }
     list.innerHTML = ventasHoy.map(v => {
         const time = v.creadoEn ? v.creadoEn.toDate().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : '';
-        const icon = v.tipo === 'bebida' ? '🥤' : '💈';
-        const border = v.tipo === 'bebida' ? 'border-cyan-500/40' : 'border-indigo-500/40';
-        const metodoTag = v.metodoPago ? ` <span class="${v.metodoPago==='transferencia'?'text-blue-400':'text-emerald-400'}">${v.metodoPago==='transferencia'?'📲':'💵'}</span>` : '';
-        const totalStr = (v.total || 0) > 0 ? `<span class="text-sm font-bold text-indigo-300">$${v.total.toLocaleString('es-AR')}</span>` : `<span class="text-xs text-gray-500">—</span>`;
+        const esML = v.canal === 'ml';
+        const icon = v.tipo === 'bebida' ? '🥤' : esML ? '🛒' : '💈';
+        const border = v.tipo === 'bebida' ? 'border-cyan-500/40' : esML ? 'border-yellow-500/30' : 'border-indigo-500/40';
+        const metodoTag = !esML && v.metodoPago ? ` <span class="${v.metodoPago==='transferencia'?'text-blue-400':'text-emerald-400'}">${v.metodoPago==='transferencia'?'📲':'💵'}</span>` : esML ? ' <span class="text-yellow-600 text-[10px] font-bold">ML</span>' : '';
+        const totalStr = esML ? `<span class="text-xs text-yellow-600">ML</span>` : (v.total || 0) > 0 ? `<span class="text-sm font-bold text-indigo-300">$${v.total.toLocaleString('es-AR')}</span>` : `<span class="text-xs text-gray-500">—</span>`;
         return `<div class="flex justify-between items-center bg-black/30 p-3 rounded-xl border-l-2 ${border}">
             <div class="flex items-center gap-2 flex-1 min-w-0">
                 <span class="text-base leading-none">${icon}</span>
@@ -1587,7 +1596,7 @@ function renderVentas() {
             </div>
         </div>`;
     }).join('');
-    const total = ventasHoy.reduce((s, v) => s + (v.total || 0), 0);
+    const total = ventasHoy.filter(v => v.canal !== 'ml').reduce((s, v) => s + (v.total || 0), 0);
     document.getElementById('ventas-total').textContent = `$${total.toLocaleString('es-AR')}`;
     totalRow.classList.remove('hidden'); totalRow.classList.add('flex');
     const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= new Date(new Date().setHours(0,0,0,0)));
@@ -1597,7 +1606,7 @@ function renderVentas() {
 function updateDailyTotalStat(cutsBilling, ventasTotal = null) {
     if (ventasTotal === null) {
         const hoy = new Date().toLocaleDateString('en-CA');
-        ventasTotal = allVentas.filter(v => v.fecha === hoy && !v.eliminado).reduce((s,v) => s+(v.total||0), 0);
+        ventasTotal = allVentas.filter(v => v.fecha === hoy && !v.eliminado && v.canal !== 'ml').reduce((s,v) => s+(v.total||0), 0);
     }
     const ventasRow = document.getElementById('stat-ventas-row');
     const totalRow = document.getElementById('stat-total-row');
@@ -1665,6 +1674,14 @@ function renderSalesHistory() {
     }).join('');
 }
 
+window.setVentaCanal = (canal) => {
+    document.getElementById('venta-canal').value = canal;
+    const esML = canal === 'ml';
+    document.getElementById('venta-canal-local').className = `p-3 rounded-xl font-bold text-sm transition ${!esML ? 'bg-indigo-600/20 border border-indigo-500 text-indigo-300' : 'bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    document.getElementById('venta-canal-ml').className = `p-3 rounded-xl font-bold text-sm transition ${esML ? 'bg-yellow-600/20 border border-yellow-500 text-yellow-300' : 'bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    document.getElementById('venta-metodo-wrap').classList.toggle('hidden', esML);
+};
+
 window.setVentaMetodo = (m) => {
     document.getElementById('venta-metodo-pago').value = m;
     const efBtn = document.getElementById('venta-mp-efectivo');
@@ -1688,6 +1705,7 @@ window.deleteVenta = async (id) => {
 window.openVentaModal = () => {
     selectedProducto = null; cantVenta = 1;
     document.getElementById('venta-cantidad-display').textContent = '1';
+    window.setVentaCanal('local');
     window.setVentaMetodo('efectivo');
     document.getElementById('productos-grid').innerHTML = PRODUCTOS_BARBER.map((p, i) => {
         const stock = (productoStock[p.id]?.stock) || 0;
@@ -1722,15 +1740,17 @@ window.submitVenta = async () => {
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
         const hoy = new Date().toLocaleDateString('en-CA');
+        const canal = document.getElementById('venta-canal').value || 'local';
         await addDoc(collection(db, PATH_VENTAS), {
             producto: selectedProducto.name,
             precio: selectedProducto.precio,
             cantidad: cantVenta,
             total: selectedProducto.precio * cantVenta,
             tipo: 'producto',
-            metodoPago: document.getElementById('venta-metodo-pago').value,
+            canal,
+            ...(canal !== 'ml' ? { metodoPago: document.getElementById('venta-metodo-pago').value } : {}),
             barbero: 'Recepción',
-            userEmail: currentUser.email,
+            userEmail: currentUser?.email || null,
             fecha: hoy,
             creadoEn: serverTimestamp()
         });
