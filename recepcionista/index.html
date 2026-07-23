@@ -854,37 +854,41 @@
 
     <!-- Venta de producto de barber -->
     <div id="ventas-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
-        <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl">
-            <div class="flex justify-between items-center mb-5">
+        <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 shadow-2xl rounded-t-3xl max-h-[92vh] flex flex-col">
+            <div class="flex justify-between items-center p-5 pb-3 flex-shrink-0">
                 <h2 class="text-xl font-bold text-white"><i class="fas fa-shopping-bag text-indigo-400 mr-2"></i>Venta de producto</h2>
                 <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
             </div>
-            <div class="grid grid-cols-1 gap-2 mb-5" id="productos-grid"></div>
-            <div class="flex items-center justify-between bg-black/30 rounded-xl px-4 py-3 mb-4">
-                <span class="text-sm text-gray-300 font-medium">Cantidad</span>
-                <div class="flex items-center gap-3">
-                    <button onclick="window.cambiarCantVenta(-1)" class="w-8 h-8 rounded-full bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 transition">−</button>
-                    <span id="venta-cantidad-display" class="text-lg font-bold text-white w-6 text-center">1</span>
-                    <button onclick="window.cambiarCantVenta(1)" class="w-8 h-8 rounded-full bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 transition">+</button>
+            <div class="overflow-y-auto flex-1 px-5 pb-1">
+            <div class="grid grid-cols-2 gap-1.5 mb-4" id="productos-grid"></div>
+            </div><!-- /scroll -->
+            <div class="px-5 pb-5 pt-3 flex-shrink-0 border-t border-white/5 space-y-3">
+                <div class="flex items-center justify-between bg-black/30 rounded-xl px-4 py-2.5">
+                    <span class="text-sm text-gray-300 font-medium">Cantidad</span>
+                    <div class="flex items-center gap-3">
+                        <button onclick="window.cambiarCantVenta(-1)" class="w-8 h-8 rounded-full bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 transition">−</button>
+                        <span id="venta-cantidad-display" class="text-lg font-bold text-white w-6 text-center">1</span>
+                        <button onclick="window.cambiarCantVenta(1)" class="w-8 h-8 rounded-full bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 transition">+</button>
+                    </div>
                 </div>
-            </div>
-            <div class="mb-4">
-                <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-2">Canal de venta</p>
-                <div class="grid grid-cols-2 gap-2">
-                    <button type="button" id="venta-canal-local" onclick="window.setVentaCanal('local')" class="p-3 bg-indigo-600/20 border border-indigo-500 rounded-xl font-bold text-sm text-indigo-300 transition">🏪 Local</button>
-                    <button type="button" id="venta-canal-ml" onclick="window.setVentaCanal('ml')" class="p-3 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition">🛒 MercadoLibre</button>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-1.5">Canal de venta</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="venta-canal-local" onclick="window.setVentaCanal('local')" class="p-2.5 bg-indigo-600/20 border border-indigo-500 rounded-xl font-bold text-sm text-indigo-300 transition">🏪 Local</button>
+                        <button type="button" id="venta-canal-ml" onclick="window.setVentaCanal('ml')" class="p-2.5 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition">🛒 MercadoLibre</button>
+                    </div>
+                    <input type="hidden" id="venta-canal" value="local">
                 </div>
-                <input type="hidden" id="venta-canal" value="local">
-            </div>
-            <div id="venta-metodo-wrap" class="mb-4">
-                <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-2">Método de pago</p>
-                <div class="grid grid-cols-2 gap-2">
-                    <button type="button" id="venta-mp-efectivo" onclick="window.setVentaMetodo('efectivo')" class="p-3 bg-emerald-600/20 border border-emerald-500 rounded-xl font-bold text-sm text-emerald-300 transition">💵 Efectivo</button>
-                    <button type="button" id="venta-mp-transferencia" onclick="window.setVentaMetodo('transferencia')" class="p-3 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition">📲 Transferencia</button>
+                <div id="venta-metodo-wrap">
+                    <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-1.5">Método de pago</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="venta-mp-efectivo" onclick="window.setVentaMetodo('efectivo')" class="p-2.5 bg-emerald-600/20 border border-emerald-500 rounded-xl font-bold text-sm text-emerald-300 transition">💵 Efectivo</button>
+                        <button type="button" id="venta-mp-transferencia" onclick="window.setVentaMetodo('transferencia')" class="p-2.5 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition">📲 Transferencia</button>
+                    </div>
+                    <input type="hidden" id="venta-metodo-pago" value="efectivo">
                 </div>
-                <input type="hidden" id="venta-metodo-pago" value="efectivo">
+                <button onclick="window.submitVenta()" id="btn-submit-venta" class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white p-3.5 rounded-xl font-bold text-base shadow-lg uppercase tracking-widest">Registrar venta</button>
             </div>
-            <button onclick="window.submitVenta()" id="btn-submit-venta" class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white p-4 rounded-xl font-bold text-base shadow-lg uppercase tracking-widest">Registrar venta</button>
         </div>
     </div>
 
@@ -1722,18 +1726,31 @@ window.deleteVenta = async (id) => {
 };
 
 function renderProductosGrid() {
-    document.getElementById('productos-grid').innerHTML = PRODUCTOS_BARBER.map((p, i) => {
+    const localProds = PRODUCTOS_BARBER.filter(p => !p.isML);
+    const mlProds    = PRODUCTOS_BARBER.filter(p =>  p.isML);
+
+    const itemHtml = (p, i) => {
         const stock = (productoStock[p.id]?.stock) || 0;
         const sinStock = stock === 0;
-        const stockBadge = sinStock
-            ? `<span class="text-[10px] text-red-400 font-bold ml-1">Sin stock</span>`
-            : `<span class="text-[10px] text-gray-500 ml-1">${stock} unid.</span>`;
-        const precioLabel = p.precio > 0 ? `$${p.precio.toLocaleString('es-AR')}` : (p.isML ? '🛒' : '—');
-        return `<div onclick="${sinStock ? '' : `window.selectProductoVenta(${i},this)`}" class="prod-btn p-3 ${sinStock ? 'bg-gray-900/50 opacity-50 cursor-not-allowed' : 'bg-gray-800/50 cursor-pointer hover:bg-gray-800'} border border-gray-700 rounded-xl flex justify-between items-center transition">
-            <div><span class="text-sm font-medium text-gray-300">${p.name}</span>${stockBadge}</div>
-            <span class="text-sm font-bold text-white bg-black/30 px-2 py-1 rounded-md">${precioLabel}</span>
+        const stockColor = sinStock ? 'text-red-400' : stock <= 3 ? 'text-yellow-400' : 'text-gray-500';
+        return `<div onclick="${sinStock ? '' : `window.selectProductoVenta(${i},this)`}"
+            class="prod-btn p-2.5 ${sinStock ? 'bg-gray-900/40 opacity-50 cursor-not-allowed' : 'bg-gray-800/50 cursor-pointer hover:bg-gray-700/60 active:scale-95'} border border-gray-700/60 rounded-xl flex flex-col gap-1 transition">
+            <span class="text-xs font-semibold text-gray-200 leading-tight">${p.name}</span>
+            <div class="flex justify-between items-center">
+                <span class="${stockColor} text-[10px] font-bold">${sinStock ? 'Sin stock' : stock + ' u.'}</span>
+                ${p.precio > 0 ? `<span class="text-[10px] font-bold text-white/60">$${(p.precio/1000).toFixed(0)}k</span>` : ''}
+            </div>
         </div>`;
-    }).join('');
+    };
+
+    const header = (label) =>
+        `<div class="col-span-2 text-[10px] font-bold text-gray-600 uppercase tracking-wider pt-1">${label}</div>`;
+
+    document.getElementById('productos-grid').innerHTML =
+        header('🏪 Local') +
+        localProds.map((p) => itemHtml(p, PRODUCTOS_BARBER.indexOf(p))).join('') +
+        header('🛒 MercadoLibre') +
+        mlProds.map((p) => itemHtml(p, PRODUCTOS_BARBER.indexOf(p))).join('');
 }
 
 window.openVentaModal = () => {
