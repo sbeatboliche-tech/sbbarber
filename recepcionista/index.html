@@ -1699,7 +1699,6 @@ window.setVentaCanal = (canal) => {
     document.getElementById('venta-canal-local').className = `p-3 rounded-xl font-bold text-sm transition ${!esML ? 'bg-indigo-600/20 border border-indigo-500 text-indigo-300' : 'bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500'}`;
     document.getElementById('venta-canal-ml').className = `p-3 rounded-xl font-bold text-sm transition ${esML ? 'bg-yellow-600/20 border border-yellow-500 text-yellow-300' : 'bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500'}`;
     document.getElementById('venta-metodo-wrap').classList.toggle('hidden', esML);
-    renderProductosGrid(canal);
 };
 
 window.setVentaMetodo = (m) => {
@@ -1722,18 +1721,15 @@ window.deleteVenta = async (id) => {
     try { await updateDoc(doc(db, PATH_VENTAS, id), { eliminado: true }); } catch { alert('Error'); }
 };
 
-function renderProductosGrid(canal) {
-    const esML = canal === 'ml';
-    const filtrados = PRODUCTOS_BARBER.filter(p => esML ? p.isML : !p.isML);
-    document.getElementById('productos-grid').innerHTML = filtrados.map((p, i) => {
+function renderProductosGrid() {
+    document.getElementById('productos-grid').innerHTML = PRODUCTOS_BARBER.map((p, i) => {
         const stock = (productoStock[p.id]?.stock) || 0;
         const sinStock = stock === 0;
         const stockBadge = sinStock
             ? `<span class="text-[10px] text-red-400 font-bold ml-1">Sin stock</span>`
             : `<span class="text-[10px] text-gray-500 ml-1">${stock} unid.</span>`;
-        const globalIdx = PRODUCTOS_BARBER.indexOf(p);
-        const precioLabel = p.precio > 0 ? `$${p.precio.toLocaleString('es-AR')}` : '—';
-        return `<div onclick="${sinStock ? '' : `window.selectProductoVenta(${globalIdx},this)`}" class="prod-btn p-3 ${sinStock ? 'bg-gray-900/50 opacity-50 cursor-not-allowed' : 'bg-gray-800/50 cursor-pointer hover:bg-gray-800'} border border-gray-700 rounded-xl flex justify-between items-center transition">
+        const precioLabel = p.precio > 0 ? `$${p.precio.toLocaleString('es-AR')}` : (p.isML ? '🛒' : '—');
+        return `<div onclick="${sinStock ? '' : `window.selectProductoVenta(${i},this)`}" class="prod-btn p-3 ${sinStock ? 'bg-gray-900/50 opacity-50 cursor-not-allowed' : 'bg-gray-800/50 cursor-pointer hover:bg-gray-800'} border border-gray-700 rounded-xl flex justify-between items-center transition">
             <div><span class="text-sm font-medium text-gray-300">${p.name}</span>${stockBadge}</div>
             <span class="text-sm font-bold text-white bg-black/30 px-2 py-1 rounded-md">${precioLabel}</span>
         </div>`;
@@ -1745,6 +1741,7 @@ window.openVentaModal = () => {
     document.getElementById('venta-cantidad-display').textContent = '1';
     window.setVentaCanal('local');
     window.setVentaMetodo('efectivo');
+    renderProductosGrid();
     showModal('ventas-modal');
 };
 
