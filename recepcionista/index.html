@@ -261,6 +261,19 @@
                     </div>
                 </div>
 
+                <!-- Stock MercadoLibre -->
+                <div class="glass-card rounded-2xl p-5 animate-enter">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2"><span class="text-base">🛒</span> Stock MercadoLibre</h3>
+                            <p class="text-[10px] text-gray-500 mt-0.5">No afecta facturación del local</p>
+                        </div>
+                    </div>
+                    <div id="ml-stock-list" class="space-y-1">
+                        <p class="text-xs text-gray-600 text-center py-4">Cargando...</p>
+                    </div>
+                </div>
+
                 <!-- Historial de ventas por día -->
                 <div class="glass-card rounded-2xl p-5 animate-enter">
                     <div class="flex justify-between items-center mb-4">
@@ -850,6 +863,26 @@
         </div>
     </div>
 
+    <!-- Modal ML: venta o restock -->
+    <div id="ml-movement-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
+        <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl">
+            <div class="flex justify-between items-center mb-1">
+                <h2 id="ml-modal-title" class="text-xl font-bold text-white">ML</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <p id="ml-modal-product" class="text-xs text-gray-500 mb-5"></p>
+            <div class="flex items-center justify-between bg-black/30 rounded-xl px-4 py-3 mb-5">
+                <span class="text-sm text-gray-300 font-medium">Cantidad</span>
+                <div class="flex items-center gap-3">
+                    <button onclick="window.mlChangeCant(-1)" class="w-9 h-9 rounded-full bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 transition text-lg">−</button>
+                    <span id="ml-cant-display" class="text-xl font-bold text-white w-8 text-center">1</span>
+                    <button onclick="window.mlChangeCant(1)" class="w-9 h-9 rounded-full bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 transition text-lg">+</button>
+                </div>
+            </div>
+            <button id="btn-ml-confirm" onclick="window.confirmMLMovement()" class="w-full text-white p-4 rounded-xl font-bold text-base shadow-lg uppercase tracking-widest">Confirmar</button>
+        </div>
+    </div>
+
     <!-- Venta de producto de barber -->
     <div id="ventas-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
         <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl">
@@ -955,6 +988,26 @@ let newItemPhoto = null, editItemPhoto = null, editItemId = null;
 let isAdmin = false;
 let activeTab = 'cortes';
 let selectedProducto = null, cantVenta = 1;
+
+const PATH_ML = 'productos_ml';
+const PRODUCTOS_ML = [
+    { id: 'ml-papel-cuello',         name: 'Papel cuello 5 capas Everest', stock: 3 },
+    { id: 'ml-aftershave-celeste',   name: 'Aftershave celeste',           stock: 6 },
+    { id: 'ml-aftershave-verde',     name: 'Aftershave verde',             stock: 6 },
+    { id: 'ml-aftershave-violeta',   name: 'Aftershave violeta',           stock: 2 },
+    { id: 'ml-peine-largo',          name: 'Peine largo',                  stock: 7 },
+    { id: 'ml-cepillito-colores',    name: 'Cepillito varios colores',     stock: 12 },
+    { id: 'ml-alfombra-everest',     name: 'Alfombra Everest',             stock: 2 },
+    { id: 'ml-tijera-entresacar',    name: 'Tijera entresacar Everest',    stock: 4 },
+    { id: 'ml-portanavaja',          name: 'Portanavaja',                  stock: 3 },
+    { id: 'ml-quitapelo',            name: 'Quitapelo',                    stock: 6 },
+    { id: 'ml-cepillito-violeta',    name: 'Cepillito violeta',            stock: 10 },
+    { id: 'ml-cepillo-naranja',      name: 'Cepillo naranja',              stock: 10 },
+    { id: 'ml-clipper-spray',        name: 'Clipper spray',                stock: 4 },
+    { id: 'ml-polvo-black-80g',      name: 'Polvo texturizador Black 80g', stock: 2 },
+];
+let mlStock = {};
+let mlCurrentMovement = null, mlCant = 1;
 let turnosSelectedDay = 0, turnoModalSelectedDay = 0, turnoModalSelectedBarber = '', turnosBarberFilter = 'todos';
 let turnosCustomDate = null, turnoModalCustomDate = null;
 let gastosCatSelected = 'otro';
@@ -984,6 +1037,7 @@ async function init() {
             listenToRetiros();
             listenToTurnos();
             listenToGastos();
+            listenToMLProductos();
         } else {
             if (localStorage.getItem('rec-gate') === '1') {
                 // Gate ya pasado — entrar anónimamente sin pedir contraseña
@@ -2950,8 +3004,87 @@ document.getElementById('nuevo-turno-form').addEventListener('submit', async e =
     btn.disabled = false; btn.textContent = 'Guardar turno';
 });
 
+// ---- STOCK MERCADOLIBRE ----
+async function listenToMLProductos() {
+    // Inicializar docs que no existan con el stock inicial
+    await Promise.all(PRODUCTOS_ML.map(async p => {
+        const ref = doc(db, PATH_ML, p.id);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) await setDoc(ref, { name: p.name, stock: p.stock });
+    }));
+    onSnapshot(collection(db, PATH_ML), snap => {
+        mlStock = {};
+        snap.docs.forEach(d => { mlStock[d.id] = d.data(); });
+        renderMLStock();
+    });
+}
+
+function renderMLStock() {
+    const list = document.getElementById('ml-stock-list');
+    if (!list) return;
+    list.innerHTML = PRODUCTOS_ML.map(p => {
+        const qty = mlStock[p.id]?.stock ?? 0;
+        const qtyColor = qty === 0 ? 'text-red-400' : qty <= 2 ? 'text-yellow-400' : 'text-white';
+        const sinStock = qty === 0;
+        return `<div class="flex items-center gap-2 py-2.5 border-b border-white/5 last:border-0">
+            <span class="text-xs text-gray-300 flex-1 min-w-0 leading-tight">${p.name}</span>
+            <span class="${qtyColor} font-bold text-sm w-7 text-center flex-shrink-0">${qty}</span>
+            <button onclick="window.openMLMovement('${p.id}','${p.name.replace(/'/g,"\\'")}','venta')"
+                class="w-8 h-8 rounded-lg ${sinStock ? 'bg-gray-800 border-gray-700 text-gray-600 cursor-not-allowed' : 'bg-yellow-600/20 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-600/40'} flex items-center justify-center text-sm font-bold transition flex-shrink-0"
+                ${sinStock ? 'disabled' : ''}>−</button>
+            <button onclick="window.openMLMovement('${p.id}','${p.name.replace(/'/g,"\\'")}','restock')"
+                class="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 hover:bg-emerald-600/40 text-sm font-bold transition flex-shrink-0">+</button>
+        </div>`;
+    }).join('');
+}
+
+window.openMLMovement = (id, name, type) => {
+    mlCurrentMovement = { id, name, type };
+    mlCant = 1;
+    document.getElementById('ml-cant-display').textContent = '1';
+    const esVenta = type === 'venta';
+    document.getElementById('ml-modal-title').textContent = esVenta ? '🛒 Venta ML' : '📦 Restock ML';
+    document.getElementById('ml-modal-product').textContent = name;
+    const btn = document.getElementById('btn-ml-confirm');
+    btn.className = `w-full text-white p-4 rounded-xl font-bold text-base shadow-lg uppercase tracking-widest bg-gradient-to-r ${esVenta ? 'from-yellow-600 to-orange-600' : 'from-emerald-600 to-teal-600'}`;
+    btn.textContent = esVenta ? 'Registrar venta' : 'Agregar stock';
+    showModal('ml-movement-modal');
+};
+
+window.mlChangeCant = (delta) => {
+    mlCant = Math.max(1, mlCant + delta);
+    document.getElementById('ml-cant-display').textContent = mlCant;
+};
+
+window.confirmMLMovement = async () => {
+    if (!mlCurrentMovement) return;
+    const { id, name, type } = mlCurrentMovement;
+    const esVenta = type === 'venta';
+    if (esVenta) {
+        const stockActual = mlStock[id]?.stock ?? 0;
+        if (mlCant > stockActual) return alert(`Stock insuficiente. Disponible: ${stockActual}`);
+    }
+    const btn = document.getElementById('btn-ml-confirm');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        await setDoc(doc(db, PATH_ML, id), { stock: increment(esVenta ? -mlCant : mlCant) }, { merge: true });
+        if (esVenta) {
+            const hoy = new Date().toLocaleDateString('en-CA');
+            await addDoc(collection(db, PATH_VENTAS), {
+                producto: name, precio: 0, cantidad: mlCant, total: 0,
+                tipo: 'producto', canal: 'ml',
+                barbero: 'Recepción',
+                userEmail: currentUser?.email || null,
+                fecha: hoy, creadoEn: serverTimestamp()
+            });
+        }
+        closeModals();
+    } catch(err) { console.error(err); alert('Error al guardar'); }
+    btn.disabled = false;
+};
+
 // ---- MODALES ----
-const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal', 'nuevo-gasto-modal'];
+const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal', 'nuevo-gasto-modal', 'ml-movement-modal'];
 function showModal(id) {
     document.getElementById(id).classList.remove('hidden');
     document.getElementById(id).classList.add('flex', 'flex-col');
