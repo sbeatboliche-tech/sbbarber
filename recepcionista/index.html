@@ -1190,11 +1190,12 @@ window.setMetodoPago = (tipo, el) => {
 };
 
 function renderBarberGrid() {
+    const prevSelected = document.querySelector('input[name="barber"]:checked')?.value;
     document.getElementById('barber-grid').innerHTML = BARBERS.map(b => {
         const t = BARBER_THEME[b];
         return `
         <label class="cursor-pointer select-none">
-            <input type="radio" name="barber" value="${b}" class="peer sr-only" onchange="window.renderServices('${b}')">
+            <input type="radio" name="barber" value="${b}" class="peer sr-only" ${b === prevSelected ? 'checked' : ''} onchange="window.renderServices('${b}')">
             <div class="flex flex-col items-center gap-2 p-4 rounded-2xl border-2 border-transparent
                 peer-checked:border-${t.color}-500 peer-checked:bg-${t.color}-500/10
                 bg-white/5 hover:bg-white/8 transition-all duration-200 active:scale-95">
