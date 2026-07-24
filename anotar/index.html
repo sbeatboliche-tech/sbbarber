@@ -137,6 +137,11 @@
         <!-- FAB: Nuevo corte -->
         <button id="add-cut-fab" onclick="window.openAddModal()" class="hidden absolute bottom-6 right-6 w-16 h-16 bg-gradient-to-tr from-blue-600 to-cyan-500 rounded-full shadow-[0_0_25px_rgba(59,130,246,0.6)] items-center justify-center text-2xl text-white transition-all active:scale-90 hover:scale-105 z-30 border-2 border-white/10"><i class="fas fa-plus"></i></button>
 
+        <!-- FAB: Stock Productos (solo admin) -->
+        <button id="stock-fab" onclick="window.openStockProductos()" class="hidden absolute bottom-44 left-6 w-14 h-14 bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-full shadow-[0_0_20px_rgba(99,102,241,0.4)] items-center justify-center text-lg text-white transition-all active:scale-90 hover:scale-105 z-30 border-2 border-white/10">
+            <i class="fas fa-box"></i>
+        </button>
+
         <!-- FAB: Gastos (solo admin) -->
         <button id="gastos-fab" onclick="window.openGastosView()" class="hidden absolute bottom-6 left-6 w-16 h-16 bg-gradient-to-tr from-orange-600 to-red-500 rounded-full shadow-[0_0_25px_rgba(234,88,12,0.5)] flex items-center justify-center text-xl text-white transition-all active:scale-90 hover:scale-105 z-30 border-2 border-white/10">
             <i class="fas fa-file-invoice-dollar"></i>
@@ -251,6 +256,38 @@
         </div>
     </div><!-- /gastos-view -->
 
+    <!-- ============================================================
+         PANTALLA DE STOCK PRODUCTOS (solo admin)
+    ============================================================ -->
+    <div id="stock-productos-view" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden slide-in">
+        <header class="px-5 py-4 glass flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <button onclick="window.closeStockProductos()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition">
+                    <i class="fas fa-arrow-left text-sm"></i>
+                </button>
+                <div>
+                    <h1 class="text-sm font-bold text-white leading-none">STOCK DE PRODUCTOS</h1>
+                    <span class="text-[10px] text-indigo-400 font-medium">Inventario y movimientos</span>
+                </div>
+            </div>
+        </header>
+        <div class="flex-1 overflow-y-auto p-4 pb-10">
+            <div id="stock-productos-list" class="space-y-2"></div>
+        </div>
+    </div><!-- /stock-productos-view -->
+
+    <!-- Modal: cantidad movimiento producto (anotar) -->
+    <div id="stock-mov-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
+        <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl flex flex-col rounded-t-3xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="spm-title" class="text-xl font-bold text-white">Entrada de stock</h2>
+                <button onclick="window.closeStockMovModal()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <p id="spm-product" class="text-sm text-gray-400 mb-5"></p>
+            <input type="number" id="spm-qty" placeholder="Cantidad" min="1" class="w-full px-4 py-4 bg-black/40 rounded-xl border border-gray-700 focus:border-indigo-500 outline-none transition text-white placeholder-gray-500 text-lg mb-5">
+            <button onclick="window.submitStockMov()" id="btn-submit-spm" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest">Confirmar</button>
+        </div>
+    </div>
 
     <!-- ============================================================
          PANTALLA DE RETIROS Y PROPINAS
@@ -415,15 +452,30 @@
         </div>
     </div>
 
-    <!-- Comisiones -->
+    <!-- Ajustes admin: Comisiones + Crear Barbero -->
     <div id="admin-settings-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
         <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl flex flex-col rounded-t-3xl">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-white"><i class="fas fa-cog text-blue-400 mr-2"></i>Comisiones</h2>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-white"><i class="fas fa-cog text-blue-400 mr-2"></i>Ajustes</h2>
                 <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
             </div>
-            <div id="admin-settings-list" class="space-y-3 mb-6"></div>
-            <button onclick="window.saveCommissions()" id="btn-save-commissions" class="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest no-select">Guardar Cambios</button>
+            <div class="flex gap-2 mb-5 bg-black/30 p-1 rounded-xl">
+                <button id="tab-comisiones-btn" onclick="window.switchAdminTab('comisiones')" class="flex-1 py-2 rounded-lg text-xs font-bold bg-blue-600 text-white transition">Comisiones</button>
+                <button id="tab-crear-btn" onclick="window.switchAdminTab('crear')" class="flex-1 py-2 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition">Crear Barbero</button>
+            </div>
+            <!-- Tab Comisiones -->
+            <div id="admin-tab-comisiones">
+                <div id="admin-settings-list" class="space-y-3 mb-6"></div>
+                <button onclick="window.saveCommissions()" id="btn-save-commissions" class="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest no-select">Guardar Cambios</button>
+            </div>
+            <!-- Tab Crear Barbero -->
+            <div id="admin-tab-crear" class="hidden space-y-3">
+                <input type="text" id="nb-name" placeholder="Nombre del barbero" class="w-full px-4 py-3 bg-white/5 rounded-xl border border-white/10 focus:border-blue-500/60 outline-none transition text-white placeholder-gray-500 text-sm">
+                <input type="email" id="nb-email" placeholder="Email" class="w-full px-4 py-3 bg-white/5 rounded-xl border border-white/10 focus:border-blue-500/60 outline-none transition text-white placeholder-gray-500 text-sm">
+                <input type="password" id="nb-password" placeholder="Contraseña" class="w-full px-4 py-3 bg-white/5 rounded-xl border border-white/10 focus:border-blue-500/60 outline-none transition text-white placeholder-gray-500 text-sm">
+                <div id="nb-status" class="hidden text-xs text-center px-3 py-2 rounded-lg"></div>
+                <button onclick="window.crearBarbero()" id="btn-crear-barbero" class="w-full bg-gradient-to-r from-emerald-600 to-green-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest no-select mt-1">Crear Barbero</button>
+            </div>
         </div>
     </div>
 
@@ -745,12 +797,20 @@ const FIXED_CATEGORIES = [
 ];
 
 const ADMINS = ['abalo7272@gmail.com','carusomanu21@gmail.com'];
-const BARBER_EMAIL_MAP = { 'gomezmaximilianorodrigo@gmail.com':'Maxi', 'ap1773508@gmail.com':'Tony', 'stefanoacostasla@gmail.com':'Stefa' };
-const BARBER_THEME = {
+let BARBER_EMAIL_MAP = { 'gomezmaximilianorodrigo@gmail.com':'Maxi', 'ap1773508@gmail.com':'Tony', 'stefanoacostasla@gmail.com':'Stefa' };
+let BARBER_THEME = {
     Tony:  { color:'blue',   text:'text-blue-400',   border:'border-blue-500',   bg:'bg-blue-500',   initial:'T' },
     Maxi:  { color:'emerald',text:'text-emerald-400', border:'border-emerald-500', bg:'bg-emerald-500', initial:'M' },
     Stefa: { color:'purple', text:'text-purple-400', border:'border-purple-500', bg:'bg-purple-500', initial:'S' }
 };
+const BARBER_EXTRA_THEMES = [
+    { color:'orange', text:'text-orange-400', border:'border-orange-500', bg:'bg-orange-500' },
+    { color:'pink',   text:'text-pink-400',   border:'border-pink-500',   bg:'bg-pink-500'   },
+    { color:'red',    text:'text-red-400',    border:'border-red-500',    bg:'bg-red-500'    },
+    { color:'indigo', text:'text-indigo-400', border:'border-indigo-500', bg:'bg-indigo-500' },
+    { color:'yellow', text:'text-yellow-400', border:'border-yellow-500', bg:'bg-yellow-500' },
+];
+let extraThemeIdx = 0;
 
 const PATH_MAIN     = `artifacts/${firebaseConfig.projectId}/public/data/all_cuts`;
 const PATH_LEGACY   = `barbershop`;
@@ -762,7 +822,7 @@ const PATH_RETIROS  = `retiros`;
 const PATH_PROPINAS = `propinas`;
 const PATH_VENTAS   = `ventas_productos`;
 const PATH_TURNOS   = `turnos`;
-const BARBERS_LIST  = ['Tony', 'Maxi', 'Stefa'];
+let BARBERS_LIST  = ['Tony', 'Maxi', 'Stefa'];
 const RETIRO_LIMITE = 10000;
 const PRODUCTOS_BARBER = [
     { name:'Pomada Mate',              precio:11000 },
@@ -806,8 +866,12 @@ async function init() {
             listenToBarberProfiles();
             listenToSettings();
             checkUpdatesBadge();
+            listenToBarberos();
             if(ADMINS.includes(user.email)){
                 document.getElementById('admin-settings-btn').classList.remove('hidden');
+                document.getElementById('stock-fab').classList.remove('hidden');
+                document.getElementById('stock-fab').classList.add('flex');
+                listenToStockProductos();
                 document.getElementById('add-cut-fab').classList.remove('hidden');
                 document.getElementById('add-cut-fab').classList.add('flex');
                 document.getElementById('gastos-fab').classList.remove('hidden');
@@ -1332,25 +1396,85 @@ function listenToSettings() {
     });
 }
 window.openAdminSettingsModal = () => {
-    document.getElementById('admin-settings-list').innerHTML=['Tony','Maxi','Stefa'].map(b=>`
-        <div class="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-gray-700">
-            <span class="font-bold text-sm ${BARBER_THEME[b].text}">${b}</span>
+    window.switchAdminTab('comisiones');
+    document.getElementById('admin-settings-list').innerHTML = BARBERS_LIST.map(b => {
+        const t = BARBER_THEME[b] || { text:'text-gray-300' };
+        return `<div class="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-gray-700">
+            <span class="font-bold text-sm ${t.text}">${b}</span>
             <div class="flex items-center gap-2">
                 <input type="number" id="comm-${b}" value="${(barberCommissions[b]||0.5)*100}" min="0" max="100" class="w-16 p-2 bg-gray-900 rounded-lg border border-gray-600 text-white text-center focus:border-blue-500 outline-none">
                 <span class="text-gray-400 font-bold">%</span>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
     showModal('admin-settings-modal');
 };
 window.saveCommissions = async () => {
     const btn=document.getElementById('btn-save-commissions');
     btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
     const data={};
-    ['Tony','Maxi','Stefa'].forEach(b=>data[b]=Number(document.getElementById(`comm-${b}`).value));
+    BARBERS_LIST.forEach(b => {
+        const inp = document.getElementById(`comm-${b}`);
+        if (inp) data[b] = Number(inp.value);
+    });
     try{ await setDoc(doc(db,PATH_SETTINGS,'commissions'),data,{merge:true}); window.closeModals(); }
     catch{ alert('Error al guardar'); }
     btn.disabled=false; btn.innerHTML='GUARDAR CAMBIOS';
 };
+window.switchAdminTab = (tab) => {
+    const isCom = tab === 'comisiones';
+    document.getElementById('admin-tab-comisiones').classList.toggle('hidden', !isCom);
+    document.getElementById('admin-tab-crear').classList.toggle('hidden', isCom);
+    document.getElementById('tab-comisiones-btn').className = `flex-1 py-2 rounded-lg text-xs font-bold transition ${isCom ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`;
+    document.getElementById('tab-crear-btn').className = `flex-1 py-2 rounded-lg text-xs font-bold transition ${!isCom ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white'}`;
+};
+window.crearBarbero = async () => {
+    const name  = document.getElementById('nb-name').value.trim();
+    const email = document.getElementById('nb-email').value.trim();
+    const pass  = document.getElementById('nb-password').value;
+    const status = document.getElementById('nb-status');
+    const btn   = document.getElementById('btn-crear-barbero');
+    if (!name || !email || !pass) { showStatus('Completá todos los campos', false); return; }
+    function showStatus(msg, ok) {
+        status.textContent = msg;
+        status.className = `text-xs text-center px-3 py-2 rounded-lg ${ok ? 'bg-emerald-900/50 text-emerald-300' : 'bg-red-900/50 text-red-300'}`;
+        status.classList.remove('hidden');
+    }
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creando...';
+    try {
+        const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password: pass, returnSecureToken: false })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Error al crear cuenta');
+        await setDoc(doc(db, 'barberos', data.localId), { name, email, uid: data.localId, creadoEn: serverTimestamp() });
+        showStatus(`✓ Barbero "${name}" creado exitosamente`, true);
+        document.getElementById('nb-name').value = '';
+        document.getElementById('nb-email').value = '';
+        document.getElementById('nb-password').value = '';
+    } catch(e) {
+        showStatus(e.message, false);
+    }
+    btn.disabled = false; btn.innerHTML = 'Crear Barbero';
+};
+function listenToBarberos() {
+    onSnapshot(collection(db, 'barberos'), snap => {
+        snap.docs.forEach(d => {
+            const { name, email } = d.data();
+            if (!name) return;
+            if (!BARBERS_LIST.includes(name)) {
+                BARBERS_LIST.push(name);
+                if (!BARBER_THEME[name]) {
+                    const t = BARBER_EXTRA_THEMES[extraThemeIdx++ % BARBER_EXTRA_THEMES.length];
+                    BARBER_THEME[name] = { ...t, initial: name.charAt(0).toUpperCase() };
+                }
+                if (email) BARBER_EMAIL_MAP[email] = name;
+            }
+        });
+    });
+}
 
 // ---- GASTOS VARIABLES ----
 function listenToExpenses() {
@@ -1744,7 +1868,7 @@ window.openAddModal = () => {
     renderBarberSelection();
 };
 
-const ALL_MODALS=['settings-modal','add-modal','expense-modal','date-search-modal','admin-settings-modal','updates-modal','fixed-expenses-modal','stock-item-modal','retiro-modal','propina-modal','ventas-modal','retiro-manual-modal','retiro-nota-modal','nuevo-turno-modal'];
+const ALL_MODALS=['settings-modal','add-modal','expense-modal','date-search-modal','admin-settings-modal','updates-modal','fixed-expenses-modal','stock-item-modal','retiro-modal','propina-modal','ventas-modal','retiro-manual-modal','retiro-nota-modal','nuevo-turno-modal','stock-mov-modal'];
 
 window.deleteRetiro = async (id) => {
     if (!confirm('¿Eliminar este retiro?')) return;
@@ -1824,6 +1948,96 @@ document.getElementById('date-search-form').addEventListener('submit', e=>{
     window.closeModals(); render();
 });
 document.querySelector('button[onclick="window.setPeriod(\'historial\',this)"]').addEventListener('click', ()=>showModal('date-search-modal'));
+
+// ---- STOCK DE PRODUCTOS ----
+const PATH_PRODUCTOS = 'productos_barber';
+let stockProductosData = {};
+let stockProductosLoaded = false;
+let currentStockMov = null;
+
+function listenToStockProductos() {
+    onSnapshot(collection(db, PATH_PRODUCTOS), snap => {
+        stockProductosData = {};
+        snap.docs.forEach(d => { stockProductosData[d.id] = { id: d.id, ...d.data() }; });
+        stockProductosLoaded = true;
+        if (!document.getElementById('stock-productos-view').classList.contains('hidden')) {
+            renderStockProductos();
+        }
+    });
+}
+
+function renderStockProductos() {
+    const list = document.getElementById('stock-productos-list');
+    const prods = Object.values(stockProductosData).sort((a, b) => (a.position ?? 999) - (b.position ?? 999));
+    if (prods.length === 0) {
+        list.innerHTML = '<p class="text-xs text-gray-500 text-center py-8">Sin productos en stock</p>';
+        return;
+    }
+    const local = prods.filter(p => !p.isML);
+    const ml    = prods.filter(p =>  p.isML);
+    const row = (p) => {
+        const qty = p.stock || 0;
+        const qtyColor = qty === 0 ? 'text-red-400' : qty <= 3 ? 'text-yellow-400' : 'text-indigo-300';
+        return `<div class="flex items-center gap-3 bg-black/30 p-3 rounded-xl border ${qty===0?'border-red-500/30':qty<=3?'border-yellow-500/20':'border-white/5'}">
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-bold text-white truncate">${p.name||p.id}</div>
+                ${p.precio>0 ? `<div class="text-[10px] text-gray-500">$${p.precio.toLocaleString('es-AR')}</div>` : ''}
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <div class="text-center w-9">
+                    <div class="${qtyColor} font-bold text-xl leading-none">${qty}</div>
+                    <div class="text-[9px] text-gray-600">u.</div>
+                </div>
+                <button onclick="window.openStockMov('${p.id}','${(p.name||p.id).replace(/'/g,"\\'")}','entrada')" class="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 hover:bg-emerald-600/40 transition">
+                    <i class="fas fa-plus text-xs"></i>
+                </button>
+                <button onclick="window.openStockMov('${p.id}','${(p.name||p.id).replace(/'/g,"\\'")}','salida')" class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 hover:bg-red-600/40 transition" ${qty===0?'disabled':''}>
+                    <i class="fas fa-minus text-xs"></i>
+                </button>
+            </div>
+        </div>`;
+    };
+    const sectionHeader = (label) => `<div class="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1 mb-2 mt-3">${label}</div>`;
+    list.innerHTML =
+        (local.length ? sectionHeader('🏪 Local') + local.map(row).join('') : '') +
+        (ml.length ? sectionHeader('🛒 MercadoLibre') + ml.map(row).join('') : '');
+}
+
+window.openStockProductos = () => {
+    const v = document.getElementById('stock-productos-view');
+    v.classList.remove('hidden'); v.classList.add('flex');
+    if (stockProductosLoaded) renderStockProductos();
+};
+window.closeStockProductos = () => {
+    const v = document.getElementById('stock-productos-view');
+    v.classList.add('hidden'); v.classList.remove('flex');
+};
+window.openStockMov = (id, name, tipo) => {
+    currentStockMov = { id, name, tipo };
+    const isEntrada = tipo === 'entrada';
+    document.getElementById('spm-title').textContent = isEntrada ? `Entrada — ${name}` : `Salida — ${name}`;
+    document.getElementById('spm-product').textContent = isEntrada ? 'Unidades que ingresaron al stock' : 'Unidades que salen del stock';
+    document.getElementById('spm-qty').value = '';
+    document.getElementById('btn-submit-spm').className = `w-full text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest bg-gradient-to-r ${isEntrada ? 'from-emerald-600 to-teal-600' : 'from-red-600 to-rose-600'}`;
+    document.getElementById('stock-mov-modal').classList.remove('hidden');
+    document.getElementById('stock-mov-modal').classList.add('flex');
+};
+window.closeStockMovModal = () => {
+    document.getElementById('stock-mov-modal').classList.add('hidden');
+    document.getElementById('stock-mov-modal').classList.remove('flex');
+};
+window.submitStockMov = async () => {
+    const qty = Number(document.getElementById('spm-qty').value);
+    if (!qty || qty < 1) return alert('Ingresá una cantidad válida');
+    const btn = document.getElementById('btn-submit-spm');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        const delta = currentStockMov.tipo === 'entrada' ? qty : -qty;
+        await updateDoc(doc(db, PATH_PRODUCTOS, currentStockMov.id), { stock: increment(delta) });
+        window.closeStockMovModal();
+    } catch(e) { alert('Error al guardar'); }
+    btn.disabled = false; btn.innerHTML = 'Confirmar';
+};
 
 // ---- VENTAS DE PRODUCTOS ----
 function listenToVentas() {
