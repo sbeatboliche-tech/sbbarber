@@ -131,6 +131,9 @@
                     <span class="hidden sm:inline">CIERRE DE CAJA</span>
                     <span class="sm:hidden">CIERRE</span>
                 </button>
+                <button id="btn-settings" onclick="window.openSettingsPanel()" class="hidden w-9 h-9 rounded-full bg-white/5 items-center justify-center text-gray-400 hover:text-white transition">
+                    <i class="fas fa-cog text-xs"></i>
+                </button>
                 <button onclick="window.logout()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-red-400 transition">
                     <i class="fas fa-power-off text-xs"></i>
                 </button>
@@ -461,6 +464,45 @@
             </div>
         </div>
     </div><!-- /gastos-panel -->
+
+    <!-- ============================================================
+         PANEL CONFIGURACIÓN (solo admins)
+    ============================================================ -->
+    <div id="settings-panel" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+        <header class="px-5 py-4 glass flex items-center gap-4 flex-shrink-0">
+            <button onclick="window.closeSettingsPanel()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition">
+                <i class="fas fa-arrow-left text-sm"></i>
+            </button>
+            <div>
+                <h1 class="text-sm font-bold text-white leading-none">CONFIGURACIÓN</h1>
+                <span class="text-[10px] text-gray-500 font-medium">Solo administradores</span>
+            </div>
+        </header>
+        <div class="flex-1 overflow-y-auto p-4 pb-10 space-y-5">
+            <!-- Barberos -->
+            <div class="glass-card rounded-2xl p-5">
+                <h3 class="text-sm font-bold text-white mb-1">✂️ Barberos</h3>
+                <p class="text-[10px] text-gray-500 mb-4">Gestión de cuentas de barberos</p>
+                <div id="settings-barbers-list" class="space-y-2 mb-5"></div>
+                <div class="border-t border-white/5 pt-4">
+                    <p class="text-[10px] font-bold text-gray-500 uppercase mb-3">Agregar nuevo barbero</p>
+                    <form id="new-barber-form" class="space-y-3">
+                        <input type="text" id="new-barber-name" placeholder="Nombre (ej: Carlos)" required
+                            class="w-full px-4 py-3 bg-white/5 rounded-xl border border-white/10 focus:border-cyan-500/60 outline-none transition text-white placeholder-gray-600 text-sm">
+                        <input type="email" id="new-barber-email" placeholder="Email del barbero" required
+                            class="w-full px-4 py-3 bg-white/5 rounded-xl border border-white/10 focus:border-cyan-500/60 outline-none transition text-white placeholder-gray-600 text-sm">
+                        <input type="password" id="new-barber-password" placeholder="Contraseña temporal (min. 6 caracteres)" required minlength="6"
+                            class="w-full px-4 py-3 bg-white/5 rounded-xl border border-white/10 focus:border-cyan-500/60 outline-none transition text-white placeholder-gray-600 text-sm">
+                        <button type="submit" id="btn-create-barber"
+                            class="w-full bg-gradient-to-r from-cyan-600 to-teal-600 text-white py-3 rounded-xl font-bold text-sm shadow-lg uppercase tracking-wider active:scale-[0.98] transition">
+                            Crear barbero
+                        </button>
+                    </form>
+                    <p id="new-barber-status" class="text-xs text-center mt-3 hidden"></p>
+                </div>
+            </div>
+        </div>
+    </div><!-- /settings-panel -->
 
     <!-- ===== MODALES ===== -->
 
@@ -914,7 +956,7 @@ const PATH_STOCK   = `stock_items`;
 const PATH_VENTAS    = `ventas_productos`;
 const PATH_PRODUCTOS = `productos_barber`;
 const PATH_PROFILES  = `barber_profiles`;
-const BARBER_EMAIL_MAP = { 'gomezmaximilianorodrigo@gmail.com':'Maxi', 'ap1773508@gmail.com':'Tony', 'stefanoacostasla@gmail.com':'Stefa' };
+let BARBER_EMAIL_MAP = { 'gomezmaximilianorodrigo@gmail.com':'Maxi', 'ap1773508@gmail.com':'Tony', 'stefanoacostasla@gmail.com':'Stefa' };
 let barberProfilesData = {};
 
 const SERVICES = [
@@ -928,12 +970,20 @@ const SERVICES = [
     { name:'Global',          price:60000 }
 ];
 
-const BARBERS = ['Tony', 'Maxi', 'Stefa'];
-const BARBER_THEME = {
+let BARBERS = ['Tony', 'Maxi', 'Stefa'];
+let BARBER_THEME = {
     Tony:  { color:'blue',    text:'text-blue-400',    border:'border-blue-500',    bg:'bg-blue-500',    initial:'T' },
     Maxi:  { color:'emerald', text:'text-emerald-400', border:'border-emerald-500', bg:'bg-emerald-500', initial:'M' },
     Stefa: { color:'purple',  text:'text-purple-400',  border:'border-purple-500',  bg:'bg-purple-500',  initial:'S' }
 };
+const BARBER_EXTRA_THEMES = [
+    { color:'orange', text:'text-orange-400', border:'border-orange-500', bg:'bg-orange-500' },
+    { color:'pink',   text:'text-pink-400',   border:'border-pink-500',   bg:'bg-pink-500'   },
+    { color:'red',    text:'text-red-400',    border:'border-red-500',    bg:'bg-red-500'    },
+    { color:'indigo', text:'text-indigo-400', border:'border-indigo-500', bg:'bg-indigo-500' },
+    { color:'yellow', text:'text-yellow-400', border:'border-yellow-500', bg:'bg-yellow-500' },
+];
+let extraThemeIdx = 0;
 
 const PRODUCTOS_BARBER = [
     { id:'pomada-mate',               name:'Pomada Mate',                  precio:11000 },
@@ -998,6 +1048,10 @@ async function init() {
             document.getElementById('dashboard-view').classList.remove('hidden');
             document.getElementById('login-view').classList.add('hidden');
             if (isAdmin) document.getElementById('btn-add-stock-item').classList.remove('hidden');
+            if (ADMINS.includes(user.email)) {
+                const btnS = document.getElementById('btn-settings');
+                btnS.classList.remove('hidden'); btnS.classList.add('flex');
+            }
             listenToCuts();
             listenToProfiles();
             listenToStock();
@@ -1005,6 +1059,7 @@ async function init() {
             listenToProductos();
             listenToRetiros();
             listenToTurnos();
+            listenToBarberos();
             listenToGastos();
         } else {
             if (localStorage.getItem('rec-gate') === '1') {
@@ -3038,6 +3093,83 @@ document.getElementById('nuevo-turno-form').addEventListener('submit', async e =
     btn.disabled = false; btn.textContent = 'Guardar turno';
 });
 
+
+// ---- CONFIGURACIÓN / BARBEROS ----
+window.openSettingsPanel = () => {
+    renderSettingsBarbers();
+    const p = document.getElementById('settings-panel');
+    p.classList.remove('hidden'); p.classList.add('flex');
+};
+window.closeSettingsPanel = () => {
+    const p = document.getElementById('settings-panel');
+    p.classList.add('hidden'); p.classList.remove('flex');
+};
+
+function renderSettingsBarbers() {
+    document.getElementById('settings-barbers-list').innerHTML = BARBERS.map(name => {
+        const t = BARBER_THEME[name] || { bg:'bg-gray-600', initial: name[0] };
+        const email = Object.entries(BARBER_EMAIL_MAP).find(([, v]) => v === name)?.[0] || '—';
+        return `<div class="flex items-center gap-3 bg-black/20 rounded-xl px-3 py-2.5">
+            <div class="w-8 h-8 rounded-full ${t.bg} flex items-center justify-center text-white text-xs font-bold flex-shrink-0">${t.initial}</div>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-bold text-white">${name}</div>
+                <div class="text-[10px] text-gray-500 truncate">${email}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function listenToBarberos() {
+    onSnapshot(collection(db, 'barberos'), snap => {
+        snap.docs.forEach(d => {
+            const { name, email } = d.data();
+            if (!name) return;
+            if (!BARBERS.includes(name)) {
+                BARBERS.push(name);
+                if (!BARBER_THEME[name]) {
+                    const t = BARBER_EXTRA_THEMES[extraThemeIdx++ % BARBER_EXTRA_THEMES.length];
+                    BARBER_THEME[name] = { ...t, initial: name.charAt(0).toUpperCase() };
+                }
+                if (email) BARBER_EMAIL_MAP[email] = name;
+            }
+        });
+        renderCuts();
+    });
+}
+
+document.getElementById('new-barber-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const name = document.getElementById('new-barber-name').value.trim();
+    const email = document.getElementById('new-barber-email').value.trim().toLowerCase();
+    const password = document.getElementById('new-barber-password').value;
+    const btn = document.getElementById('btn-create-barber');
+    const status = document.getElementById('new-barber-status');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+    status.className = 'text-xs text-center mt-3';
+    try {
+        const API_KEY = 'AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w';
+        const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, returnSecureToken: false })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        await setDoc(doc(db, 'barberos', data.localId), {
+            name, email, uid: data.localId, creadoEn: serverTimestamp()
+        });
+        status.textContent = `✅ ${name} creado. Ya puede iniciar sesión con ${email}`;
+        status.classList.add('text-emerald-400'); status.classList.remove('hidden');
+        document.getElementById('new-barber-form').reset();
+        renderSettingsBarbers();
+    } catch(err) {
+        console.error(err);
+        const msg = err.message === 'EMAIL_EXISTS' ? 'Ese email ya tiene una cuenta.' : (err.message || 'Error desconocido');
+        status.textContent = '❌ ' + msg;
+        status.classList.add('text-red-400'); status.classList.remove('hidden');
+    }
+    btn.disabled = false; btn.textContent = 'Crear barbero';
+});
 
 // ---- MODALES ----
 const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal', 'nuevo-gasto-modal'];
