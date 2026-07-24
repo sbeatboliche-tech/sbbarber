@@ -823,6 +823,14 @@ const PATH_PROPINAS = `propinas`;
 const PATH_VENTAS   = `ventas_productos`;
 const PATH_TURNOS   = `turnos`;
 let BARBERS_LIST  = ['Tony', 'Maxi', 'Stefa'];
+const PATH_GASTOS = 'gastos';
+const GASTOS_CATS = [
+    { id:'insumos',   label:'Insumos',   icon:'🧴' },
+    { id:'servicios', label:'Servicios', icon:'💡' },
+    { id:'alquiler',  label:'Alquiler',  icon:'🏠' },
+    { id:'personal',  label:'Personal',  icon:'👤' },
+    { id:'otros',     label:'Otros',     icon:'📦' },
+];
 const RETIRO_LIMITE = 10000;
 const PRODUCTOS_BARBER = [
     { name:'Pomada Mate',              precio:11000 },
@@ -833,7 +841,7 @@ const PRODUCTOS_BARBER = [
 ];
 
 let app, auth, db, currentUser;
-let allCuts=[], allExpenses=[], allStock=[];
+let allCuts=[], allExpenses=[], allStock=[], allGastos=[];
 let allRetiros=[], allPropinas=[], allVentas=[], allTurnos=[];
 let anotarTurnosDay=0, anotarTurnoModalDay=0, anotarTurnoModalBarber='', anotarTurnosBarber='todos';
 let anotarTurnosCustomDate=null, anotarTurnoModalCustomDate=null;
@@ -872,6 +880,7 @@ async function init() {
                 document.getElementById('stock-fab').classList.remove('hidden');
                 document.getElementById('stock-fab').classList.add('flex');
                 listenToStockProductos();
+                listenToGastos();
                 document.getElementById('add-cut-fab').classList.remove('hidden');
                 document.getElementById('add-cut-fab').classList.add('flex');
                 document.getElementById('gastos-fab').classList.remove('hidden');
@@ -1476,6 +1485,13 @@ function listenToBarberos() {
     });
 }
 
+function listenToGastos() {
+    onSnapshot(query(collection(db, PATH_GASTOS), orderBy('fecha', 'desc'), limit(300)), snap => {
+        allGastos = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        if (!document.getElementById('cierre-view').classList.contains('hidden')) renderCierreView();
+    });
+}
+
 // ---- GASTOS VARIABLES ----
 function listenToExpenses() {
     onSnapshot(query(collection(db,PATH_EXPENSES),orderBy('createdAt','desc'),limit(300)), s=>{
@@ -1787,6 +1803,42 @@ function render() {
         list.appendChild(div);
     });
     renderServiceStats(personal);
+
+    // Show ventas (products + drinks) for today/yesterday in main view for admins
+    if (isAdmin && (activePeriod === 'dia' || activePeriod === 'ayer')) {
+        const matchDate = activePeriod === 'dia'
+            ? now.toLocaleDateString('en-CA')
+            : yesterday.toLocaleDateString('en-CA');
+        const ventasFiltradas = allVentas.filter(v => !v.eliminado && v.fecha === matchDate);
+        if (ventasFiltradas.length > 0) {
+            const totalV = ventasFiltradas.reduce((s,v) => s+(v.total||0), 0);
+            let ventasRows = ventasFiltradas.map(v => {
+                const icon = v.tipo==='bebida' ? '🥤' : '💈';
+                const border = v.tipo==='bebida' ? 'border-cyan-500/40' : 'border-indigo-500/40';
+                const time = v.creadoEn ? v.creadoEn.toDate().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : v.fecha||'';
+                return `<div class="flex justify-between items-center bg-black/30 p-3 rounded-xl border-l-2 ${border}">
+                    <div class="flex items-center gap-2">
+                        <span class="text-base leading-none">${icon}</span>
+                        <div>
+                            <div class="text-xs font-bold text-white">${v.producto}${v.cantidad>1?` <span class="text-indigo-300">×${v.cantidad}</span>`:''}</div>
+                            <div class="text-[10px] text-gray-500">${v.barbero?v.barbero+' · ':''}${time}</div>
+                        </div>
+                    </div>
+                    ${(v.total||0)>0?`<span class="text-sm font-bold text-indigo-300">$${v.total.toLocaleString('es-AR')}</span>`:''}
+                </div>`;
+            }).join('');
+            const ventasDiv = document.createElement('div');
+            ventasDiv.className = 'glass-card p-5 rounded-xl no-select';
+            ventasDiv.innerHTML = `
+                <div class="flex justify-between items-center mb-3">
+                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2"><i class="fas fa-shopping-bag text-indigo-400"></i> Ventas del día</div>
+                    <button onclick="window.openVentaModal()" class="bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-indigo-600/30 transition flex items-center gap-1.5"><i class="fas fa-plus text-[9px]"></i> Vender</button>
+                </div>
+                <div class="space-y-2 mb-3">${ventasRows}</div>
+                <div class="flex justify-between items-center pt-2 border-t border-white/10"><span class="text-[10px] text-gray-500 uppercase font-bold">Total ventas</span><span class="text-sm font-extrabold text-indigo-300">$${totalV.toLocaleString('es-AR')}</span></div>`;
+            list.appendChild(ventasDiv);
+        }
+    }
 }
 function renderServiceStats(filtered) {
     const container=document.getElementById('service-stats-container'); container.innerHTML='';
@@ -2180,102 +2232,153 @@ function buildBarberRows(barberData) {
 function renderCierreDia() {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today);
+    const hoy = now.toLocaleDateString('en-CA');
     const isAdmin = ADMINS.includes(currentUser.email);
     const myName = BARBER_EMAIL_MAP[currentUser.email];
 
-    const totalBilling = cuts.reduce((s,c) => s + c.price, 0);
-    const totalComm = cuts.reduce((s,c) => s + c.price*(barberCommissions[c.barber]||0.5), 0);
-    const bizNet = totalBilling - totalComm;
+    const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today);
+    const ventasHoy = allVentas.filter(v => v.fecha === hoy && !v.eliminado);
+    const ventasProductos = ventasHoy.filter(v => v.tipo !== 'bebida');
+    const ventasBebidas   = ventasHoy.filter(v => v.tipo === 'bebida');
 
-    const barberData = {};
-    cuts.forEach(c => {
-        if (!barberData[c.barber]) barberData[c.barber] = { cuts:0, billing:0, earnings:0 };
-        barberData[c.barber].cuts++;
-        barberData[c.barber].billing += c.price;
-        barberData[c.barber].earnings += c.price*(barberCommissions[c.barber]||0.5);
-    });
+    const totalCortes    = cuts.reduce((s, c) => s + (c.price || 0), 0);
+    const efectivo       = cuts.filter(c => c.metodoPago !== 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
+    const transferencia  = cuts.filter(c => c.metodoPago === 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
+    const totalProductos = ventasProductos.reduce((s, v) => s + (v.total || 0), 0);
+    const totalBebidas   = ventasBebidas.reduce((s, v) => s + (v.total || 0), 0);
+    const totalGeneral   = totalCortes + totalProductos + totalBebidas;
+    const gastosHoy      = allGastos.filter(g => !g.eliminado && g.fecha === hoy);
+    const totalGastos    = gastosHoy.reduce((s, g) => s + (g.monto || 0), 0);
+    const netoReal       = totalGeneral - totalGastos;
+    const dateStr        = today.toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
 
-    const myCuts = isAdmin ? cuts : cuts.filter(c => myName ? c.barber===myName : c.userEmail===currentUser.email);
-    const myBilling = myCuts.reduce((s,c) => s + c.price, 0);
-    const myEarnings = myCuts.reduce((s,c) => s + c.price*(barberCommissions[c.barber]||0.5), 0);
-    const dateStr = today.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+    document.getElementById('cierre-header-sub').textContent = `${cuts.length} cortes · $${totalGeneral.toLocaleString('es-AR')}`;
 
-    const subAmt = isAdmin ? bizNet : myEarnings;
-    const subCount = isAdmin ? cuts.length : myCuts.length;
-    const subLabel = subCount === 0 ? 'Sin cortes hoy' : `$${subAmt.toLocaleString('es-AR')} · ${subCount} corte${subCount!==1?'s':''}`;
-    document.getElementById('cierre-header-sub').textContent = subLabel;
-
-    let html = `<div class="glass-card rounded-2xl p-5">
-        <div class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fas fa-calendar-day"></i> ${dateStr}</div>
-        ${isAdmin ? `
-        <div class="space-y-2">
-            <div class="flex justify-between text-sm"><span class="text-gray-400">Facturación total</span><span class="font-bold text-white">$${totalBilling.toLocaleString('es-AR')}</span></div>
-            <div class="flex justify-between text-sm"><span class="text-gray-400">Comisiones barberos</span><span class="font-bold text-red-400">− $${totalComm.toLocaleString('es-AR')}</span></div>
-            <div class="flex justify-between text-sm border-t border-white/10 pt-2"><span class="text-gray-200 font-semibold">Ganancia del negocio</span><span class="font-bold text-indigo-300 text-lg">$${bizNet.toLocaleString('es-AR')}</span></div>
-        </div>
-        <div class="mt-2 text-center text-[10px] text-gray-500">${cuts.length} cortes en total</div>` : `
-        <div class="space-y-2">
-            <div class="flex justify-between text-sm"><span class="text-gray-400">Tus cortes</span><span class="font-bold text-white">${myCuts.length}</span></div>
-            <div class="flex justify-between text-sm"><span class="text-gray-400">Facturado</span><span class="font-bold text-white">$${myBilling.toLocaleString('es-AR')}</span></div>
-            <div class="flex justify-between text-sm border-t border-white/10 pt-2"><span class="text-gray-200 font-semibold">Tu ganancia</span><span class="font-bold text-indigo-300 text-lg">$${myEarnings.toLocaleString('es-AR')}</span></div>
-        </div>`}
-    </div>`;
-
-    if (isAdmin && Object.keys(barberData).length > 0) {
-        html += `<div class="glass-card rounded-2xl p-5">
-            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fas fa-users text-indigo-400"></i> Por barbero</div>
-            <div class="space-y-3">${buildBarberRows(barberData)}</div>
-        </div>`;
-    }
-
-    const listCuts = isAdmin ? cuts : myCuts;
-    if (listCuts.length > 0) {
-        let rows = '';
-        listCuts.forEach(c => {
-            const t = BARBER_THEME[c.barber]||{border:'border-gray-600',text:'text-gray-400'};
+    if (!isAdmin) {
+        // Barbero: vista simple de sus propios cortes
+        const myCuts = cuts.filter(c => myName ? c.barber === myName : c.userEmail === currentUser.email);
+        const myBilling = myCuts.reduce((s,c) => s + c.price, 0);
+        const myEarnings = myCuts.reduce((s,c) => s + c.price*(barberCommissions[c.barber]||0.5), 0);
+        let rows = myCuts.map(c => {
+            const t = BARBER_THEME[c.barber]||{border:'border-gray-600'};
             const time = c.createdAt ? c.createdAt.toDate().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
-            rows += `<div class="flex justify-between items-center bg-black/30 p-3 rounded-xl border-l-2 ${t.border}">
-                <div>
-                    <div class="text-xs font-bold text-white">${c.service}${c.clientName?` <span class="text-blue-300 font-normal">(${c.clientName})</span>`:''}</div>
-                    <div class="text-[10px] text-gray-500">${isAdmin?c.barber+' · ':''}${time}</div>
-                </div>
+            return `<div class="flex justify-between items-center bg-black/30 p-3 rounded-xl border-l-2 ${t.border}">
+                <div><div class="text-xs font-bold text-white">${c.service}${c.clientName?` <span class="text-blue-300">(${c.clientName})</span>`:''}</div><div class="text-[10px] text-gray-500">${time}</div></div>
                 <span class="text-sm font-bold text-white">$${c.price.toLocaleString('es-AR')}</span>
             </div>`;
-        });
-        html += `<div class="glass-card rounded-2xl p-5">
-            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fas fa-list text-indigo-400"></i> Cortes del día</div>
-            <div class="space-y-2">${rows}</div>
-        </div>`;
-    } else {
-        html += `<div class="text-center py-10 text-gray-600"><i class="fas fa-moon text-3xl mb-3 block opacity-40"></i><p class="text-sm">Nada registrado hoy todavía</p></div>`;
-    }
-
-    const ventasHoy = allVentas.filter(v => !v.eliminado && v.fecha === new Date().toLocaleDateString('en-CA'));
-
-    if (isAdmin) {
-        html += renderVentasCard(ventasHoy);
-    }
-
-    if (isAdmin) {
-        const totalBebidas = ventasHoy.filter(v => v.tipo==='bebida').reduce((s,v) => s+(v.total||0), 0);
-        const totalProductos = ventasHoy.filter(v => v.tipo!=='bebida').reduce((s,v) => s+(v.total||0), 0);
-        const totalGeneral = totalBilling + totalBebidas + totalProductos;
-        if (totalGeneral > 0) {
-            html += `<div class="glass-card rounded-2xl p-5 border border-indigo-500/20 bg-indigo-500/5">
-                <div class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fas fa-cash-register"></i> Facturación total del día</div>
+        }).join('') || '<p class="text-xs text-gray-600 text-center py-4">Sin cortes hoy</p>';
+        document.getElementById('cierre-content').innerHTML = `
+            <div class="glass-card rounded-2xl p-5 mb-4">
+                <div class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3">${dateStr}</div>
                 <div class="space-y-2">
-                    <div class="flex justify-between text-sm"><span class="text-gray-400">✂️ Cortes</span><span class="font-bold text-white">$${totalBilling.toLocaleString('es-AR')}</span></div>
-                    ${totalProductos>0?`<div class="flex justify-between text-sm"><span class="text-gray-400">💈 Productos barber</span><span class="font-bold text-white">$${totalProductos.toLocaleString('es-AR')}</span></div>`:''}
-                    ${totalBebidas>0?`<div class="flex justify-between text-sm"><span class="text-gray-400">🥤 Bebidas</span><span class="font-bold text-white">$${totalBebidas.toLocaleString('es-AR')}</span></div>`:''}
-                    <div class="flex justify-between items-center pt-2 border-t border-indigo-500/30">
-                        <span class="text-sm font-bold text-indigo-200">TOTAL</span>
-                        <span class="text-2xl font-extrabold text-indigo-300 tracking-tight">$${totalGeneral.toLocaleString('es-AR')}</span>
-                    </div>
+                    <div class="flex justify-between text-sm"><span class="text-gray-400">Tus cortes</span><span class="font-bold text-white">${myCuts.length}</span></div>
+                    <div class="flex justify-between text-sm"><span class="text-gray-400">Facturado</span><span class="font-bold text-white">$${myBilling.toLocaleString('es-AR')}</span></div>
+                    <div class="flex justify-between text-sm border-t border-white/10 pt-2"><span class="text-gray-200 font-semibold">Tu ganancia</span><span class="font-bold text-indigo-300 text-lg">$${myEarnings.toLocaleString('es-AR')}</span></div>
                 </div>
-            </div>`;
-        }
+            </div>
+            <div class="glass-card rounded-2xl p-5"><div class="text-[10px] font-bold text-gray-400 uppercase mb-3">Cortes del día</div><div class="space-y-2">${rows}</div></div>`;
+        return;
     }
+
+    // Admin: vista completa estilo recepcionista
+    const byBarber = {};
+    cuts.forEach(c => {
+        if (!byBarber[c.barber]) byBarber[c.barber] = { count:0, total:0, efectivo:0, transferencia:0 };
+        byBarber[c.barber].count++;
+        byBarber[c.barber].total += c.price || 0;
+        if (c.metodoPago === 'transferencia') byBarber[c.barber].transferencia += c.price || 0;
+        else byBarber[c.barber].efectivo += c.price || 0;
+    });
+
+    const row = (label, value, lCls='text-gray-400', vCls='text-white') =>
+        `<div class="flex justify-between items-center py-1.5 border-b border-white/5 last:border-0">
+            <span class="text-xs ${lCls}">${label}</span>
+            <span class="text-xs font-bold ${vCls} whitespace-nowrap">${value}</span>
+        </div>`;
+
+    const barberRows = BARBERS_LIST.filter(b => byBarber[b]).map(b => {
+        const d = byBarber[b], t = BARBER_THEME[b] || { text:'text-gray-300' };
+        return row(`<span class="font-bold ${t.text}">${b}</span>`, `$${d.total.toLocaleString('es-AR')}`);
+    }).join('') || '<p class="text-xs text-gray-600 text-center py-2">Sin cortes hoy</p>';
+
+    const makeVentaRows = list => list.length === 0
+        ? '<p class="text-xs text-gray-600 text-center py-2">Sin ventas</p>'
+        : list.map(v => row(
+            `${v.producto}${v.cantidad>1?` <span class="text-indigo-300">×${v.cantidad}</span>`:''}`,
+            (v.total||0)>0 ? `$${v.total.toLocaleString('es-AR')}` : '—'
+        )).join('');
+
+    const section = (icon, title, color, content, subtotal) => `
+        <div>
+            <div class="text-[10px] font-bold ${color} uppercase tracking-widest mb-2">${icon} ${title}</div>
+            ${content}
+            ${subtotal ? `<div class="flex justify-between items-center pt-2 mt-1 border-t border-white/10">
+                <span class="text-xs text-gray-500 font-bold uppercase">Subtotal</span>
+                <span class="text-sm font-bold text-white">$${subtotal.toLocaleString('es-AR')}</span>
+            </div>` : ''}
+        </div>`;
+
+    const html = `
+        <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">${dateStr}</div>
+
+        <!-- Tiles -->
+        <div class="grid grid-cols-2 gap-3 mb-5">
+            <div class="glass-card rounded-2xl p-4 text-center">
+                <div class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Cortes</div>
+                <div class="text-2xl font-extrabold text-white">$${totalCortes.toLocaleString('es-AR')}</div>
+                <div class="text-[10px] text-gray-600 mt-1">${cuts.length} corte${cuts.length!==1?'s':''}</div>
+            </div>
+            <div class="glass-card rounded-2xl p-4 text-center">
+                <div class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Efectivo</div>
+                <div class="text-2xl font-extrabold text-emerald-300">$${efectivo.toLocaleString('es-AR')}</div>
+                <div class="text-[10px] text-emerald-800 mt-1">💵</div>
+            </div>
+            <div class="glass-card rounded-2xl p-4 text-center">
+                <div class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Transferencia</div>
+                <div class="text-2xl font-extrabold text-blue-300">$${transferencia.toLocaleString('es-AR')}</div>
+                <div class="text-[10px] text-blue-800 mt-1">📲</div>
+            </div>
+            <div class="glass-card rounded-2xl p-4 text-center">
+                <div class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Total del día</div>
+                <div class="text-2xl font-extrabold text-emerald-400">$${totalGeneral.toLocaleString('es-AR')}</div>
+                <div class="text-[10px] text-emerald-700 mt-1">general</div>
+            </div>
+            ${totalGastos > 0 ? `
+            <div class="glass-card rounded-2xl p-4 col-span-2 border border-rose-500/20 flex items-center justify-between gap-4">
+                <div class="text-center flex-1">
+                    <div class="text-[10px] text-rose-400 uppercase tracking-widest mb-1">Gastos</div>
+                    <div class="text-xl font-bold text-rose-400">−$${totalGastos.toLocaleString('es-AR')}</div>
+                </div>
+                <div class="text-gray-600 text-xl">→</div>
+                <div class="text-center flex-1">
+                    <div class="text-[10px] text-emerald-400 uppercase tracking-widest mb-1">Neto real</div>
+                    <div class="text-2xl font-extrabold ${netoReal>=0?'text-emerald-400':'text-red-400'}">$${netoReal.toLocaleString('es-AR')}</div>
+                </div>
+            </div>` : ''}
+        </div>
+
+        <!-- Detalle -->
+        <div class="space-y-3">
+            <div class="glass-card rounded-2xl p-5">
+                ${section('✂️', 'Cortes por barbero', 'text-cyan-400', barberRows, null)}
+            </div>
+            <div class="glass-card rounded-2xl p-5">
+                ${section('💈', 'Productos barber', 'text-indigo-400', makeVentaRows(ventasProductos), totalProductos > 0 ? totalProductos : null)}
+            </div>
+            <div class="glass-card rounded-2xl p-5">
+                ${section('🥤', 'Bebidas', 'text-cyan-400', makeVentaRows(ventasBebidas), totalBebidas > 0 ? totalBebidas : null)}
+            </div>
+            ${gastosHoy.length > 0 ? `
+            <div class="glass-card rounded-2xl p-5 border border-rose-500/15">
+                ${section('🧾', 'Gastos del día', 'text-rose-400',
+                    gastosHoy.map(g => {
+                        const cat = GASTOS_CATS.find(c => c.id === g.categoria) || GASTOS_CATS[4];
+                        return row(`${cat.icon} ${g.descripcion}`, `−$${(g.monto||0).toLocaleString('es-AR')}`, 'text-gray-400', 'text-rose-400');
+                    }).join(''),
+                    totalGastos
+                )}
+            </div>` : ''}
+        </div>`;
 
     document.getElementById('cierre-content').innerHTML = html;
 }
@@ -2286,77 +2389,127 @@ function renderCierreSemana() {
     const day = today.getDay()||7;
     const weekStart = new Date(today);
     if (day!==1) weekStart.setDate(today.getDate()-(day-1));
-    const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= weekStart);
     const isAdmin = ADMINS.includes(currentUser.email);
     const myName = BARBER_EMAIL_MAP[currentUser.email];
 
-    const totalBilling = cuts.reduce((s,c) => s + c.price, 0);
-    const totalComm = cuts.reduce((s,c) => s + c.price*(barberCommissions[c.barber]||0.5), 0);
-    const bizNet = totalBilling - totalComm;
+    const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= weekStart);
+    const ventasSemana = allVentas.filter(v => {
+        if (v.eliminado) return false;
+        const d = new Date(v.fecha+'T00:00:00');
+        return d >= weekStart && d <= today;
+    });
+    const ventasProductos = ventasSemana.filter(v => v.tipo !== 'bebida');
+    const ventasBebidas   = ventasSemana.filter(v => v.tipo === 'bebida');
 
+    const totalCortes    = cuts.reduce((s, c) => s + (c.price || 0), 0);
+    const totalComm      = cuts.reduce((s, c) => s + c.price*(barberCommissions[c.barber]||0.5), 0);
+    const bizNet         = totalCortes - totalComm;
+    const totalProductos = ventasProductos.reduce((s, v) => s + (v.total || 0), 0);
+    const totalBebidas   = ventasBebidas.reduce((s, v) => s + (v.total || 0), 0);
+    const totalGeneral   = totalCortes + totalProductos + totalBebidas;
+
+    // For gastos: use allGastos (same collection as recepcionista)
+    const gastosWeek = allGastos.filter(g => !g.eliminado && g.fecha && new Date(g.fecha+'T00:00:00') >= weekStart);
+    const totalGastosWeek = gastosWeek.reduce((s, g) => s + (g.monto || 0), 0);
+    const netoReal = totalGeneral - totalGastosWeek;
+
+    const fmt = d => d.toLocaleDateString('es-AR',{day:'numeric',month:'short'});
+    const weekLabel = `${fmt(weekStart)} — ${fmt(today)}`;
+
+    document.getElementById('cierre-header-sub').textContent = `Semana · $${totalGeneral.toLocaleString('es-AR')}`;
+
+    if (!isAdmin) {
+        const myCuts = cuts.filter(c => myName ? c.barber === myName : c.userEmail === currentUser.email);
+        const myBilling = myCuts.reduce((s,c) => s + c.price, 0);
+        const myEarnings = myCuts.reduce((s,c) => s + c.price*(barberCommissions[c.barber]||0.5), 0);
+        document.getElementById('cierre-content').innerHTML = `
+            <div class="glass-card rounded-2xl p-5">
+                <div class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3">${weekLabel}</div>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-sm"><span class="text-gray-400">Tus cortes</span><span class="font-bold text-white">${myCuts.length}</span></div>
+                    <div class="flex justify-between text-sm"><span class="text-gray-400">Facturado</span><span class="font-bold text-white">$${myBilling.toLocaleString('es-AR')}</span></div>
+                    <div class="flex justify-between text-sm border-t border-white/10 pt-2"><span class="text-gray-200 font-semibold">Tu ganancia</span><span class="font-bold text-indigo-300 text-lg">$${myEarnings.toLocaleString('es-AR')}</span></div>
+                </div>
+            </div>`;
+        return;
+    }
+
+    // Admin: vista completa
     const barberData = {};
     cuts.forEach(c => {
         if (!barberData[c.barber]) barberData[c.barber] = { cuts:0, billing:0, earnings:0 };
         barberData[c.barber].cuts++;
-        barberData[c.barber].billing += c.price;
+        barberData[c.barber].billing += c.price || 0;
         barberData[c.barber].earnings += c.price*(barberCommissions[c.barber]||0.5);
     });
 
-    const myCuts = isAdmin ? cuts : cuts.filter(c => myName ? c.barber===myName : c.userEmail===currentUser.email);
-    const myBilling = myCuts.reduce((s,c) => s + c.price, 0);
-    const myEarnings = myCuts.reduce((s,c) => s + c.price*(barberCommissions[c.barber]||0.5), 0);
-    const fmt = d => d.toLocaleDateString('es-AR',{day:'numeric',month:'short'});
-    const weekLabel = `${fmt(weekStart)} — ${fmt(today)}`;
-
-    let html = `<div class="glass-card rounded-2xl p-5">
-        <div class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fas fa-calendar-week"></i> ${weekLabel}</div>
-        ${isAdmin ? `
-        <div class="space-y-2">
-            <div class="flex justify-between text-sm"><span class="text-gray-400">Facturación total</span><span class="font-bold text-white">$${totalBilling.toLocaleString('es-AR')}</span></div>
-            <div class="flex justify-between text-sm"><span class="text-gray-400">Comisiones barberos</span><span class="font-bold text-red-400">− $${totalComm.toLocaleString('es-AR')}</span></div>
-            <div class="flex justify-between text-sm border-t border-white/10 pt-2"><span class="text-gray-200 font-semibold">Ganancia del negocio</span><span class="font-bold text-indigo-300 text-lg">$${bizNet.toLocaleString('es-AR')}</span></div>
-        </div>
-        <div class="mt-2 text-center text-[10px] text-gray-500">${cuts.length} cortes en la semana</div>` : `
-        <div class="space-y-2">
-            <div class="flex justify-between text-sm"><span class="text-gray-400">Tus cortes</span><span class="font-bold text-white">${myCuts.length}</span></div>
-            <div class="flex justify-between text-sm"><span class="text-gray-400">Facturado</span><span class="font-bold text-white">$${myBilling.toLocaleString('es-AR')}</span></div>
-            <div class="flex justify-between text-sm border-t border-white/10 pt-2"><span class="text-gray-200 font-semibold">Tu ganancia</span><span class="font-bold text-indigo-300 text-lg">$${myEarnings.toLocaleString('es-AR')}</span></div>
-        </div>`}
-    </div>`;
-
-    if (isAdmin && Object.keys(barberData).length > 0) {
-        html += `<div class="glass-card rounded-2xl p-5">
-            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fas fa-users text-indigo-400"></i> Por barbero (semana)</div>
-            <div class="space-y-3">${buildBarberRows(barberData)}</div>
+    const row = (label, value, lCls='text-gray-400', vCls='text-white') =>
+        `<div class="flex justify-between items-center py-1.5 border-b border-white/5 last:border-0">
+            <span class="text-xs ${lCls}">${label}</span>
+            <span class="text-xs font-bold ${vCls} whitespace-nowrap">${value}</span>
         </div>`;
-    }
 
-    const ventasSemana = allVentas.filter(v => { if (v.eliminado) return false; const d = new Date(v.fecha+'T00:00:00'); return d >= weekStart && d <= today; });
-    html += renderVentasCard(ventasSemana);
+    const barberRows = BARBERS_LIST.filter(b => barberData[b]).map(b => {
+        const d = barberData[b], t = BARBER_THEME[b] || { text:'text-gray-300' };
+        return row(`<span class="font-bold ${t.text}">${b}</span> <span class="text-gray-600 text-[10px]">${d.cuts} cortes</span>`, `$${d.billing.toLocaleString('es-AR')}`);
+    }).join('') || '<p class="text-xs text-gray-600 text-center py-2">Sin cortes</p>';
 
-    if (isAdmin) {
-        const weekExpenses = allExpenses.filter(e => e.createdAt && e.createdAt.toDate() >= weekStart);
-        const totalVarExp = weekExpenses.reduce((s,e) => s + e.amount, 0);
-        if (totalVarExp > 0 || Object.keys(fixedExpenses).length > 0) {
-            const fixedTotal = Object.values(fixedExpenses).reduce((s,v) => s + (Number(v)||0), 0);
-            const fixedWeek = Math.round(fixedTotal / 4);
-            const totalVentasSemana = ventasSemana.reduce((s,v) => s + v.total, 0);
-            const netaSemana = bizNet + totalVentasSemana - totalVarExp - fixedWeek;
-            html += `<div class="glass-card rounded-2xl p-5 border border-emerald-500/20">
-                <div class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fas fa-calculator"></i> Ganancia neta del negocio</div>
-                <div class="space-y-2">
-                    <div class="flex justify-between text-sm"><span class="text-gray-400">Ganancia del negocio</span><span class="font-bold text-blue-300">$${bizNet.toLocaleString('es-AR')}</span></div>
-                    ${totalVentasSemana>0?`<div class="flex justify-between text-sm"><span class="text-gray-400">Ventas de productos</span><span class="font-bold text-indigo-300">+ $${totalVentasSemana.toLocaleString('es-AR')}</span></div>`:''}
-                    <div class="flex justify-between text-sm"><span class="text-gray-400">Gastos variables semana</span><span class="font-bold text-orange-400">− $${totalVarExp.toLocaleString('es-AR')}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-400">Gastos fijos estimados (÷4)</span><span class="font-bold text-orange-400">− $${fixedWeek.toLocaleString('es-AR')}</span></div>
-                    <div class="flex justify-between text-sm border-t border-white/10 pt-2">
-                        <span class="text-gray-200 font-bold uppercase text-[11px]">Neta semana</span>
-                        <span class="font-extrabold text-xl ${netaSemana>=0?'text-emerald-400':'text-red-400'}">$${netaSemana.toLocaleString('es-AR')}</span>
-                    </div>
-                </div>
-            </div>`;
-        }
-    }
+    const makeVentaRows = list => list.length === 0
+        ? '<p class="text-xs text-gray-600 text-center py-2">Sin ventas</p>'
+        : list.map(v => row(
+            `${v.producto}${v.cantidad>1?` <span class="text-indigo-300">×${v.cantidad}</span>`:''}`,
+            (v.total||0)>0 ? `$${v.total.toLocaleString('es-AR')}` : '—'
+        )).join('');
+
+    const section = (icon, title, color, content, subtotal) => `
+        <div>
+            <div class="text-[10px] font-bold ${color} uppercase tracking-widest mb-2">${icon} ${title}</div>
+            ${content}
+            ${subtotal ? `<div class="flex justify-between items-center pt-2 mt-1 border-t border-white/10">
+                <span class="text-xs text-gray-500 font-bold uppercase">Subtotal</span>
+                <span class="text-sm font-bold text-white">$${subtotal.toLocaleString('es-AR')}</span>
+            </div>` : ''}
+        </div>`;
+
+    const html = `
+        <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">${weekLabel}</div>
+
+        <!-- Resumen rápido -->
+        <div class="glass-card rounded-2xl p-5 mb-4">
+            <div class="space-y-2">
+                <div class="flex justify-between text-sm"><span class="text-gray-400">✂️ Cortes</span><span class="font-bold text-white">$${totalCortes.toLocaleString('es-AR')} <span class="text-gray-500 text-[10px]">(${cuts.length})</span></span></div>
+                ${totalProductos>0?`<div class="flex justify-between text-sm"><span class="text-gray-400">💈 Productos</span><span class="font-bold text-indigo-300">$${totalProductos.toLocaleString('es-AR')}</span></div>`:''}
+                ${totalBebidas>0?`<div class="flex justify-between text-sm"><span class="text-gray-400">🥤 Bebidas</span><span class="font-bold text-cyan-300">$${totalBebidas.toLocaleString('es-AR')}</span></div>`:''}
+                <div class="flex justify-between text-sm border-t border-white/10 pt-2"><span class="text-gray-200 font-semibold">Total semana</span><span class="font-extrabold text-lg text-emerald-400">$${totalGeneral.toLocaleString('es-AR')}</span></div>
+                ${totalGastosWeek>0?`
+                <div class="flex justify-between text-sm"><span class="text-rose-400">🧾 Gastos</span><span class="font-bold text-rose-400">−$${totalGastosWeek.toLocaleString('es-AR')}</span></div>
+                <div class="flex justify-between text-sm border-t border-emerald-500/30 pt-2"><span class="text-emerald-300 font-bold">Neto real</span><span class="font-extrabold text-xl ${netoReal>=0?'text-emerald-400':'text-red-400'}">$${netoReal.toLocaleString('es-AR')}</span></div>
+                `:''}
+            </div>
+        </div>
+
+        <!-- Detalle -->
+        <div class="space-y-3">
+            <div class="glass-card rounded-2xl p-5">
+                ${section('✂️', 'Cortes por barbero', 'text-cyan-400', barberRows, null)}
+            </div>
+            <div class="glass-card rounded-2xl p-5">
+                ${section('💈', 'Productos barber', 'text-indigo-400', makeVentaRows(ventasProductos), totalProductos>0?totalProductos:null)}
+            </div>
+            <div class="glass-card rounded-2xl p-5">
+                ${section('🥤', 'Bebidas', 'text-cyan-400', makeVentaRows(ventasBebidas), totalBebidas>0?totalBebidas:null)}
+            </div>
+            ${gastosWeek.length > 0 ? `
+            <div class="glass-card rounded-2xl p-5 border border-rose-500/15">
+                ${section('🧾', 'Gastos de la semana', 'text-rose-400',
+                    gastosWeek.map(g => {
+                        const cat = GASTOS_CATS.find(c => c.id === g.categoria) || GASTOS_CATS[4];
+                        return row(`${cat.icon} ${g.descripcion} <span class="text-gray-600 text-[10px]">${g.fecha}</span>`, `−$${(g.monto||0).toLocaleString('es-AR')}`, 'text-gray-400', 'text-rose-400');
+                    }).join(''),
+                    totalGastosWeek
+                )}
+            </div>` : ''}
+        </div>`;
 
     document.getElementById('cierre-content').innerHTML = html;
 }
