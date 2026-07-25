@@ -2879,6 +2879,8 @@ function quienAnoто(email) {
     return BARBER_EMAIL_MAP[email] || 'Recepción';
 }
 
+let turnoConfirmingDelete = null;
+
 function renderTurnosList() {
     const targetDate = turnosSelectedDay === -1 ? turnosCustomDate : getTodayStr(turnosSelectedDay);
     const el = document.getElementById('turnos-list');
@@ -2894,6 +2896,7 @@ function renderTurnosList() {
         .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
 
     if (dayTurnos.length === 0) {
+        turnoConfirmingDelete = null;
         const dayName = turnosSelectedDay === -1
             ? new Date(targetDate + 'T12:00:00').toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'short' })
             : getDayLabel(turnosSelectedDay).toLowerCase();
@@ -2906,6 +2909,19 @@ function renderTurnosList() {
     el.innerHTML = dayTurnos.map(t => {
         const done = t.estado === 'completado';
         const anotadoPor = t.anotadoPor || quienAnoто(t.userEmail);
+        const confirming = turnoConfirmingDelete === t.id;
+        const actions = confirming
+            ? `<div class="flex items-center gap-2">
+                <span class="text-[10px] text-red-400 font-bold whitespace-nowrap">¿Eliminar?</span>
+                <button onclick="window.confirmDeleteTurno('${t.id}')" class="px-2 py-1 rounded-lg bg-red-600 text-white text-[10px] font-bold active:scale-95 transition">Sí</button>
+                <button onclick="window.cancelDeleteTurno()" class="px-2 py-1 rounded-lg bg-white/10 text-gray-300 text-[10px] font-bold active:scale-95 transition">No</button>
+               </div>`
+            : `<div class="flex gap-2 flex-shrink-0">
+                ${!done
+                    ? `<button onclick="window.completarTurno('${t.id}')" class="w-8 h-8 rounded-full bg-emerald-600/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center hover:bg-emerald-600/40 transition" title="Completado"><i class="fas fa-check text-xs"></i></button>`
+                    : `<span class="text-[10px] text-emerald-500 font-bold self-center">✓</span>`}
+                <button onclick="window.requestDeleteTurno('${t.id}')" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-gray-500 flex items-center justify-center hover:bg-red-600/20 hover:border-red-500/30 hover:text-red-400 transition"><i class="fas fa-trash text-xs"></i></button>
+               </div>`;
         return `<div class="glass-card rounded-2xl p-4 flex items-center gap-4 ${done ? 'opacity-50' : ''}">
             <div class="text-center flex-shrink-0 w-12">
                 <div class="text-base font-extrabold text-amber-300">${t.hora || '--:--'}</div>
@@ -2916,12 +2932,7 @@ function renderTurnosList() {
                 <div class="text-[10px] text-gray-500 mt-0.5">${t.barbero || ''}${t.servicio ? ' · ' + t.servicio : ''}</div>
                 <div class="text-[9px] text-gray-700 mt-0.5">anotado por ${anotadoPor}</div>
             </div>
-            <div class="flex gap-2 flex-shrink-0">
-                ${!done
-                    ? `<button onclick="window.completarTurno('${t.id}')" class="w-8 h-8 rounded-full bg-emerald-600/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center hover:bg-emerald-600/40 transition" title="Completado"><i class="fas fa-check text-xs"></i></button>`
-                    : `<span class="text-[10px] text-emerald-500 font-bold self-center">✓</span>`}
-                <button onclick="window.deleteTurno('${t.id}')" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-gray-500 flex items-center justify-center hover:bg-red-600/20 hover:border-red-500/30 hover:text-red-400 transition"><i class="fas fa-trash text-xs"></i></button>
-            </div>
+            ${actions}
         </div>`;
     }).join('');
 }
@@ -2931,8 +2942,16 @@ window.completarTurno = async (id) => {
     renderTurnosList();
     try { await updateDoc(doc(db, PATH_TURNOS, id), { estado: 'completado' }); } catch { alert('Error'); }
 };
-window.deleteTurno = async (id) => {
-    if (!confirm('¿Eliminar este turno?')) return;
+window.requestDeleteTurno = (id) => {
+    turnoConfirmingDelete = id;
+    renderTurnosList();
+};
+window.cancelDeleteTurno = () => {
+    turnoConfirmingDelete = null;
+    renderTurnosList();
+};
+window.confirmDeleteTurno = async (id) => {
+    turnoConfirmingDelete = null;
     allTurnos = allTurnos.map(t => t.id === id ? {...t, eliminado:true} : t);
     renderTurnosList();
     try { await updateDoc(doc(db, PATH_TURNOS, id), { eliminado: true }); } catch { alert('Error'); }
