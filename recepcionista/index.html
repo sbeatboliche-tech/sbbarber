@@ -188,7 +188,7 @@
                         </div>
                     </div>
                     <div id="stat-ventas-row" class="hidden mt-3 pt-3 border-t border-white/5 justify-between items-center">
-                        <span class="text-[10px] text-gray-500">+ Ventas productos y bebidas</span>
+                        <span class="text-[10px] text-gray-500">+ Ventas de productos</span>
                         <span id="stat-ventas-billing" class="text-sm font-bold text-indigo-300">$0</span>
                     </div>
                     <div id="stat-total-row" class="hidden mt-1 justify-between items-center">
@@ -223,7 +223,7 @@
                     <div class="flex justify-between items-start mb-4">
                         <div>
                             <h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-shopping-bag text-indigo-400 text-xs"></i> Ventas de hoy</h3>
-                            <p class="text-[10px] text-gray-500 mt-0.5">Productos y bebidas</p>
+                            <p class="text-[10px] text-gray-500 mt-0.5">Productos</p>
                         </div>
                         <div class="flex gap-2">
                             <button onclick="window.openVentaModal()" class="bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-indigo-600/30 transition flex items-center gap-1.5">
@@ -2099,11 +2099,8 @@ function renderCierreCaja() {
     const makeVentaRows = list => list.length === 0
         ? '<p class="text-xs text-gray-600 text-center py-2">Sin ventas</p>'
         : list.map(v => {
-            const metodoTag = v.tipo === 'bebida' && v.metodoPago
-                ? ` <span class="text-[10px] font-normal ${v.metodoPago==='transferencia'?'text-blue-400':'text-emerald-400'}">${v.metodoPago==='transferencia'?'📲':'💵'}</span>`
-                : '';
             return row(
-                `${v.producto}${v.cantidad>1?` <span class="text-indigo-300">×${v.cantidad}</span>`:''}${metodoTag}`,
+                `${v.producto}${v.cantidad>1?` <span class="text-indigo-300">×${v.cantidad}</span>`:''}`,
                 (v.total||0)>0 ? `$${v.total.toLocaleString('es-AR')}` : '—'
             );
         }).join('');
