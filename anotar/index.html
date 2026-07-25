@@ -49,7 +49,7 @@
 <div class="w-full max-w-md h-full flex flex-col relative shadow-2xl bg-transparent overflow-hidden">
 
     <!-- Loading -->
-    <div id="loading-view" class="absolute inset-0 z-50 bg-[#0f1115] flex flex-col justify-center items-center transition-opacity duration-500">
+    <div id="loading-view" class="absolute inset-0 z-50 bg-[#0f1115] flex flex-col justify-center items-center">
         <img src="https://i.imgur.com/xyjMT6X.png" alt="SB BARBER" class="h-28 mb-6 animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">
         <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
     </div>
@@ -867,8 +867,8 @@ function init() {
     // Safety net: if onAuthStateChanged never fires (Firebase SDK hang), show login after 8s
     const loadingTimeout = setTimeout(() => {
         const lv = document.getElementById('loading-view');
-        if (!lv.classList.contains('opacity-0')) {
-            lv.classList.add('opacity-0','pointer-events-none');
+        if (!lv.classList.contains('hidden')) {
+            lv.classList.add('hidden');
             document.getElementById('login-view').classList.remove('hidden');
         }
     }, 8000);
@@ -877,7 +877,7 @@ function init() {
         clearTimeout(loadingTimeout);
         if(user) {
             currentUser=user;
-            document.getElementById('loading-view').classList.add('opacity-0','pointer-events-none');
+            document.getElementById('loading-view').classList.add('hidden');
             document.getElementById('dashboard-view').classList.remove('hidden');
             document.getElementById('login-view').classList.add('hidden');
             const bName=BARBER_EMAIL_MAP[user.email];
@@ -912,7 +912,7 @@ function init() {
             listenToAnotarTurnos();
             startDualSync();
         } else {
-            document.getElementById('loading-view').classList.add('opacity-0','pointer-events-none');
+            document.getElementById('loading-view').classList.add('hidden');
             document.getElementById('dashboard-view').classList.add('hidden');
             document.getElementById('login-view').classList.remove('hidden');
         }
@@ -1732,7 +1732,7 @@ function startDualSync() {
         const map=new Map(); [...d1,...d2].forEach(c=>map.set(c.id,c));
         allCuts=Array.from(map.values()).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
         render(); renderWeeklyProfit();
-        document.getElementById('loading-view').classList.add('opacity-0','pointer-events-none');
+        document.getElementById('loading-view').classList.add('hidden');
     };
     onSnapshot(query(collection(db,PATH_MAIN),orderBy('createdAt','desc'),limit(500)),s=>{ d1=s.docs.map(d=>({...d.data(),id:d.id,_ref:d.ref.path})); upd(); });
     onSnapshot(query(collection(db,PATH_LEGACY),orderBy('createdAt','desc'),limit(500)),s=>{ d2=s.docs.map(d=>({...d.data(),id:d.id,_ref:d.ref.path})); upd(); });
