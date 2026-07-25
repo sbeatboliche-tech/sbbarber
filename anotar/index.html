@@ -853,17 +853,28 @@ let expensePeriod='semanal';
 let currentStockAction=null;
 
 // ---- INIT ----
-async function init() {
+function init() {
     app=initializeApp(firebaseConfig);
     auth=getAuth(app); db=getFirestore(app);
-    await setPersistence(auth, browserLocalPersistence);
+    // Set persistence but don't block auth listener on it — if it fails the app still works
+    setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Persistence unavailable:', e));
 
     document.body.addEventListener('click', async e => {
         const btn=e.target.closest('.btn-delete-action');
         if(btn && confirm('¿Eliminar registro?')) await deleteDoc(doc(db, btn.dataset.path));
     });
 
+    // Safety net: if onAuthStateChanged never fires (Firebase SDK hang), show login after 8s
+    const loadingTimeout = setTimeout(() => {
+        const lv = document.getElementById('loading-view');
+        if (!lv.classList.contains('opacity-0')) {
+            lv.classList.add('opacity-0','pointer-events-none');
+            document.getElementById('login-view').classList.remove('hidden');
+        }
+    }, 8000);
+
     onAuthStateChanged(auth, user => {
+        clearTimeout(loadingTimeout);
         if(user) {
             currentUser=user;
             document.getElementById('loading-view').classList.add('opacity-0','pointer-events-none');
