@@ -408,7 +408,7 @@
         <!-- Tabs DÍA / SEMANA -->
         <div class="bg-[#0f1115] px-4 pt-3 pb-2 border-b border-gray-800/50">
             <nav class="flex bg-gray-900/80 p-1 rounded-xl border border-gray-800">
-                <button onclick="window.setCierreTab('dia',this)" id="cierre-tab-dia" class="cierre-tab flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-gradient-to-r from-indigo-600 to-slate-600 shadow-md transition-all">HOY</button>
+                <button onclick="window.setCierreTab('dia',this)" id="cierre-tab-dia" class="cierre-tab flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-gradient-to-r from-emerald-600 to-green-600 shadow-md transition-all">HOY</button>
                 <button onclick="window.setCierreTab('semana',this)" id="cierre-tab-semana" class="cierre-tab flex-1 py-2 rounded-lg text-[10px] font-medium text-gray-500 hover:text-gray-300 transition-all">SEMANA</button>
             </nav>
         </div>
@@ -2189,7 +2189,7 @@ window.openCierreView = () => {
     v.classList.remove('hidden'); v.classList.add('flex','flex-col');
     cierreTab = 'dia';
     document.querySelectorAll('.cierre-tab').forEach(b => b.className = 'cierre-tab flex-1 py-2 rounded-lg text-[10px] font-medium text-gray-500 hover:text-gray-300 transition-all');
-    document.getElementById('cierre-tab-dia').className = 'cierre-tab flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-gradient-to-r from-indigo-600 to-slate-600 shadow-md transition-all';
+    document.getElementById('cierre-tab-dia').className = 'cierre-tab flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-gradient-to-r from-emerald-600 to-green-600 shadow-md transition-all';
     renderCierreView();
 };
 window.closeCierreView = () => {
@@ -2199,7 +2199,7 @@ window.closeCierreView = () => {
 window.setCierreTab = (tab, el) => {
     cierreTab = tab;
     document.querySelectorAll('.cierre-tab').forEach(b => b.className = 'cierre-tab flex-1 py-2 rounded-lg text-[10px] font-medium text-gray-500 hover:text-gray-300 transition-all');
-    el.className = 'cierre-tab flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-gradient-to-r from-indigo-600 to-slate-600 shadow-md transition-all';
+    el.className = 'cierre-tab flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-gradient-to-r from-emerald-600 to-green-600 shadow-md transition-all';
     renderCierreView();
 };
 
@@ -2283,12 +2283,16 @@ function renderCierreDia() {
     // Admin: vista completa estilo recepcionista
     const byBarber = {};
     cuts.forEach(c => {
-        if (!byBarber[c.barber]) byBarber[c.barber] = { count:0, total:0, efectivo:0, transferencia:0 };
+        if (!byBarber[c.barber]) byBarber[c.barber] = { count:0, total:0, earnings:0, efectivo:0, transferencia:0 };
         byBarber[c.barber].count++;
         byBarber[c.barber].total += c.price || 0;
+        byBarber[c.barber].earnings += (c.price || 0) * (barberCommissions[c.barber] || 0.5);
         if (c.metodoPago === 'transferencia') byBarber[c.barber].transferencia += c.price || 0;
         else byBarber[c.barber].efectivo += c.price || 0;
     });
+
+    const retirosHoy   = allRetiros.filter(r => r.estado === 'confirmado' && r.fecha === hoy);
+    const propinasHoy  = allPropinas.filter(p => p.estado === 'confirmado' && p.fecha === hoy);
 
     const row = (label, value, lCls='text-gray-400', vCls='text-white') =>
         `<div class="flex justify-between items-center py-1.5 border-b border-white/5 last:border-0">
@@ -2296,10 +2300,36 @@ function renderCierreDia() {
             <span class="text-xs font-bold ${vCls} whitespace-nowrap">${value}</span>
         </div>`;
 
-    const barberRows = BARBERS_LIST.filter(b => byBarber[b]).map(b => {
-        const d = byBarber[b], t = BARBER_THEME[b] || { text:'text-gray-300' };
-        return row(`<span class="font-bold ${t.text}">${b}</span>`, `$${d.total.toLocaleString('es-AR')}`);
-    }).join('') || '<p class="text-xs text-gray-600 text-center py-2">Sin cortes hoy</p>';
+    const barberCard = b => {
+        const d = byBarber[b], t = BARBER_THEME[b] || { text:'text-gray-300', border:'border-gray-600', bg:'bg-gray-600', initial:b[0] };
+        const av = barberProfilesData[b]
+            ? `<img src="${barberProfilesData[b]}" class="w-9 h-9 rounded-full object-cover flex-shrink-0">`
+            : `<div class="w-9 h-9 rounded-full ${t.bg} flex items-center justify-center text-white font-bold text-sm flex-shrink-0">${t.initial}</div>`;
+        const ret = retirosHoy.filter(r => r.barbero === b).reduce((s,r) => s+(r.monto||0), 0);
+        const pro = propinasHoy.filter(p => p.barbero === b).reduce((s,p) => s+(p.monto||0), 0);
+        const balance = d.earnings + pro - ret;
+        const pct = Math.round((barberCommissions[b]||0.5)*100);
+        return `<div class="bg-black/30 rounded-xl border ${t.border}/20 overflow-hidden">
+            <div class="flex items-center gap-3 px-3 pt-3 pb-2">
+                ${av}
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-bold ${t.text}">${b}</div>
+                    <div class="text-[10px] text-gray-500">${d.count} corte${d.count!==1?'s':''} · facturó $${d.total.toLocaleString('es-AR')}</div>
+                </div>
+            </div>
+            <div class="px-3 pb-3 space-y-1 border-t border-white/5 pt-2">
+                <div class="flex justify-between text-xs"><span class="text-gray-400">Comisión ${pct}%</span><span class="font-bold text-white">$${Math.round(d.earnings).toLocaleString('es-AR')}</span></div>
+                ${pro > 0 ? `<div class="flex justify-between text-xs"><span class="text-yellow-400">+ Propinas</span><span class="font-bold text-yellow-300">+$${pro.toLocaleString('es-AR')}</span></div>` : ''}
+                ${ret > 0 ? `<div class="flex justify-between text-xs"><span class="text-violet-400">− Retiros del día</span><span class="font-bold text-violet-300">−$${ret.toLocaleString('es-AR')}</span></div>` : ''}
+                <div class="flex justify-between text-xs border-t border-white/10 pt-1.5 mt-0.5">
+                    <span class="font-bold text-gray-200 uppercase text-[10px]">A pagar</span>
+                    <span class="font-extrabold text-sm ${balance>0?'text-emerald-400':balance===0?'text-gray-400':'text-red-400'}">$${Math.round(balance).toLocaleString('es-AR')}</span>
+                </div>
+            </div>
+        </div>`;
+    };
+
+    const barberRows = BARBERS_LIST.filter(b => byBarber[b]).map(barberCard).join('') || '<p class="text-xs text-gray-600 text-center py-2">Sin cortes hoy</p>';
 
     const makeVentaRows = list => list.length === 0
         ? '<p class="text-xs text-gray-600 text-center py-2">Sin ventas</p>'
@@ -2360,7 +2390,8 @@ function renderCierreDia() {
         <!-- Detalle -->
         <div class="space-y-3">
             <div class="glass-card rounded-2xl p-5">
-                ${section('✂️', 'Cortes por barbero', 'text-cyan-400', barberRows, null)}
+                <div class="text-[10px] font-bold text-cyan-400 uppercase tracking-widest mb-3">✂️ Ganancias por barbero</div>
+                <div class="space-y-2">${barberRows}</div>
             </div>
             <div class="glass-card rounded-2xl p-5">
                 ${section('💈', 'Productos barber', 'text-indigo-400', makeVentaRows(ventasProductos), totalProductos > 0 ? totalProductos : null)}
@@ -2373,7 +2404,7 @@ function renderCierreDia() {
                 ${section('🧾', 'Gastos del día', 'text-rose-400',
                     gastosHoy.map(g => {
                         const cat = GASTOS_CATS.find(c => c.id === g.categoria) || GASTOS_CATS[4];
-                        return row(`${cat.icon} ${g.descripcion}`, `−$${(g.monto||0).toLocaleString('es-AR')}`, 'text-gray-400', 'text-rose-400');
+                        return row(\`\${cat.icon} \${g.descripcion}\`, \`−$\${(g.monto||0).toLocaleString('es-AR')}\`, 'text-gray-400', 'text-rose-400');
                     }).join(''),
                     totalGastos
                 )}
@@ -2435,13 +2466,21 @@ function renderCierreSemana() {
     }
 
     // Admin: vista completa
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+    const todayStr = today.toISOString().split('T')[0];
+
     const barberData = {};
     cuts.forEach(c => {
-        if (!barberData[c.barber]) barberData[c.barber] = { cuts:0, billing:0, earnings:0 };
+        if (!barberData[c.barber]) barberData[c.barber] = { cuts:0, billing:0, earnings:0, efectivo:0, transferencia:0 };
         barberData[c.barber].cuts++;
         barberData[c.barber].billing += c.price || 0;
-        barberData[c.barber].earnings += c.price*(barberCommissions[c.barber]||0.5);
+        barberData[c.barber].earnings += (c.price || 0) * (barberCommissions[c.barber] || 0.5);
+        if (c.metodoPago === 'transferencia') barberData[c.barber].transferencia += c.price || 0;
+        else barberData[c.barber].efectivo += c.price || 0;
     });
+
+    const retirosWeek  = allRetiros.filter(r => r.estado === 'confirmado' && r.fecha >= weekStartStr && r.fecha <= todayStr);
+    const propinasWeek = allPropinas.filter(p => p.estado === 'confirmado' && p.fecha >= weekStartStr && p.fecha <= todayStr);
 
     const row = (label, value, lCls='text-gray-400', vCls='text-white') =>
         `<div class="flex justify-between items-center py-1.5 border-b border-white/5 last:border-0">
@@ -2449,10 +2488,36 @@ function renderCierreSemana() {
             <span class="text-xs font-bold ${vCls} whitespace-nowrap">${value}</span>
         </div>`;
 
-    const barberRows = BARBERS_LIST.filter(b => barberData[b]).map(b => {
-        const d = barberData[b], t = BARBER_THEME[b] || { text:'text-gray-300' };
-        return row(`<span class="font-bold ${t.text}">${b}</span> <span class="text-gray-600 text-[10px]">${d.cuts} cortes</span>`, `$${d.billing.toLocaleString('es-AR')}`);
-    }).join('') || '<p class="text-xs text-gray-600 text-center py-2">Sin cortes</p>';
+    const barberCard = b => {
+        const d = barberData[b];
+        const t = BARBER_THEME[b] || { text:'text-gray-300', border:'border-gray-600', initial: b.charAt(0) };
+        const pct = Math.round((barberCommissions[b] || 0.5) * 100);
+        const ret = retirosWeek.filter(r => r.barbero === b).reduce((s,r) => s+(r.monto||0), 0);
+        const pro = propinasWeek.filter(p => p.barbero === b).reduce((s,p) => s+(p.monto||0), 0);
+        const balance = d.earnings + pro - ret;
+        const av = `<div class="w-8 h-8 rounded-full ${t.bg||'bg-gray-700'} flex items-center justify-center text-white font-bold text-sm shrink-0">${t.initial||b.charAt(0)}</div>`;
+        return `<div class="bg-black/30 rounded-xl border ${t.border||'border-gray-600'}/20 overflow-hidden">
+            <div class="flex items-center gap-3 px-3 pt-3 pb-2">
+                ${av}
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-bold ${t.text}">${b}</div>
+                    <div class="text-[10px] text-gray-500">${d.cuts} corte${d.cuts!==1?'s':''} · facturó $${d.billing.toLocaleString('es-AR')}</div>
+                </div>
+            </div>
+            <div class="px-3 pb-3 space-y-1 border-t border-white/5 pt-2">
+                <div class="flex justify-between text-xs"><span class="text-gray-400">Comisión ${pct}%</span><span class="font-bold text-white">$${Math.round(d.earnings).toLocaleString('es-AR')}</span></div>
+                ${pro > 0 ? `<div class="flex justify-between text-xs"><span class="text-emerald-400">+ Propinas semana</span><span class="font-bold text-emerald-400">+$${pro.toLocaleString('es-AR')}</span></div>` : ''}
+                ${ret > 0 ? `<div class="flex justify-between text-xs"><span class="text-rose-400">− Retiros semana</span><span class="font-bold text-rose-400">−$${ret.toLocaleString('es-AR')}</span></div>` : ''}
+                <div class="flex justify-between text-xs border-t border-white/10 pt-1.5 mt-0.5">
+                    <span class="font-bold text-gray-200 uppercase text-[10px]">A pagar semana</span>
+                    <span class="font-extrabold text-sm ${balance>0?'text-emerald-400':balance<0?'text-rose-400':'text-gray-400'}">$${Math.round(balance).toLocaleString('es-AR')}</span>
+                </div>
+            </div>
+        </div>`;
+    };
+
+    const barberRows = BARBERS_LIST.filter(b => barberData[b]).map(barberCard).join('')
+        || '<p class="text-xs text-gray-600 text-center py-2">Sin cortes</p>';
 
     const makeVentaRows = list => list.length === 0
         ? '<p class="text-xs text-gray-600 text-center py-2">Sin ventas</p>'
@@ -2491,7 +2556,7 @@ function renderCierreSemana() {
         <!-- Detalle -->
         <div class="space-y-3">
             <div class="glass-card rounded-2xl p-5">
-                ${section('✂️', 'Cortes por barbero', 'text-cyan-400', barberRows, null)}
+                ${section('✂️', 'Ganancias por barbero', 'text-cyan-400', `<div class="space-y-2">${barberRows}</div>`, null)}
             </div>
             <div class="glass-card rounded-2xl p-5">
                 ${section('💈', 'Productos barber', 'text-indigo-400', makeVentaRows(ventasProductos), totalProductos>0?totalProductos:null)}
