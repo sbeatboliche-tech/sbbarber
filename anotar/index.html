@@ -17,18 +17,6 @@
     <link rel="dns-prefetch" href="https://i.imgur.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-    function _showLoadErr(msg) {
-        var el = document.getElementById('loading-error');
-        if (el) { el.style.display = 'block'; el.textContent = msg; }
-    }
-    window.addEventListener('error', function(e) {
-        _showLoadErr('JS Error: ' + (e.message || e.type) + (e.filename ? ' @ ' + e.filename.split('/').pop() + ':' + e.lineno : ''));
-    });
-    window.addEventListener('unhandledrejection', function(e) {
-        _showLoadErr('Promise Error: ' + (e.reason?.message || String(e.reason)));
-    });
-    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
     <style>
@@ -64,7 +52,6 @@
     <div id="loading-view" class="absolute inset-0 z-50 bg-[#0f1115] flex flex-col justify-center items-center">
         <img src="https://i.imgur.com/xyjMT6X.png" alt="SB BARBER" class="h-28 mb-6 animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">
         <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-        <p id="loading-error" style="display:none;color:#f87171;font-size:11px;margin-top:20px;padding:0 24px;text-align:center;max-width:320px;word-break:break-word;font-family:monospace"></p>
     </div>
 
     <!-- Login -->
@@ -2428,7 +2415,7 @@ function renderCierreDia() {
                 ${section('🧾', 'Gastos del día', 'text-rose-400',
                     gastosHoy.map(g => {
                         const cat = GASTOS_CATS.find(c => c.id === g.categoria) || GASTOS_CATS[4];
-                        return row(\`\${cat.icon} \${g.descripcion}\`, \`−$\${(g.monto||0).toLocaleString('es-AR')}\`, 'text-gray-400', 'text-rose-400');
+                        return row(`${cat.icon} ${g.descripcion}`, `−$${(g.monto||0).toLocaleString('es-AR')}`, 'text-gray-400', 'text-rose-400');
                     }).join(''),
                     totalGastos
                 )}
