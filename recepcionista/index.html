@@ -1036,7 +1036,7 @@ async function init() {
 
     document.getElementById('cuts-list').addEventListener('click', async e => {
         const btn = e.target.closest('.btn-delete-cut');
-        if (btn && confirm('¿Eliminar este corte?')) {
+        if (btn && await customConfirm('¿Eliminar este corte?')) {
             const id = btn.dataset.id;
             allCuts = allCuts.map(c => c.id === id ? {...c, eliminado: true} : c);
             renderCuts();
@@ -1513,7 +1513,7 @@ document.getElementById('add-item-form').addEventListener('submit', async e => {
 });
 
 window.deleteStockItem = async id => {
-    if (!confirm('¿Eliminar esta bebida?')) return;
+    if (!await customConfirm('¿Eliminar esta bebida?')) return;
     try { await deleteDoc(doc(db, PATH_STOCK, id)); } catch { alert('Error al eliminar'); }
 };
 
@@ -1731,7 +1731,7 @@ window.setVentaMetodo = (m) => {
 };
 
 window.deleteVenta = async (id) => {
-    if (!confirm('¿Eliminar esta venta?')) return;
+    if (!await customConfirm('¿Eliminar esta venta?')) return;
     allVentas = allVentas.map(v => v.id === id ? {...v, eliminado: true} : v);
     renderVentas(); renderSalesHistory();
     try { await updateDoc(doc(db, PATH_VENTAS, id), { eliminado: true }); } catch { alert('Error'); }
@@ -1745,13 +1745,19 @@ function renderProductosGrid() {
         const stock = (productoStock[p.id]?.stock) || 0;
         const sinStock = stock === 0;
         const stockColor = sinStock ? 'text-red-400' : stock <= 3 ? 'text-yellow-400' : 'text-gray-500';
+        const safeId = p.id.replace(/'/g, "\\'");
+        const safeName = p.name.replace(/'/g, "\\'");
         return `<div onclick="${sinStock ? '' : `window.selectProductoVenta(${i},this)`}"
-            class="prod-btn p-2.5 ${sinStock ? 'bg-gray-900/40 opacity-50 cursor-not-allowed' : 'bg-gray-800/50 cursor-pointer hover:bg-gray-700/60 active:scale-95'} border border-gray-700/60 rounded-xl flex flex-col gap-1 transition">
-            <span class="text-xs font-semibold text-gray-200 leading-tight">${p.name}</span>
+            class="prod-btn p-2.5 ${sinStock ? 'bg-gray-900/40 opacity-50 cursor-not-allowed' : 'bg-gray-800/50 cursor-pointer hover:bg-gray-700/60 active:scale-95'} border border-gray-700/60 rounded-xl flex flex-col gap-1 transition relative">
+            <span class="text-xs font-semibold text-gray-200 leading-tight pr-5">${p.name}</span>
             <div class="flex justify-between items-center">
                 <span class="${stockColor} text-[10px] font-bold">${sinStock ? 'Sin stock' : stock + ' u.'}</span>
                 ${p.precio > 0 ? `<span class="text-[10px] font-bold text-white/60">$${(p.precio/1000).toFixed(0)}k</span>` : ''}
             </div>
+            <button onclick="event.stopPropagation();window.openMovimientoProducto('${safeId}','${safeName}','entrada')"
+                class="absolute top-1.5 right-1.5 w-5 h-5 rounded-md bg-emerald-600/30 border border-emerald-500/40 flex items-center justify-center text-emerald-400 hover:bg-emerald-600/60 transition active:scale-90" title="Agregar stock">
+                <i class="fas fa-plus" style="font-size:8px"></i>
+            </button>
         </div>`;
     };
 
@@ -2547,7 +2553,7 @@ window.rejectItem = async (path, id) => {
     try { await updateDoc(doc(db, path, id), { estado: 'rechazado' }); } catch { alert('Error'); }
 };
 window.deleteRetiroRec = async (id) => {
-    if (!confirm('¿Marcar como eliminado?')) return;
+    if (!await customConfirm('¿Eliminar este retiro?')) return;
     allRetiros = allRetiros.map(r => r.id === id ? {...r, eliminado: true} : r);
     renderRetirosPanel();
     try { await updateDoc(doc(db, PATH_RETIROS, id), { eliminado: true }); } catch { alert('Error al eliminar'); }
@@ -2696,7 +2702,7 @@ function renderGastosPanel() {
 }
 
 window.deleteGasto = async (id) => {
-    if (!confirm('¿Eliminar este gasto?')) return;
+    if (!await customConfirm('¿Eliminar este gasto?')) return;
     allGastos = allGastos.map(g => g.id === id ? {...g, eliminado:true} : g);
     renderGastosPanel();
     if (!document.getElementById('cierre-caja-view').classList.contains('hidden')) {
@@ -3090,6 +3096,25 @@ async function listenToBarberos() {
 }
 
 // ---- MODALES ----
+// Custom confirm — avoids native confirm() que rompe el foco del teclado en mobile
+function customConfirm(message, confirmLabel = 'Eliminar') {
+    return new Promise(resolve => {
+        const ov = document.createElement('div');
+        ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);display:flex;align-items:flex-end;justify-content:center;padding-bottom:env(safe-area-inset-bottom,16px)';
+        ov.innerHTML = `<div style="background:#1e293b;border:1px solid rgba(255,255,255,0.1);border-radius:20px 20px 0 0;padding:24px 20px;width:100%;max-width:480px">
+            <p style="color:#f1f5f9;font-size:15px;font-weight:600;margin:0 0 18px;text-align:center">${message}</p>
+            <div style="display:flex;gap:10px">
+                <button id="_cc_cancel" style="flex:1;padding:14px;border-radius:12px;background:rgba(255,255,255,0.07);color:#94a3b8;font-weight:700;font-size:14px;border:1px solid rgba(255,255,255,0.1);cursor:pointer">Cancelar</button>
+                <button id="_cc_ok" style="flex:1;padding:14px;border-radius:12px;background:#dc2626;color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer">${confirmLabel}</button>
+            </div></div>`;
+        document.body.appendChild(ov);
+        const done = r => { document.body.removeChild(ov); resolve(r); };
+        ov.querySelector('#_cc_ok').onclick = () => done(true);
+        ov.querySelector('#_cc_cancel').onclick = () => done(false);
+        ov.onclick = e => { if (e.target === ov) done(false); };
+    });
+}
+
 const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal', 'nuevo-gasto-modal'];
 function showModal(id) {
     document.getElementById(id).classList.remove('hidden');
