@@ -485,7 +485,11 @@ const KITS = [
       ] }
 ];
 let _extraProductos = [], _extraKits = [];
-function getAllProducts(){ return [...PRODUCTS, ..._extraProductos]; }
+function getAllProducts(){
+    // _extraProductos con mismo ID que estático lo reemplaza
+    const customIds = new Set(_extraProductos.map(p=>p.id));
+    return [...PRODUCTS.filter(p=>!customIds.has(p.id)), ..._extraProductos];
+}
 function getAllKits(){ return [...KITS, ..._extraKits]; }
 function render(){ renderProducts(); renderKits(); }
 function prodById(id){ return getAllProducts().find(p=>p.id===id); }

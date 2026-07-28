@@ -330,6 +330,19 @@ const auth    = firebase.auth();
 const db      = firebase.firestore();
 const storage = firebase.storage();
 
+var STATIC_PRODUCTS = [
+    { id:'polvo-texturizador',        name:'Polvo Texturizador',               variant:'15gr',             price:12000, tag:'FAVORITO',    image:'https://i.imgur.com/Fx1ZtDm.jpeg',  description:'Volumen y textura al instante. Fijación media con acabado mate natural.' },
+    { id:'pomada-mate',               name:'Pomada Mate',                       variant:'Opcion 90gr',      price:12000, tag:'MÁS VENDIDO', image:'https://i.imgur.com/lX2zxQJ.jpeg',  description:'Control total sin brillo. Fijación fuerte, ideal para looks modernos.' },
+    { id:'pomada-brillante',          name:'Pomada Brillante',                  variant:'Opcion 50gr',      price:12000, tag:null,          image:'https://i.imgur.com/DvuCRX3.jpeg',  description:'Brillo intenso y fijación duradera. El look retro que marca la diferencia.' },
+    { id:'polvo-texturizador-black',  name:'Polvo Texturizador Original Black', variant:'5gr',              price:10000, tag:'NUEVO',       image:'https://i.imgur.com/Pl38xr5.jpeg',  description:'Versión original en black. Volumen y textura extrema con acabado mate oscuro intenso.' },
+    { id:'aftershave-celeste-black',  name:'Aftershave Celeste Original Black', variant:'400ml',            price:10900, tag:null,          image:'https://i.imgur.com/AwQhG9i.jpeg',  description:'Aftershave profesional Original Black. Efecto calmante, fragancia fresca y duradera.' },
+    { id:'aftershave-violeta-black',  name:'Aftershave Violeta Original Black', variant:'400ml',            price:10200, tag:null,          image:'https://i.imgur.com/w9uoX7U.jpeg',  description:'Aftershave profesional Original Black fragancia violeta. Efecto calmante y duradera.' },
+    { id:'quita-pelo-lujo',           name:'Quita Pelo Lujo',                   variant:'Profesional',      price:6900,  tag:null,          image:'https://i.imgur.com/LUO3Biq.jpeg',  description:'Quita pelo profesional de lujo. Limpieza rápida y eficiente del área de corte.' },
+    { id:'peine-toniguy',             name:'Peine Carbon Toniguy',              variant:'Profesional',      price:3900,  tag:null,          image:'https://i.imgur.com/ZJLQVrJ.jpeg',  description:'Peine profesional de barbería. Resistente, liviano y de uso diario.' },
+    { id:'capa-everest',              name:'Capa de Corte Everest',             variant:'Blanco y Negro',   price:17000, tag:'NUEVO',       image:'https://i.imgur.com/Axw82rM.jpeg',  description:'Capa profesional estilo pinstripe. Material impermeable, liviano y fácil de limpiar.' },
+    { id:'desinfectante-everest',     name:'Desinfectante Aerosol',             variant:'Everest 5 en 1',   price:10200, tag:null,          image:'https://i.imgur.com/c7oqrOb.jpeg',  description:'Desinfectante profesional de uso múltiple. Elimina bacterias, virus y hongos en instrumental.' }
+];
+
 let allProductos = [], allCombos = [];
 let freeShipping = false;
 let editingProductoId = null, editingComboId = null;
@@ -433,48 +446,55 @@ function removeFile(inputId, previewId, zoneId) {
 function saveProducto() {
     var name  = document.getElementById('p-name').value.trim();
     var price = Number(document.getElementById('p-price').value);
-    if (!name || !price) { showToast('Completá nombre y precio', false); return; }
+    if (!name) { showToast('Completá el nombre', false); return; }
+    if (!price) { showToast('Completá el precio', false); return; }
 
     var btn = document.getElementById('p-save-btn');
     btn.disabled = true; btn.textContent = 'Guardando...';
 
-    var id = editingProductoId || (name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now());
-    var data = {
-        name: name,
-        variant: document.getElementById('p-variant').value.trim(),
-        price: price,
-        tag: document.getElementById('p-tag').value || null,
-        description: document.getElementById('p-desc').value.trim(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    if (!editingProductoId) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    function resetBtn() { btn.disabled = false; btn.textContent = 'Guardar producto'; }
 
-    var imgFile = document.getElementById('p-img-file').files[0];
-    var imgUrl  = document.getElementById('p-img-url').value.trim();
-    var vidFile = document.getElementById('p-vid-file').files[0];
-    var vidUrl  = document.getElementById('p-video').value.trim();
+    try {
+        var id      = editingProductoId || (name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now());
+        var imgFile = document.getElementById('p-img-file').files[0];
+        var imgUrl  = document.getElementById('p-img-url').value.trim();
+        var vidFile = document.getElementById('p-vid-file').files[0];
+        var vidUrl  = document.getElementById('p-video').value.trim();
 
-    var imgPromise = imgFile
-        ? uploadFile(imgFile, 'tienda/products/' + id + '/imagen.' + imgFile.name.split('.').pop(), 'p-img-progress')
-        : Promise.resolve(imgUrl || null);
+        var imgPromise = imgFile ? uploadFile(imgFile, 'tienda/products/'+id+'/imagen.'+imgFile.name.split('.').pop(), 'p-img-progress') : Promise.resolve(imgUrl||null);
+        var vidPromise = vidFile ? uploadFile(vidFile, 'tienda/products/'+id+'/video.'+vidFile.name.split('.').pop(), 'p-vid-progress')   : Promise.resolve(vidUrl||null);
 
-    var vidPromise = vidFile
-        ? uploadFile(vidFile, 'tienda/products/' + id + '/video.' + vidFile.name.split('.').pop(), 'p-vid-progress')
-        : Promise.resolve(vidUrl || null);
+        Promise.all([imgPromise, vidPromise]).then(function(results) {
+            var now  = new Date();
+            var data = {
+                name: name,
+                variant: document.getElementById('p-variant').value.trim(),
+                price: price,
+                tag: document.getElementById('p-tag').value || null,
+                description: document.getElementById('p-desc').value.trim(),
+                updatedAt: now
+            };
+            if (!editingProductoId) data.createdAt = now;
+            if (results[0]) data.image    = results[0];
+            if (results[1]) data.videoUrl = results[1];
 
-    Promise.all([imgPromise, vidPromise]).then(function(results) {
-        if (results[0]) data.image    = results[0];
-        if (results[1]) data.videoUrl = results[1];
-        return db.collection(PATH_PRODUCTOS).doc(id).set(data, { merge: true });
-    }).then(function() {
-        showToast('Producto guardado ✓', true);
-        cancelEditProducto();
-    }).catch(function(e) {
-        console.error('saveProducto error:', e);
-        showToast('Error: ' + (e.code || e.message), false, 8000);
-    }).finally(function() {
-        btn.disabled = false; btn.textContent = 'Guardar producto';
-    });
+            var writeP   = db.collection(PATH_PRODUCTOS).doc(id).set(data, { merge: true });
+            var timeoutP = new Promise(function(_, rej) { setTimeout(function() { rej(new Error('Sin respuesta del servidor (15s). Revisá Firestore Rules en Firebase Console.')); }, 15000); });
+            return Promise.race([writeP, timeoutP]);
+        }).then(function() {
+            showToast('Producto guardado ✓', true);
+            cancelEditProducto();
+            resetBtn();
+        }).catch(function(e) {
+            console.error('saveProducto error:', e);
+            showToast('Error: ' + (e.code || e.message), false, 10000);
+            resetBtn();
+        });
+    } catch(e) {
+        console.error('saveProducto sync error:', e);
+        showToast('Error: ' + e.message, false, 10000);
+        resetBtn();
+    }
 }
 
 function cancelEditProducto() {
@@ -491,7 +511,7 @@ function cancelEditProducto() {
 }
 
 function editProducto(id) {
-    var p = allProductos.find(function(x) { return x.id === id; }); if (!p) return;
+    var p = allProductos.find(function(x) { return x.id === id; }) || STATIC_PRODUCTS.find(function(x) { return x.id === id; }); if (!p) return;
     editingProductoId = id;
     document.getElementById('p-name').value    = p.name || '';
     document.getElementById('p-variant').value = p.variant || '';
@@ -518,24 +538,37 @@ function deleteProducto(id) {
         .catch(function() { showToast('Error al eliminar', false); });
 }
 
+function prodRow(p, isCustom) {
+    return '<div class="prod-row">' +
+        (p.image ? '<img class="prod-thumb" src="' + p.image + '" alt="" onerror="this.style.display=\'none\'">' : '<div class="prod-thumb-placeholder">📦</div>') +
+        '<div class="prod-info">' +
+            '<div class="prod-name">' + p.name + (p.tag ? '<span class="prod-tag-badge">' + p.tag + '</span>' : '') + (!isCustom ? '<span class="prod-tag-badge" style="background:rgba(99,102,241,.15);color:#818cf8;">WEB</span>' : '') + '</div>' +
+            '<div class="prod-meta">$' + (p.price||0).toLocaleString('es-AR') + (p.variant?' · '+p.variant:'') + (p.videoUrl?' · 🎥':'') + '</div>' +
+        '</div>' +
+        '<div class="prod-actions">' +
+            '<button class="btn-edit" onclick="editProducto(\'' + p.id + '\')"><i class="fas fa-pen"></i></button>' +
+            (isCustom ? '<button class="btn-del" onclick="deleteProducto(\'' + p.id + '\')"><i class="fas fa-trash"></i></button>' : '') +
+        '</div></div>';
+}
+
 function renderProdList() {
     var el = document.getElementById('prod-list');
-    if (!allProductos.length) {
-        el.innerHTML = '<div class="empty-state"><i class="fas fa-box-open"></i><p>No hay productos. Agregá uno arriba.</p></div>';
-        return;
+    var customIds = allProductos.map(function(p) { return p.id; });
+    var staticToShow = STATIC_PRODUCTS.filter(function(p) { return customIds.indexOf(p.id) === -1; });
+
+    var html = '';
+    if (allProductos.length) {
+        html += '<div style="font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#404040;margin-bottom:8px;">Personalizados</div>';
+        html += allProductos.map(function(p) { return prodRow(p, true); }).join('');
     }
-    el.innerHTML = allProductos.map(function(p) {
-        return '<div class="prod-row">' +
-            (p.image ? '<img class="prod-thumb" src="' + p.image + '" alt="" onerror="this.style.display=\'none\'">' : '<div class="prod-thumb-placeholder">📦</div>') +
-            '<div class="prod-info">' +
-                '<div class="prod-name">' + p.name + (p.tag ? '<span class="prod-tag-badge">' + p.tag + '</span>' : '') + '</div>' +
-                '<div class="prod-meta">$' + (p.price||0).toLocaleString('es-AR') + (p.variant?' · '+p.variant:'') + (p.videoUrl?' · 🎥':'') + '</div>' +
-            '</div>' +
-            '<div class="prod-actions">' +
-                '<button class="btn-edit" onclick="editProducto(\'' + p.id + '\')"><i class="fas fa-pen"></i></button>' +
-                '<button class="btn-del" onclick="deleteProducto(\'' + p.id + '\')"><i class="fas fa-trash"></i></button>' +
-            '</div></div>';
-    }).join('');
+    if (staticToShow.length) {
+        html += '<div style="font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#404040;margin:' + (allProductos.length?'16px':'0') + ' 0 8px;">Productos de la web · Clic en editar para modificar</div>';
+        html += staticToShow.map(function(p) { return prodRow(p, false); }).join('');
+    }
+    if (!html) {
+        html = '<div class="empty-state"><i class="fas fa-box-open"></i><p>No hay productos.</p></div>';
+    }
+    el.innerHTML = html;
 }
 
 // ---- COMBO ----
@@ -577,52 +610,58 @@ function saveCombo() {
     var btn = document.getElementById('k-save-btn');
     btn.disabled = true; btn.textContent = 'Guardando...';
 
-    var id = editingComboId || (name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now());
-    var priceVal = document.getElementById('k-price').value;
-    var items = kitItemRows.map(function(rowId) {
-        var n = document.getElementById(rowId+'-name');
-        var d = document.getElementById(rowId+'-detail');
-        return { name: n ? n.value.trim() : '', detail: d ? d.value.trim() : '' };
-    }).filter(function(it) { return it.name; });
+    function resetBtn() { btn.disabled = false; btn.textContent = 'Guardar combo'; }
 
-    var data = {
-        name: name,
-        tag: 'COMBO',
-        subtitle: document.getElementById('k-subtitle').value.trim(),
-        price: priceVal ? Number(priceVal) : null,
-        desc: document.getElementById('k-desc').value.trim(),
-        freeShipping: freeShipping,
-        items: items,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    if (!editingComboId) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    try {
+        var id       = editingComboId || (name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now());
+        var priceVal = document.getElementById('k-price').value;
+        var items    = kitItemRows.map(function(rowId) {
+            var n = document.getElementById(rowId+'-name');
+            var d = document.getElementById(rowId+'-detail');
+            return { name: n ? n.value.trim() : '', detail: d ? d.value.trim() : '' };
+        }).filter(function(it) { return it.name; });
 
-    var imgFile = document.getElementById('k-img-file').files[0];
-    var imgUrl  = document.getElementById('k-img-url').value.trim();
-    var vidFile = document.getElementById('k-vid-file').files[0];
-    var vidUrl  = document.getElementById('k-video').value.trim();
+        var imgFile = document.getElementById('k-img-file').files[0];
+        var imgUrl  = document.getElementById('k-img-url').value.trim();
+        var vidFile = document.getElementById('k-vid-file').files[0];
+        var vidUrl  = document.getElementById('k-video').value.trim();
 
-    var imgPromise = imgFile
-        ? uploadFile(imgFile, 'tienda/kits/' + id + '/imagen.' + imgFile.name.split('.').pop(), 'k-img-progress')
-        : Promise.resolve(imgUrl || null);
+        var imgPromise = imgFile ? uploadFile(imgFile, 'tienda/kits/'+id+'/imagen.'+imgFile.name.split('.').pop(), 'k-img-progress') : Promise.resolve(imgUrl||null);
+        var vidPromise = vidFile ? uploadFile(vidFile, 'tienda/kits/'+id+'/video.'+vidFile.name.split('.').pop(), 'k-vid-progress')   : Promise.resolve(vidUrl||null);
 
-    var vidPromise = vidFile
-        ? uploadFile(vidFile, 'tienda/kits/' + id + '/video.' + vidFile.name.split('.').pop(), 'k-vid-progress')
-        : Promise.resolve(vidUrl || null);
+        Promise.all([imgPromise, vidPromise]).then(function(results) {
+            var now  = new Date();
+            var data = {
+                name: name,
+                tag: 'COMBO',
+                subtitle: document.getElementById('k-subtitle').value.trim(),
+                price: priceVal ? Number(priceVal) : null,
+                desc: document.getElementById('k-desc').value.trim(),
+                freeShipping: freeShipping,
+                items: items,
+                updatedAt: now
+            };
+            if (!editingComboId) data.createdAt = now;
+            if (results[0]) data.image    = results[0];
+            if (results[1]) data.videoUrl = results[1];
 
-    Promise.all([imgPromise, vidPromise]).then(function(results) {
-        if (results[0]) data.image    = results[0];
-        if (results[1]) data.videoUrl = results[1];
-        return db.collection(PATH_COMBOS).doc(id).set(data, { merge: true });
-    }).then(function() {
-        showToast('Combo guardado ✓', true);
-        cancelEditCombo();
-    }).catch(function(e) {
-        console.error('saveCombo error:', e);
-        showToast('Error: ' + (e.code || e.message), false, 8000);
-    }).finally(function() {
-        btn.disabled = false; btn.textContent = 'Guardar combo';
-    });
+            var writeP   = db.collection(PATH_COMBOS).doc(id).set(data, { merge: true });
+            var timeoutP = new Promise(function(_, rej) { setTimeout(function() { rej(new Error('Sin respuesta del servidor (15s). Revisá Firestore Rules en Firebase Console.')); }, 15000); });
+            return Promise.race([writeP, timeoutP]);
+        }).then(function() {
+            showToast('Combo guardado ✓', true);
+            cancelEditCombo();
+            resetBtn();
+        }).catch(function(e) {
+            console.error('saveCombo error:', e);
+            showToast('Error: ' + (e.code || e.message), false, 10000);
+            resetBtn();
+        });
+    } catch(e) {
+        console.error('saveCombo sync error:', e);
+        showToast('Error: ' + e.message, false, 10000);
+        resetBtn();
+    }
 }
 
 function cancelEditCombo() {
