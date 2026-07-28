@@ -451,9 +451,9 @@ let activeTab = 'mp';
 const KIT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>`;
 const KITS = [
     { id:'kit-inicial', name:'Kit Inicial', tag:'KIT', subtitle:'Para arrancar',
-      componentes:['pomada-mate','peine-toniguy','quita-pelo-lujo'] },
+      componentes:['pomada-mate','peine-toniguy','quita-pelo-lujo','desinfectante-everest'] },
     { id:'kit-avanzado', name:'Kit Avanzado', tag:'KIT', subtitle:'Equipo completo',
-      componentes:['pomada-mate','polvo-texturizador','aftershave-celeste-black','peine-toniguy','capa-everest'] }
+      componentes:['pomada-mate','polvo-texturizador','aftershave-celeste-black','peine-toniguy','capa-everest','desinfectante-everest'] }
 ];
 function prodById(id){ return PRODUCTS.find(p=>p.id===id); }
 function prodPriceLive(id){ const p=prodById(id); const cfg=productConfig[id]||{}; return cfg.price!=null?cfg.price:(p?p.price:0); }
