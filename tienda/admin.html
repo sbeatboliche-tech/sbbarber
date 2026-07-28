@@ -213,8 +213,8 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                     </div>
                 </div>
                 <div class="form-actions">
-                    <button class="btn-save" id="p-save-btn" onclick="saveProducto()">Guardar producto</button>
-                    <button class="btn-cancel" id="p-cancel-btn" style="display:none;" onclick="cancelEditProducto()">Cancelar</button>
+                    <button class="btn-save" id="p-save-btn">Guardar producto</button>
+                    <button class="btn-cancel" id="p-cancel-btn" style="display:none;">Cancelar</button>
                 </div>
                 <input type="hidden" id="p-edit-id">
             </div>
@@ -258,7 +258,7 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                 </div>
                 <div class="toggle-row" style="margin-top:4px;">
                     <span class="toggle-label">Envío gratis</span>
-                    <div class="toggle" id="k-shipping-toggle" onclick="toggleShipping()"></div>
+                    <div class="toggle" id="k-shipping-toggle"></div>
                 </div>
                 <div class="form-grid" style="margin-top:12px;">
                 <div class="form-field">
@@ -299,8 +299,8 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                     <button class="btn-add-item" onclick="addKitItemRow()"><i class="fas fa-plus" style="margin-right:6px;"></i> Agregar producto</button>
                 </div>
                 <div class="form-actions" style="margin-top:20px;">
-                    <button class="btn-save" id="k-save-btn" onclick="saveKit()">Guardar kit</button>
-                    <button class="btn-cancel" id="k-cancel-btn" style="display:none;" onclick="cancelEditKit()">Cancelar</button>
+                    <button class="btn-save" id="k-save-btn">Guardar kit</button>
+                    <button class="btn-cancel" id="k-cancel-btn" style="display:none;">Cancelar</button>
                 </div>
                 <input type="hidden" id="k-edit-id">
             </div>
@@ -476,8 +476,11 @@ window.saveProducto = async () => {
         showToast('Producto guardado ✓', true);
         cancelEditProducto();
     } catch(e) {
-        console.error(e);
-        showToast('Error: ' + (e.code || e.message), false);
+        console.error('saveProducto error:', e);
+        const msg = e.code === 'permission-denied'
+            ? 'Sin permiso en Firestore. Revisá las reglas en Firebase Console.'
+            : 'Error: ' + (e.code || e.message);
+        showToast(msg, false, 8000);
     } finally {
         btn.disabled = false; btn.textContent = 'Guardar producto';
     }
@@ -617,8 +620,11 @@ window.saveKit = async () => {
         showToast('Kit guardado ✓', true);
         cancelEditKit();
     } catch(e) {
-        console.error(e);
-        showToast('Error: ' + (e.code || e.message), false);
+        console.error('saveKit error:', e);
+        const msg = e.code === 'permission-denied'
+            ? 'Sin permiso en Firestore. Revisá las reglas en Firebase Console.'
+            : 'Error: ' + (e.code || e.message);
+        showToast(msg, false, 8000);
     } finally {
         btn.disabled = false; btn.textContent = 'Guardar kit';
     }
@@ -696,17 +702,24 @@ function renderKitList() {
 }
 
 // ---- TOAST ----
-function showToast(msg, ok) {
+function showToast(msg, ok, duration=3000) {
     const t = document.getElementById('toast');
     t.textContent = msg;
     t.className = 'status-toast ' + (ok ? 'ok' : 'err');
     t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 3000);
+    setTimeout(() => t.classList.remove('show'), duration);
 }
 
 // ---- LOGIN ENTER KEY ----
 document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') window.doLogin(); });
 document.getElementById('login-email').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-pass').focus(); });
+
+// ---- STATIC BUTTON LISTENERS (más confiable que onclick en módulos) ----
+document.getElementById('p-save-btn').addEventListener('click', () => window.saveProducto());
+document.getElementById('p-cancel-btn').addEventListener('click', () => window.cancelEditProducto());
+document.getElementById('k-save-btn').addEventListener('click', () => window.saveKit());
+document.getElementById('k-cancel-btn').addEventListener('click', () => window.cancelEditKit());
+document.getElementById('k-shipping-toggle').addEventListener('click', () => window.toggleShipping());
 </script>
 </body>
 </html>
