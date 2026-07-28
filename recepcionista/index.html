@@ -1080,6 +1080,7 @@ async function init() {
             listenToTurnos();
             listenToBarberos();
             listenToGastos();
+            listenToMenuData();
         } else {
             if (localStorage.getItem('rec-gate') === '1') {
                 // Gate ya pasado — entrar anónimamente sin pedir contraseña
@@ -2134,16 +2135,21 @@ let tiendaProdLive = {};         // overrides por id: {name, price, stock}
 let meBeb = [];                  // copia editable de bebidas
 let meProd = [];                 // copia editable de productos
 let menuEditorTab = 'bebidas';
+let menuDataListening = false;
 
-onSnapshot(collection(db, 'menu_bebidas'), snap => {
-    menuBebidasLive = [];
-    snap.forEach(d => menuBebidasLive.push({ id: d.id, ...d.data() }));
-    menuBebidasLive.sort((a, b) => (a.orden || 0) - (b.orden || 0));
-});
-onSnapshot(collection(db, 'tienda_productos'), snap => {
-    tiendaProdLive = {};
-    snap.forEach(d => { tiendaProdLive[d.id] = d.data(); });
-});
+function listenToMenuData() {
+    if (menuDataListening || !db) return;
+    menuDataListening = true;
+    onSnapshot(collection(db, 'menu_bebidas'), snap => {
+        menuBebidasLive = [];
+        snap.forEach(d => menuBebidasLive.push({ id: d.id, ...d.data() }));
+        menuBebidasLive.sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    });
+    onSnapshot(collection(db, 'tienda_productos'), snap => {
+        tiendaProdLive = {};
+        snap.forEach(d => { tiendaProdLive[d.id] = d.data(); });
+    });
+}
 
 const meEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
 
