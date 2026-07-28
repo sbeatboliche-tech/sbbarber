@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SB Barber — Admin Tienda</title>
+<link rel="icon" type="image/jpeg" href="https://i.imgur.com/PzcD4W2.jpeg">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;}
+input,select,textarea,button{font-family:'Inter',sans-serif;}
+
+/* LOGIN */
+#login-view{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+.login-box{background:#111;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:40px 32px;width:100%;max-width:380px;}
+.login-logo{font-size:11px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:#a3a3a3;margin-bottom:32px;}
+.login-title{font-size:22px;font-weight:800;margin-bottom:8px;}
+.login-sub{font-size:13px;color:#525252;margin-bottom:28px;}
+.field-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#525252;margin-bottom:6px;display:block;}
+.field-input{width:100%;padding:12px 14px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-size:14px;outline:none;transition:border-color .2s;}
+.field-input:focus{border-color:rgba(255,255,255,.3);}
+.btn-primary{width:100%;height:48px;background:#fff;color:#000;border:none;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;border-radius:8px;transition:background .15s;margin-top:20px;}
+.btn-primary:hover{background:#e5e5e5;}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+.login-err{font-size:12px;color:#f87171;margin-top:12px;text-align:center;}
+
+/* DASHBOARD */
+#dashboard-view{display:none;}
+.topbar{position:sticky;top:0;z-index:100;background:rgba(10,10,10,.95);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.07);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;}
+.topbar-title{font-size:11px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:#a3a3a3;}
+.btn-logout{background:none;border:1px solid rgba(255,255,255,.1);color:#a3a3a3;font-size:11px;font-weight:700;padding:6px 14px;cursor:pointer;border-radius:6px;letter-spacing:.06em;}
+.btn-logout:hover{background:rgba(255,255,255,.05);}
+.main{max-width:960px;margin:0 auto;padding:24px 16px 80px;}
+
+/* TABS */
+.tabs{display:flex;gap:4px;background:#111;border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:4px;margin-bottom:28px;}
+.tab-btn{flex:1;height:36px;background:none;border:none;color:#525252;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:7px;transition:all .2s;}
+.tab-btn.active{background:#fff;color:#000;}
+
+/* SECTION */
+.section-title{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:#404040;margin-bottom:16px;}
+.card{background:#111;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:20px;margin-bottom:12px;}
+.card-title{font-size:13px;font-weight:700;margin-bottom:16px;color:#e5e5e5;}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-grid.full{grid-template-columns:1fr;}
+.form-field{display:flex;flex-direction:column;gap:6px;}
+.form-field input,.form-field select,.form-field textarea{padding:10px 12px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-size:13px;outline:none;transition:border-color .2s;resize:vertical;}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:rgba(255,255,255,.3);}
+.form-field select option{background:#1a1a1a;}
+.form-field textarea{min-height:72px;}
+.field-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#525252;display:block;}
+.form-actions{display:flex;gap:10px;margin-top:16px;}
+.btn-save{height:42px;padding:0 24px;background:#fff;color:#000;border:none;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:8px;}
+.btn-save:disabled{opacity:.5;cursor:not-allowed;}
+.btn-cancel{height:42px;padding:0 20px;background:none;border:1px solid rgba(255,255,255,.1);color:#a3a3a3;font-size:11px;font-weight:700;cursor:pointer;border-radius:8px;}
+
+/* IMAGE UPLOAD */
+.upload-zone{border:2px dashed rgba(255,255,255,.12);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:border-color .2s;position:relative;background:#0f0f0f;}
+.upload-zone:hover,.upload-zone.drag{border-color:rgba(255,255,255,.35);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-zone-icon{font-size:28px;margin-bottom:8px;color:#404040;}
+.upload-zone-label{font-size:12px;color:#525252;line-height:1.5;}
+.upload-zone-label span{color:#a3a3a3;font-weight:600;}
+.upload-preview{position:relative;border-radius:8px;overflow:hidden;margin-top:10px;}
+.upload-preview img,.upload-preview video{width:100%;max-height:200px;object-fit:cover;display:block;border-radius:8px;}
+.upload-remove{position:absolute;top:6px;right:6px;width:28px;height:28px;background:rgba(0,0,0,.7);border:none;color:#fff;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;}
+.upload-progress{height:3px;background:#1a1a1a;border-radius:2px;margin-top:8px;overflow:hidden;}
+.upload-progress-bar{height:100%;background:#4ade80;transition:width .3s;width:0%;}
+
+/* KIT ITEMS */
+.kit-items-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+.kit-item-row{display:flex;gap-8px;gap:8px;align-items:flex-start;}
+.kit-item-row .fi{flex:1;}
+.kit-item-row .btn-rm{width:32px;height:32px;flex-shrink:0;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.2);color:#f87171;border-radius:6px;cursor:pointer;font-size:13px;margin-top:22px;}
+.btn-add-item{width:100%;height:36px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.1);color:#a3a3a3;font-size:11px;font-weight:700;letter-spacing:.08em;cursor:pointer;border-radius:8px;transition:all .2s;}
+.btn-add-item:hover{background:rgba(255,255,255,.07);}
+
+/* PRODUCT LIST */
+.prod-list{display:flex;flex-direction:column;gap:10px;}
+.prod-row{display:flex;align-items:center;gap:14px;background:#111;border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px 16px;}
+.prod-thumb{width:48px;height:48px;border-radius:6px;object-fit:cover;background:#1a1a1a;flex-shrink:0;}
+.prod-thumb-placeholder{width:48px;height:48px;border-radius:6px;background:#1a1a1a;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.prod-info{flex:1;min-width:0;}
+.prod-name{font-size:13px;font-weight:700;color:#e5e5e5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.prod-meta{font-size:11px;color:#525252;margin-top:2px;}
+.prod-actions{display:flex;gap:6px;flex-shrink:0;}
+.btn-edit,.btn-del{width:34px;height:34px;border:1px solid rgba(255,255,255,.08);border-radius:6px;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:background .15s;}
+.btn-edit{color:#60a5fa;}
+.btn-edit:hover{background:rgba(96,165,250,.1);}
+.btn-del{color:#f87171;}
+.btn-del:hover{background:rgba(248,113,113,.1);}
+.prod-tag-badge{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:4px;margin-left:8px;background:rgba(255,255,255,.08);color:#a3a3a3;}
+
+/* EMPTY */
+.empty-state{text-align:center;padding:48px 20px;color:#404040;}
+.empty-state i{font-size:32px;margin-bottom:12px;display:block;}
+.empty-state p{font-size:13px;}
+
+/* STATUS */
+.status-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a1a;border:1px solid rgba(255,255,255,.12);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;transition:transform .3s;z-index:9999;white-space:nowrap;}
+.status-toast.show{transform:translateX(-50%) translateY(0);}
+.status-toast.ok{border-color:rgba(74,222,128,.3);color:#4ade80;}
+.status-toast.err{border-color:rgba(248,113,113,.3);color:#f87171;}
+
+/* TOGGLE */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;}
+.toggle-label{font-size:13px;color:#e5e5e5;}
+.toggle{width:42px;height:24px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:12px;position:relative;cursor:pointer;transition:background .2s;}
+.toggle.on{background:#16a34a;border-color:#16a34a;}
+.toggle::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:2px;left:2px;transition:left .2s;}
+.toggle.on::after{left:20px;}
+
+@media(max-width:600px){.form-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-view">
+    <div class="login-box">
+        <div class="login-logo">SB Barber</div>
+        <div class="login-title">Panel Admin</div>
+        <div class="login-sub">Solo administradores</div>
+        <label class="field-label">Email</label>
+        <input type="email" id="login-email" class="field-input" placeholder="tu@email.com" style="margin-bottom:12px;">
+        <label class="field-label">Contraseña</label>
+        <input type="password" id="login-pass" class="field-input" placeholder="••••••••">
+        <button class="btn-primary" id="login-btn" onclick="doLogin()">Entrar</button>
+        <div class="login-err" id="login-err"></div>
+    </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard-view">
+    <div class="topbar">
+        <div class="topbar-title">Admin · Tienda</div>
+        <button class="btn-logout" onclick="doLogout()">Salir</button>
+    </div>
+    <div class="main">
+        <div class="tabs">
+            <button class="tab-btn active" id="tab-productos" onclick="switchTab('productos')">Productos</button>
+            <button class="tab-btn" id="tab-kits" onclick="switchTab('kits')">Kits / Combos</button>
+        </div>
+
+        <!-- TAB PRODUCTOS -->
+        <div id="panel-productos">
+            <div class="section-title">Agregar / Editar Producto</div>
+            <div class="card">
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="field-label">Nombre *</label>
+                        <input type="text" id="p-name" placeholder="Ej: Pomada Mate">
+                    </div>
+                    <div class="form-field">
+                        <label class="field-label">Variante</label>
+                        <input type="text" id="p-variant" placeholder="Ej: 90g">
+                    </div>
+                    <div class="form-field">
+                        <label class="field-label">Precio ($) *</label>
+                        <input type="number" id="p-price" placeholder="12000" min="0">
+                    </div>
+                    <div class="form-field">
+                        <label class="field-label">Tag</label>
+                        <select id="p-tag">
+                            <option value="">Sin tag</option>
+                            <option value="FAVORITO">FAVORITO</option>
+                            <option value="MÁS VENDIDO">MÁS VENDIDO</option>
+                            <option value="NUEVO">NUEVO</option>
+                            <option value="OFERTA">OFERTA</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid full" style="margin-top:12px;">
+                    <div class="form-field">
+                        <label class="field-label">Descripción</label>
+                        <textarea id="p-desc" placeholder="Describe el producto..."></textarea>
+                    </div>
+                </div>
+                <div class="form-grid" style="margin-top:12px;">
+                    <div class="form-field">
+                        <label class="field-label">Foto principal</label>
+                        <div class="upload-zone" id="p-img-zone">
+                            <input type="file" id="p-img-file" accept="image/*" onchange="previewFile(this,'p-img-preview','p-img-remove')">
+                            <div class="upload-zone-icon"><i class="fas fa-image"></i></div>
+                            <div class="upload-zone-label">Arrastrá o <span>elegí una foto</span></div>
+                        </div>
+                        <div class="upload-preview" id="p-img-preview" style="display:none;">
+                            <img id="p-img-preview-img" src="" alt="">
+                            <button class="upload-remove" id="p-img-remove" onclick="removeFile('p-img-file','p-img-preview','p-img-zone')"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="upload-progress"><div class="upload-progress-bar" id="p-img-progress"></div></div>
+                    </div>
+                    <div class="form-field">
+                        <label class="field-label">Video (URL YouTube/Vimeo)</label>
+                        <input type="url" id="p-video" placeholder="https://youtube.com/...">
+                        <label class="field-label" style="margin-top:12px;">O subir video</label>
+                        <div class="upload-zone" id="p-vid-zone">
+                            <input type="file" id="p-vid-file" accept="video/*" onchange="previewVideo(this,'p-vid-preview','p-vid-remove')">
+                            <div class="upload-zone-icon"><i class="fas fa-video"></i></div>
+                            <div class="upload-zone-label">Arrastrá o <span>elegí un video</span></div>
+                        </div>
+                        <div class="upload-preview" id="p-vid-preview" style="display:none;">
+                            <video id="p-vid-preview-vid" src="" controls style="max-height:160px;"></video>
+                            <button class="upload-remove" id="p-vid-remove" onclick="removeFile('p-vid-file','p-vid-preview','p-vid-zone')"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="upload-progress"><div class="upload-progress-bar" id="p-vid-progress"></div></div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn-save" id="p-save-btn" onclick="saveProducto()">Guardar producto</button>
+                    <button class="btn-cancel" id="p-cancel-btn" style="display:none;" onclick="cancelEditProducto()">Cancelar</button>
+                </div>
+                <input type="hidden" id="p-edit-id">
+            </div>
+
+            <div class="section-title" style="margin-top:24px;">Productos en la tienda</div>
+            <div id="prod-list" class="prod-list">
+                <div class="empty-state"><i class="fas fa-box-open"></i><p>Cargando...</p></div>
+            </div>
+        </div>
+
+        <!-- TAB KITS -->
+        <div id="panel-kits" style="display:none;">
+            <div class="section-title">Agregar / Editar Kit o Combo</div>
+            <div class="card">
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="field-label">Nombre *</label>
+                        <input type="text" id="k-name" placeholder="Ej: Combo Styling Profesional">
+                    </div>
+                    <div class="form-field">
+                        <label class="field-label">Tipo</label>
+                        <select id="k-tag">
+                            <option value="KIT">KIT</option>
+                            <option value="COMBO">COMBO</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label class="field-label">Subtítulo</label>
+                        <input type="text" id="k-subtitle" placeholder="Ej: Fijación · Textura · Volumen">
+                    </div>
+                    <div class="form-field">
+                        <label class="field-label">Precio ($) — vacío = "Consultá"</label>
+                        <input type="number" id="k-price" placeholder="54900" min="0">
+                    </div>
+                </div>
+                <div class="form-grid full" style="margin-top:12px;">
+                    <div class="form-field">
+                        <label class="field-label">Descripción (quién es ideal, para qué, etc.)</label>
+                        <textarea id="k-desc" placeholder="Descripción breve del combo..."></textarea>
+                    </div>
+                </div>
+                <div class="toggle-row" style="margin-top:4px;">
+                    <span class="toggle-label">Envío gratis</span>
+                    <div class="toggle" id="k-shipping-toggle" onclick="toggleShipping()"></div>
+                </div>
+                <div class="form-field" style="margin-top:12px;">
+                    <label class="field-label">Foto del kit/combo</label>
+                    <div class="upload-zone" id="k-img-zone">
+                        <input type="file" id="k-img-file" accept="image/*" onchange="previewFile(this,'k-img-preview','k-img-remove')">
+                        <div class="upload-zone-icon"><i class="fas fa-image"></i></div>
+                        <div class="upload-zone-label">Arrastrá o <span>elegí una foto</span></div>
+                    </div>
+                    <div class="upload-preview" id="k-img-preview" style="display:none;">
+                        <img id="k-img-preview-img" src="" alt="">
+                        <button class="upload-remove" id="k-img-remove" onclick="removeFile('k-img-file','k-img-preview','k-img-zone')"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="upload-progress"><div class="upload-progress-bar" id="k-img-progress"></div></div>
+                    <div id="k-img-current" style="font-size:11px;color:#525252;margin-top:6px;display:none;">Imagen actual: <span id="k-img-current-url"></span></div>
+                </div>
+                <div style="margin-top:16px;">
+                    <label class="field-label" style="margin-bottom:12px;display:block;">Productos incluidos</label>
+                    <div id="k-items-list" class="kit-items-list"></div>
+                    <button class="btn-add-item" onclick="addKitItemRow()"><i class="fas fa-plus" style="margin-right:6px;"></i> Agregar producto</button>
+                </div>
+                <div class="form-actions" style="margin-top:20px;">
+                    <button class="btn-save" id="k-save-btn" onclick="saveKit()">Guardar kit</button>
+                    <button class="btn-cancel" id="k-cancel-btn" style="display:none;" onclick="cancelEditKit()">Cancelar</button>
+                </div>
+                <input type="hidden" id="k-edit-id">
+            </div>
+
+            <div class="section-title" style="margin-top:24px;">Kits y combos en la tienda</div>
+            <div id="kit-list" class="prod-list">
+                <div class="empty-state"><i class="fas fa-layer-group"></i><p>Cargando...</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="status-toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
+    authDomain: "sb-barber-6dc16.firebaseapp.com",
+    projectId: "sb-barber-6dc16",
+    storageBucket: "sb-barber-6dc16.firebasestorage.app",
+    messagingSenderId: "213501157745",
+    appId: "1:213501157745:web:09fd59996cf1d72b6696d0"
+};
+const ADMINS = ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
+const PATH_PRODUCTOS = 'tienda_productos_custom';
+const PATH_KITS      = 'tienda_kits_custom';
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+const storage = getStorage(app);
+
+let allProductos = [], allKits = [];
+let freeShipping = false;
+let editingProductoId = null, editingKitId = null;
+
+// ---- AUTH ----
+onAuthStateChanged(auth, user => {
+    if (user && ADMINS.includes(user.email)) {
+        document.getElementById('login-view').style.display = 'none';
+        document.getElementById('dashboard-view').style.display = 'block';
+        listenProductos();
+        listenKits();
+    } else {
+        document.getElementById('login-view').style.display = 'flex';
+        document.getElementById('dashboard-view').style.display = 'none';
+    }
+});
+
+window.doLogin = async () => {
+    const btn = document.getElementById('login-btn');
+    const err = document.getElementById('login-err');
+    err.textContent = '';
+    btn.disabled = true; btn.textContent = 'Entrando...';
+    try {
+        const cred = await signInWithEmailAndPassword(auth,
+            document.getElementById('login-email').value.trim(),
+            document.getElementById('login-pass').value);
+        if (!ADMINS.includes(cred.user.email)) {
+            await signOut(auth);
+            err.textContent = 'No tenés permiso de admin.';
+        }
+    } catch(e) {
+        err.textContent = 'Email o contraseña incorrectos.';
+    }
+    btn.disabled = false; btn.textContent = 'Entrar';
+};
+window.doLogout = () => signOut(auth);
+
+// ---- TABS ----
+window.switchTab = (tab) => {
+    document.getElementById('panel-productos').style.display = tab === 'productos' ? 'block' : 'none';
+    document.getElementById('panel-kits').style.display = tab === 'kits' ? 'block' : 'none';
+    document.getElementById('tab-productos').classList.toggle('active', tab === 'productos');
+    document.getElementById('tab-kits').classList.toggle('active', tab === 'kits');
+};
+
+// ---- FIRESTORE LISTENERS ----
+function listenProductos() {
+    onSnapshot(collection(db, PATH_PRODUCTOS), snap => {
+        allProductos = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        renderProdList();
+    });
+}
+function listenKits() {
+    onSnapshot(collection(db, PATH_KITS), snap => {
+        allKits = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        renderKitList();
+    });
+}
+
+// ---- UPLOAD ----
+async function uploadFile(file, path, progressBarId) {
+    return new Promise((resolve, reject) => {
+        const storageRef = ref(storage, path);
+        const task = uploadBytesResumable(storageRef, file);
+        const bar = document.getElementById(progressBarId);
+        task.on('state_changed',
+            snap => { if(bar) bar.style.width = Math.round(snap.bytesTransferred/snap.totalBytes*100)+'%'; },
+            reject,
+            async () => { resolve(await getDownloadURL(task.snapshot.ref)); }
+        );
+    });
+}
+
+window.previewFile = (input, previewId, removeId) => {
+    const f = input.files[0]; if(!f) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById(previewId).style.display = 'block';
+        document.getElementById(previewId + '-img').src = e.target.result;
+        input.closest('.upload-zone').style.display = 'none';
+    };
+    reader.readAsDataURL(f);
+};
+window.previewVideo = (input, previewId, removeId) => {
+    const f = input.files[0]; if(!f) return;
+    const url = URL.createObjectURL(f);
+    document.getElementById(previewId).style.display = 'block';
+    document.getElementById(previewId + '-vid').src = url;
+    input.closest('.upload-zone').style.display = 'none';
+};
+window.removeFile = (inputId, previewId, zoneId) => {
+    document.getElementById(inputId).value = '';
+    document.getElementById(previewId).style.display = 'none';
+    document.getElementById(zoneId).style.display = 'block';
+    const bar = document.getElementById(inputId.replace('-file','') + '-progress');
+    if(bar) bar.style.width = '0%';
+};
+
+// ---- PRODUCTO FORM ----
+window.saveProducto = async () => {
+    const name = document.getElementById('p-name').value.trim();
+    const price = Number(document.getElementById('p-price').value);
+    if (!name || !price) { showToast('Completá nombre y precio', false); return; }
+
+    const btn = document.getElementById('p-save-btn');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+
+    try {
+        const id = editingProductoId || name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now();
+        const data = {
+            name,
+            variant: document.getElementById('p-variant').value.trim(),
+            price,
+            tag: document.getElementById('p-tag').value || null,
+            description: document.getElementById('p-desc').value.trim(),
+            updatedAt: serverTimestamp(),
+        };
+
+        const imgFile = document.getElementById('p-img-file').files[0];
+        if (imgFile) {
+            data.image = await uploadFile(imgFile, `tienda/products/${id}/imagen.${imgFile.name.split('.').pop()}`, 'p-img-progress');
+        }
+        const vidFile = document.getElementById('p-vid-file').files[0];
+        if (vidFile) {
+            data.videoUrl = await uploadFile(vidFile, `tienda/products/${id}/video.${vidFile.name.split('.').pop()}`, 'p-vid-progress');
+        } else {
+            const vidUrl = document.getElementById('p-video').value.trim();
+            if (vidUrl) data.videoUrl = vidUrl;
+        }
+
+        if (!editingProductoId) data.createdAt = serverTimestamp();
+        await setDoc(doc(db, PATH_PRODUCTOS, id), data, { merge: true });
+        showToast('Producto guardado ✓', true);
+        cancelEditProducto();
+    } catch(e) {
+        console.error(e);
+        showToast('Error al guardar: ' + e.message, false);
+    }
+    btn.disabled = false; btn.textContent = 'Guardar producto';
+};
+
+window.cancelEditProducto = () => {
+    editingProductoId = null;
+    ['p-name','p-variant','p-price','p-desc','p-video'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('p-tag').value = '';
+    document.getElementById('p-edit-id').value = '';
+    window.removeFile('p-img-file','p-img-preview','p-img-zone');
+    window.removeFile('p-vid-file','p-vid-preview','p-vid-zone');
+    document.getElementById('p-cancel-btn').style.display = 'none';
+    document.getElementById('p-save-btn').textContent = 'Guardar producto';
+};
+
+window.editProducto = (id) => {
+    const p = allProductos.find(x => x.id === id); if(!p) return;
+    editingProductoId = id;
+    document.getElementById('p-name').value = p.name || '';
+    document.getElementById('p-variant').value = p.variant || '';
+    document.getElementById('p-price').value = p.price || '';
+    document.getElementById('p-tag').value = p.tag || '';
+    document.getElementById('p-desc').value = p.description || '';
+    document.getElementById('p-video').value = p.videoUrl || '';
+    if (p.image) {
+        document.getElementById('p-img-preview').style.display = 'block';
+        document.getElementById('p-img-preview-img').src = p.image;
+        document.getElementById('p-img-zone').style.display = 'none';
+    }
+    document.getElementById('p-edit-id').value = id;
+    document.getElementById('p-cancel-btn').style.display = 'inline-flex';
+    document.getElementById('p-save-btn').textContent = 'Actualizar producto';
+    document.getElementById('panel-productos').scrollIntoView({ behavior:'smooth' });
+};
+
+window.deleteProducto = async (id) => {
+    if (!confirm('¿Eliminar este producto?')) return;
+    try { await deleteDoc(doc(db, PATH_PRODUCTOS, id)); showToast('Eliminado', true); }
+    catch(e) { showToast('Error al eliminar', false); }
+};
+
+function renderProdList() {
+    const el = document.getElementById('prod-list');
+    if (!allProductos.length) {
+        el.innerHTML = '<div class="empty-state"><i class="fas fa-box-open"></i><p>No hay productos. Agregá uno arriba.</p></div>';
+        return;
+    }
+    el.innerHTML = allProductos.map(p => `
+        <div class="prod-row">
+            ${p.image ? `<img class="prod-thumb" src="${p.image}" alt="">` : `<div class="prod-thumb-placeholder">📦</div>`}
+            <div class="prod-info">
+                <div class="prod-name">${p.name}${p.tag?`<span class="prod-tag-badge">${p.tag}</span>`:''}</div>
+                <div class="prod-meta">$${(p.price||0).toLocaleString('es-AR')}${p.variant?' · '+p.variant:''}${p.videoUrl?' · 🎥':''}</div>
+            </div>
+            <div class="prod-actions">
+                <button class="btn-edit" onclick="editProducto('${p.id}')"><i class="fas fa-pen"></i></button>
+                <button class="btn-del" onclick="deleteProducto('${p.id}')"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>`).join('');
+}
+
+// ---- KIT FORM ----
+let kitItemRows = [];
+window.addKitItemRow = (name='', detail='') => {
+    const rowId = 'kr-' + Date.now();
+    kitItemRows.push(rowId);
+    const list = document.getElementById('k-items-list');
+    const row = document.createElement('div');
+    row.className = 'kit-item-row'; row.id = rowId;
+    row.innerHTML = `
+        <div class="fi form-field" style="flex:1;">
+            <label class="field-label">Producto</label>
+            <input type="text" id="${rowId}-name" value="${name}" placeholder="Ej: Pomada Mate Opción 90g">
+        </div>
+        <div class="fi form-field" style="flex:1.5;">
+            <label class="field-label">Detalle (opcional)</label>
+            <input type="text" id="${rowId}-detail" value="${detail}" placeholder="Fijación media, acabado mate...">
+        </div>
+        <button class="btn-rm" onclick="removeKitRow('${rowId}')"><i class="fas fa-times"></i></button>`;
+    list.appendChild(row);
+};
+window.removeKitRow = (rowId) => {
+    document.getElementById(rowId)?.remove();
+    kitItemRows = kitItemRows.filter(id => id !== rowId);
+};
+
+window.toggleShipping = () => {
+    freeShipping = !freeShipping;
+    document.getElementById('k-shipping-toggle').classList.toggle('on', freeShipping);
+};
+
+window.saveKit = async () => {
+    const name = document.getElementById('k-name').value.trim();
+    if (!name) { showToast('Completá el nombre', false); return; }
+
+    const btn = document.getElementById('k-save-btn');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+
+    try {
+        const id = editingKitId || name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now();
+        const priceVal = document.getElementById('k-price').value;
+        const items = kitItemRows.map(rowId => ({
+            name: document.getElementById(rowId+'-name')?.value.trim() || '',
+            detail: document.getElementById(rowId+'-detail')?.value.trim() || ''
+        })).filter(it => it.name);
+
+        const data = {
+            name,
+            tag: document.getElementById('k-tag').value,
+            subtitle: document.getElementById('k-subtitle').value.trim(),
+            price: priceVal ? Number(priceVal) : null,
+            desc: document.getElementById('k-desc').value.trim(),
+            freeShipping,
+            items,
+            updatedAt: serverTimestamp(),
+        };
+
+        const imgFile = document.getElementById('k-img-file').files[0];
+        if (imgFile) {
+            data.image = await uploadFile(imgFile, `tienda/kits/${id}/imagen.${imgFile.name.split('.').pop()}`, 'k-img-progress');
+        }
+
+        if (!editingKitId) data.createdAt = serverTimestamp();
+        await setDoc(doc(db, PATH_KITS, id), data, { merge: true });
+        showToast('Kit guardado ✓', true);
+        cancelEditKit();
+    } catch(e) {
+        console.error(e);
+        showToast('Error al guardar: ' + e.message, false);
+    }
+    btn.disabled = false; btn.textContent = 'Guardar kit';
+};
+
+window.cancelEditKit = () => {
+    editingKitId = null; freeShipping = false;
+    ['k-name','k-subtitle','k-price','k-desc'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('k-tag').value = 'KIT';
+    document.getElementById('k-edit-id').value = '';
+    document.getElementById('k-shipping-toggle').classList.remove('on');
+    document.getElementById('k-items-list').innerHTML = '';
+    kitItemRows = [];
+    window.removeFile('k-img-file','k-img-preview','k-img-zone');
+    document.getElementById('k-img-current').style.display = 'none';
+    document.getElementById('k-cancel-btn').style.display = 'none';
+    document.getElementById('k-save-btn').textContent = 'Guardar kit';
+};
+
+window.editKit = (id) => {
+    const k = allKits.find(x => x.id === id); if(!k) return;
+    editingKitId = id;
+    document.getElementById('k-name').value = k.name || '';
+    document.getElementById('k-tag').value = k.tag || 'KIT';
+    document.getElementById('k-subtitle').value = k.subtitle || '';
+    document.getElementById('k-price').value = k.price != null ? k.price : '';
+    document.getElementById('k-desc').value = k.desc || '';
+    freeShipping = !!k.freeShipping;
+    document.getElementById('k-shipping-toggle').classList.toggle('on', freeShipping);
+    document.getElementById('k-items-list').innerHTML = '';
+    kitItemRows = [];
+    (k.items || []).forEach(it => addKitItemRow(it.name, it.detail||''));
+    if (k.image) {
+        document.getElementById('k-img-preview').style.display = 'block';
+        document.getElementById('k-img-preview-img').src = k.image;
+        document.getElementById('k-img-zone').style.display = 'none';
+        document.getElementById('k-img-current').style.display = 'block';
+        document.getElementById('k-img-current-url').textContent = k.image.length > 50 ? k.image.slice(0,50)+'…' : k.image;
+    }
+    document.getElementById('k-edit-id').value = id;
+    document.getElementById('k-cancel-btn').style.display = 'inline-flex';
+    document.getElementById('k-save-btn').textContent = 'Actualizar kit';
+    document.getElementById('panel-kits').scrollIntoView({ behavior:'smooth' });
+};
+
+window.deleteKit = async (id) => {
+    if (!confirm('¿Eliminar este kit/combo?')) return;
+    try { await deleteDoc(doc(db, PATH_KITS, id)); showToast('Eliminado', true); }
+    catch(e) { showToast('Error al eliminar', false); }
+};
+
+function renderKitList() {
+    const el = document.getElementById('kit-list');
+    if (!allKits.length) {
+        el.innerHTML = '<div class="empty-state"><i class="fas fa-layer-group"></i><p>No hay kits. Agregá uno arriba.</p></div>';
+        return;
+    }
+    el.innerHTML = allKits.map(k => `
+        <div class="prod-row">
+            ${k.image ? `<img class="prod-thumb" src="${k.image}" alt="">` : `<div class="prod-thumb-placeholder">${k.tag==='COMBO'?'🎁':'📦'}</div>`}
+            <div class="prod-info">
+                <div class="prod-name">${k.name}<span class="prod-tag-badge">${k.tag||'KIT'}</span></div>
+                <div class="prod-meta">${k.price!=null?'$'+k.price.toLocaleString('es-AR'):'Consultá'}${k.freeShipping?' · ENVÍO GRATIS':''}${k.items?.length?' · '+k.items.length+' items':''}</div>
+            </div>
+            <div class="prod-actions">
+                <button class="btn-edit" onclick="editKit('${k.id}')"><i class="fas fa-pen"></i></button>
+                <button class="btn-del" onclick="deleteKit('${k.id}')"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>`).join('');
+}
+
+// ---- TOAST ----
+function showToast(msg, ok) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'status-toast ' + (ok ? 'ok' : 'err');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ---- LOGIN ENTER KEY ----
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') window.doLogin(); });
+document.getElementById('login-email').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-pass').focus(); });
+</script>
+</body>
+</html>

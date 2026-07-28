@@ -469,7 +469,8 @@ const KITS = [
     { id:'kit-avanzado', name:'Kit Avanzado', tag:'KIT', subtitle:'Equipo completo',
       componentes:['pomada-mate','polvo-texturizador','aftershave-celeste-black','peine-toniguy','capa-everest','desinfectante-everest'] },
     { id:'combo-opcion-styling', name:'Combo Opción – Styling Profesional', tag:'COMBO', subtitle:'Fijación · Textura · Volumen · Definición',
-      custom:true, price:null,
+      custom:true, price:54900, freeShipping:true,
+      image:'img/combo-opcion-styling.jpg',
       desc:'Para todo tipo de cabello. Uso profesional o personal. Peinados clásicos, modernos, con volumen o efecto despeinado.',
       items:[
         { name:'Mousse Modelador Opción', detail:'Volumen, control y fijación flexible sin dejar el cabello pesado.' },
@@ -478,7 +479,11 @@ const KITS = [
         { name:'Texturizante Instantáneo Opción Navajas 15 g', detail:'Textura, volumen y cuerpo al instante para estilos descontracturados.' }
       ] }
 ];
-function prodById(id){ return PRODUCTS.find(p=>p.id===id); }
+let _extraProductos = [], _extraKits = [];
+function getAllProducts(){ return [...PRODUCTS, ..._extraProductos]; }
+function getAllKits(){ return [...KITS, ..._extraKits]; }
+function render(){ renderProducts(); renderKits(); }
+function prodById(id){ return getAllProducts().find(p=>p.id===id); }
 function prodPriceLive(id){ const p=prodById(id); const cfg=productConfig[id]||{}; return cfg.price!=null?cfg.price:(p?p.price:0); }
 function prodNameLive(id){ const p=prodById(id); const cfg=productConfig[id]||{}; return (cfg.name||(p&&p.name))||''; }
 function kitPrice(kit){ return kit.custom ? (kit.price||0) : kit.componentes.reduce((s,id)=>s+prodPriceLive(id),0); }
@@ -489,13 +494,16 @@ function kitCount(kit){ return kit.custom ? kit.items.length : kit.componentes.l
 function renderKits() {
     const grid = document.getElementById('kits-grid');
     if(!grid) return;
-    grid.innerHTML = KITS.map((k,i)=>{
+    const allKitsToRender = typeof getAllKits === 'function' ? getAllKits() : KITS;
+    grid.innerHTML = allKitsToRender.map((k,i)=>{
         const price = kitPrice(k);
         const hasPrice = kitHasPrice(k);
         const out = kitOut(k);
         let collage, includes;
         if (k.custom) {
-            collage = KIT_ICON;
+            collage = k.image
+                ? `<img src="${k.image}" alt="${k.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;">`
+                : KIT_ICON;
             includes = k.items.map(it =>
                 `<li>${it.name}${it.detail?`<span class="kit-detail">${it.detail}</span>`:''}</li>`).join('');
         } else {
@@ -530,6 +538,7 @@ function renderKits() {
             <div class="product-image-wrap">
                 ${collage}
                 <div class="product-tag">${k.tag}</div>
+                ${k.freeShipping ? `<div style="position:absolute;bottom:8px;left:8px;background:#16a34a;color:#fff;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;">ENVÍO GRATIS</div>` : ''}
                 ${out ? `<div class="stock-badge stock-out-badge">Sin stock</div>` : ''}
             </div>
             <div class="product-info">
@@ -622,7 +631,8 @@ async function calcularEnvio() {
 }
 
 function renderProducts() {
-    document.getElementById('products-grid').innerHTML = PRODUCTS.map((p,i)=>{
+    const allProdsToRender = typeof getAllProducts === 'function' ? getAllProducts() : PRODUCTS;
+    document.getElementById('products-grid').innerHTML = allProdsToRender.map((p,i)=>{
         const cfg = productConfig[p.id] || {};
         const price = cfg.price != null ? cfg.price : p.price;
         const stock = cfg.stock;
@@ -943,6 +953,15 @@ onSnapshot(collection(db, 'tienda_productos'), snap => {
     productConfig = {};
     snap.forEach(d => { productConfig[d.id] = d.data(); });
     renderProducts();
+});
+
+onSnapshot(collection(db, 'tienda_productos_custom'), snap => {
+    _extraProductos = snap.docs.map(d => ({ ...d.data(), id:d.id }));
+    renderProducts();
+});
+onSnapshot(collection(db, 'tienda_kits_custom'), snap => {
+    _extraKits = snap.docs.map(d => ({ ...d.data(), id:d.id, custom:true }));
+    renderKits();
 });
 
 onSnapshot(collection(db, 'tienda_cursos'), snap => {
