@@ -38,6 +38,16 @@
         @keyframes pulse-red { 0%,100%{border-color:rgba(239,68,68,0.4)} 50%{border-color:rgba(239,68,68,0.9)} }
         body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
         button:disabled { opacity:0.7; cursor:not-allowed; }
+        /* Ocultar saldo de facturación con asteriscos */
+        .money-hidden .js-money { font-size:0 !important; }
+        .money-hidden .js-money::after {
+            content:"*****"; color:#9ca3af; font-weight:800; letter-spacing:0.1em;
+        }
+        .money-hidden #stat-cuts-billing::after { font-size:1.5rem; }
+        .money-hidden #stat-ventas-billing::after { font-size:0.875rem; }
+        .money-hidden #stat-total-billing::after { font-size:1rem; }
+        #money-eye-btn { color:#6b7280; transition:color .2s, transform .2s; }
+        #money-eye-btn:hover { color:#e5e7eb; }
         /* Mobile tabs */
         .tab-content { display:none; }
         .tab-content.active { display:flex; flex-direction:column; }
@@ -171,9 +181,14 @@
 
                 <!-- Resumen del día -->
                 <div class="glass-card rounded-2xl p-5 animate-enter">
-                    <span class="text-gray-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2 mb-3">
-                        <i class="fas fa-calendar-day text-cyan-400"></i> Hoy
-                    </span>
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-gray-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                            <i class="fas fa-calendar-day text-cyan-400"></i> Hoy
+                        </span>
+                        <button id="money-eye-btn" type="button" onclick="window.toggleMoneyVisibility()" title="Mostrar/ocultar saldo" aria-label="Mostrar u ocultar saldo" class="w-8 h-8 flex items-center justify-center rounded-lg">
+                            <i id="money-eye-icon" class="fas fa-eye text-sm"></i>
+                        </button>
+                    </div>
                     <div class="grid grid-cols-3 gap-3">
                         <div class="bg-black/30 rounded-xl p-3 text-center col-span-1">
                             <div id="stat-cuts-count" class="text-2xl font-extrabold text-blue-300">0</div>
@@ -182,18 +197,18 @@
                         <div class="bg-black/30 rounded-xl p-3 text-center col-span-2">
                             <div class="flex items-baseline justify-center gap-1">
                                 <span class="text-gray-500 text-sm">$</span>
-                                <span id="stat-cuts-billing" class="text-2xl font-extrabold text-white">0</span>
+                                <span id="stat-cuts-billing" class="js-money text-2xl font-extrabold text-white">0</span>
                             </div>
                             <div class="text-[10px] text-gray-500 mt-0.5">facturado</div>
                         </div>
                     </div>
                     <div id="stat-ventas-row" class="hidden mt-3 pt-3 border-t border-white/5 justify-between items-center">
                         <span class="text-[10px] text-gray-500">+ Ventas de productos</span>
-                        <span id="stat-ventas-billing" class="text-sm font-bold text-indigo-300">$0</span>
+                        <span id="stat-ventas-billing" class="js-money text-sm font-bold text-indigo-300">$0</span>
                     </div>
                     <div id="stat-total-row" class="hidden mt-1 justify-between items-center">
                         <span class="text-[10px] font-bold text-gray-300 uppercase tracking-wide">Total del día</span>
-                        <span id="stat-total-billing" class="text-base font-extrabold text-white">$0</span>
+                        <span id="stat-total-billing" class="js-money text-base font-extrabold text-white">$0</span>
                     </div>
                 </div>
 
@@ -3110,6 +3125,27 @@ window.closeModals = closeModals;
 
 init();
 </script>
+    <script>
+        // Mostrar/ocultar saldo de facturación con asteriscos (persistente)
+        window.toggleMoneyVisibility = function () {
+            const hidden = document.body.classList.toggle('money-hidden');
+            try { localStorage.setItem('sb_money_hidden', hidden ? '1' : '0'); } catch (e) {}
+            const icon = document.getElementById('money-eye-icon');
+            if (icon) icon.className = 'fas text-sm ' + (hidden ? 'fa-eye-slash' : 'fa-eye');
+        };
+        (function () {
+            let hidden = false;
+            try { hidden = localStorage.getItem('sb_money_hidden') === '1'; } catch (e) {}
+            if (hidden) document.body.classList.add('money-hidden');
+            const apply = function () {
+                const icon = document.getElementById('money-eye-icon');
+                if (icon) icon.className = 'fas text-sm ' + (hidden ? 'fa-eye-slash' : 'fa-eye');
+            };
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', apply);
+            } else { apply(); }
+        })();
+    </script>
     <script src="../assets/sb-motion.js"></script>
 </body>
 </html>

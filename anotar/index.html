@@ -43,6 +43,16 @@
         /* Slide in desde la derecha */
         .slide-in { animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1); }
         @keyframes slideIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
+        /* Ocultar saldo con asteriscos */
+        .money-hidden .js-money { font-size:0 !important; }
+        .money-hidden .js-money::after {
+            content:"*****"; color:#9ca3af; font-weight:800; letter-spacing:0.1em;
+        }
+        .money-hidden #total-revenue::after { font-size:3rem; color:#e5e7eb; }
+        .money-hidden #total-revenue-full::after { font-size:0.875rem; }
+        .money-hidden #top-performer-amount::after { font-size:1.125rem; color:#facc15; }
+        #money-eye-btn { color:#6b7280; transition:color .2s, transform .2s; }
+        #money-eye-btn:hover { color:#e5e7eb; }
     </style>
 </head>
 <body class="h-full bg-[#0f1115] text-white flex items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0f1115] to-black">
@@ -106,11 +116,16 @@
 
             <!-- Ganancia -->
             <div class="glass-card rounded-2xl p-6">
-                <span class="text-gray-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2 mb-1"><i class="fas fa-wallet"></i> Tu Ganancia</span>
-                <div class="flex items-baseline gap-1 mt-2"><span class="text-2xl text-gray-400 font-light">$</span><span id="total-revenue" class="text-5xl font-extrabold text-white tracking-tighter">0</span></div>
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-gray-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2"><i class="fas fa-wallet"></i> Tu Ganancia</span>
+                    <button id="money-eye-btn" type="button" onclick="window.toggleMoneyVisibility()" title="Mostrar/ocultar saldo" aria-label="Mostrar u ocultar saldo" class="w-8 h-8 flex items-center justify-center rounded-lg -mr-1">
+                        <i id="money-eye-icon" class="fas fa-eye text-sm"></i>
+                    </button>
+                </div>
+                <div class="flex items-baseline gap-1 mt-2"><span class="text-2xl text-gray-400 font-light">$</span><span id="total-revenue" class="js-money text-5xl font-extrabold text-white tracking-tighter">0</span></div>
                 <div class="h-px bg-gradient-to-r from-gray-700 via-gray-600 to-transparent w-full my-4 opacity-50"></div>
                 <div class="grid grid-cols-2 gap-4">
-                    <div><span class="text-[10px] text-gray-500 uppercase font-bold block">Facturación</span><span id="total-revenue-full" class="font-mono text-gray-300 text-sm">$0</span></div>
+                    <div><span class="text-[10px] text-gray-500 uppercase font-bold block">Facturación</span><span id="total-revenue-full" class="js-money font-mono text-gray-300 text-sm">$0</span></div>
                     <div class="text-right"><span class="text-[10px] text-gray-500 uppercase font-bold block">Cortes</span><span id="total-services-count" class="font-bold text-blue-300 text-lg bg-blue-900/30 px-2 rounded-md">0</span></div>
                 </div>
             </div>
@@ -121,7 +136,7 @@
                     <div id="top-performer-avatar" class="w-12 h-12 rounded-full border-2 border-yellow-500 shadow-lg flex items-center justify-center bg-gray-800 text-yellow-500 font-bold text-lg">👑</div>
                     <div><div class="text-[10px] font-bold text-yellow-500 uppercase tracking-widest mb-0.5">LIDERANDO</div><div id="top-performer-name" class="font-bold text-white text-lg leading-tight">...</div></div>
                 </div>
-                <div class="text-right z-10"><div class="text-[9px] text-gray-400">Ganancia (Neto)</div><div id="top-performer-amount" class="font-mono font-bold text-yellow-400 text-lg">$0</div></div>
+                <div class="text-right z-10"><div class="text-[9px] text-gray-400">Ganancia (Neto)</div><div id="top-performer-amount" class="js-money font-mono font-bold text-yellow-400 text-lg">$0</div></div>
             </div>
 
             <!-- Ganancias semana (admin) -->
@@ -2871,6 +2886,27 @@ document.getElementById('nuevo-turno-form').addEventListener('submit', async e =
 });
 
 init();
+</script>
+<script>
+    // Mostrar/ocultar saldo con asteriscos (persistente y sincronizado con recepción)
+    window.toggleMoneyVisibility = function () {
+        const hidden = document.body.classList.toggle('money-hidden');
+        try { localStorage.setItem('sb_money_hidden', hidden ? '1' : '0'); } catch (e) {}
+        const icon = document.getElementById('money-eye-icon');
+        if (icon) icon.className = 'fas text-sm ' + (hidden ? 'fa-eye-slash' : 'fa-eye');
+    };
+    (function () {
+        let hidden = false;
+        try { hidden = localStorage.getItem('sb_money_hidden') === '1'; } catch (e) {}
+        if (hidden) document.body.classList.add('money-hidden');
+        const apply = function () {
+            const icon = document.getElementById('money-eye-icon');
+            if (icon) icon.className = 'fas text-sm ' + (hidden ? 'fa-eye-slash' : 'fa-eye');
+        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', apply);
+        } else { apply(); }
+    })();
 </script>
 </body>
 </html>
