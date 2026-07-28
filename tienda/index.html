@@ -467,7 +467,16 @@ const KITS = [
         { name:'Capa de Corte Everest (blanco y negro)' }
       ] },
     { id:'kit-avanzado', name:'Kit Avanzado', tag:'KIT', subtitle:'Equipo completo',
-      componentes:['pomada-mate','polvo-texturizador','aftershave-celeste-black','peine-toniguy','capa-everest','desinfectante-everest'] }
+      componentes:['pomada-mate','polvo-texturizador','aftershave-celeste-black','peine-toniguy','capa-everest','desinfectante-everest'] },
+    { id:'combo-opcion-styling', name:'Combo Opción – Styling Profesional', tag:'COMBO', subtitle:'Fijación · Textura · Volumen · Definición',
+      custom:true, price:null,
+      desc:'Para todo tipo de cabello. Uso profesional o personal. Peinados clásicos, modernos, con volumen o efecto despeinado.',
+      items:[
+        { name:'Mousse Modelador Opción', detail:'Volumen, control y fijación flexible sin dejar el cabello pesado.' },
+        { name:'Cera Brillo Opción 50 g', detail:'Definición con acabado brillante y aspecto prolijo.' },
+        { name:'Pomada Mate Opción Navajas 90 g', detail:'Fijación media-alta con acabado natural, sin brillo.' },
+        { name:'Texturizante Instantáneo Opción Navajas 15 g', detail:'Textura, volumen y cuerpo al instante para estilos descontracturados.' }
+      ] }
 ];
 function prodById(id){ return PRODUCTS.find(p=>p.id===id); }
 function prodPriceLive(id){ const p=prodById(id); const cfg=productConfig[id]||{}; return cfg.price!=null?cfg.price:(p?p.price:0); }
@@ -526,6 +535,7 @@ function renderKits() {
             <div class="product-info">
                 <div class="product-name">${k.name}</div>
                 <div class="product-variant">${kitCount(k)} productos · ${k.subtitle}</div>
+                ${k.desc ? `<div class="product-desc" style="font-size:12px;color:#525252;margin-bottom:10px;line-height:1.5;">${k.desc}</div>` : ''}
                 <ul class="kit-includes">${includes}</ul>
                 ${priceBlock}
                 <div class="product-footer" style="margin-top:0;">
