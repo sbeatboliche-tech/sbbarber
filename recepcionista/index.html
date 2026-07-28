@@ -1087,12 +1087,12 @@ async function init() {
                     // Si anon auth no está habilitado, mostrar login como fallback
                     document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
                     document.getElementById('dashboard-view').classList.add('hidden');
-                    document.getElementById('login-view').classList.remove('hidden');
+                    document.getElementById('gate-view').classList.remove('hidden');
                 });
             } else {
                 document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
                 document.getElementById('dashboard-view').classList.add('hidden');
-                document.getElementById('login-view').classList.remove('hidden');
+                document.getElementById('gate-view').classList.remove('hidden');
             }
         }
     });
@@ -2052,12 +2052,8 @@ function afterGatePassed() {
     // Si auth ya está listo y no hay usuario, entrar anónimamente
     if (typeof auth !== 'undefined' && auth && !auth.currentUser) {
         signInAnonymously(auth).catch(() => {
-            document.getElementById('login-view').classList.remove('hidden');
+            document.getElementById('gate-view').classList.remove('hidden');
         });
-    } else if (document.getElementById('dashboard-view').classList.contains('hidden')) {
-        // auth aún no inicializado (localStorage check en page load) → mostrar login como fallback
-        // onAuthStateChanged lo va a resolver cuando auth esté listo
-        document.getElementById('login-view').classList.remove('hidden');
     }
 }
 window.checkGate = () => {
