@@ -451,23 +451,6 @@ let activeTab = 'mp';
 // ── KITS / COMBOS (precio = suma exacta de sus productos, en vivo) ──
 const KIT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>`;
 const KITS = [
-    // Kit profesional (contenido propio, precio fijo). price:null => "Consultá"
-    { id:'kit-inicial', name:'Kit Inicial', tag:'KIT', subtitle:'Profesional para arrancar',
-      custom:true, price:null,
-      items:[
-        { name:'Máquina Kemei 2600', detail:'Alzas 1 al 4 + intermedias 1,5 y 0,5 mm · Cable USB · Cepillo de limpieza · Aceite lubricante' },
-        { name:'Máquina Kemei Detailer (trimmer)', detail:'Alzas 1/2/3 mm · Cepillo de limpieza · Aceite lubricante · Cable USB' },
-        { name:'Máquina Kemei 3382 (shaver)', detail:'Cepillo de limpieza · Cable USB' },
-        { name:'Aftershave Original Black' },
-        { name:'Navaja de plástico Magic' },
-        { name:'Quita pelo' },
-        { name:'Rociador (varios colores)' },
-        { name:'Juego de tijeras (corte y pulir)' },
-        { name:'Papel cuello' },
-        { name:'Capa de Corte Everest (blanco y negro)' }
-      ] },
-    { id:'kit-avanzado', name:'Kit Avanzado', tag:'KIT', subtitle:'Equipo completo',
-      componentes:['pomada-mate','polvo-texturizador','aftershave-celeste-black','peine-toniguy','capa-everest','desinfectante-everest'] },
     { id:'combo-opcion-styling', name:'Combo Opción – Styling Profesional', tag:'COMBO', subtitle:'Fijación · Textura · Volumen · Definición',
       custom:true, price:54900, freeShipping:true,
       image:'img/combo-opcion-styling.jpg',
