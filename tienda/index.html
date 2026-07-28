@@ -75,6 +75,7 @@
         .kit-includes li { font-size:12.5px; color:var(--g500); line-height:1.4; padding:5px 0 5px 20px; position:relative; border-bottom:1px dashed rgba(255,255,255,.06); }
         .kit-includes li:last-child { border-bottom:none; }
         .kit-includes li::before { content:'✓'; position:absolute; left:0; color:#4ade80; font-weight:800; }
+        .kit-includes .kit-detail { display:block; color:var(--g700); font-size:11px; line-height:1.45; margin-top:3px; font-weight:400; }
         .product-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; }
         .product-price { font-size:20px; font-weight:900; letter-spacing:-.02em; }
         .btn-add { height:44px; padding:0 18px; background:var(--white); color:var(--black); border:none; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:background .15s; font-family:'Inter',sans-serif; white-space:nowrap; -webkit-appearance:none; flex-shrink:0; }
@@ -450,40 +451,53 @@ let activeTab = 'mp';
 // ── KITS / COMBOS (precio = suma exacta de sus productos, en vivo) ──
 const KIT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>`;
 const KITS = [
-    { id:'kit-inicial', name:'Kit Inicial', tag:'KIT', subtitle:'Para arrancar',
-      componentes:['pomada-mate','peine-toniguy','quita-pelo-lujo','desinfectante-everest'] },
+    // Kit profesional (contenido propio, precio fijo). price:null => "Consultá"
+    { id:'kit-inicial', name:'Kit Inicial', tag:'KIT', subtitle:'Profesional para arrancar',
+      custom:true, price:null,
+      items:[
+        { name:'Máquina Kemei 2600', detail:'Alzas 1 al 4 + intermedias 1,5 y 0,5 mm · Cable USB · Cepillo de limpieza · Aceite lubricante' },
+        { name:'Máquina Kemei Detailer (trimmer)', detail:'Alzas 1/2/3 mm · Cepillo de limpieza · Aceite lubricante · Cable USB' },
+        { name:'Máquina Kemei 3382 (shaver)', detail:'Cepillo de limpieza · Cable USB' },
+        { name:'Aftershave Original Black' },
+        { name:'Navaja de plástico Magic' },
+        { name:'Quita pelo' },
+        { name:'Rociador (varios colores)' },
+        { name:'Juego de tijeras (corte y pulir)' },
+        { name:'Papel cuello' },
+        { name:'Capa de Corte Everest (blanco y negro)' }
+      ] },
     { id:'kit-avanzado', name:'Kit Avanzado', tag:'KIT', subtitle:'Equipo completo',
       componentes:['pomada-mate','polvo-texturizador','aftershave-celeste-black','peine-toniguy','capa-everest','desinfectante-everest'] }
 ];
 function prodById(id){ return PRODUCTS.find(p=>p.id===id); }
 function prodPriceLive(id){ const p=prodById(id); const cfg=productConfig[id]||{}; return cfg.price!=null?cfg.price:(p?p.price:0); }
 function prodNameLive(id){ const p=prodById(id); const cfg=productConfig[id]||{}; return (cfg.name||(p&&p.name))||''; }
-function kitPrice(kit){ return kit.componentes.reduce((s,id)=>s+prodPriceLive(id),0); }
-function kitOut(kit){ return kit.componentes.some(id=>{ const cfg=productConfig[id]||{}; return cfg.stock===0; }); }
+function kitPrice(kit){ return kit.custom ? (kit.price||0) : kit.componentes.reduce((s,id)=>s+prodPriceLive(id),0); }
+function kitHasPrice(kit){ return kit.custom ? (kit.price!=null) : true; }
+function kitOut(kit){ return kit.custom ? false : kit.componentes.some(id=>{ const cfg=productConfig[id]||{}; return cfg.stock===0; }); }
+function kitCount(kit){ return kit.custom ? kit.items.length : kit.componentes.length; }
 
 function renderKits() {
     const grid = document.getElementById('kits-grid');
     if(!grid) return;
     grid.innerHTML = KITS.map((k,i)=>{
         const price = kitPrice(k);
+        const hasPrice = kitHasPrice(k);
         const out = kitOut(k);
-        const comps = k.componentes.map(prodById).filter(Boolean);
-        const imgs = comps.filter(p=>p.image).slice(0,4);
-        const collage = imgs.length
-            ? `<div style="position:absolute;inset:0;display:flex;gap:2px;">${imgs.map(p=>`<img src="${p.image}" alt="" style="flex:1;min-width:0;height:100%;object-fit:cover;display:block;">`).join('')}</div>`
-            : KIT_ICON;
-        const includes = comps.map(p=>`<li>${prodNameLive(p.id)}</li>`).join('');
-        return `
-        <div class="product-card reveal" style="transition-delay:${i*.06}s">
-            <div class="product-image-wrap">
-                ${collage}
-                <div class="product-tag">${k.tag}</div>
-                ${out ? `<div class="stock-badge stock-out-badge">Sin stock</div>` : ''}
-            </div>
-            <div class="product-info">
-                <div class="product-name">${k.name}</div>
-                <div class="product-variant">${k.componentes.length} productos · ${k.subtitle}</div>
-                <ul class="kit-includes">${includes}</ul>
+        let collage, includes;
+        if (k.custom) {
+            collage = KIT_ICON;
+            includes = k.items.map(it =>
+                `<li>${it.name}${it.detail?`<span class="kit-detail">${it.detail}</span>`:''}</li>`).join('');
+        } else {
+            const comps = k.componentes.map(prodById).filter(Boolean);
+            const imgs = comps.filter(p=>p.image).slice(0,4);
+            collage = imgs.length
+                ? `<div style="position:absolute;inset:0;display:flex;gap:2px;">${imgs.map(p=>`<img src="${p.image}" alt="" style="flex:1;min-width:0;height:100%;object-fit:cover;display:block;">`).join('')}</div>`
+                : KIT_ICON;
+            includes = comps.map(p=>`<li>${prodNameLive(p.id)}</li>`).join('');
+        }
+        const priceBlock = hasPrice ? `
                 <div style="margin-bottom:12px;">
                     <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:4px 10px;margin-bottom:10px;">
                         <span style="font-size:9px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#4ade80;">20% OFF</span>
@@ -494,10 +508,29 @@ function renderKits() {
                         <span style="font-size:13px;color:#525252;text-decoration:line-through;">$${price.toLocaleString('es-AR')}</span>
                     </div>
                     <div style="font-size:10px;color:#404040;margin-top:2px;">Precio efectivo: $${price.toLocaleString('es-AR')}</div>
-                </div>
+                </div>` : `
+                <div style="margin-bottom:12px;">
+                    <span style="font-size:20px;font-weight:900;letter-spacing:-.02em;color:var(--white);">Consultá</span>
+                    <div style="font-size:10px;color:#404040;margin-top:2px;">Precio a confirmar</div>
+                </div>`;
+        const btn = !hasPrice
+            ? `<button class="btn-add" onclick="openCart()" disabled style="opacity:.5;">Consultá</button>`
+            : `<button class="btn-add${out?' btn-soldout':''}" onclick="addKitToCart('${k.id}')" ${out?'disabled':''}>${out?'Sin stock':'+ Agregar'}</button>`;
+        return `
+        <div class="product-card reveal" style="transition-delay:${i*.06}s">
+            <div class="product-image-wrap">
+                ${collage}
+                <div class="product-tag">${k.tag}</div>
+                ${out ? `<div class="stock-badge stock-out-badge">Sin stock</div>` : ''}
+            </div>
+            <div class="product-info">
+                <div class="product-name">${k.name}</div>
+                <div class="product-variant">${kitCount(k)} productos · ${k.subtitle}</div>
+                <ul class="kit-includes">${includes}</ul>
+                ${priceBlock}
                 <div class="product-footer" style="margin-top:0;">
                     <div></div>
-                    <button class="btn-add${out?' btn-soldout':''}" onclick="addKitToCart('${k.id}')" ${out?'disabled':''}>${out?'Sin stock':'+ Agregar'}</button>
+                    ${btn}
                 </div>
             </div>
         </div>`;
@@ -505,7 +538,7 @@ function renderKits() {
 }
 function addKitToCart(id) {
     const kit = KITS.find(k=>k.id===id);
-    if(!kit || kitOut(kit)) return;
+    if(!kit || kitOut(kit) || !kitHasPrice(kit)) return;
     const price = kitPrice(kit);
     const ex = cart.find(x=>x.id===id);
     if(ex) ex.qty++;
