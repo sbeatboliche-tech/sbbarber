@@ -592,15 +592,30 @@
                 <!-- Solo en venta de bebida -->
                 <div id="stock-venta-group" class="hidden space-y-4">
                     <div>
-                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">¿A quién? (opcional)</label>
-                        <input type="text" id="stock-cliente" placeholder="Nombre del cliente o barbero" class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none transition text-white placeholder-gray-500 mt-1">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Método de pago</label>
+                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">¿Quién la compra?</label>
                         <div class="grid grid-cols-2 gap-2 mt-1">
-                            <button type="button" id="pago-efectivo" onclick="window.setVentaPago('efectivo')" class="p-3 rounded-xl border font-bold text-sm transition">💵 Efectivo</button>
-                            <button type="button" id="pago-transferencia" onclick="window.setVentaPago('transferencia')" class="p-3 rounded-xl border font-bold text-sm transition">🏦 Transferencia</button>
+                            <button type="button" id="comp-cliente" onclick="window.setComprador('cliente')" class="p-3 rounded-xl border font-bold text-sm transition">👤 Cliente</button>
+                            <button type="button" id="comp-barbero" onclick="window.setComprador('barbero')" class="p-3 rounded-xl border font-bold text-sm transition">✂️ Barbero</button>
                         </div>
+                    </div>
+                    <!-- Panel Cliente -->
+                    <div id="venta-cliente-panel" class="space-y-4">
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Nombre del cliente (opcional)</label>
+                            <input type="text" id="stock-cliente" placeholder="Ej: Juan" class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none transition text-white placeholder-gray-500 mt-1">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Método de pago</label>
+                            <div class="grid grid-cols-2 gap-2 mt-1">
+                                <button type="button" id="pago-efectivo" onclick="window.setVentaPago('efectivo')" class="p-3 rounded-xl border font-bold text-sm transition">💵 Efectivo</button>
+                                <button type="button" id="pago-transferencia" onclick="window.setVentaPago('transferencia')" class="p-3 rounded-xl border font-bold text-sm transition">🏦 Transferencia</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Panel Barbero -->
+                    <div id="venta-barbero-panel" class="hidden">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Barbero — se suma a sus retiros</label>
+                        <div id="venta-barbero-list" class="grid grid-cols-2 gap-2 mt-1"></div>
                     </div>
                 </div>
                 <button type="submit" id="btn-submit-stock" class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest no-select">Confirmar</button>
@@ -1707,12 +1722,36 @@ window.openAddStockItemModal = () => {
     showModal('stock-item-modal');
 };
 let ventaMetodoPago = 'efectivo';
+let ventaComprador = 'cliente';   // 'cliente' | 'barbero'
+let ventaBarbero = null;
+const _btnOn = 'p-3 rounded-xl border font-bold text-sm transition bg-cyan-600/25 border-cyan-500 text-white';
+const _btnOff = 'p-3 rounded-xl border font-bold text-sm transition bg-black/30 border-gray-700 text-gray-400';
+
 window.setVentaPago = (m) => { ventaMetodoPago = m; updatePagoButtons(); };
 function updatePagoButtons() {
-    const on = 'p-3 rounded-xl border font-bold text-sm transition bg-cyan-600/25 border-cyan-500 text-white';
-    const off = 'p-3 rounded-xl border font-bold text-sm transition bg-black/30 border-gray-700 text-gray-400';
-    document.getElementById('pago-efectivo').className = ventaMetodoPago === 'efectivo' ? on : off;
-    document.getElementById('pago-transferencia').className = ventaMetodoPago === 'transferencia' ? on : off;
+    document.getElementById('pago-efectivo').className = ventaMetodoPago === 'efectivo' ? _btnOn : _btnOff;
+    document.getElementById('pago-transferencia').className = ventaMetodoPago === 'transferencia' ? _btnOn : _btnOff;
+}
+window.setComprador = (t) => {
+    ventaComprador = t;
+    document.getElementById('comp-cliente').className = t === 'cliente' ? _btnOn : _btnOff;
+    document.getElementById('comp-barbero').className = t === 'barbero' ? _btnOn : _btnOff;
+    document.getElementById('venta-cliente-panel').classList.toggle('hidden', t !== 'cliente');
+    document.getElementById('venta-barbero-panel').classList.toggle('hidden', t !== 'barbero');
+    if (t === 'barbero') renderVentaBarberos();
+};
+window.setVentaBarbero = (name) => {
+    ventaBarbero = name;
+    document.querySelectorAll('#venta-barbero-list button').forEach(b => {
+        b.className = (b.dataset.name === name) ? _btnOn : _btnOff;
+    });
+};
+function renderVentaBarberos() {
+    const nombres = [...new Set(Object.values(BARBER_EMAIL_MAP))];
+    document.getElementById('venta-barbero-list').innerHTML = nombres.map(n =>
+        `<button type="button" data-name="${n}" onclick="window.setVentaBarbero('${n.replace(/'/g,"\\'")}')" class="${_btnOff}">${n}</button>`
+    ).join('');
+    ventaBarbero = null;
 }
 window.openStockMovement = (itemId, itemName, type) => {
     currentStockAction={itemId,itemName,type};
@@ -1726,7 +1765,7 @@ window.openStockMovement = (itemId, itemName, type) => {
     document.getElementById('stock-item-form').reset();
     const isVenta = type==='venta';
     document.getElementById('stock-venta-group').classList.toggle('hidden', !isVenta);
-    if(isVenta){ ventaMetodoPago='efectivo'; updatePagoButtons(); }
+    if(isVenta){ ventaMetodoPago='efectivo'; ventaBarbero=null; setComprador('cliente'); updatePagoButtons(); }
     showModal('stock-item-modal');
 };
 document.getElementById('stock-item-form').addEventListener('submit', async e=>{
@@ -1734,6 +1773,7 @@ document.getElementById('stock-item-form').addEventListener('submit', async e=>{
     const btn=document.getElementById('btn-submit-stock');
     const qty=Number(document.getElementById('stock-quantity').value);
     if(!qty||qty<1) return alert('Ingresá una cantidad válida');
+    if(currentStockAction.type==='venta' && ventaComprador==='barbero' && !ventaBarbero) return alert('Elegí el barbero');
     btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
     try{
         if(currentStockAction.type==='nuevo'){
@@ -1747,15 +1787,27 @@ document.getElementById('stock-item-form').addEventListener('submit', async e=>{
             if(currentStockAction.type==='venta'){
                 const item=allStock.find(i=>i.id===currentStockAction.itemId);
                 const precio=item?.price||0;
+                const total=precio*qty;
                 const hoy=new Date().toLocaleDateString('en-CA');
+                const esBarbero = ventaComprador==='barbero';
                 const cliente=(document.getElementById('stock-cliente').value||'').trim();
                 await addDoc(collection(db,PATH_VENTAS),{
                     producto:currentStockAction.itemName, tipo:'bebida',
-                    precio, cantidad:qty, total:precio*qty,
+                    precio, cantidad:qty, total,
                     barbero:'Admin', userEmail:currentUser.email,
-                    cliente:cliente||null, metodoPago:ventaMetodoPago,
+                    comprador: esBarbero ? ventaBarbero : (cliente||null),
+                    compradorTipo: esBarbero ? 'barbero' : 'cliente',
+                    metodoPago: esBarbero ? null : ventaMetodoPago,
                     fecha:hoy, creadoEn:serverTimestamp()
                 });
+                if(esBarbero){
+                    await addDoc(collection(db,PATH_RETIROS),{
+                        barbero:ventaBarbero, userEmail:currentUser.email, monto:total,
+                        fecha:hoy, estado:'confirmado',
+                        descripcion:`🥤 ${currentStockAction.itemName}${qty>1?' ×'+qty:''}`,
+                        creadoEn:serverTimestamp()
+                    });
+                }
             }
         }
         window.closeModals();
@@ -2215,8 +2267,13 @@ function renderVentasCard(ventasFiltradas) {
             const icon = v.tipo==='bebida' ? '🥤' : '💈';
             const border = v.tipo==='bebida' ? 'border-cyan-500/40' : 'border-indigo-500/40';
             const meta = [];
-            if (isAdmin && v.barbero) meta.push(v.barbero);
-            if (v.cliente) meta.push('→ ' + v.cliente);
+            if (v.compradorTipo === 'barbero' && v.comprador) {
+                meta.push('→ ' + v.comprador + ' (retiro)');
+            } else if (v.comprador || v.cliente) {
+                meta.push('→ ' + (v.comprador || v.cliente));
+            } else if (isAdmin && v.barbero) {
+                meta.push(v.barbero);
+            }
             if (v.metodoPago) meta.push(v.metodoPago==='transferencia' ? '🏦 Transf.' : '💵 Efectivo');
             meta.push(time);
             rows += `<div class="flex justify-between items-center bg-black/30 p-3 rounded-xl border-l-2 ${border}">
