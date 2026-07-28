@@ -94,7 +94,10 @@
         background: #fff; border-radius: 16px; display: inline-flex;
         align-items: center; justify-content: center;
     }
+    /* QR renderizado en alta (800px) y escalado por CSS => impresión nítida */
     .qr-panel img, .qr-panel canvas { display: block; }
+    .cartel.lg .qr-panel img, .cartel.lg .qr-panel canvas { width: 210px !important; height: 210px !important; }
+    .cartel.sm .qr-panel img, .cartel.sm .qr-panel canvas { width: 150px !important; height: 150px !important; }
     .scan {
         font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
         display: flex; align-items: center; gap: 8px; justify-content: center;
@@ -212,8 +215,8 @@
         function renderAll() {
             document.getElementById('qr-lg').innerHTML = '';
             document.getElementById('qr-sm').innerHTML = '';
-            makeQR('qr-lg', 200);
-            makeQR('qr-sm', 150);
+            makeQR('qr-lg', 800);
+            makeQR('qr-sm', 800);
         }
         function resetUrl() {
             try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
