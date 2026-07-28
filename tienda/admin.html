@@ -71,9 +71,9 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
 .upload-progress{height:3px;background:#1a1a1a;border-radius:2px;margin-top:8px;overflow:hidden;}
 .upload-progress-bar{height:100%;background:#4ade80;transition:width .3s;width:0%;}
 
-/* KIT ITEMS */
+/* COMBO ITEMS */
 .kit-items-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
-.kit-item-row{display:flex;gap-8px;gap:8px;align-items:flex-start;}
+.kit-item-row{display:flex;gap:8px;align-items:flex-start;}
 .kit-item-row .fi{flex:1;}
 .kit-item-row .btn-rm{width:32px;height:32px;flex-shrink:0;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.2);color:#f87171;border-radius:6px;cursor:pointer;font-size:13px;margin-top:22px;}
 .btn-add-item{width:100%;height:36px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.1);color:#a3a3a3;font-size:11px;font-weight:700;letter-spacing:.08em;cursor:pointer;border-radius:8px;transition:all .2s;}
@@ -143,7 +143,7 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
     <div class="main">
         <div class="tabs">
             <button class="tab-btn active" id="tab-productos" onclick="switchTab('productos')">Productos</button>
-            <button class="tab-btn" id="tab-kits" onclick="switchTab('kits')">Kits / Combos</button>
+            <button class="tab-btn" id="tab-combos" onclick="switchTab('combos')">Combos</button>
         </div>
 
         <!-- TAB PRODUCTOS -->
@@ -213,8 +213,8 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                     </div>
                 </div>
                 <div class="form-actions">
-                    <button class="btn-save" id="p-save-btn">Guardar producto</button>
-                    <button class="btn-cancel" id="p-cancel-btn" style="display:none;">Cancelar</button>
+                    <button class="btn-save" id="p-save-btn" onclick="saveProducto()">Guardar producto</button>
+                    <button class="btn-cancel" id="p-cancel-btn" style="display:none;" onclick="cancelEditProducto()">Cancelar</button>
                 </div>
                 <input type="hidden" id="p-edit-id">
             </div>
@@ -225,21 +225,14 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
             </div>
         </div>
 
-        <!-- TAB KITS -->
-        <div id="panel-kits" style="display:none;">
-            <div class="section-title">Agregar / Editar Kit o Combo</div>
+        <!-- TAB COMBOS -->
+        <div id="panel-combos" style="display:none;">
+            <div class="section-title">Agregar / Editar Combo</div>
             <div class="card">
                 <div class="form-grid">
                     <div class="form-field">
                         <label class="field-label">Nombre *</label>
                         <input type="text" id="k-name" placeholder="Ej: Combo Styling Profesional">
-                    </div>
-                    <div class="form-field">
-                        <label class="field-label">Tipo</label>
-                        <select id="k-tag">
-                            <option value="KIT">KIT</option>
-                            <option value="COMBO">COMBO</option>
-                        </select>
                     </div>
                     <div class="form-field">
                         <label class="field-label">Subtítulo</label>
@@ -252,60 +245,60 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                 </div>
                 <div class="form-grid full" style="margin-top:12px;">
                     <div class="form-field">
-                        <label class="field-label">Descripción (quién es ideal, para qué, etc.)</label>
+                        <label class="field-label">Descripción</label>
                         <textarea id="k-desc" placeholder="Descripción breve del combo..."></textarea>
                     </div>
                 </div>
                 <div class="toggle-row" style="margin-top:4px;">
                     <span class="toggle-label">Envío gratis</span>
-                    <div class="toggle" id="k-shipping-toggle"></div>
+                    <div class="toggle" id="k-shipping-toggle" onclick="toggleShipping()"></div>
                 </div>
                 <div class="form-grid" style="margin-top:12px;">
-                <div class="form-field">
-                    <label class="field-label">Video (URL YouTube/Vimeo)</label>
-                    <input type="url" id="k-video" placeholder="https://youtube.com/...">
-                    <label class="field-label" style="margin-top:12px;">O subir video</label>
-                    <div class="upload-zone" id="k-vid-zone">
-                        <input type="file" id="k-vid-file" accept="video/*" onchange="previewVideo(this,'k-vid-preview','k-vid-remove')">
-                        <div class="upload-zone-icon"><i class="fas fa-video"></i></div>
-                        <div class="upload-zone-label">Arrastrá o <span>elegí un video</span></div>
+                    <div class="form-field">
+                        <label class="field-label">Video (URL YouTube/Vimeo)</label>
+                        <input type="url" id="k-video" placeholder="https://youtube.com/...">
+                        <label class="field-label" style="margin-top:12px;">O subir video</label>
+                        <div class="upload-zone" id="k-vid-zone">
+                            <input type="file" id="k-vid-file" accept="video/*" onchange="previewVideo(this,'k-vid-preview','k-vid-remove')">
+                            <div class="upload-zone-icon"><i class="fas fa-video"></i></div>
+                            <div class="upload-zone-label">Arrastrá o <span>elegí un video</span></div>
+                        </div>
+                        <div class="upload-preview" id="k-vid-preview" style="display:none;">
+                            <video id="k-vid-preview-vid" src="" controls style="max-height:160px;"></video>
+                            <button class="upload-remove" id="k-vid-remove" onclick="removeFile('k-vid-file','k-vid-preview','k-vid-zone')"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="upload-progress"><div class="upload-progress-bar" id="k-vid-progress"></div></div>
                     </div>
-                    <div class="upload-preview" id="k-vid-preview" style="display:none;">
-                        <video id="k-vid-preview-vid" src="" controls style="max-height:160px;"></video>
-                        <button class="upload-remove" id="k-vid-remove" onclick="removeFile('k-vid-file','k-vid-preview','k-vid-zone')"><i class="fas fa-times"></i></button>
+                    <div class="form-field">
+                        <label class="field-label">URL de imagen del combo</label>
+                        <input type="url" id="k-img-url" placeholder="https://i.imgur.com/...">
+                        <label class="field-label" style="margin-top:10px;">O subir foto</label>
+                        <div class="upload-zone" id="k-img-zone">
+                            <input type="file" id="k-img-file" accept="image/*" onchange="previewFile(this,'k-img-preview','k-img-remove')">
+                            <div class="upload-zone-icon"><i class="fas fa-image"></i></div>
+                            <div class="upload-zone-label">Arrastrá o <span>elegí una foto</span></div>
+                        </div>
+                        <div class="upload-preview" id="k-img-preview" style="display:none;">
+                            <img id="k-img-preview-img" src="" alt="">
+                            <button class="upload-remove" id="k-img-remove" onclick="removeFile('k-img-file','k-img-preview','k-img-zone')"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="upload-progress"><div class="upload-progress-bar" id="k-img-progress"></div></div>
+                        <div id="k-img-current" style="font-size:11px;color:#525252;margin-top:6px;display:none;">Imagen actual: <span id="k-img-current-url"></span></div>
                     </div>
-                    <div class="upload-progress"><div class="upload-progress-bar" id="k-vid-progress"></div></div>
                 </div>
-                <div class="form-field">
-                    <label class="field-label">URL de imagen del kit/combo</label>
-                    <input type="url" id="k-img-url" placeholder="https://i.imgur.com/...">
-                    <label class="field-label" style="margin-top:10px;">O subir foto</label>
-                    <div class="upload-zone" id="k-img-zone">
-                        <input type="file" id="k-img-file" accept="image/*" onchange="previewFile(this,'k-img-preview','k-img-remove')">
-                        <div class="upload-zone-icon"><i class="fas fa-image"></i></div>
-                        <div class="upload-zone-label">Arrastrá o <span>elegí una foto</span></div>
-                    </div>
-                    <div class="upload-preview" id="k-img-preview" style="display:none;">
-                        <img id="k-img-preview-img" src="" alt="">
-                        <button class="upload-remove" id="k-img-remove" onclick="removeFile('k-img-file','k-img-preview','k-img-zone')"><i class="fas fa-times"></i></button>
-                    </div>
-                    <div class="upload-progress"><div class="upload-progress-bar" id="k-img-progress"></div></div>
-                    <div id="k-img-current" style="font-size:11px;color:#525252;margin-top:6px;display:none;">Imagen actual: <span id="k-img-current-url"></span></div>
-                </div>
-                </div><!-- /form-grid foto+video -->
                 <div style="margin-top:16px;">
                     <label class="field-label" style="margin-bottom:12px;display:block;">Productos incluidos</label>
                     <div id="k-items-list" class="kit-items-list"></div>
                     <button class="btn-add-item" onclick="addKitItemRow()"><i class="fas fa-plus" style="margin-right:6px;"></i> Agregar producto</button>
                 </div>
                 <div class="form-actions" style="margin-top:20px;">
-                    <button class="btn-save" id="k-save-btn">Guardar kit</button>
-                    <button class="btn-cancel" id="k-cancel-btn" style="display:none;">Cancelar</button>
+                    <button class="btn-save" id="k-save-btn" onclick="saveCombo()">Guardar combo</button>
+                    <button class="btn-cancel" id="k-cancel-btn" style="display:none;" onclick="cancelEditCombo()">Cancelar</button>
                 </div>
                 <input type="hidden" id="k-edit-id">
             </div>
 
-            <div class="section-title" style="margin-top:24px;">Kits y combos en la tienda</div>
+            <div class="section-title" style="margin-top:24px;">Combos en la tienda</div>
             <div id="kit-list" class="prod-list">
                 <div class="empty-state"><i class="fas fa-layer-group"></i><p>Cargando...</p></div>
             </div>
@@ -315,196 +308,197 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
 
 <div class="status-toast" id="toast"></div>
 
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
+<!-- Firebase compat SDK (sin módulos, funciona con onclick normal) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script>
+const ADMINS = ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
+const PATH_PRODUCTOS = 'tienda_productos_custom';
+const PATH_COMBOS    = 'tienda_kits_custom';
 
-const firebaseConfig = {
+firebase.initializeApp({
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
     authDomain: "sb-barber-6dc16.firebaseapp.com",
     projectId: "sb-barber-6dc16",
     storageBucket: "sb-barber-6dc16.firebasestorage.app",
     messagingSenderId: "213501157745",
     appId: "1:213501157745:web:09fd59996cf1d72b6696d0"
-};
-const ADMINS = ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
-const PATH_PRODUCTOS = 'tienda_productos_custom';
-const PATH_KITS      = 'tienda_kits_custom';
+});
+const auth    = firebase.auth();
+const db      = firebase.firestore();
+const storage = firebase.storage();
 
-const app  = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db   = getFirestore(app);
-const storage = getStorage(app);
-
-let allProductos = [], allKits = [];
+let allProductos = [], allCombos = [];
 let freeShipping = false;
-let editingProductoId = null, editingKitId = null;
+let editingProductoId = null, editingComboId = null;
+let kitItemRows = [];
 
 // ---- AUTH ----
-onAuthStateChanged(auth, user => {
+auth.onAuthStateChanged(function(user) {
     if (user && ADMINS.includes(user.email)) {
         document.getElementById('login-view').style.display = 'none';
         document.getElementById('dashboard-view').style.display = 'block';
         listenProductos();
-        listenKits();
+        listenCombos();
     } else {
         document.getElementById('login-view').style.display = 'flex';
         document.getElementById('dashboard-view').style.display = 'none';
     }
 });
 
-window.doLogin = async () => {
-    const btn = document.getElementById('login-btn');
-    const err = document.getElementById('login-err');
+function doLogin() {
+    var btn = document.getElementById('login-btn');
+    var err = document.getElementById('login-err');
+    var email = document.getElementById('login-email').value.trim();
+    var pass  = document.getElementById('login-pass').value;
     err.textContent = '';
     btn.disabled = true; btn.textContent = 'Entrando...';
-    try {
-        const cred = await signInWithEmailAndPassword(auth,
-            document.getElementById('login-email').value.trim(),
-            document.getElementById('login-pass').value);
-        if (!ADMINS.includes(cred.user.email)) {
-            await signOut(auth);
-            err.textContent = 'No tenés permiso de admin.';
-        }
-    } catch(e) {
-        err.textContent = 'Email o contraseña incorrectos.';
-    }
-    btn.disabled = false; btn.textContent = 'Entrar';
-};
-window.doLogout = () => signOut(auth);
+    auth.signInWithEmailAndPassword(email, pass)
+        .then(function(cred) {
+            if (!ADMINS.includes(cred.user.email)) {
+                return auth.signOut().then(function() {
+                    err.textContent = 'No tenés permiso de admin.';
+                });
+            }
+        })
+        .catch(function() { err.textContent = 'Email o contraseña incorrectos.'; })
+        .finally(function() { btn.disabled = false; btn.textContent = 'Entrar'; });
+}
+
+function doLogout() { auth.signOut(); }
 
 // ---- TABS ----
-window.switchTab = (tab) => {
+function switchTab(tab) {
     document.getElementById('panel-productos').style.display = tab === 'productos' ? 'block' : 'none';
-    document.getElementById('panel-kits').style.display = tab === 'kits' ? 'block' : 'none';
+    document.getElementById('panel-combos').style.display   = tab === 'combos'    ? 'block' : 'none';
     document.getElementById('tab-productos').classList.toggle('active', tab === 'productos');
-    document.getElementById('tab-kits').classList.toggle('active', tab === 'kits');
-};
+    document.getElementById('tab-combos').classList.toggle('active', tab === 'combos');
+}
 
-// ---- FIRESTORE LISTENERS ----
+// ---- LISTENERS ----
 function listenProductos() {
-    onSnapshot(collection(db, PATH_PRODUCTOS), snap => {
-        allProductos = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+    db.collection(PATH_PRODUCTOS).onSnapshot(function(snap) {
+        allProductos = snap.docs.map(function(d) { return Object.assign({}, d.data(), { id: d.id }); });
         renderProdList();
     });
 }
-function listenKits() {
-    onSnapshot(collection(db, PATH_KITS), snap => {
-        allKits = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-        renderKitList();
+function listenCombos() {
+    db.collection(PATH_COMBOS).onSnapshot(function(snap) {
+        allCombos = snap.docs.map(function(d) { return Object.assign({}, d.data(), { id: d.id }); });
+        renderComboList();
     });
 }
 
 // ---- UPLOAD ----
-async function uploadFile(file, path, progressBarId) {
-    return new Promise((resolve, reject) => {
-        const storageRef = ref(storage, path);
-        const task = uploadBytesResumable(storageRef, file);
-        const bar = document.getElementById(progressBarId);
+function uploadFile(file, path, progressBarId) {
+    return new Promise(function(resolve, reject) {
+        var storageRef = storage.ref(path);
+        var task = storageRef.put(file);
+        var bar = document.getElementById(progressBarId);
         task.on('state_changed',
-            snap => { if(bar) bar.style.width = Math.round(snap.bytesTransferred/snap.totalBytes*100)+'%'; },
-            err => reject(err),
-            async () => { try { resolve(await getDownloadURL(task.snapshot.ref)); } catch(e) { reject(e); } }
+            function(snap) { if (bar) bar.style.width = Math.round(snap.bytesTransferred / snap.totalBytes * 100) + '%'; },
+            function(err) { reject(err); },
+            function() { task.snapshot.ref.getDownloadURL().then(resolve).catch(reject); }
         );
     });
 }
 
-window.previewFile = (input, previewId, removeId) => {
-    const f = input.files[0]; if(!f) return;
-    const reader = new FileReader();
-    reader.onload = e => {
+function previewFile(input, previewId, removeId) {
+    var f = input.files[0]; if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
         document.getElementById(previewId).style.display = 'block';
         document.getElementById(previewId + '-img').src = e.target.result;
         input.closest('.upload-zone').style.display = 'none';
     };
     reader.readAsDataURL(f);
-};
-window.previewVideo = (input, previewId, removeId) => {
-    const f = input.files[0]; if(!f) return;
-    const url = URL.createObjectURL(f);
+}
+function previewVideo(input, previewId, removeId) {
+    var f = input.files[0]; if (!f) return;
     document.getElementById(previewId).style.display = 'block';
-    document.getElementById(previewId + '-vid').src = url;
+    document.getElementById(previewId + '-vid').src = URL.createObjectURL(f);
     input.closest('.upload-zone').style.display = 'none';
-};
-window.removeFile = (inputId, previewId, zoneId) => {
+}
+function removeFile(inputId, previewId, zoneId) {
     document.getElementById(inputId).value = '';
     document.getElementById(previewId).style.display = 'none';
     document.getElementById(zoneId).style.display = 'block';
-    const bar = document.getElementById(inputId.replace('-file','') + '-progress');
-    if(bar) bar.style.width = '0%';
-};
+    var bar = document.getElementById(inputId.replace('-file','') + '-progress');
+    if (bar) bar.style.width = '0%';
+}
 
-// ---- PRODUCTO FORM ----
-window.saveProducto = async () => {
-    console.log('saveProducto llamado');
-    const name = document.getElementById('p-name').value.trim();
-    const price = Number(document.getElementById('p-price').value);
-    console.log('name:', name, 'price:', price);
+// ---- PRODUCTO ----
+function saveProducto() {
+    var name  = document.getElementById('p-name').value.trim();
+    var price = Number(document.getElementById('p-price').value);
     if (!name || !price) { showToast('Completá nombre y precio', false); return; }
 
-    const btn = document.getElementById('p-save-btn');
+    var btn = document.getElementById('p-save-btn');
     btn.disabled = true; btn.textContent = 'Guardando...';
 
-    try {
-        const id = editingProductoId || name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now();
-        const data = {
-            name,
-            variant: document.getElementById('p-variant').value.trim(),
-            price,
-            tag: document.getElementById('p-tag').value || null,
-            description: document.getElementById('p-desc').value.trim(),
-            updatedAt: serverTimestamp(),
-        };
+    var id = editingProductoId || (name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now());
+    var data = {
+        name: name,
+        variant: document.getElementById('p-variant').value.trim(),
+        price: price,
+        tag: document.getElementById('p-tag').value || null,
+        description: document.getElementById('p-desc').value.trim(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if (!editingProductoId) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
 
-        const imgFile = document.getElementById('p-img-file').files[0];
-        const imgUrl = document.getElementById('p-img-url').value.trim();
-        if (imgFile) {
-            data.image = await uploadFile(imgFile, `tienda/products/${id}/imagen.${imgFile.name.split('.').pop()}`, 'p-img-progress');
-        } else if (imgUrl) {
-            data.image = imgUrl;
-        }
-        const vidFile = document.getElementById('p-vid-file').files[0];
-        if (vidFile) {
-            data.videoUrl = await uploadFile(vidFile, `tienda/products/${id}/video.${vidFile.name.split('.').pop()}`, 'p-vid-progress');
-        } else {
-            const vidUrl = document.getElementById('p-video').value.trim();
-            if (vidUrl) data.videoUrl = vidUrl;
-        }
+    var imgFile = document.getElementById('p-img-file').files[0];
+    var imgUrl  = document.getElementById('p-img-url').value.trim();
+    var vidFile = document.getElementById('p-vid-file').files[0];
+    var vidUrl  = document.getElementById('p-video').value.trim();
 
-        if (!editingProductoId) data.createdAt = serverTimestamp();
-        await setDoc(doc(db, PATH_PRODUCTOS, id), data, { merge: true });
+    var imgPromise = imgFile
+        ? uploadFile(imgFile, 'tienda/products/' + id + '/imagen.' + imgFile.name.split('.').pop(), 'p-img-progress')
+        : Promise.resolve(imgUrl || null);
+
+    var vidPromise = vidFile
+        ? uploadFile(vidFile, 'tienda/products/' + id + '/video.' + vidFile.name.split('.').pop(), 'p-vid-progress')
+        : Promise.resolve(vidUrl || null);
+
+    Promise.all([imgPromise, vidPromise]).then(function(results) {
+        if (results[0]) data.image    = results[0];
+        if (results[1]) data.videoUrl = results[1];
+        return db.collection(PATH_PRODUCTOS).doc(id).set(data, { merge: true });
+    }).then(function() {
         showToast('Producto guardado ✓', true);
         cancelEditProducto();
-    } catch(e) {
+    }).catch(function(e) {
         console.error('saveProducto error:', e);
-        alert('ERROR al guardar producto:\n' + (e.code || e.message) + '\n\nRevisá la consola del navegador (F12) para más detalles.');
-    } finally {
+        showToast('Error: ' + (e.code || e.message), false, 8000);
+    }).finally(function() {
         btn.disabled = false; btn.textContent = 'Guardar producto';
-    }
-};
+    });
+}
 
-window.cancelEditProducto = () => {
+function cancelEditProducto() {
     editingProductoId = null;
-    ['p-name','p-variant','p-price','p-desc','p-video','p-img-url'].forEach(id => document.getElementById(id).value = '');
+    ['p-name','p-variant','p-price','p-desc','p-video','p-img-url'].forEach(function(id) {
+        document.getElementById(id).value = '';
+    });
     document.getElementById('p-tag').value = '';
     document.getElementById('p-edit-id').value = '';
-    window.removeFile('p-img-file','p-img-preview','p-img-zone');
-    window.removeFile('p-vid-file','p-vid-preview','p-vid-zone');
+    removeFile('p-img-file','p-img-preview','p-img-zone');
+    removeFile('p-vid-file','p-vid-preview','p-vid-zone');
     document.getElementById('p-cancel-btn').style.display = 'none';
     document.getElementById('p-save-btn').textContent = 'Guardar producto';
-};
+}
 
-window.editProducto = (id) => {
-    const p = allProductos.find(x => x.id === id); if(!p) return;
+function editProducto(id) {
+    var p = allProductos.find(function(x) { return x.id === id; }); if (!p) return;
     editingProductoId = id;
-    document.getElementById('p-name').value = p.name || '';
+    document.getElementById('p-name').value    = p.name || '';
     document.getElementById('p-variant').value = p.variant || '';
-    document.getElementById('p-price').value = p.price || '';
-    document.getElementById('p-tag').value = p.tag || '';
-    document.getElementById('p-desc').value = p.description || '';
-    document.getElementById('p-video').value = p.videoUrl || '';
+    document.getElementById('p-price').value   = p.price || '';
+    document.getElementById('p-tag').value     = p.tag || '';
+    document.getElementById('p-desc').value    = p.description || '';
+    document.getElementById('p-video').value   = p.videoUrl || '';
     document.getElementById('p-img-url').value = p.image || '';
     if (p.image) {
         document.getElementById('p-img-preview').style.display = 'block';
@@ -515,147 +509,150 @@ window.editProducto = (id) => {
     document.getElementById('p-cancel-btn').style.display = 'inline-flex';
     document.getElementById('p-save-btn').textContent = 'Actualizar producto';
     document.getElementById('panel-productos').scrollIntoView({ behavior:'smooth' });
-};
+}
 
-window.deleteProducto = async (id) => {
+function deleteProducto(id) {
     if (!confirm('¿Eliminar este producto?')) return;
-    try { await deleteDoc(doc(db, PATH_PRODUCTOS, id)); showToast('Eliminado', true); }
-    catch(e) { showToast('Error al eliminar', false); }
-};
+    db.collection(PATH_PRODUCTOS).doc(id).delete()
+        .then(function() { showToast('Eliminado', true); })
+        .catch(function() { showToast('Error al eliminar', false); });
+}
 
 function renderProdList() {
-    const el = document.getElementById('prod-list');
+    var el = document.getElementById('prod-list');
     if (!allProductos.length) {
         el.innerHTML = '<div class="empty-state"><i class="fas fa-box-open"></i><p>No hay productos. Agregá uno arriba.</p></div>';
         return;
     }
-    el.innerHTML = allProductos.map(p => `
-        <div class="prod-row">
-            ${p.image ? `<img class="prod-thumb" src="${p.image}" alt="">` : `<div class="prod-thumb-placeholder">📦</div>`}
-            <div class="prod-info">
-                <div class="prod-name">${p.name}${p.tag?`<span class="prod-tag-badge">${p.tag}</span>`:''}</div>
-                <div class="prod-meta">$${(p.price||0).toLocaleString('es-AR')}${p.variant?' · '+p.variant:''}${p.videoUrl?' · 🎥':''}</div>
-            </div>
-            <div class="prod-actions">
-                <button class="btn-edit" onclick="editProducto('${p.id}')"><i class="fas fa-pen"></i></button>
-                <button class="btn-del" onclick="deleteProducto('${p.id}')"><i class="fas fa-trash"></i></button>
-            </div>
-        </div>`).join('');
+    el.innerHTML = allProductos.map(function(p) {
+        return '<div class="prod-row">' +
+            (p.image ? '<img class="prod-thumb" src="' + p.image + '" alt="" onerror="this.style.display=\'none\'">' : '<div class="prod-thumb-placeholder">📦</div>') +
+            '<div class="prod-info">' +
+                '<div class="prod-name">' + p.name + (p.tag ? '<span class="prod-tag-badge">' + p.tag + '</span>' : '') + '</div>' +
+                '<div class="prod-meta">$' + (p.price||0).toLocaleString('es-AR') + (p.variant?' · '+p.variant:'') + (p.videoUrl?' · 🎥':'') + '</div>' +
+            '</div>' +
+            '<div class="prod-actions">' +
+                '<button class="btn-edit" onclick="editProducto(\'' + p.id + '\')"><i class="fas fa-pen"></i></button>' +
+                '<button class="btn-del" onclick="deleteProducto(\'' + p.id + '\')"><i class="fas fa-trash"></i></button>' +
+            '</div></div>';
+    }).join('');
 }
 
-// ---- KIT FORM ----
-let kitItemRows = [];
-window.addKitItemRow = (name='', detail='') => {
-    const rowId = 'kr-' + Date.now();
+// ---- COMBO ----
+function addKitItemRow(name, detail) {
+    name = name || ''; detail = detail || '';
+    var rowId = 'kr-' + Date.now() + '-' + Math.random().toString(36).slice(2,5);
     kitItemRows.push(rowId);
-    const list = document.getElementById('k-items-list');
-    const row = document.createElement('div');
+    var list = document.getElementById('k-items-list');
+    var row  = document.createElement('div');
     row.className = 'kit-item-row'; row.id = rowId;
-    row.innerHTML = `
-        <div class="fi form-field" style="flex:1;">
-            <label class="field-label">Producto</label>
-            <input type="text" id="${rowId}-name" value="${name}" placeholder="Ej: Pomada Mate Opción 90g">
-        </div>
-        <div class="fi form-field" style="flex:1.5;">
-            <label class="field-label">Detalle (opcional)</label>
-            <input type="text" id="${rowId}-detail" value="${detail}" placeholder="Fijación media, acabado mate...">
-        </div>
-        <button class="btn-rm" onclick="removeKitRow('${rowId}')"><i class="fas fa-times"></i></button>`;
+    row.innerHTML =
+        '<div class="fi form-field" style="flex:1;">' +
+            '<label class="field-label">Producto</label>' +
+            '<input type="text" id="' + rowId + '-name" value="' + name + '" placeholder="Ej: Pomada Mate Opción 90g">' +
+        '</div>' +
+        '<div class="fi form-field" style="flex:1.5;">' +
+            '<label class="field-label">Detalle (opcional)</label>' +
+            '<input type="text" id="' + rowId + '-detail" value="' + detail + '" placeholder="Fijación media, acabado mate...">' +
+        '</div>' +
+        '<button class="btn-rm" onclick="removeKitRow(\'' + rowId + '\')"><i class="fas fa-times"></i></button>';
     list.appendChild(row);
-};
-window.removeKitRow = (rowId) => {
-    document.getElementById(rowId)?.remove();
-    kitItemRows = kitItemRows.filter(id => id !== rowId);
-};
+}
 
-window.toggleShipping = () => {
+function removeKitRow(rowId) {
+    var el = document.getElementById(rowId);
+    if (el) el.remove();
+    kitItemRows = kitItemRows.filter(function(id) { return id !== rowId; });
+}
+
+function toggleShipping() {
     freeShipping = !freeShipping;
     document.getElementById('k-shipping-toggle').classList.toggle('on', freeShipping);
-};
+}
 
-window.saveKit = async () => {
-    const name = document.getElementById('k-name').value.trim();
-    if (!name) { showToast('Completá el nombre', false); return; }
+function saveCombo() {
+    var name = document.getElementById('k-name').value.trim();
+    if (!name) { showToast('Completá el nombre del combo', false); return; }
 
-    const btn = document.getElementById('k-save-btn');
+    var btn = document.getElementById('k-save-btn');
     btn.disabled = true; btn.textContent = 'Guardando...';
 
-    try {
-        const id = editingKitId || name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now();
-        const priceVal = document.getElementById('k-price').value;
-        const items = kitItemRows.map(rowId => ({
-            name: document.getElementById(rowId+'-name')?.value.trim() || '',
-            detail: document.getElementById(rowId+'-detail')?.value.trim() || ''
-        })).filter(it => it.name);
+    var id = editingComboId || (name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now());
+    var priceVal = document.getElementById('k-price').value;
+    var items = kitItemRows.map(function(rowId) {
+        var n = document.getElementById(rowId+'-name');
+        var d = document.getElementById(rowId+'-detail');
+        return { name: n ? n.value.trim() : '', detail: d ? d.value.trim() : '' };
+    }).filter(function(it) { return it.name; });
 
-        const data = {
-            name,
-            tag: document.getElementById('k-tag').value,
-            subtitle: document.getElementById('k-subtitle').value.trim(),
-            price: priceVal ? Number(priceVal) : null,
-            desc: document.getElementById('k-desc').value.trim(),
-            freeShipping,
-            items,
-            updatedAt: serverTimestamp(),
-        };
+    var data = {
+        name: name,
+        tag: 'COMBO',
+        subtitle: document.getElementById('k-subtitle').value.trim(),
+        price: priceVal ? Number(priceVal) : null,
+        desc: document.getElementById('k-desc').value.trim(),
+        freeShipping: freeShipping,
+        items: items,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if (!editingComboId) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
 
-        const imgFile = document.getElementById('k-img-file').files[0];
-        const kImgUrl = document.getElementById('k-img-url').value.trim();
-        if (imgFile) {
-            data.image = await uploadFile(imgFile, `tienda/kits/${id}/imagen.${imgFile.name.split('.').pop()}`, 'k-img-progress');
-        } else if (kImgUrl) {
-            data.image = kImgUrl;
-        }
-        const kVidFile = document.getElementById('k-vid-file').files[0];
-        if (kVidFile) {
-            data.videoUrl = await uploadFile(kVidFile, `tienda/kits/${id}/video.${kVidFile.name.split('.').pop()}`, 'k-vid-progress');
-        } else {
-            const kVidUrl = document.getElementById('k-video').value.trim();
-            if (kVidUrl) data.videoUrl = kVidUrl;
-        }
+    var imgFile = document.getElementById('k-img-file').files[0];
+    var imgUrl  = document.getElementById('k-img-url').value.trim();
+    var vidFile = document.getElementById('k-vid-file').files[0];
+    var vidUrl  = document.getElementById('k-video').value.trim();
 
-        if (!editingKitId) data.createdAt = serverTimestamp();
-        await setDoc(doc(db, PATH_KITS, id), data, { merge: true });
-        showToast('Kit guardado ✓', true);
-        cancelEditKit();
-    } catch(e) {
-        console.error('saveKit error:', e);
-        alert('ERROR al guardar kit:\n' + (e.code || e.message) + '\n\nRevisá la consola del navegador (F12) para más detalles.');
-    } finally {
-        btn.disabled = false; btn.textContent = 'Guardar kit';
-    }
-};
+    var imgPromise = imgFile
+        ? uploadFile(imgFile, 'tienda/kits/' + id + '/imagen.' + imgFile.name.split('.').pop(), 'k-img-progress')
+        : Promise.resolve(imgUrl || null);
 
-window.cancelEditKit = () => {
-    editingKitId = null; freeShipping = false;
-    ['k-name','k-subtitle','k-price','k-desc'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('k-tag').value = 'KIT';
+    var vidPromise = vidFile
+        ? uploadFile(vidFile, 'tienda/kits/' + id + '/video.' + vidFile.name.split('.').pop(), 'k-vid-progress')
+        : Promise.resolve(vidUrl || null);
+
+    Promise.all([imgPromise, vidPromise]).then(function(results) {
+        if (results[0]) data.image    = results[0];
+        if (results[1]) data.videoUrl = results[1];
+        return db.collection(PATH_COMBOS).doc(id).set(data, { merge: true });
+    }).then(function() {
+        showToast('Combo guardado ✓', true);
+        cancelEditCombo();
+    }).catch(function(e) {
+        console.error('saveCombo error:', e);
+        showToast('Error: ' + (e.code || e.message), false, 8000);
+    }).finally(function() {
+        btn.disabled = false; btn.textContent = 'Guardar combo';
+    });
+}
+
+function cancelEditCombo() {
+    editingComboId = null; freeShipping = false;
+    ['k-name','k-subtitle','k-price','k-desc','k-video','k-img-url'].forEach(function(id) {
+        document.getElementById(id).value = '';
+    });
     document.getElementById('k-edit-id').value = '';
     document.getElementById('k-shipping-toggle').classList.remove('on');
     document.getElementById('k-items-list').innerHTML = '';
     kitItemRows = [];
-    document.getElementById('k-video').value = '';
-    document.getElementById('k-img-url').value = '';
-    window.removeFile('k-vid-file','k-vid-preview','k-vid-zone');
-    window.removeFile('k-img-file','k-img-preview','k-img-zone');
+    removeFile('k-vid-file','k-vid-preview','k-vid-zone');
+    removeFile('k-img-file','k-img-preview','k-img-zone');
     document.getElementById('k-img-current').style.display = 'none';
     document.getElementById('k-cancel-btn').style.display = 'none';
-    document.getElementById('k-save-btn').textContent = 'Guardar kit';
-};
+    document.getElementById('k-save-btn').textContent = 'Guardar combo';
+}
 
-window.editKit = (id) => {
-    const k = allKits.find(x => x.id === id); if(!k) return;
-    editingKitId = id;
-    document.getElementById('k-name').value = k.name || '';
-    document.getElementById('k-tag').value = k.tag || 'KIT';
+function editCombo(id) {
+    var k = allCombos.find(function(x) { return x.id === id; }); if (!k) return;
+    editingComboId = id;
+    document.getElementById('k-name').value     = k.name || '';
     document.getElementById('k-subtitle').value = k.subtitle || '';
-    document.getElementById('k-price').value = k.price != null ? k.price : '';
-    document.getElementById('k-desc').value = k.desc || '';
+    document.getElementById('k-price').value    = k.price != null ? k.price : '';
+    document.getElementById('k-desc').value     = k.desc || '';
     freeShipping = !!k.freeShipping;
     document.getElementById('k-shipping-toggle').classList.toggle('on', freeShipping);
     document.getElementById('k-items-list').innerHTML = '';
     kitItemRows = [];
-    (k.items || []).forEach(it => addKitItemRow(it.name, it.detail||''));
+    (k.items || []).forEach(function(it) { addKitItemRow(it.name, it.detail||''); });
     if (k.image) {
         document.getElementById('k-img-preview').style.display = 'block';
         document.getElementById('k-img-preview-img').src = k.image;
@@ -663,59 +660,54 @@ window.editKit = (id) => {
         document.getElementById('k-img-current').style.display = 'block';
         document.getElementById('k-img-current-url').textContent = k.image.length > 50 ? k.image.slice(0,50)+'…' : k.image;
     }
-    document.getElementById('k-video').value = k.videoUrl || '';
+    document.getElementById('k-video').value   = k.videoUrl || '';
     document.getElementById('k-img-url').value = k.image || '';
     document.getElementById('k-edit-id').value = id;
     document.getElementById('k-cancel-btn').style.display = 'inline-flex';
-    document.getElementById('k-save-btn').textContent = 'Actualizar kit';
-    document.getElementById('panel-kits').scrollIntoView({ behavior:'smooth' });
-};
+    document.getElementById('k-save-btn').textContent = 'Actualizar combo';
+    document.getElementById('panel-combos').scrollIntoView({ behavior:'smooth' });
+}
 
-window.deleteKit = async (id) => {
-    if (!confirm('¿Eliminar este kit/combo?')) return;
-    try { await deleteDoc(doc(db, PATH_KITS, id)); showToast('Eliminado', true); }
-    catch(e) { showToast('Error al eliminar', false); }
-};
+function deleteCombo(id) {
+    if (!confirm('¿Eliminar este combo?')) return;
+    db.collection(PATH_COMBOS).doc(id).delete()
+        .then(function() { showToast('Eliminado', true); })
+        .catch(function() { showToast('Error al eliminar', false); });
+}
 
-function renderKitList() {
-    const el = document.getElementById('kit-list');
-    if (!allKits.length) {
-        el.innerHTML = '<div class="empty-state"><i class="fas fa-layer-group"></i><p>No hay kits. Agregá uno arriba.</p></div>';
+function renderComboList() {
+    var el = document.getElementById('kit-list');
+    if (!allCombos.length) {
+        el.innerHTML = '<div class="empty-state"><i class="fas fa-layer-group"></i><p>No hay combos. Agregá uno arriba.</p></div>';
         return;
     }
-    el.innerHTML = allKits.map(k => `
-        <div class="prod-row">
-            ${k.image ? `<img class="prod-thumb" src="${k.image}" alt="">` : `<div class="prod-thumb-placeholder">${k.tag==='COMBO'?'🎁':'📦'}</div>`}
-            <div class="prod-info">
-                <div class="prod-name">${k.name}<span class="prod-tag-badge">${k.tag||'KIT'}</span></div>
-                <div class="prod-meta">${k.price!=null?'$'+k.price.toLocaleString('es-AR'):'Consultá'}${k.freeShipping?' · ENVÍO GRATIS':''}${k.items?.length?' · '+k.items.length+' items':''}</div>
-            </div>
-            <div class="prod-actions">
-                <button class="btn-edit" onclick="editKit('${k.id}')"><i class="fas fa-pen"></i></button>
-                <button class="btn-del" onclick="deleteKit('${k.id}')"><i class="fas fa-trash"></i></button>
-            </div>
-        </div>`).join('');
+    el.innerHTML = allCombos.map(function(k) {
+        return '<div class="prod-row">' +
+            (k.image ? '<img class="prod-thumb" src="' + k.image + '" alt="" onerror="this.style.display=\'none\'">' : '<div class="prod-thumb-placeholder">🎁</div>') +
+            '<div class="prod-info">' +
+                '<div class="prod-name">' + k.name + '<span class="prod-tag-badge">COMBO</span></div>' +
+                '<div class="prod-meta">' + (k.price!=null?'$'+k.price.toLocaleString('es-AR'):'Consultá') + (k.freeShipping?' · ENVÍO GRATIS':'') + (k.items&&k.items.length?' · '+k.items.length+' items':'') + '</div>' +
+            '</div>' +
+            '<div class="prod-actions">' +
+                '<button class="btn-edit" onclick="editCombo(\'' + k.id + '\')"><i class="fas fa-pen"></i></button>' +
+                '<button class="btn-del" onclick="deleteCombo(\'' + k.id + '\')"><i class="fas fa-trash"></i></button>' +
+            '</div></div>';
+    }).join('');
 }
 
 // ---- TOAST ----
-function showToast(msg, ok, duration=3000) {
-    const t = document.getElementById('toast');
+function showToast(msg, ok, duration) {
+    duration = duration || 3000;
+    var t = document.getElementById('toast');
     t.textContent = msg;
     t.className = 'status-toast ' + (ok ? 'ok' : 'err');
     t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), duration);
+    setTimeout(function() { t.classList.remove('show'); }, duration);
 }
 
-// ---- LOGIN ENTER KEY ----
-document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') window.doLogin(); });
-document.getElementById('login-email').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-pass').focus(); });
-
-// ---- STATIC BUTTON LISTENERS (más confiable que onclick en módulos) ----
-document.getElementById('p-save-btn').addEventListener('click', () => window.saveProducto());
-document.getElementById('p-cancel-btn').addEventListener('click', () => window.cancelEditProducto());
-document.getElementById('k-save-btn').addEventListener('click', () => window.saveKit());
-document.getElementById('k-cancel-btn').addEventListener('click', () => window.cancelEditKit());
-document.getElementById('k-shipping-toggle').addEventListener('click', () => window.toggleShipping());
+// ---- ENTER KEY ----
+document.getElementById('login-pass').addEventListener('keydown', function(e) { if(e.key==='Enter') doLogin(); });
+document.getElementById('login-email').addEventListener('keydown', function(e) { if(e.key==='Enter') document.getElementById('login-pass').focus(); });
 </script>
 </body>
 </html>
