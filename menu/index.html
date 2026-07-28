@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SB Barber — Menú</title>
+<meta name="description" content="Menú de SB Barber: bebidas y productos profesionales.">
+<link rel="icon" type="image/jpeg" href="https://i.imgur.com/PzcD4W2.jpeg">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+        --bg: #0a0a0a;
+        --card: #101010;
+        --border: #232323;
+        --text: #ffffff;
+        --muted: #8a8a8a;
+        --gold: #d4af37;
+    }
+    body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+        padding-bottom: 80px;
+    }
+
+    /* ---- Header ---- */
+    header {
+        text-align: center;
+        padding: 3rem 1.5rem 1.5rem;
+        position: relative;
+    }
+    header::after {
+        content: '';
+        position: absolute; top: -20%; left: 50%; transform: translateX(-50%);
+        width: 120%; height: 50%;
+        background: radial-gradient(ellipse at center, rgba(255,255,255,0.05), transparent 70%);
+        pointer-events: none; z-index: 0;
+    }
+    header img { height: 56px; margin-bottom: 1rem; position: relative; }
+    header h1 {
+        font-size: clamp(2.2rem, 9vw, 3.2rem);
+        font-weight: 900; letter-spacing: 0.02em; line-height: 1;
+        position: relative;
+    }
+    header .eyebrow {
+        color: var(--gold); font-size: 0.7rem; font-weight: 800;
+        letter-spacing: 0.35em; text-transform: uppercase; margin-bottom: 0.6rem;
+    }
+
+    /* ---- Layout ---- */
+    main { max-width: 640px; margin: 0 auto; padding: 1rem 1.25rem; }
+    .section { margin-top: 2.5rem; }
+    .section-head {
+        display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem;
+    }
+    .section-head h2 {
+        font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap;
+    }
+    .section-head .line { flex: 1; height: 1px; background: linear-gradient(to right, var(--border), transparent); }
+    .section-head .count { font-size: 0.7rem; color: var(--muted); font-weight: 700; letter-spacing: 0.1em; }
+
+    /* ---- Lista de items ---- */
+    .item {
+        display: flex; align-items: center; gap: 1rem;
+        padding: 0.9rem 0;
+        border-bottom: 1px dashed rgba(255,255,255,0.08);
+    }
+    .item:last-child { border-bottom: none; }
+    .item .thumb {
+        width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0;
+        background: var(--card); border: 1px solid var(--border);
+        object-fit: cover; display: flex; align-items: center; justify-content: center;
+        color: var(--muted);
+    }
+    .item .info { flex: 1; min-width: 0; }
+    .item .name { font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .item .variant, .item .desc { color: var(--muted); font-size: 0.8rem; margin-top: 2px; line-height: 1.4; }
+    .item .dots { flex: 1; border-bottom: 1px dotted rgba(255,255,255,0.15); margin: 0 0.5rem; min-width: 20px; }
+    .item .price {
+        font-weight: 800; font-size: 1.05rem; color: #fff; white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+    }
+    .tag {
+        font-size: 0.55rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--gold); border: 1px solid rgba(212,175,55,0.4); border-radius: 999px;
+        padding: 2px 7px;
+    }
+
+    .empty { color: var(--muted); font-size: 0.85rem; text-align: center; padding: 1rem 0; }
+
+    footer {
+        text-align: center; color: #555; font-size: 0.7rem; font-weight: 700;
+        letter-spacing: 0.16em; text-transform: uppercase; margin-top: 3rem;
+        padding: 1.5rem; border-top: 1px solid var(--border);
+    }
+
+    /* ---- Botones flotantes (no imprimen) ---- */
+    .fab-row {
+        position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 50;
+    }
+    .fab {
+        width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--border);
+        background: var(--card); color: var(--muted); cursor: pointer;
+        display: flex; align-items: center; justify-content: center; font-size: 1rem;
+        transition: transform .2s, color .2s, border-color .2s;
+    }
+    .fab:hover { transform: translateY(-2px); color: #fff; border-color: #444; }
+    .fab.print { background: #fff; color: #000; border-color: #fff; }
+
+    /* ---- Admin ---- */
+    .admin-bar {
+        display: none; max-width: 640px; margin: 1rem auto 0; padding: 0 1.25rem;
+    }
+    body.admin .admin-bar { display: block; }
+    .admin-note {
+        background: rgba(212,175,55,0.08); border: 1px solid rgba(212,175,55,0.25);
+        border-radius: 12px; padding: 10px 14px; font-size: 0.75rem; color: var(--gold);
+        display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .admin-only { display: none; }
+    body.admin .admin-only { display: flex; }
+
+    .edit-row { display: flex; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px dashed rgba(255,255,255,0.08); }
+    .edit-row input {
+        background: #000; border: 1px solid var(--border); color: #fff; border-radius: 8px;
+        padding: 9px 10px; font-family: inherit; font-size: 14px; outline: none;
+    }
+    .edit-row input:focus { border-color: var(--gold); }
+    .edit-row .in-name { flex: 1; min-width: 0; }
+    .edit-row .in-price { width: 100px; }
+    .edit-row .del { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 18px; padding: 4px 8px; }
+    .btn {
+        border: none; border-radius: 10px; padding: 11px 16px; font-weight: 800;
+        font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+        font-family: inherit; transition: transform .2s, opacity .2s;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-gold { background: var(--gold); color: #000; }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .row-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+    /* ---- Modal login ---- */
+    .modal-bg {
+        position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(6px);
+        display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px;
+    }
+    .modal-bg.show { display: flex; }
+    .modal {
+        background: var(--card); border: 1px solid var(--border); border-radius: 18px;
+        padding: 28px 24px; width: 100%; max-width: 340px; text-align: center;
+    }
+    .modal img { height: 44px; margin-bottom: 16px; }
+    .modal h3 { font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 18px; }
+    .modal input {
+        width: 100%; background: #000; border: 1px solid var(--border); color: #fff;
+        border-radius: 10px; padding: 13px; margin-bottom: 10px; font-family: inherit; font-size: 15px; outline: none;
+    }
+    .modal input:focus { border-color: #fff; }
+    .modal .err { color: #ef4444; font-size: 0.75rem; margin-top: 6px; min-height: 18px; }
+
+    /* ---- Impresión ---- */
+    @media print {
+        @page { margin: 12mm; }
+        body {
+            background: #fff !important; color: #000 !important; padding: 0;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+        }
+        header::after { display: none; }
+        header h1, .section-head h2, .item .name, .item .price { color: #000 !important; }
+        .item .variant, .item .desc, .section-head .count, footer { color: #555 !important; }
+        .item { border-bottom: 1px dashed #ccc; }
+        .section-head .line { background: #ccc; }
+        .fab-row, .admin-bar, .modal-bg, .admin-only { display: none !important; }
+        header img { filter: invert(1); }
+        .item .thumb { border-color: #ddd; background: #f4f4f4; }
+    }
+</style>
+</head>
+<body>
+
+    <header>
+        <img src="https://i.imgur.com/xyjMT6X.png" alt="SB Barber">
+        <div class="eyebrow">SB Barber</div>
+        <h1>MENÚ</h1>
+    </header>
+
+    <!-- Barra admin -->
+    <div class="admin-bar">
+        <div class="admin-note">
+            <span>✏️ Modo edición — cambios en bebidas se guardan online</span>
+            <button class="btn btn-ghost" onclick="salirAdmin()" style="padding:6px 12px;">Salir</button>
+        </div>
+    </div>
+
+    <main>
+        <!-- BEBIDAS -->
+        <section class="section">
+            <div class="section-head">
+                <h2>Bebidas</h2>
+                <span class="line"></span>
+                <span class="count" id="bebidas-count"></span>
+            </div>
+            <div id="bebidas-list"></div>
+
+            <!-- Editor de bebidas (admin) -->
+            <div class="admin-only" style="flex-direction:column; margin-top:16px;">
+                <div id="bebidas-editor" style="width:100%;"></div>
+                <div class="row-actions">
+                    <button class="btn btn-ghost" onclick="agregarBebida()">+ Agregar bebida</button>
+                    <button class="btn btn-gold" onclick="guardarBebidas()" id="save-beb">Guardar cambios</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- PRODUCTOS -->
+        <section class="section">
+            <div class="section-head">
+                <h2>Productos</h2>
+                <span class="line"></span>
+                <span class="count" id="productos-count"></span>
+            </div>
+            <div id="productos-list"></div>
+            <p class="admin-only" style="color:var(--muted); font-size:0.72rem; margin-top:12px;">
+                Los precios de productos se editan desde la Tienda (se sincronizan acá automáticamente).
+            </p>
+        </section>
+    </main>
+
+    <footer>SB Barber · Dávila 951, CABA</footer>
+
+    <!-- FABs -->
+    <div class="fab-row">
+        <button class="fab" title="Editar (admin)" onclick="abrirLogin()">⚙️</button>
+        <button class="fab print" title="Imprimir / PDF" onclick="window.print()">🖨️</button>
+    </div>
+
+    <!-- Login modal -->
+    <div class="modal-bg" id="login-modal">
+        <div class="modal">
+            <img src="https://i.imgur.com/xyjMT6X.png" alt="SB Barber">
+            <h3>Acceso administrador</h3>
+            <input type="email" id="login-email" placeholder="Correo" autocomplete="username">
+            <input type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password">
+            <button class="btn btn-gold" style="width:100%;" onclick="hacerLogin()">Ingresar</button>
+            <div class="err" id="login-err"></div>
+            <button class="btn btn-ghost" style="width:100%; margin-top:4px;" onclick="cerrarLogin()">Cancelar</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
+            authDomain: "sb-barber-6dc16.firebaseapp.com",
+            projectId: "sb-barber-6dc16",
+            storageBucket: "sb-barber-6dc16.firebasestorage.app",
+            messagingSenderId: "213501157745",
+            appId: "1:213501157745:web:09fd59996cf1d72b6696d0"
+        };
+        const ADMINS = ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // ---- Productos base (mismo listado que la Tienda) ----
+        const PRODUCTS = [
+            { id:'polvo-texturizador', name:'Polvo Texturizador', variant:'15gr', price:12000, tag:'FAVORITO', image:'https://i.imgur.com/Fx1ZtDm.jpeg' },
+            { id:'pomada-mate', name:'Pomada Mate', variant:'90gr', price:12000, tag:'MÁS VENDIDO', image:'https://i.imgur.com/lX2zxQJ.jpeg' },
+            { id:'pomada-brillante', name:'Pomada Brillante', variant:'50gr', price:12000, tag:null, image:'https://i.imgur.com/DvuCRX3.jpeg' },
+            { id:'polvo-texturizador-black', name:'Polvo Texturizador Original Black', variant:'5gr', price:10000, tag:'NUEVO', image:'https://i.imgur.com/Pl38xr5.jpeg' },
+            { id:'aftershave-celeste-black', name:'Aftershave Celeste Original Black', variant:'400ml', price:10900, tag:null, image:'https://i.imgur.com/AwQhG9i.jpeg' },
+            { id:'aftershave-violeta-black', name:'Aftershave Violeta Original Black', variant:'400ml', price:10200, tag:null, image:'https://i.imgur.com/w9uoX7U.jpeg' },
+            { id:'quita-pelo-lujo', name:'Quita Pelo Lujo', variant:'Profesional', price:6900, tag:null, image:'https://i.imgur.com/LUO3Biq.jpeg' },
+            { id:'peine-toniguy', name:'Peine Carbon Toniguy', variant:'Profesional', price:3900, tag:null, image:'https://i.imgur.com/ZJLQVrJ.jpeg' },
+            { id:'capa-everest', name:'Capa de Corte Everest', variant:'Blanco y Negro', price:17000, tag:'NUEVO', image:'https://i.imgur.com/Axw82rM.jpeg' },
+            { id:'desinfectante-everest', name:'Desinfectante Aerosol', variant:'Everest 5 en 1', price:10200, tag:null, image:'https://i.imgur.com/c7oqrOb.jpeg' }
+        ];
+
+        // Bebidas por defecto (hasta que se editen y guarden online)
+        const DEFAULT_BEBIDAS = [
+            { id:'d1', name:'Agua mineral', price:1000, orden:1 },
+            { id:'d2', name:'Gaseosa', price:1500, orden:2 },
+            { id:'d3', name:'Agua saborizada', price:1500, orden:3 },
+            { id:'d4', name:'Cerveza', price:2500, orden:4 },
+            { id:'d5', name:'Energizante', price:2800, orden:5 },
+            { id:'d6', name:'Café', price:1200, orden:6 }
+        ];
+
+        let productConfig = {};   // overrides de precio/stock desde la Tienda
+        let bebidas = [];         // bebidas desde Firestore
+        let bebidasEsDefault = true;
+        let isAdmin = false;
+
+        const money = n => '$' + Number(n || 0).toLocaleString('es-AR');
+
+        // ---- Suscripciones en vivo ----
+        onSnapshot(collection(db, 'tienda_productos'), snap => {
+            productConfig = {};
+            snap.forEach(d => { productConfig[d.id] = d.data(); });
+            renderProductos();
+        });
+
+        onSnapshot(collection(db, 'menu_bebidas'), snap => {
+            if (snap.empty) {
+                bebidas = DEFAULT_BEBIDAS.map(b => ({ ...b }));
+                bebidasEsDefault = true;
+            } else {
+                bebidas = [];
+                snap.forEach(d => bebidas.push({ id: d.id, ...d.data() }));
+                bebidas.sort((a, b) => (a.orden || 0) - (b.orden || 0));
+                bebidasEsDefault = false;
+            }
+            renderBebidas();
+            if (isAdmin) renderEditor();
+        });
+
+        function renderBebidas() {
+            const cont = document.getElementById('bebidas-list');
+            document.getElementById('bebidas-count').textContent = bebidas.length ? bebidas.length + ' opciones' : '';
+            if (!bebidas.length) { cont.innerHTML = '<p class="empty">Sin bebidas cargadas.</p>'; return; }
+            cont.innerHTML = bebidas.map(b => `
+                <div class="item">
+                    <div class="info">
+                        <div class="name">${escapeHtml(b.name)}</div>
+                    </div>
+                    <span class="dots"></span>
+                    <span class="price">${money(b.price)}</span>
+                </div>`).join('');
+        }
+
+        function renderProductos() {
+            const cont = document.getElementById('productos-list');
+            document.getElementById('productos-count').textContent = PRODUCTS.length + ' productos';
+            cont.innerHTML = PRODUCTS.map(p => {
+                const cfg = productConfig[p.id] || {};
+                const price = (cfg.price != null) ? cfg.price : p.price;
+                const agotado = (cfg.stock === 0);
+                const thumb = p.image
+                    ? `<img class="thumb" src="${p.image}" alt="" loading="lazy">`
+                    : `<div class="thumb">•</div>`;
+                return `
+                <div class="item">
+                    ${thumb}
+                    <div class="info">
+                        <div class="name">${escapeHtml(p.name)} ${p.tag ? `<span class="tag">${p.tag}</span>` : ''}</div>
+                        <div class="variant">${escapeHtml(p.variant || '')}${agotado ? ' · <span style="color:#ef4444">Agotado</span>' : ''}</div>
+                    </div>
+                    <span class="dots"></span>
+                    <span class="price">${money(price)}</span>
+                </div>`;
+            }).join('');
+        }
+
+        // ---- Editor de bebidas (admin) ----
+        function renderEditor() {
+            const cont = document.getElementById('bebidas-editor');
+            cont.innerHTML = bebidas.map((b, i) => `
+                <div class="edit-row" data-i="${i}">
+                    <input class="in-name" value="${escapeAttr(b.name)}" placeholder="Nombre" oninput="window._setB(${i},'name',this.value)">
+                    <input class="in-price" type="number" inputmode="numeric" value="${b.price}" placeholder="Precio" oninput="window._setB(${i},'price',this.value)">
+                    <button class="del" title="Eliminar" onclick="window._delB(${i})">🗑️</button>
+                </div>`).join('');
+        }
+        window._setB = (i, k, v) => { bebidas[i][k] = (k === 'price') ? Number(v) : v; };
+        window._delB = (i) => { bebidas.splice(i, 1); renderEditor(); };
+        window.agregarBebida = () => {
+            bebidas.push({ id: 'b' + Date.now(), name: '', price: 0, orden: bebidas.length + 1 });
+            renderEditor();
+        };
+        window.guardarBebidas = async () => {
+            const btn = document.getElementById('save-beb');
+            btn.disabled = true; btn.textContent = 'Guardando...';
+            try {
+                // Si venía de defaults, limpiamos esos ids ficticios generando nuevos
+                const items = bebidas
+                    .filter(b => (b.name || '').trim() !== '')
+                    .map((b, idx) => ({
+                        id: (bebidasEsDefault ? 'b' + Date.now() + idx : b.id),
+                        name: b.name.trim(),
+                        price: Number(b.price) || 0,
+                        orden: idx + 1
+                    }));
+                // Guardar cada uno
+                for (const it of items) {
+                    await setDoc(doc(db, 'menu_bebidas', it.id), { name: it.name, price: it.price, orden: it.orden });
+                }
+                // Borrar los que ya no están (solo si no era default)
+                if (!bebidasEsDefault) {
+                    const currentIds = new Set(items.map(i => i.id));
+                    const existentes = bebidas.map(b => b.id);
+                    for (const id of existentes) {
+                        if (!currentIds.has(id)) { try { await deleteDoc(doc(db, 'menu_bebidas', id)); } catch (e) {} }
+                    }
+                }
+                btn.textContent = '✓ Guardado';
+                setTimeout(() => { btn.disabled = false; btn.textContent = 'Guardar cambios'; }, 1500);
+            } catch (e) {
+                alert('No se pudo guardar. ¿Estás con permisos de admin?');
+                btn.disabled = false; btn.textContent = 'Guardar cambios';
+            }
+        };
+
+        // ---- Auth / admin ----
+        window.abrirLogin = () => {
+            if (isAdmin) { entrarAdmin(); return; }
+            document.getElementById('login-modal').classList.add('show');
+        };
+        window.cerrarLogin = () => document.getElementById('login-modal').classList.remove('show');
+        window.hacerLogin = async () => {
+            const email = document.getElementById('login-email').value.trim();
+            const pass = document.getElementById('login-pass').value;
+            const err = document.getElementById('login-err');
+            err.textContent = '';
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+                cerrarLogin();
+            } catch (e) { err.textContent = 'Correo o contraseña incorrectos.'; }
+        };
+        window.salirAdmin = async () => { try { await signOut(auth); } catch (e) {} };
+
+        function entrarAdmin() { document.body.classList.add('admin'); renderEditor(); }
+
+        setPersistence(auth, browserLocalPersistence).catch(() => {}).finally(() => {
+            onAuthStateChanged(auth, user => {
+                isAdmin = !!(user && ADMINS.includes(user.email));
+                if (isAdmin) { entrarAdmin(); }
+                else { document.body.classList.remove('admin'); }
+            });
+        });
+
+        // ---- Utils ----
+        function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+        function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
+
+        // Render inicial inmediato (antes de que llegue Firestore)
+        bebidas = DEFAULT_BEBIDAS.map(b => ({ ...b }));
+        renderBebidas();
+        renderProductos();
+    </script>
+</body>
+</html>
