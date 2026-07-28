@@ -416,10 +416,14 @@ function uploadFile(file, path, progressBarId) {
         var storageRef = storage.ref(path);
         var task = storageRef.put(file);
         var bar = document.getElementById(progressBarId);
+        var timer = setTimeout(function() {
+            task.cancel();
+            reject(new Error('El upload falló (timeout). Las reglas de Firebase Storage pueden estar bloqueando la subida.\n\nUsá el campo "URL de imagen" — subí la foto a imgur.com y pegá el link ahí.'));
+        }, 20000);
         task.on('state_changed',
             function(snap) { if (bar) bar.style.width = Math.round(snap.bytesTransferred / snap.totalBytes * 100) + '%'; },
-            function(err) { reject(err); },
-            function() { task.snapshot.ref.getDownloadURL().then(resolve).catch(reject); }
+            function(err) { clearTimeout(timer); reject(new Error('Error de Storage: ' + err.code + '\n\nUsá el campo "URL de imagen" — subí la foto a imgur.com y pegá el link ahí.')); },
+            function() { clearTimeout(timer); task.snapshot.ref.getDownloadURL().then(resolve).catch(function(e){ reject(new Error('Error obteniendo URL: ' + e.message)); }); }
         );
     });
 }
