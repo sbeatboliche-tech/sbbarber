@@ -164,6 +164,16 @@
         @keyframes spin { to { transform:rotate(360deg); } }
         @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
+        /* ── VIDEO ── */
+        .video-play-btn { position:absolute; bottom:10px; right:10px; width:36px; height:36px; border-radius:50%; background:rgba(0,0,0,.72); border:1.5px solid rgba(255,255,255,.25); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .2s,transform .2s; z-index:2; }
+        .video-play-btn:hover { background:rgba(0,0,0,.9); transform:scale(1.1); }
+        .video-play-btn svg { width:14px; height:14px; fill:#fff; margin-left:2px; }
+        #video-modal { position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,.92); display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity .25s; }
+        #video-modal.open { opacity:1; pointer-events:all; }
+        .video-modal-inner { position:relative; width:100%; max-width:700px; background:#000; border-radius:4px; overflow:hidden; }
+        .video-modal-close { position:absolute; top:10px; right:10px; z-index:10; width:36px; height:36px; background:rgba(0,0,0,.7); border:none; border-radius:50%; color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+        .video-modal-inner iframe, .video-modal-inner video { width:100%; aspect-ratio:16/9; display:block; border:none; }
+
         /* ── STOCK ── */
         .stock-badge { position:absolute; top:12px; right:12px; font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; padding:4px 9px; }
         .stock-out-badge { background:rgba(0,0,0,.75); border:1px solid rgba(255,255,255,.15); color:var(--g600); }
@@ -523,6 +533,7 @@ function renderKits() {
                 <div class="product-tag">${k.tag}</div>
                 ${k.freeShipping ? `<div style="position:absolute;bottom:8px;left:8px;background:#16a34a;color:#fff;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;">ENVÍO GRATIS</div>` : ''}
                 ${out ? `<div class="stock-badge stock-out-badge">Sin stock</div>` : ''}
+                ${k.videoUrl ? `<button class="video-play-btn" onclick="event.stopPropagation();openVideoModal('${k.videoUrl.replace(/'/g,"\\'")}')" title="Ver video"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>` : ''}
             </div>
             <div class="product-info">
                 <div class="product-name">${k.name}</div>
@@ -630,6 +641,7 @@ function renderProducts() {
                 ${p.tag && !out ? `<div class="product-tag">${p.tag}</div>` : ''}
                 ${out ? `<div class="stock-badge stock-out-badge">Sin stock</div>` : ''}
                 ${low ? `<div class="stock-badge stock-low-badge">Últimas ${stock}</div>` : ''}
+                ${p.videoUrl ? `<button class="video-play-btn" onclick="event.stopPropagation();openVideoModal('${p.videoUrl.replace(/'/g,"\\'")}')" title="Ver video"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>` : ''}
             </div>
             <div class="product-info">
                 <div class="product-name">${cfg.name || p.name}</div>
@@ -1101,5 +1113,39 @@ window.saveCursos = async () => {
 };
 </script>
     <script src="../assets/sb-motion.js"></script>
+
+<!-- VIDEO MODAL -->
+<div id="video-modal" onclick="closeVideoModal(event)">
+    <div class="video-modal-inner" id="video-modal-inner">
+        <button class="video-modal-close" onclick="closeVideoModal()">✕</button>
+        <div id="video-modal-content"></div>
+    </div>
+</div>
+<script>
+function openVideoModal(url) {
+    const content = document.getElementById('video-modal-content');
+    let embed;
+    const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([A-Za-z0-9_-]{11})/);
+    const vim = url.match(/vimeo\.com\/(\d+)/);
+    if (yt) {
+        embed = `<iframe src="https://www.youtube.com/embed/${yt[1]}?autoplay=1&rel=0" allow="autoplay;fullscreen" allowfullscreen></iframe>`;
+    } else if (vim) {
+        embed = `<iframe src="https://player.vimeo.com/video/${vim[1]}?autoplay=1" allow="autoplay;fullscreen" allowfullscreen></iframe>`;
+    } else {
+        embed = `<video src="${url}" controls autoplay playsinline style="width:100%;aspect-ratio:16/9;background:#000;"></video>`;
+    }
+    content.innerHTML = embed;
+    document.getElementById('video-modal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+function closeVideoModal(e) {
+    if (e && e.target !== document.getElementById('video-modal') && e.target !== document.querySelector('.video-modal-close')) return;
+    if (e && e.target === document.getElementById('video-modal-inner')) return;
+    document.getElementById('video-modal-content').innerHTML = '';
+    document.getElementById('video-modal').classList.remove('open');
+    document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if(e.key==='Escape') { document.getElementById('video-modal-content').innerHTML=''; document.getElementById('video-modal').classList.remove('open'); document.body.style.overflow=''; }});
+</script>
 </body>
 </html>

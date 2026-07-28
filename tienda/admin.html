@@ -258,7 +258,23 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                     <span class="toggle-label">Envío gratis</span>
                     <div class="toggle" id="k-shipping-toggle" onclick="toggleShipping()"></div>
                 </div>
-                <div class="form-field" style="margin-top:12px;">
+                <div class="form-grid" style="margin-top:12px;">
+                <div class="form-field">
+                    <label class="field-label">Video (URL YouTube/Vimeo)</label>
+                    <input type="url" id="k-video" placeholder="https://youtube.com/...">
+                    <label class="field-label" style="margin-top:12px;">O subir video</label>
+                    <div class="upload-zone" id="k-vid-zone">
+                        <input type="file" id="k-vid-file" accept="video/*" onchange="previewVideo(this,'k-vid-preview','k-vid-remove')">
+                        <div class="upload-zone-icon"><i class="fas fa-video"></i></div>
+                        <div class="upload-zone-label">Arrastrá o <span>elegí un video</span></div>
+                    </div>
+                    <div class="upload-preview" id="k-vid-preview" style="display:none;">
+                        <video id="k-vid-preview-vid" src="" controls style="max-height:160px;"></video>
+                        <button class="upload-remove" id="k-vid-remove" onclick="removeFile('k-vid-file','k-vid-preview','k-vid-zone')"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="upload-progress"><div class="upload-progress-bar" id="k-vid-progress"></div></div>
+                </div>
+                <div class="form-field">
                     <label class="field-label">Foto del kit/combo</label>
                     <div class="upload-zone" id="k-img-zone">
                         <input type="file" id="k-img-file" accept="image/*" onchange="previewFile(this,'k-img-preview','k-img-remove')">
@@ -272,6 +288,7 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                     <div class="upload-progress"><div class="upload-progress-bar" id="k-img-progress"></div></div>
                     <div id="k-img-current" style="font-size:11px;color:#525252;margin-top:6px;display:none;">Imagen actual: <span id="k-img-current-url"></span></div>
                 </div>
+                </div><!-- /form-grid foto+video -->
                 <div style="margin-top:16px;">
                     <label class="field-label" style="margin-bottom:12px;display:block;">Productos incluidos</label>
                     <div id="k-items-list" class="kit-items-list"></div>
@@ -384,8 +401,8 @@ async function uploadFile(file, path, progressBarId) {
         const bar = document.getElementById(progressBarId);
         task.on('state_changed',
             snap => { if(bar) bar.style.width = Math.round(snap.bytesTransferred/snap.totalBytes*100)+'%'; },
-            reject,
-            async () => { resolve(await getDownloadURL(task.snapshot.ref)); }
+            err => reject(err),
+            async () => { try { resolve(await getDownloadURL(task.snapshot.ref)); } catch(e) { reject(e); } }
         );
     });
 }
@@ -453,9 +470,10 @@ window.saveProducto = async () => {
         cancelEditProducto();
     } catch(e) {
         console.error(e);
-        showToast('Error al guardar: ' + e.message, false);
+        showToast('Error: ' + (e.code || e.message), false);
+    } finally {
+        btn.disabled = false; btn.textContent = 'Guardar producto';
     }
-    btn.disabled = false; btn.textContent = 'Guardar producto';
 };
 
 window.cancelEditProducto = () => {
@@ -575,6 +593,13 @@ window.saveKit = async () => {
         if (imgFile) {
             data.image = await uploadFile(imgFile, `tienda/kits/${id}/imagen.${imgFile.name.split('.').pop()}`, 'k-img-progress');
         }
+        const kVidFile = document.getElementById('k-vid-file').files[0];
+        if (kVidFile) {
+            data.videoUrl = await uploadFile(kVidFile, `tienda/kits/${id}/video.${kVidFile.name.split('.').pop()}`, 'k-vid-progress');
+        } else {
+            const kVidUrl = document.getElementById('k-video').value.trim();
+            if (kVidUrl) data.videoUrl = kVidUrl;
+        }
 
         if (!editingKitId) data.createdAt = serverTimestamp();
         await setDoc(doc(db, PATH_KITS, id), data, { merge: true });
@@ -582,9 +607,10 @@ window.saveKit = async () => {
         cancelEditKit();
     } catch(e) {
         console.error(e);
-        showToast('Error al guardar: ' + e.message, false);
+        showToast('Error: ' + (e.code || e.message), false);
+    } finally {
+        btn.disabled = false; btn.textContent = 'Guardar kit';
     }
-    btn.disabled = false; btn.textContent = 'Guardar kit';
 };
 
 window.cancelEditKit = () => {
@@ -595,6 +621,8 @@ window.cancelEditKit = () => {
     document.getElementById('k-shipping-toggle').classList.remove('on');
     document.getElementById('k-items-list').innerHTML = '';
     kitItemRows = [];
+    document.getElementById('k-video').value = '';
+    window.removeFile('k-vid-file','k-vid-preview','k-vid-zone');
     window.removeFile('k-img-file','k-img-preview','k-img-zone');
     document.getElementById('k-img-current').style.display = 'none';
     document.getElementById('k-cancel-btn').style.display = 'none';
@@ -621,6 +649,7 @@ window.editKit = (id) => {
         document.getElementById('k-img-current').style.display = 'block';
         document.getElementById('k-img-current-url').textContent = k.image.length > 50 ? k.image.slice(0,50)+'…' : k.image;
     }
+    document.getElementById('k-video').value = k.videoUrl || '';
     document.getElementById('k-edit-id').value = id;
     document.getElementById('k-cancel-btn').style.display = 'inline-flex';
     document.getElementById('k-save-btn').textContent = 'Actualizar kit';
