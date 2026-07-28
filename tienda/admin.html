@@ -197,19 +197,9 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                         <div class="upload-progress"><div class="upload-progress-bar" id="p-img-progress"></div></div>
                     </div>
                     <div class="form-field">
-                        <label class="field-label">Video (URL YouTube/Vimeo)</label>
-                        <input type="url" id="p-video" placeholder="https://youtube.com/...">
-                        <label class="field-label" style="margin-top:12px;">O subir video</label>
-                        <div class="upload-zone" id="p-vid-zone">
-                            <input type="file" id="p-vid-file" accept="video/*" onchange="previewVideo(this,'p-vid-preview','p-vid-remove')">
-                            <div class="upload-zone-icon"><i class="fas fa-video"></i></div>
-                            <div class="upload-zone-label">Arrastrá o <span>elegí un video</span></div>
-                        </div>
-                        <div class="upload-preview" id="p-vid-preview" style="display:none;">
-                            <video id="p-vid-preview-vid" src="" controls style="max-height:160px;"></video>
-                            <button class="upload-remove" id="p-vid-remove" onclick="removeFile('p-vid-file','p-vid-preview','p-vid-zone')"><i class="fas fa-times"></i></button>
-                        </div>
-                        <div class="upload-progress"><div class="upload-progress-bar" id="p-vid-progress"></div></div>
+                        <label class="field-label">Video (URL YouTube o Vimeo)</label>
+                        <input type="url" id="p-video" placeholder="https://youtube.com/watch?v=...">
+                        <div style="font-size:11px;color:#404040;margin-top:6px;">Subí el video a YouTube (puede ser "Sin listar") y pegá el link acá.</div>
                     </div>
                 </div>
                 <div class="form-actions">
@@ -255,19 +245,9 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                 </div>
                 <div class="form-grid" style="margin-top:12px;">
                     <div class="form-field">
-                        <label class="field-label">Video (URL YouTube/Vimeo)</label>
-                        <input type="url" id="k-video" placeholder="https://youtube.com/...">
-                        <label class="field-label" style="margin-top:12px;">O subir video</label>
-                        <div class="upload-zone" id="k-vid-zone">
-                            <input type="file" id="k-vid-file" accept="video/*" onchange="previewVideo(this,'k-vid-preview','k-vid-remove')">
-                            <div class="upload-zone-icon"><i class="fas fa-video"></i></div>
-                            <div class="upload-zone-label">Arrastrá o <span>elegí un video</span></div>
-                        </div>
-                        <div class="upload-preview" id="k-vid-preview" style="display:none;">
-                            <video id="k-vid-preview-vid" src="" controls style="max-height:160px;"></video>
-                            <button class="upload-remove" id="k-vid-remove" onclick="removeFile('k-vid-file','k-vid-preview','k-vid-zone')"><i class="fas fa-times"></i></button>
-                        </div>
-                        <div class="upload-progress"><div class="upload-progress-bar" id="k-vid-progress"></div></div>
+                        <label class="field-label">Video (URL YouTube o Vimeo)</label>
+                        <input type="url" id="k-video" placeholder="https://youtube.com/watch?v=...">
+                        <div style="font-size:11px;color:#404040;margin-top:6px;">Subí el video a YouTube (puede ser "Sin listar") y pegá el link acá.</div>
                     </div>
                     <div class="form-field">
                         <label class="field-label">URL de imagen del combo</label>
@@ -308,11 +288,10 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
 
 <div class="status-toast" id="toast"></div>
 
-<!-- Firebase compat SDK (sin módulos, funciona con onclick normal) -->
+<!-- Firebase compat SDK (sin Storage — no requiere Blaze) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
 const ADMINS = ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
 const PATH_PRODUCTOS = 'tienda_productos_custom';
@@ -326,9 +305,8 @@ firebase.initializeApp({
     messagingSenderId: "213501157745",
     appId: "1:213501157745:web:09fd59996cf1d72b6696d0"
 });
-const auth    = firebase.auth();
-const db      = firebase.firestore();
-const storage = firebase.storage();
+const auth = firebase.auth();
+const db   = firebase.firestore();
 
 var STATIC_PRODUCTS = [
     { id:'polvo-texturizador',        name:'Polvo Texturizador',               variant:'15gr',             price:12000, tag:'FAVORITO',    image:'https://i.imgur.com/Fx1ZtDm.jpeg',  description:'Volumen y textura al instante. Fijación media con acabado mate natural.' },
@@ -410,21 +388,33 @@ function listenCombos() {
     });
 }
 
-// ---- UPLOAD ----
-function uploadFile(file, path, progressBarId) {
+// ---- IMAGEN: comprime a base64 con Canvas (sin Firebase Storage) ----
+function compressToBase64(file) {
     return new Promise(function(resolve, reject) {
-        var storageRef = storage.ref(path);
-        var task = storageRef.put(file);
-        var bar = document.getElementById(progressBarId);
-        var timer = setTimeout(function() {
-            task.cancel();
-            reject(new Error('El upload falló (timeout). Las reglas de Firebase Storage pueden estar bloqueando la subida.\n\nUsá el campo "URL de imagen" — subí la foto a imgur.com y pegá el link ahí.'));
-        }, 20000);
-        task.on('state_changed',
-            function(snap) { if (bar) bar.style.width = Math.round(snap.bytesTransferred / snap.totalBytes * 100) + '%'; },
-            function(err) { clearTimeout(timer); reject(new Error('Error de Storage: ' + err.code + '\n\nUsá el campo "URL de imagen" — subí la foto a imgur.com y pegá el link ahí.')); },
-            function() { clearTimeout(timer); task.snapshot.ref.getDownloadURL().then(resolve).catch(function(e){ reject(new Error('Error obteniendo URL: ' + e.message)); }); }
-        );
+        var reader = new FileReader();
+        reader.onerror = reject;
+        reader.onload = function(e) {
+            var img = new Image();
+            img.onerror = reject;
+            img.onload = function() {
+                var MAX = 900;
+                var ratio = Math.min(1, MAX / Math.max(img.width, img.height));
+                var canvas = document.createElement('canvas');
+                canvas.width  = Math.round(img.width  * ratio);
+                canvas.height = Math.round(img.height * ratio);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                var b64 = canvas.toDataURL('image/jpeg', 0.82);
+                // ~900KB max — Firestore doc limit es 1MB
+                if (b64.length > 950000) {
+                    var b64s = canvas.toDataURL('image/jpeg', 0.55);
+                    resolve(b64s);
+                } else {
+                    resolve(b64);
+                }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
     });
 }
 
@@ -438,18 +428,10 @@ function previewFile(input, previewId, removeId) {
     };
     reader.readAsDataURL(f);
 }
-function previewVideo(input, previewId, removeId) {
-    var f = input.files[0]; if (!f) return;
-    document.getElementById(previewId).style.display = 'block';
-    document.getElementById(previewId + '-vid').src = URL.createObjectURL(f);
-    input.closest('.upload-zone').style.display = 'none';
-}
 function removeFile(inputId, previewId, zoneId) {
     document.getElementById(inputId).value = '';
     document.getElementById(previewId).style.display = 'none';
     document.getElementById(zoneId).style.display = 'block';
-    var bar = document.getElementById(inputId.replace('-file','') + '-progress');
-    if (bar) bar.style.width = '0%';
 }
 
 // ---- PRODUCTO ----
@@ -468,13 +450,11 @@ function saveProducto() {
         var id      = editingProductoId || (name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now());
         var imgFile = document.getElementById('p-img-file').files[0];
         var imgUrl  = document.getElementById('p-img-url').value.trim();
-        var vidFile = document.getElementById('p-vid-file').files[0];
         var vidUrl  = document.getElementById('p-video').value.trim();
 
-        var imgPromise = imgFile ? uploadFile(imgFile, 'tienda/products/'+id+'/imagen.'+imgFile.name.split('.').pop(), 'p-img-progress') : Promise.resolve(imgUrl||null);
-        var vidPromise = vidFile ? uploadFile(vidFile, 'tienda/products/'+id+'/video.'+vidFile.name.split('.').pop(), 'p-vid-progress')   : Promise.resolve(vidUrl||null);
+        var imgPromise = imgFile ? compressToBase64(imgFile) : Promise.resolve(imgUrl || null);
 
-        Promise.all([imgPromise, vidPromise]).then(function(results) {
+        imgPromise.then(function(imgResult) {
             var now  = new Date();
             var data = {
                 name: name,
@@ -485,11 +465,11 @@ function saveProducto() {
                 updatedAt: now
             };
             if (!editingProductoId) data.createdAt = now;
-            if (results[0]) data.image    = results[0];
-            if (results[1]) data.videoUrl = results[1];
+            if (imgResult) data.image = imgResult;
+            if (vidUrl)    data.videoUrl = vidUrl;
 
             var writeP   = db.collection(PATH_PRODUCTOS).doc(id).set(data, { merge: true });
-            var timeoutP = new Promise(function(_, rej) { setTimeout(function() { rej(new Error('Sin respuesta del servidor (15s). Revisá Firestore Rules en Firebase Console.')); }, 15000); });
+            var timeoutP = new Promise(function(_, rej) { setTimeout(function() { rej(new Error('Sin respuesta (15s).\n\nAndá a Firebase Console → Firestore → Rules y cambiá las reglas a:\n\nrules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}')); }, 15000); });
             return Promise.race([writeP, timeoutP]);
         }).then(function() {
             showToast('Producto guardado ✓', true);
@@ -497,12 +477,12 @@ function saveProducto() {
             resetBtn();
         }).catch(function(e) {
             console.error('saveProducto error:', e);
-            alert('NO SE PUDO GUARDAR EL PRODUCTO:\n\n' + (e.code || e.message));
+            alert('NO SE PUDO GUARDAR:\n\n' + (e.code || e.message));
             resetBtn();
         });
     } catch(e) {
         console.error('saveProducto sync error:', e);
-        alert('ERROR (sync):\n\n' + e.message);
+        alert('ERROR:\n\n' + e.message);
         resetBtn();
     }
 }
@@ -633,13 +613,11 @@ function saveCombo() {
 
         var imgFile = document.getElementById('k-img-file').files[0];
         var imgUrl  = document.getElementById('k-img-url').value.trim();
-        var vidFile = document.getElementById('k-vid-file').files[0];
         var vidUrl  = document.getElementById('k-video').value.trim();
 
-        var imgPromise = imgFile ? uploadFile(imgFile, 'tienda/kits/'+id+'/imagen.'+imgFile.name.split('.').pop(), 'k-img-progress') : Promise.resolve(imgUrl||null);
-        var vidPromise = vidFile ? uploadFile(vidFile, 'tienda/kits/'+id+'/video.'+vidFile.name.split('.').pop(), 'k-vid-progress')   : Promise.resolve(vidUrl||null);
+        var imgPromise = imgFile ? compressToBase64(imgFile) : Promise.resolve(imgUrl || null);
 
-        Promise.all([imgPromise, vidPromise]).then(function(results) {
+        imgPromise.then(function(imgResult) {
             var now  = new Date();
             var data = {
                 name: name,
@@ -652,11 +630,11 @@ function saveCombo() {
                 updatedAt: now
             };
             if (!editingComboId) data.createdAt = now;
-            if (results[0]) data.image    = results[0];
-            if (results[1]) data.videoUrl = results[1];
+            if (imgResult) data.image = imgResult;
+            if (vidUrl)    data.videoUrl = vidUrl;
 
             var writeP   = db.collection(PATH_COMBOS).doc(id).set(data, { merge: true });
-            var timeoutP = new Promise(function(_, rej) { setTimeout(function() { rej(new Error('Sin respuesta del servidor (15s). Revisá Firestore Rules en Firebase Console.')); }, 15000); });
+            var timeoutP = new Promise(function(_, rej) { setTimeout(function() { rej(new Error('Sin respuesta (15s).\n\nAndá a Firebase Console → Firestore → Rules y cambiá las reglas a:\n\nrules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}')); }, 15000); });
             return Promise.race([writeP, timeoutP]);
         }).then(function() {
             showToast('Combo guardado ✓', true);
@@ -664,12 +642,12 @@ function saveCombo() {
             resetBtn();
         }).catch(function(e) {
             console.error('saveCombo error:', e);
-            alert('NO SE PUDO GUARDAR EL COMBO:\n\n' + (e.code || e.message));
+            alert('NO SE PUDO GUARDAR:\n\n' + (e.code || e.message));
             resetBtn();
         });
     } catch(e) {
         console.error('saveCombo sync error:', e);
-        alert('ERROR (sync):\n\n' + e.message);
+        alert('ERROR:\n\n' + e.message);
         resetBtn();
     }
 }
@@ -683,7 +661,6 @@ function cancelEditCombo() {
     document.getElementById('k-shipping-toggle').classList.remove('on');
     document.getElementById('k-items-list').innerHTML = '';
     kitItemRows = [];
-    removeFile('k-vid-file','k-vid-preview','k-vid-zone');
     removeFile('k-img-file','k-img-preview','k-img-zone');
     document.getElementById('k-img-current').style.display = 'none';
     document.getElementById('k-cancel-btn').style.display = 'none';
