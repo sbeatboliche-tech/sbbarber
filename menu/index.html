@@ -17,6 +17,7 @@
         --muted: #8a8a8a;
         --gold: #d4af37;
     }
+    html, body { overflow-x: hidden; }
     body {
         background: var(--bg);
         color: var(--text);
@@ -31,6 +32,7 @@
         text-align: center;
         padding: 3rem 1.5rem 1.5rem;
         position: relative;
+        overflow: hidden;
     }
     header::after {
         content: '';
@@ -52,7 +54,23 @@
 
     /* ---- Layout ---- */
     main { max-width: 640px; margin: 0 auto; padding: 1rem 1.25rem; }
-    .section { margin-top: 2.5rem; }
+
+    /* ---- Tabs Bebidas / Productos ---- */
+    .menu-tabs {
+        display: flex; gap: 6px; background: var(--card); border: 1px solid var(--border);
+        border-radius: 14px; padding: 5px; position: sticky; top: 10px; z-index: 20;
+        backdrop-filter: blur(8px);
+    }
+    .menu-tab {
+        flex: 1; padding: 13px 10px; border: none; background: none; color: var(--muted);
+        font-weight: 800; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase;
+        border-radius: 10px; cursor: pointer; font-family: inherit; transition: all .2s;
+    }
+    .menu-tab.active { background: #fff; color: #000; }
+    .menu-tab:not(.active):hover { color: #fff; }
+
+    .section { margin-top: 2rem; }
+    .section.hidden-sec { display: none; }
     .section-head {
         display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem;
     }
@@ -64,22 +82,24 @@
 
     /* ---- Lista de items ---- */
     .item {
-        display: flex; align-items: center; gap: 1rem;
+        display: flex; align-items: center; gap: 0.75rem;
         padding: 0.9rem 0;
         border-bottom: 1px dashed rgba(255,255,255,0.08);
+        max-width: 100%;
     }
     .item:last-child { border-bottom: none; }
     .item .thumb {
-        width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0;
+        width: 52px; height: 52px; border-radius: 12px; flex: 0 0 auto;
         background: var(--card); border: 1px solid var(--border);
         object-fit: cover; display: flex; align-items: center; justify-content: center;
         color: var(--muted);
     }
-    .item .info { flex: 1; min-width: 0; }
-    .item .name { font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .item .info { flex: 0 1 auto; min-width: 0; }
+    .item .name { font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
     .item .variant, .item .desc { color: var(--muted); font-size: 0.8rem; margin-top: 2px; line-height: 1.4; }
-    .item .dots { flex: 1; border-bottom: 1px dotted rgba(255,255,255,0.15); margin: 0 0.5rem; min-width: 20px; }
+    .item .dots { flex: 1 1 12px; border-bottom: 1px dotted rgba(255,255,255,0.15); min-width: 12px; align-self: flex-end; margin-bottom: 6px; }
     .item .price {
+        flex: 0 0 auto; margin-left: auto;
         font-weight: 800; font-size: 1.05rem; color: #fff; white-space: nowrap;
         font-variant-numeric: tabular-nums;
     }
@@ -173,7 +193,8 @@
         .item .variant, .item .desc, .section-head .count, footer { color: #555 !important; }
         .item { border-bottom: 1px dashed #ccc; }
         .section-head .line { background: #ccc; }
-        .fab-row, .admin-bar, .modal-bg, .admin-only { display: none !important; }
+        .fab-row, .admin-bar, .modal-bg, .admin-only, .menu-tabs { display: none !important; }
+        .section.hidden-sec { display: block !important; }
         header img { filter: invert(1); }
         .item .thumb { border-color: #ddd; background: #f4f4f4; }
     }
@@ -195,8 +216,14 @@
     </div>
 
     <main>
+        <!-- Tabs -->
+        <div class="menu-tabs">
+            <button class="menu-tab active" data-tab="bebidas" onclick="switchMenu('bebidas')">🍹 Bebidas</button>
+            <button class="menu-tab" data-tab="productos" onclick="switchMenu('productos')">✂️ Productos</button>
+        </div>
+
         <!-- BEBIDAS -->
-        <section class="section">
+        <section class="section" id="sec-bebidas">
             <div class="section-head">
                 <h2>Bebidas</h2>
                 <span class="line"></span>
@@ -215,7 +242,7 @@
         </section>
 
         <!-- PRODUCTOS -->
-        <section class="section">
+        <section class="section hidden-sec" id="sec-productos">
             <div class="section-head">
                 <h2>Productos</h2>
                 <span class="line"></span>
@@ -340,6 +367,7 @@
             cont.innerHTML = PRODUCTS.map(p => {
                 const cfg = productConfig[p.id] || {};
                 const price = (cfg.price != null) ? cfg.price : p.price;
+                const name = cfg.name || p.name;
                 const agotado = (cfg.stock === 0);
                 const thumb = p.image
                     ? `<img class="thumb" src="${p.image}" alt="" loading="lazy">`
@@ -348,7 +376,7 @@
                 <div class="item">
                     ${thumb}
                     <div class="info">
-                        <div class="name">${escapeHtml(p.name)} ${p.tag ? `<span class="tag">${p.tag}</span>` : ''}</div>
+                        <div class="name">${escapeHtml(name)} ${p.tag ? `<span class="tag">${p.tag}</span>` : ''}</div>
                         <div class="variant">${escapeHtml(p.variant || '')}${agotado ? ' · <span style="color:#ef4444">Agotado</span>' : ''}</div>
                     </div>
                     <span class="dots"></span>
@@ -437,6 +465,13 @@
         // ---- Utils ----
         function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
         function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
+
+        // ---- Tabs Bebidas / Productos ----
+        window.switchMenu = (tab) => {
+            document.querySelectorAll('.menu-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+            document.getElementById('sec-bebidas').classList.toggle('hidden-sec', tab !== 'bebidas');
+            document.getElementById('sec-productos').classList.toggle('hidden-sec', tab !== 'productos');
+        };
 
         // Render inicial inmediato (antes de que llegue Firestore)
         bebidas = DEFAULT_BEBIDAS.map(b => ({ ...b }));

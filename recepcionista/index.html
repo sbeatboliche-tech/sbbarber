@@ -142,6 +142,12 @@
                     <span class="hidden sm:inline">CIERRE DE CAJA</span>
                     <span class="sm:hidden">CIERRE</span>
                 </button>
+                <!-- Botón modificar menú -->
+                <button onclick="window.openMenuEditor()" class="flex items-center gap-1.5 bg-white/10 border border-white/20 text-white px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/20 transition">
+                    <i class="fas fa-list-ul text-xs"></i>
+                    <span class="hidden md:inline">MODIFICAR MENÚ</span>
+                    <span class="md:hidden">MENÚ</span>
+                </button>
                 <button onclick="window.logout()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-red-400 transition">
                     <i class="fas fa-power-off text-xs"></i>
                 </button>
@@ -336,6 +342,49 @@
         </div>
 
     </div><!-- /cierre-caja-view -->
+
+    <!-- ============================================================
+         MODIFICAR MENÚ (bebidas + productos)
+    ============================================================ -->
+    <div id="menu-editor-view" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+        <header class="px-4 md:px-8 py-4 md:py-5 glass flex items-center justify-between flex-shrink-0 border-b border-white/5">
+            <div class="flex items-center gap-3">
+                <button onclick="window.closeMenuEditor()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
+                    <i class="fas fa-arrow-left text-sm"></i>
+                </button>
+                <h1 class="text-base md:text-xl font-bold text-white leading-none tracking-wide">Modificar Menú</h1>
+            </div>
+            <div class="flex bg-gray-900/80 p-1 rounded-xl border border-gray-800 text-[11px] font-bold">
+                <button id="me-tab-bebidas" onclick="window.setMenuEditorTab('bebidas')" class="px-3 py-1.5 rounded-lg text-white bg-gradient-to-r from-cyan-600 to-teal-600 shadow transition">Bebidas</button>
+                <button id="me-tab-productos" onclick="window.setMenuEditorTab('productos')" class="px-3 py-1.5 rounded-lg text-gray-500 hover:text-gray-300 transition">Productos</button>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 md:p-6 pb-32 max-w-2xl md:mx-auto w-full">
+            <!-- BEBIDAS -->
+            <div id="me-panel-bebidas">
+                <p class="text-[11px] text-gray-500 uppercase tracking-widest mb-3">Bebidas · nombre y precio</p>
+                <div id="me-bebidas-list" class="space-y-2"></div>
+                <button onclick="window.meAddBebida()" class="mt-3 w-full py-3 rounded-xl border border-dashed border-gray-700 text-gray-400 text-sm font-bold hover:border-cyan-500 hover:text-cyan-400 transition">
+                    <i class="fas fa-plus mr-1"></i> Agregar bebida
+                </button>
+            </div>
+            <!-- PRODUCTOS -->
+            <div id="me-panel-productos" class="hidden">
+                <p class="text-[11px] text-gray-500 uppercase tracking-widest mb-3">Productos · nombre, precio y stock</p>
+                <div id="me-productos-list" class="space-y-2"></div>
+            </div>
+        </div>
+
+        <!-- Barra guardar (fija) -->
+        <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#0f1115] via-[#0f1115] to-transparent">
+            <div class="max-w-2xl mx-auto">
+                <button onclick="window.saveMenuEditor()" id="me-save-btn" class="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 text-white font-bold text-sm uppercase tracking-wider shadow-lg hover:scale-[1.01] transition active:scale-95">
+                    Guardar cambios
+                </button>
+            </div>
+        </div>
+    </div><!-- /menu-editor-view -->
 
     <!-- ============================================================
          PANEL STOCK DE PRODUCTOS
@@ -2060,6 +2109,148 @@ window.setCierreCajaTab = (tab) => {
     document.getElementById('cc-tab-semanal').className = tab === 'semanal' ? active : inactive;
     if (tab === 'diario') renderCierreCaja();
     else renderCierreCajaSemanal();
+};
+
+/* ============================================================
+   MODIFICAR MENÚ (bebidas: menu_bebidas · productos: tienda_productos)
+   ============================================================ */
+// Lista base de productos (mismos ids que la Tienda; el nombre se puede sobrescribir online)
+const MENU_PRODUCTS = [
+    { id:'polvo-texturizador', name:'Polvo Texturizador', variant:'15gr', price:12000 },
+    { id:'pomada-mate', name:'Pomada Mate', variant:'90gr', price:12000 },
+    { id:'pomada-brillante', name:'Pomada Brillante', variant:'50gr', price:12000 },
+    { id:'polvo-texturizador-black', name:'Polvo Texturizador Original Black', variant:'5gr', price:10000 },
+    { id:'aftershave-celeste-black', name:'Aftershave Celeste Original Black', variant:'400ml', price:10900 },
+    { id:'aftershave-violeta-black', name:'Aftershave Violeta Original Black', variant:'400ml', price:10200 },
+    { id:'quita-pelo-lujo', name:'Quita Pelo Lujo', variant:'Profesional', price:6900 },
+    { id:'peine-toniguy', name:'Peine Carbon Toniguy', variant:'Profesional', price:3900 },
+    { id:'capa-everest', name:'Capa de Corte Everest', variant:'Blanco y Negro', price:17000 },
+    { id:'desinfectante-everest', name:'Desinfectante Aerosol', variant:'Everest 5 en 1', price:10200 }
+];
+const DEFAULT_MENU_BEBIDAS = [
+    { name:'Agua mineral', price:1000 }, { name:'Gaseosa', price:1500 },
+    { name:'Agua saborizada', price:1500 }, { name:'Cerveza', price:2500 },
+    { name:'Energizante', price:2800 }, { name:'Café', price:1200 }
+];
+
+let menuBebidasLive = [];        // snapshot de Firestore (con id real)
+let tiendaProdLive = {};         // overrides por id: {name, price, stock}
+let meBeb = [];                  // copia editable de bebidas
+let meProd = [];                 // copia editable de productos
+let menuEditorTab = 'bebidas';
+
+onSnapshot(collection(db, 'menu_bebidas'), snap => {
+    menuBebidasLive = [];
+    snap.forEach(d => menuBebidasLive.push({ id: d.id, ...d.data() }));
+    menuBebidasLive.sort((a, b) => (a.orden || 0) - (b.orden || 0));
+});
+onSnapshot(collection(db, 'tienda_productos'), snap => {
+    tiendaProdLive = {};
+    snap.forEach(d => { tiendaProdLive[d.id] = d.data(); });
+});
+
+const meEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+window.openMenuEditor = () => {
+    // Cargar copias editables desde lo último en vivo
+    meBeb = (menuBebidasLive.length ? menuBebidasLive : DEFAULT_MENU_BEBIDAS)
+        .map(b => ({ id: b.id || null, name: b.name || '', price: Number(b.price) || 0 }));
+    meProd = MENU_PRODUCTS.map(p => {
+        const cfg = tiendaProdLive[p.id] || {};
+        return {
+            id: p.id, variant: p.variant,
+            name: cfg.name || p.name,
+            price: (cfg.price != null) ? cfg.price : p.price,
+            stock: (cfg.stock != null) ? cfg.stock : ''
+        };
+    });
+    menuEditorTab = 'bebidas';
+    window.setMenuEditorTab('bebidas');
+    const v = document.getElementById('menu-editor-view');
+    v.classList.remove('hidden'); v.classList.add('flex', 'flex-col');
+};
+window.closeMenuEditor = () => {
+    const v = document.getElementById('menu-editor-view');
+    v.classList.add('hidden'); v.classList.remove('flex', 'flex-col');
+};
+window.setMenuEditorTab = (tab) => {
+    menuEditorTab = tab;
+    const active = 'px-3 py-1.5 rounded-lg text-white bg-gradient-to-r from-cyan-600 to-teal-600 shadow transition';
+    const inactive = 'px-3 py-1.5 rounded-lg text-gray-500 hover:text-gray-300 transition';
+    document.getElementById('me-tab-bebidas').className = tab === 'bebidas' ? active : inactive;
+    document.getElementById('me-tab-productos').className = tab === 'productos' ? active : inactive;
+    document.getElementById('me-panel-bebidas').classList.toggle('hidden', tab !== 'bebidas');
+    document.getElementById('me-panel-productos').classList.toggle('hidden', tab !== 'productos');
+    if (tab === 'bebidas') renderMeBebidas(); else renderMeProductos();
+};
+
+function renderMeBebidas() {
+    const cont = document.getElementById('me-bebidas-list');
+    cont.innerHTML = meBeb.map((b, i) => `
+        <div class="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl p-2">
+            <input value="${meEsc(b.name)}" placeholder="Nombre" oninput="window.meSetBeb(${i},'name',this.value)"
+                class="flex-1 min-w-0 bg-black/40 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-500">
+            <div class="flex items-center bg-black/40 border border-gray-700 rounded-lg px-2 focus-within:border-cyan-500">
+                <span class="text-gray-500 text-sm">$</span>
+                <input value="${b.price}" type="number" inputmode="numeric" placeholder="0" oninput="window.meSetBeb(${i},'price',this.value)"
+                    class="w-20 bg-transparent py-2.5 text-sm text-white outline-none text-right">
+            </div>
+            <button onclick="window.meDelBebida(${i})" class="w-9 h-9 flex-shrink-0 rounded-lg text-red-400 hover:bg-red-500/10 transition"><i class="fas fa-trash text-xs"></i></button>
+        </div>`).join('') || '<p class="text-xs text-gray-600 text-center py-4">Sin bebidas. Agregá una.</p>';
+}
+function renderMeProductos() {
+    const cont = document.getElementById('me-productos-list');
+    cont.innerHTML = meProd.map((p, i) => `
+        <div class="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2">
+            <input value="${meEsc(p.name)}" placeholder="Nombre del producto" oninput="window.meSetProd(${i},'name',this.value)"
+                class="w-full bg-black/40 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white font-semibold outline-none focus:border-cyan-500">
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] text-gray-500 uppercase tracking-wide flex-shrink-0">${meEsc(p.variant || '')}</span>
+                <div class="flex items-center bg-black/40 border border-gray-700 rounded-lg px-2 ml-auto focus-within:border-cyan-500">
+                    <span class="text-gray-500 text-sm">$</span>
+                    <input value="${p.price}" type="number" inputmode="numeric" placeholder="0" oninput="window.meSetProd(${i},'price',this.value)"
+                        class="w-24 bg-transparent py-2.5 text-sm text-white outline-none text-right">
+                </div>
+                <div class="flex items-center bg-black/40 border border-gray-700 rounded-lg px-2 focus-within:border-cyan-500">
+                    <span class="text-gray-500 text-[10px] uppercase">Stock</span>
+                    <input value="${p.stock}" type="number" inputmode="numeric" placeholder="—" oninput="window.meSetProd(${i},'stock',this.value)"
+                        class="w-14 bg-transparent py-2.5 text-sm text-white outline-none text-right">
+                </div>
+            </div>
+        </div>`).join('');
+}
+window.meSetBeb = (i, k, v) => { meBeb[i][k] = (k === 'price') ? Number(v) : v; };
+window.meDelBebida = (i) => { meBeb.splice(i, 1); renderMeBebidas(); };
+window.meAddBebida = () => { meBeb.push({ id: null, name: '', price: 0 }); renderMeBebidas(); };
+window.meSetProd = (i, k, v) => { meProd[i][k] = (k === 'name') ? v : (v === '' ? '' : Number(v)); };
+
+window.saveMenuEditor = async () => {
+    const btn = document.getElementById('me-save-btn');
+    btn.disabled = true; const prev = btn.textContent; btn.textContent = 'Guardando...';
+    try {
+        // --- Bebidas: reescribir colección menu_bebidas ---
+        const bebItems = meBeb.filter(b => (b.name || '').trim() !== '')
+            .map((b, idx) => ({ id: b.id || ('b' + Date.now() + idx), name: b.name.trim(), price: Number(b.price) || 0, orden: idx + 1 }));
+        for (const it of bebItems) {
+            await setDoc(doc(db, 'menu_bebidas', it.id), { name: it.name, price: it.price, orden: it.orden });
+        }
+        // borrar bebidas eliminadas
+        const keepIds = new Set(bebItems.map(i => i.id));
+        for (const old of menuBebidasLive) {
+            if (!keepIds.has(old.id)) { try { await deleteDoc(doc(db, 'menu_bebidas', old.id)); } catch (e) {} }
+        }
+        // --- Productos: overrides en tienda_productos (merge, no pisa otros campos) ---
+        for (const p of meProd) {
+            const data = { name: p.name.trim(), price: Number(p.price) || 0 };
+            data.stock = (p.stock === '' || p.stock == null) ? null : parseInt(p.stock);
+            await setDoc(doc(db, 'tienda_productos', p.id), data, { merge: true });
+        }
+        btn.textContent = '✓ Guardado';
+        setTimeout(() => { btn.disabled = false; btn.textContent = prev; window.closeMenuEditor(); }, 900);
+    } catch (e) {
+        alert('No se pudo guardar. Verificá tu conexión / permisos.');
+        btn.disabled = false; btn.textContent = prev;
+    }
 };
 
 function renderCierreCaja() {

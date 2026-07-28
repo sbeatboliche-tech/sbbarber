@@ -517,7 +517,7 @@ function renderProducts() {
                 ${low ? `<div class="stock-badge stock-low-badge">Últimas ${stock}</div>` : ''}
             </div>
             <div class="product-info">
-                <div class="product-name">${p.name}</div>
+                <div class="product-name">${cfg.name || p.name}</div>
                 <div class="product-variant">${p.variant}</div>
                 <div class="product-desc">${p.description}</div>
                 <div style="margin-bottom:12px;">
@@ -552,7 +552,7 @@ function addToCart(id) {
     if(typeof stock === 'number' && stock === 0) return;
     const ex = cart.find(x=>x.id===id);
     if(ex) ex.qty++;
-    else cart.push({...p, price, qty:1});
+    else cart.push({...p, name: cfg.name || p.name, price, qty:1});
     saveCart(); updateCartUI(); openCart();
 }
 
@@ -953,7 +953,7 @@ window.saveProductos = async () => {
             const priceVal = parseInt(document.getElementById(`ap-${p.id}`).value);
             const stockRaw = document.getElementById(`as-${p.id}`).value;
             const data = { price: isNaN(priceVal) ? p.price : priceVal, stock: stockRaw !== '' ? parseInt(stockRaw) : null };
-            await setDoc(doc(db, 'tienda_productos', p.id), data);
+            await setDoc(doc(db, 'tienda_productos', p.id), data, { merge: true });
         }
         const envioCostoVal = parseInt(document.getElementById('envio-costo').value) || 0;
         await setDoc(doc(db, 'tienda_config', 'general'), { envioCosto: envioCostoVal }, { merge: true });
