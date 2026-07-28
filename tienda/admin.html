@@ -182,7 +182,9 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                 </div>
                 <div class="form-grid" style="margin-top:12px;">
                     <div class="form-field">
-                        <label class="field-label">Foto principal</label>
+                        <label class="field-label">URL de imagen (Imgur, Google Drive, etc.)</label>
+                        <input type="url" id="p-img-url" placeholder="https://i.imgur.com/...">
+                        <label class="field-label" style="margin-top:10px;">O subir foto</label>
                         <div class="upload-zone" id="p-img-zone">
                             <input type="file" id="p-img-file" accept="image/*" onchange="previewFile(this,'p-img-preview','p-img-remove')">
                             <div class="upload-zone-icon"><i class="fas fa-image"></i></div>
@@ -275,7 +277,9 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                     <div class="upload-progress"><div class="upload-progress-bar" id="k-vid-progress"></div></div>
                 </div>
                 <div class="form-field">
-                    <label class="field-label">Foto del kit/combo</label>
+                    <label class="field-label">URL de imagen del kit/combo</label>
+                    <input type="url" id="k-img-url" placeholder="https://i.imgur.com/...">
+                    <label class="field-label" style="margin-top:10px;">O subir foto</label>
                     <div class="upload-zone" id="k-img-zone">
                         <input type="file" id="k-img-file" accept="image/*" onchange="previewFile(this,'k-img-preview','k-img-remove')">
                         <div class="upload-zone-icon"><i class="fas fa-image"></i></div>
@@ -453,8 +457,11 @@ window.saveProducto = async () => {
         };
 
         const imgFile = document.getElementById('p-img-file').files[0];
+        const imgUrl = document.getElementById('p-img-url').value.trim();
         if (imgFile) {
             data.image = await uploadFile(imgFile, `tienda/products/${id}/imagen.${imgFile.name.split('.').pop()}`, 'p-img-progress');
+        } else if (imgUrl) {
+            data.image = imgUrl;
         }
         const vidFile = document.getElementById('p-vid-file').files[0];
         if (vidFile) {
@@ -478,7 +485,7 @@ window.saveProducto = async () => {
 
 window.cancelEditProducto = () => {
     editingProductoId = null;
-    ['p-name','p-variant','p-price','p-desc','p-video'].forEach(id => document.getElementById(id).value = '');
+    ['p-name','p-variant','p-price','p-desc','p-video','p-img-url'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('p-tag').value = '';
     document.getElementById('p-edit-id').value = '';
     window.removeFile('p-img-file','p-img-preview','p-img-zone');
@@ -496,6 +503,7 @@ window.editProducto = (id) => {
     document.getElementById('p-tag').value = p.tag || '';
     document.getElementById('p-desc').value = p.description || '';
     document.getElementById('p-video').value = p.videoUrl || '';
+    document.getElementById('p-img-url').value = p.image || '';
     if (p.image) {
         document.getElementById('p-img-preview').style.display = 'block';
         document.getElementById('p-img-preview-img').src = p.image;
@@ -590,8 +598,11 @@ window.saveKit = async () => {
         };
 
         const imgFile = document.getElementById('k-img-file').files[0];
+        const kImgUrl = document.getElementById('k-img-url').value.trim();
         if (imgFile) {
             data.image = await uploadFile(imgFile, `tienda/kits/${id}/imagen.${imgFile.name.split('.').pop()}`, 'k-img-progress');
+        } else if (kImgUrl) {
+            data.image = kImgUrl;
         }
         const kVidFile = document.getElementById('k-vid-file').files[0];
         if (kVidFile) {
@@ -622,6 +633,7 @@ window.cancelEditKit = () => {
     document.getElementById('k-items-list').innerHTML = '';
     kitItemRows = [];
     document.getElementById('k-video').value = '';
+    document.getElementById('k-img-url').value = '';
     window.removeFile('k-vid-file','k-vid-preview','k-vid-zone');
     window.removeFile('k-img-file','k-img-preview','k-img-zone');
     document.getElementById('k-img-current').style.display = 'none';
@@ -650,6 +662,7 @@ window.editKit = (id) => {
         document.getElementById('k-img-current-url').textContent = k.image.length > 50 ? k.image.slice(0,50)+'…' : k.image;
     }
     document.getElementById('k-video').value = k.videoUrl || '';
+    document.getElementById('k-img-url').value = k.image || '';
     document.getElementById('k-edit-id').value = id;
     document.getElementById('k-cancel-btn').style.display = 'inline-flex';
     document.getElementById('k-save-btn').textContent = 'Actualizar kit';
