@@ -438,8 +438,10 @@ window.removeFile = (inputId, previewId, zoneId) => {
 
 // ---- PRODUCTO FORM ----
 window.saveProducto = async () => {
+    console.log('saveProducto llamado');
     const name = document.getElementById('p-name').value.trim();
     const price = Number(document.getElementById('p-price').value);
+    console.log('name:', name, 'price:', price);
     if (!name || !price) { showToast('Completá nombre y precio', false); return; }
 
     const btn = document.getElementById('p-save-btn');
@@ -477,10 +479,7 @@ window.saveProducto = async () => {
         cancelEditProducto();
     } catch(e) {
         console.error('saveProducto error:', e);
-        const msg = e.code === 'permission-denied'
-            ? 'Sin permiso en Firestore. Revisá las reglas en Firebase Console.'
-            : 'Error: ' + (e.code || e.message);
-        showToast(msg, false, 8000);
+        alert('ERROR al guardar producto:\n' + (e.code || e.message) + '\n\nRevisá la consola del navegador (F12) para más detalles.');
     } finally {
         btn.disabled = false; btn.textContent = 'Guardar producto';
     }
@@ -621,10 +620,7 @@ window.saveKit = async () => {
         cancelEditKit();
     } catch(e) {
         console.error('saveKit error:', e);
-        const msg = e.code === 'permission-denied'
-            ? 'Sin permiso en Firestore. Revisá las reglas en Firebase Console.'
-            : 'Error: ' + (e.code || e.message);
-        showToast(msg, false, 8000);
+        alert('ERROR al guardar kit:\n' + (e.code || e.message) + '\n\nRevisá la consola del navegador (F12) para más detalles.');
     } finally {
         btn.disabled = false; btn.textContent = 'Guardar kit';
     }
