@@ -353,6 +353,12 @@ auth.onAuthStateChanged(function(user) {
     if (user && ADMINS.includes(user.email)) {
         document.getElementById('login-view').style.display = 'none';
         document.getElementById('dashboard-view').style.display = 'block';
+        // Prueba de escritura para detectar problema de Firestore Rules
+        db.collection('_admin_test').doc('ping').set({ t: new Date() })
+            .then(function() { console.log('✅ Firestore write OK'); })
+            .catch(function(e) {
+                alert('⚠️ PROBLEMA CON FIRESTORE RULES ⚠️\n\nNo se puede escribir en Firestore.\nError: ' + e.code + '\n\nAndá a Firebase Console → Firestore → Rules y cambiá las reglas a:\n\nrules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}');
+            });
         listenProductos();
         listenCombos();
     } else {
@@ -487,12 +493,12 @@ function saveProducto() {
             resetBtn();
         }).catch(function(e) {
             console.error('saveProducto error:', e);
-            showToast('Error: ' + (e.code || e.message), false, 10000);
+            alert('NO SE PUDO GUARDAR EL PRODUCTO:\n\n' + (e.code || e.message));
             resetBtn();
         });
     } catch(e) {
         console.error('saveProducto sync error:', e);
-        showToast('Error: ' + e.message, false, 10000);
+        alert('ERROR (sync):\n\n' + e.message);
         resetBtn();
     }
 }
@@ -654,12 +660,12 @@ function saveCombo() {
             resetBtn();
         }).catch(function(e) {
             console.error('saveCombo error:', e);
-            showToast('Error: ' + (e.code || e.message), false, 10000);
+            alert('NO SE PUDO GUARDAR EL COMBO:\n\n' + (e.code || e.message));
             resetBtn();
         });
     } catch(e) {
         console.error('saveCombo sync error:', e);
-        showToast('Error: ' + e.message, false, 10000);
+        alert('ERROR (sync):\n\n' + e.message);
         resetBtn();
     }
 }
