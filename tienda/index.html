@@ -71,6 +71,10 @@
         .product-name { font-size:17px; font-weight:800; letter-spacing:-.02em; color:var(--white); margin-bottom:2px; }
         .product-variant { font-size:10px; color:var(--g700); font-weight:600; letter-spacing:.08em; text-transform:uppercase; margin-bottom:10px; }
         .product-desc { font-size:13px; color:var(--g600); line-height:1.55; flex:1; margin-bottom:16px; }
+        .kit-includes { list-style:none; padding:0; margin:0 0 16px; flex:1; }
+        .kit-includes li { font-size:12.5px; color:var(--g500); line-height:1.4; padding:5px 0 5px 20px; position:relative; border-bottom:1px dashed rgba(255,255,255,.06); }
+        .kit-includes li:last-child { border-bottom:none; }
+        .kit-includes li::before { content:'✓'; position:absolute; left:0; color:#4ade80; font-weight:800; }
         .product-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; }
         .product-price { font-size:20px; font-weight:900; letter-spacing:-.02em; }
         .btn-add { height:44px; padding:0 18px; background:var(--white); color:var(--black); border:none; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:background .15s; font-family:'Inter',sans-serif; white-space:nowrap; -webkit-appearance:none; flex-shrink:0; }
@@ -231,10 +235,19 @@
     <p class="hero-desc reveal" style="transition-delay:.16s">Los mismos productos que usan nuestros barberos, disponibles para vos.</p>
 </section>
 
-<!-- PRODUCTS -->
-<section class="products-section">
+<!-- KITS -->
+<section class="products-section" style="padding-bottom:20px;">
     <div class="section-header">
-        <span class="section-title">Productos</span>
+        <span class="section-title">Kits · Combos</span>
+        <span class="product-count">Todo junto</span>
+    </div>
+    <div class="products-grid" id="kits-grid" data-motion></div>
+</section>
+
+<!-- PRODUCTS -->
+<section class="products-section" style="padding-top:20px;">
+    <div class="section-header">
+        <span class="section-title">Productos individuales</span>
         <span class="product-count">10 productos</span>
     </div>
     <div class="products-grid" id="products-grid" data-motion></div>
@@ -434,6 +447,72 @@ let shippingCost = 0;
 let cart = JSON.parse(localStorage.getItem('sb_cart')||'[]');
 let activeTab = 'mp';
 
+// ── KITS / COMBOS (precio = suma exacta de sus productos, en vivo) ──
+const KIT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>`;
+const KITS = [
+    { id:'kit-inicial', name:'Kit Inicial', tag:'KIT', subtitle:'Para arrancar',
+      componentes:['pomada-mate','peine-toniguy','quita-pelo-lujo'] },
+    { id:'kit-avanzado', name:'Kit Avanzado', tag:'KIT', subtitle:'Equipo completo',
+      componentes:['pomada-mate','polvo-texturizador','aftershave-celeste-black','peine-toniguy','capa-everest'] }
+];
+function prodById(id){ return PRODUCTS.find(p=>p.id===id); }
+function prodPriceLive(id){ const p=prodById(id); const cfg=productConfig[id]||{}; return cfg.price!=null?cfg.price:(p?p.price:0); }
+function prodNameLive(id){ const p=prodById(id); const cfg=productConfig[id]||{}; return (cfg.name||(p&&p.name))||''; }
+function kitPrice(kit){ return kit.componentes.reduce((s,id)=>s+prodPriceLive(id),0); }
+function kitOut(kit){ return kit.componentes.some(id=>{ const cfg=productConfig[id]||{}; return cfg.stock===0; }); }
+
+function renderKits() {
+    const grid = document.getElementById('kits-grid');
+    if(!grid) return;
+    grid.innerHTML = KITS.map((k,i)=>{
+        const price = kitPrice(k);
+        const out = kitOut(k);
+        const comps = k.componentes.map(prodById).filter(Boolean);
+        const imgs = comps.filter(p=>p.image).slice(0,4);
+        const collage = imgs.length
+            ? `<div style="position:absolute;inset:0;display:flex;gap:2px;">${imgs.map(p=>`<img src="${p.image}" alt="" style="flex:1;min-width:0;height:100%;object-fit:cover;display:block;">`).join('')}</div>`
+            : KIT_ICON;
+        const includes = comps.map(p=>`<li>${prodNameLive(p.id)}</li>`).join('');
+        return `
+        <div class="product-card reveal" style="transition-delay:${i*.06}s">
+            <div class="product-image-wrap">
+                ${collage}
+                <div class="product-tag">${k.tag}</div>
+                ${out ? `<div class="stock-badge stock-out-badge">Sin stock</div>` : ''}
+            </div>
+            <div class="product-info">
+                <div class="product-name">${k.name}</div>
+                <div class="product-variant">${k.componentes.length} productos · ${k.subtitle}</div>
+                <ul class="kit-includes">${includes}</ul>
+                <div style="margin-bottom:12px;">
+                    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:4px 10px;margin-bottom:10px;">
+                        <span style="font-size:9px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#4ade80;">20% OFF</span>
+                        <span style="font-size:9px;color:#525252;font-weight:600;text-transform:uppercase;letter-spacing:.08em;">con transferencia</span>
+                    </div>
+                    <div style="display:flex;align-items:baseline;gap:8px;">
+                        <span style="font-size:20px;font-weight:900;letter-spacing:-.02em;">$${Math.round(price*(1-TRANSFER_DISCOUNT)).toLocaleString('es-AR')}</span>
+                        <span style="font-size:13px;color:#525252;text-decoration:line-through;">$${price.toLocaleString('es-AR')}</span>
+                    </div>
+                    <div style="font-size:10px;color:#404040;margin-top:2px;">Precio efectivo: $${price.toLocaleString('es-AR')}</div>
+                </div>
+                <div class="product-footer" style="margin-top:0;">
+                    <div></div>
+                    <button class="btn-add${out?' btn-soldout':''}" onclick="addKitToCart('${k.id}')" ${out?'disabled':''}>${out?'Sin stock':'+ Agregar'}</button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+function addKitToCart(id) {
+    const kit = KITS.find(k=>k.id===id);
+    if(!kit || kitOut(kit)) return;
+    const price = kitPrice(kit);
+    const ex = cart.find(x=>x.id===id);
+    if(ex) ex.qty++;
+    else cart.push({ id:kit.id, name:kit.name, variant:'Kit', price, qty:1, icon:KIT_ICON });
+    saveCart(); updateCartUI(); openCart();
+}
+
 function getTotal() { return cart.reduce((s,i)=>s+i.price*i.qty,0); }
 function getFinalTotal() {
     const b=getTotal();
@@ -540,6 +619,7 @@ function renderProducts() {
             </div>
         </div>`;
     }).join('');
+    renderKits();
     if (typeof revealAfterRender === 'function') revealAfterRender();
 }
 
