@@ -498,7 +498,7 @@ function prodNameLive(id){ const p=prodById(id); const cfg=productConfig[id]||{}
 function kitPrice(kit){ return kit.custom ? (kit.price||0) : kit.componentes.reduce((s,id)=>s+prodPriceLive(id),0); }
 function kitHasPrice(kit){ return kit.custom ? (kit.price!=null) : true; }
 function kitOut(kit){ return kit.custom ? false : kit.componentes.some(id=>{ const cfg=productConfig[id]||{}; return cfg.stock===0; }); }
-function kitCount(kit){ return kit.custom ? kit.items.length : kit.componentes.length; }
+function kitCount(kit){ return kit.custom ? (kit.items ? kit.items.length : 0) : kit.componentes.length; }
 
 function renderKits() {
     const grid = document.getElementById('kits-grid');
@@ -511,9 +511,9 @@ function renderKits() {
         let collage, includes;
         if (k.custom) {
             collage = k.image
-                ? `<img src="${k.image}" alt="${k.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;">`
+                ? `<img src="${k.image}" alt="${k.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')"><div style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;">${KIT_ICON}</div>`
                 : KIT_ICON;
-            includes = k.items.map(it =>
+            includes = (k.items||[]).map(it =>
                 `<li>${it.name}${it.detail?`<span class="kit-detail">${it.detail}</span>`:''}</li>`).join('');
         } else {
             const comps = k.componentes.map(prodById).filter(Boolean);
@@ -553,7 +553,7 @@ function renderKits() {
             </div>
             <div class="product-info">
                 <div class="product-name">${k.name}</div>
-                <div class="product-variant">${kitCount(k)} productos · ${k.subtitle}</div>
+                <div class="product-variant">${kitCount(k)} productos${k.subtitle?' · '+k.subtitle:''}</div>
                 ${k.desc ? `<div class="product-desc" style="font-size:12px;color:#525252;margin-bottom:10px;line-height:1.5;">${k.desc}</div>` : ''}
                 <ul class="kit-includes">${includes}</ul>
                 ${priceBlock}
@@ -566,12 +566,12 @@ function renderKits() {
     }).join('');
 }
 function addKitToCart(id) {
-    const kit = KITS.find(k=>k.id===id);
+    const kit = getAllKits().find(k=>k.id===id);
     if(!kit || kitOut(kit) || !kitHasPrice(kit)) return;
     const price = kitPrice(kit);
     const ex = cart.find(x=>x.id===id);
     if(ex) ex.qty++;
-    else cart.push({ id:kit.id, name:kit.name, variant:'Kit', price, qty:1, icon:KIT_ICON });
+    else cart.push({ id:kit.id, name:kit.name, variant:'', price, qty:1, icon:KIT_ICON });
     saveCart(); updateCartUI(); openCart();
 }
 
