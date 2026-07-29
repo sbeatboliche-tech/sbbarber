@@ -90,6 +90,10 @@ function buyerHtml(name, items, total, orderId, shipping) {
     <p style="color:#1e293b;font-size:14px;margin:0;">${items}</p>
   </div>
   ${shipBlock}
+  <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px 20px;margin-bottom:20px;text-align:center;">
+    <p style="color:#166534;font-size:14px;font-weight:800;margin:0;">${shipping.mode==='delivery'?'🚚 En breve estaremos despachando tu producto':'🏬 Ya podés pasar a retirarlo por el local'}</p>
+    ${shipping.mode==='delivery'?'<p style="color:#15803d;font-size:12px;margin:6px 0 0;">Te avisamos cuando salga el envío.</p>':''}
+  </div>
   <div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid #e2e8f0;padding-top:16px;margin-bottom:24px;">
     <span style="color:#0f172a;font-weight:700;">Total pagado</span>
     <span style="color:#0f172a;font-size:20px;font-weight:900;">$${total.toLocaleString('es-AR')}</span>

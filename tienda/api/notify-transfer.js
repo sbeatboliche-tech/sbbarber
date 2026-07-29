@@ -24,7 +24,7 @@ export default async function handler(req, res) {
             await transporter.sendMail({
                 from: '"SB Barber Tienda" <sbbaarber@gmail.com>',
                 to: buyer.email,
-                subject: '📋 Tu pedido en SB Barber — Datos para pagar',
+                subject: '🖤 ¡Gracias por tu compra en SB Barber! — Datos para pagar',
                 html: buyerHtml(buyer.name, itemsSummary, total, discount||0, orderId, ship)
             });
         }
@@ -91,39 +91,51 @@ function buyerHtml(name, items, total, discount, orderId, ship) {
 
     let shipBlock = '';
     if (ship.mode === 'delivery') {
-        const carrierName = ship.carrierLabel || (ship.carrier === 'andreani' ? 'Andreani' : ship.carrier === 'correo' ? 'Correo Argentino' : 'la transportista');
         shipBlock = `<div style="background:#eff6ff;border-radius:12px;padding:16px 20px;margin-bottom:16px;border:1px solid #bfdbfe;">
-            <p style="color:#1d4ed8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;">Envío a domicilio — ${carrierName}</p>
-            <p style="color:#1e40af;font-size:13px;margin:0 0 4px;">${ship.address}</p>
-            <p style="color:#3b82f6;font-size:12px;margin:4px 0 0;">Una vez confirmado el pago te enviamos el número de seguimiento.</p>
+            <p style="color:#1d4ed8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;">📦 Envío a domicilio</p>
+            <p style="color:#1e40af;font-size:13px;margin:0 0 4px;">${ship.address || ''}</p>
+            <p style="color:#3b82f6;font-size:12px;margin:4px 0 0;">Confirmado el pago, despachamos tu producto.</p>
         </div>`;
     } else {
         shipBlock = `<div style="background:#f0fdf4;border-radius:12px;padding:16px 20px;margin-bottom:16px;border:1px solid #bbf7d0;">
-            <p style="color:#166534;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;">Retiro en local</p>
+            <p style="color:#166534;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;">🏬 Retiro en local</p>
             <p style="color:#15803d;font-size:13px;margin:0;">Dávila 951, Parque Chacabuco · Lun–Sáb 12:00–19:30</p>
         </div>`;
     }
 
-    return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f1f5f9;margin:0;padding:24px;">
-<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.08);">
-  <div style="text-align:center;margin-bottom:28px;">
-    <div style="font-size:40px;margin-bottom:12px;">📋</div>
-    <h1 style="color:#0f172a;font-size:22px;margin:0 0 6px;">¡Pedido recibido!</h1>
-    <p style="color:#64748b;margin:0;">Hola ${name}, ya recibimos tu pedido.</p>
+    const waMsg = encodeURIComponent(`Hola! Te paso la captura de mi pago. Orden: ${orderId}`);
+    const waLink = `https://wa.me/541170583352?text=${waMsg}`;
+
+    return `<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;background:#f1f5f9;margin:0;padding:24px;">
+<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);">
+  <div style="background:#0a0a0a;padding:28px 32px;text-align:center;">
+    <p style="color:#d4af37;font-size:11px;font-weight:800;letter-spacing:.25em;text-transform:uppercase;margin:0 0 8px;">SB BARBER</p>
+    <h1 style="color:#fff;font-size:23px;margin:0;">¡Gracias por tu compra! 🖤</h1>
+    <p style="color:#a3a3a3;margin:8px 0 0;font-size:14px;">Hola ${name}, ya reservamos tu pedido.</p>
   </div>
-  <div style="background:#f8fafc;border-radius:12px;padding:20px;margin-bottom:16px;border:1px solid #e2e8f0;">
-    <p style="color:#475569;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px;">Tu pedido</p>
-    <p style="color:#1e293b;font-size:14px;margin:0 0 8px;">${items}</p>
-    ${discountLine}
-    <p style="color:#0f172a;font-size:17px;font-weight:800;margin:8px 0 0;">Total: $${Number(total).toLocaleString('es-AR')}</p>
+  <div style="padding:28px 32px;">
+    <div style="background:#f8fafc;border-radius:12px;padding:18px 20px;margin-bottom:18px;border:1px solid #e2e8f0;">
+      <p style="color:#475569;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px;">Tu pedido</p>
+      <p style="color:#1e293b;font-size:14px;margin:0 0 8px;">${items}</p>
+      ${discountLine}
+      <p style="color:#0f172a;font-size:18px;font-weight:800;margin:8px 0 0;">Total: $${Number(total).toLocaleString('es-AR')}</p>
+    </div>
+    ${shipBlock}
+    <div style="background:#0a0a0a;border-radius:12px;padding:20px;margin-bottom:18px;">
+      <p style="color:#d4af37;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin:0 0 12px;">💳 Datos para transferir</p>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr><td style="color:#8a8a8a;font-size:13px;padding:4px 0;">Alias</td><td style="color:#fff;font-size:15px;font-weight:800;text-align:right;padding:4px 0;">sbeat.ar</td></tr>
+        <tr><td style="color:#8a8a8a;font-size:13px;padding:4px 0;">CVU</td><td style="color:#fff;font-size:12px;font-family:monospace;text-align:right;padding:4px 0;">0000003100061376563207</td></tr>
+        <tr><td style="color:#8a8a8a;font-size:13px;padding:4px 0;">Titular</td><td style="color:#fff;font-size:13px;text-align:right;padding:4px 0;">Agustín Abalo</td></tr>
+        <tr><td style="color:#8a8a8a;font-size:13px;padding:8px 0 0;">Monto</td><td style="color:#4ade80;font-size:16px;font-weight:800;text-align:right;padding:8px 0 0;">$${Number(total).toLocaleString('es-AR')}</td></tr>
+      </table>
+    </div>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:18px 20px;margin-bottom:20px;text-align:center;">
+      <p style="color:#166534;font-size:14px;font-weight:800;margin:0 0 4px;">📸 Último paso</p>
+      <p style="color:#15803d;font-size:13px;margin:0 0 14px;line-height:1.5;">Hacé la transferencia y mandanos la <b>captura del pago</b> por WhatsApp para confirmar tu pedido.</p>
+      <a href="${waLink}" style="display:inline-block;background:#25D366;color:#fff;font-size:14px;font-weight:800;text-decoration:none;padding:13px 26px;border-radius:999px;">Enviar captura por WhatsApp</a>
+    </div>
+    <p style="text-align:center;color:#94a3b8;font-size:11px;margin:0;">SB Barber · Dávila 951, CABA · Orden: ${orderId}</p>
   </div>
-  ${shipBlock}
-  <div style="background:#eff6ff;border-radius:12px;padding:20px;margin-bottom:24px;border:1px solid #bfdbfe;">
-    <p style="color:#1d4ed8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px;">Datos para transferir</p>
-    <p style="color:#1e40af;font-size:14px;margin:0 0 4px;">Alias: <strong>sbeat.ar</strong></p>
-    <p style="color:#1e40af;font-size:13px;margin:0 0 4px;">CVU: 0000003100061376563207</p>
-    <p style="color:#1e40af;font-size:13px;margin:0;">Titular: Agustín Abalo</p>
-  </div>
-  <p style="text-align:center;color:#94a3b8;font-size:11px;margin:0;">Una vez confirmado el pago, preparamos tu pedido.<br>SB Barber · Orden: ${orderId}</p>
 </div></body></html>`;
 }
