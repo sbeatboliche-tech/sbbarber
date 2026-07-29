@@ -316,6 +316,20 @@
 
     </div><!-- /dashboard-view -->
 
+    <!-- MODAL CONTRASEÑA CIERRE -->
+    <div id="cierre-pass-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+        <div class="bg-[#0f1115] border border-white/10 rounded-2xl p-6 w-80 shadow-2xl">
+            <div class="text-sm font-bold text-white mb-1">Cierre de Caja</div>
+            <div class="text-xs text-gray-500 mb-4">Ingresá la contraseña para continuar</div>
+            <input id="cierre-pass-input" type="password" placeholder="Contraseña" class="w-full bg-white/5 border border-white/10 text-white text-sm rounded-xl px-4 h-11 outline-none focus:border-white/30 mb-3" autocomplete="off" onkeydown="if(event.key==='Enter')window.confirmCierrePass()">
+            <div id="cierre-pass-err" class="text-xs text-red-400 mb-3 hidden">Contraseña incorrecta</div>
+            <div class="flex gap-2">
+                <button onclick="window.closeCierrePass()" class="flex-1 h-10 rounded-xl border border-white/10 text-xs text-gray-400 font-bold">Cancelar</button>
+                <button onclick="window.confirmCierrePass()" class="flex-1 h-10 rounded-xl bg-emerald-600 text-white text-xs font-bold">Entrar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ============================================================
          CIERRE DE CAJA
     ============================================================ -->
@@ -2090,8 +2104,23 @@ window.logout = () => signOut(auth);
 // ---- CIERRE DE CAJA ----
 let cierreCajaTab = 'diario';
 window.openCierreCaja = () => {
-    const pass = prompt('Contraseña de cierre de caja:');
-    if (pass !== 'femesb') { if (pass !== null) alert('Contraseña incorrecta'); return; }
+    const modal = document.getElementById('cierre-pass-modal');
+    const input = document.getElementById('cierre-pass-input');
+    const err   = document.getElementById('cierre-pass-err');
+    input.value = ''; err.classList.add('hidden');
+    modal.classList.remove('hidden');
+    setTimeout(() => input.focus(), 80);
+};
+window.closeCierrePass = () => {
+    document.getElementById('cierre-pass-modal').classList.add('hidden');
+};
+window.confirmCierrePass = () => {
+    const input = document.getElementById('cierre-pass-input');
+    if (input.value !== 'femesb') {
+        document.getElementById('cierre-pass-err').classList.remove('hidden');
+        input.value = ''; input.focus(); return;
+    }
+    window.closeCierrePass();
     const v = document.getElementById('cierre-caja-view');
     v.classList.remove('hidden'); v.classList.add('flex', 'flex-col');
     cierreCajaTab = 'diario';
