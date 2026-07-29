@@ -335,7 +335,7 @@
 </div>
 
 <!-- KITS -->
-<section class="products-section" style="padding-bottom:20px;">
+<section class="products-section" id="kits-section" style="padding-bottom:20px;opacity:0;transition:opacity .4s;">
     <div class="section-header">
         <span class="section-title">Kits · Combos</span>
         <span class="product-count">Todo junto</span>
@@ -568,6 +568,8 @@ function renderKits() {
     const grid = document.getElementById('kits-grid');
     if(!grid) return;
     const allKitsToRender = (typeof getAllKits === 'function' ? getAllKits() : KITS).filter(k => kitHasPrice(k));
+    const sec = document.getElementById('kits-section');
+    if(sec) sec.style.opacity = allKitsToRender.length ? '1' : '0';
     grid.innerHTML = allKitsToRender.map((k,i)=>{
         const price = kitPrice(k);
         const out = kitOut(k);
