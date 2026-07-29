@@ -439,8 +439,8 @@
             <div style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.2);padding:10px 14px;margin-bottom:16px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;color:#4ade80;">10% OFF pagando con transferencia</div>
             <div class="info-block-label">Datos para transferir</div>
             <div class="info-row">
-                <div><span class="info-key">Alias</span><br><span class="info-val">sbeat.ar</span></div>
-                <button class="copy-btn" onclick="copyText('sbeat.ar',this)">Copiar</button>
+                <div><span class="info-key">Alias</span><br><span class="info-val">tienda.sbbarber</span></div>
+                <button class="copy-btn" onclick="copyText('tienda.sbbarber',this)">Copiar</button>
             </div>
             <div class="info-row">
                 <div><span class="info-key">CVU</span><br><span class="info-val" style="font-size:11px;font-family:monospace;letter-spacing:.03em">0000003100061376563207</span></div>
@@ -545,18 +545,9 @@ let activeTab = 'mp';
 
 // ── KITS / COMBOS (precio = suma exacta de sus productos, en vivo) ──
 const KIT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>`;
-const KITS = [
-    { id:'combo-opcion-styling', name:'Combo Opción – Styling Profesional', tag:'COMBO', subtitle:'Fijación · Textura · Volumen · Definición',
-      custom:true, price:54900, freeShipping:true,
-      image:'img/combo-opcion-styling.jpg',
-      desc:'Para todo tipo de cabello. Uso profesional o personal. Peinados clásicos, modernos, con volumen o efecto despeinado.',
-      items:[
-        { name:'Mousse Modelador Opción', detail:'Volumen, control y fijación flexible sin dejar el cabello pesado.' },
-        { name:'Cera Brillo Opción 50 g', detail:'Definición con acabado brillante y aspecto prolijo.' },
-        { name:'Pomada Mate Opción Navajas 90 g', detail:'Fijación media-alta con acabado natural, sin brillo.' },
-        { name:'Texturizante Instantáneo Opción Navajas 15 g', detail:'Textura, volumen y cuerpo al instante para estilos descontracturados.' }
-      ] }
-];
+// Combos: se administran desde el panel admin (colección tienda_kits_custom).
+// No hay combos fijos en el código.
+const KITS = [];
 let _extraProductos = [], _extraKits = [];
 function getAllProducts(){
     // _extraProductos con mismo ID que estático lo reemplaza

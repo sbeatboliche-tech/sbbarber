@@ -77,7 +77,7 @@ function sellerHtml(name, email, items, total, discount, orderId, ship) {
     </tr>
   </table>
   <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:12px;margin-top:16px;">
-    <p style="color:#fbbf24;font-size:12px;margin:0;">Esperá la transferencia al alias <strong>sbeat.ar</strong> antes de ${ship.mode==='delivery'?'enviar':'entregar'} el producto.</p>
+    <p style="color:#fbbf24;font-size:12px;margin:0;">Esperá la transferencia al alias <strong>tienda.sbbarber</strong> antes de ${ship.mode==='delivery'?'enviar':'entregar'} el producto.</p>
   </div>
   ${shippingAlert}
   <p style="color:#334155;font-size:11px;margin-top:16px;">Orden: ${orderId}</p>
@@ -124,7 +124,7 @@ function buyerHtml(name, items, total, discount, orderId, ship) {
     <div style="background:#0a0a0a;border-radius:12px;padding:20px;margin-bottom:18px;">
       <p style="color:#d4af37;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin:0 0 12px;">💳 Datos para transferir</p>
       <table style="width:100%;border-collapse:collapse;">
-        <tr><td style="color:#8a8a8a;font-size:13px;padding:4px 0;">Alias</td><td style="color:#fff;font-size:15px;font-weight:800;text-align:right;padding:4px 0;">sbeat.ar</td></tr>
+        <tr><td style="color:#8a8a8a;font-size:13px;padding:4px 0;">Alias</td><td style="color:#fff;font-size:15px;font-weight:800;text-align:right;padding:4px 0;">tienda.sbbarber</td></tr>
         <tr><td style="color:#8a8a8a;font-size:13px;padding:4px 0;">CVU</td><td style="color:#fff;font-size:12px;font-family:monospace;text-align:right;padding:4px 0;">0000003100061376563207</td></tr>
         <tr><td style="color:#8a8a8a;font-size:13px;padding:4px 0;">Titular</td><td style="color:#fff;font-size:13px;text-align:right;padding:4px 0;">Agustín Abalo</td></tr>
         <tr><td style="color:#8a8a8a;font-size:13px;padding:8px 0 0;">Monto</td><td style="color:#4ade80;font-size:16px;font-weight:800;text-align:right;padding:8px 0 0;">$${Number(total).toLocaleString('es-AR')}</td></tr>

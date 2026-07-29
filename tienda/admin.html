@@ -115,6 +115,10 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
 .toggle.on::after{left:20px;}
 
 @media(max-width:600px){.form-grid{grid-template-columns:1fr;}}
+.emoji-bar{display:flex;flex-wrap:wrap;gap:3px;margin-top:8px;padding:8px;background:#111;border:1px solid rgba(255,255,255,.08);border-radius:8px;}
+.emoji-bar .emoji-label{width:100%;font-size:10px;color:#525252;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
+.emoji-bar button{background:none;border:none;font-size:20px;cursor:pointer;padding:3px 5px;border-radius:6px;line-height:1;transition:background .15s;}
+.emoji-bar button:hover{background:rgba(255,255,255,.12);}
 </style>
 </head>
 <body>
@@ -178,6 +182,7 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                     <div class="form-field">
                         <label class="field-label">Descripción</label>
                         <textarea id="p-desc" placeholder="Describe el producto..."></textarea>
+                        <div class="emoji-bar" data-emoji-bar></div>
                     </div>
                 </div>
                 <div class="form-grid" style="margin-top:12px;">
@@ -237,6 +242,7 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                     <div class="form-field">
                         <label class="field-label">Descripción</label>
                         <textarea id="k-desc" placeholder="Descripción breve del combo..."></textarea>
+                        <div class="emoji-bar" data-emoji-bar></div>
                     </div>
                 </div>
                 <div class="toggle-row" style="margin-top:4px;">
@@ -746,6 +752,39 @@ function showToast(msg, ok, duration) {
 // ---- ENTER KEY ----
 document.getElementById('login-pass').addEventListener('keydown', function(e) { if(e.key==='Enter') doLogin(); });
 document.getElementById('login-email').addEventListener('keydown', function(e) { if(e.key==='Enter') document.getElementById('login-pass').focus(); });
+
+// ---- EMOJIS ----
+var EMOJIS = ['✂️','💈','🔥','⭐','✨','💯','🖤','🧔','💇‍♂️','🪒','🧴','💧','🎁','📦','🚚','💥','👑','🥇','🆕','💪','😎','👌','🙌','⚡','🌟','✅','🔝','💦','🧢','🫧'];
+var lastEmojiField = null;
+document.addEventListener('focusin', function(e){
+    var el = e.target;
+    if (el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && (el.type === 'text' || el.type === '')))) {
+        lastEmojiField = el;
+    }
+});
+function insertEmoji(emoji){
+    var el = lastEmojiField;
+    if (!el) { showToast('Tocá primero un campo de texto', false); return; }
+    var start = (el.selectionStart != null) ? el.selectionStart : el.value.length;
+    var end = (el.selectionEnd != null) ? el.selectionEnd : el.value.length;
+    el.value = el.value.slice(0, start) + emoji + el.value.slice(end);
+    var pos = start + emoji.length;
+    try { el.setSelectionRange(pos, pos); } catch(e){}
+    el.focus();
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+function initEmojiBars(){
+    document.querySelectorAll('[data-emoji-bar]').forEach(function(bar){
+        if (bar.dataset.filled) return;
+        bar.dataset.filled = '1';
+        var html = '<span class="emoji-label">Emojis — tocá un campo y luego el emoji</span>';
+        EMOJIS.forEach(function(em){
+            html += '<button type="button" onclick="insertEmoji(\'' + em + '\')">' + em + '</button>';
+        });
+        bar.innerHTML = html;
+    });
+}
+initEmojiBars();
 </script>
 </body>
 </html>
