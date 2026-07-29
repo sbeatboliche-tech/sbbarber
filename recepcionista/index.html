@@ -2090,6 +2090,8 @@ window.logout = () => signOut(auth);
 // ---- CIERRE DE CAJA ----
 let cierreCajaTab = 'diario';
 window.openCierreCaja = () => {
+    const pass = prompt('Contraseña de cierre de caja:');
+    if (pass !== 'femesb') { if (pass !== null) alert('Contraseña incorrecta'); return; }
     const v = document.getElementById('cierre-caja-view');
     v.classList.remove('hidden'); v.classList.add('flex', 'flex-col');
     cierreCajaTab = 'diario';
