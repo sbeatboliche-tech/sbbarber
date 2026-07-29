@@ -259,7 +259,6 @@
 
     <!-- FABs -->
     <div class="fab-row">
-        <button class="fab" title="Editar (admin)" onclick="abrirLogin()">⚙️</button>
         <button class="fab print" title="Imprimir / PDF" onclick="window.print()">🖨️</button>
     </div>
 
@@ -454,13 +453,8 @@
 
         function entrarAdmin() { document.body.classList.add('admin'); renderEditor(); }
 
-        setPersistence(auth, browserLocalPersistence).catch(() => {}).finally(() => {
-            onAuthStateChanged(auth, user => {
-                isAdmin = !!(user && ADMINS.includes(user.email));
-                if (isAdmin) { entrarAdmin(); }
-                else { document.body.classList.remove('admin'); }
-            });
-        });
+        // El menú es SOLO LECTURA para clientes. La edición se hace desde
+        // recepcionista → "Modificar Menú". No se activa modo admin acá.
 
         // ---- Utils ----
         function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
