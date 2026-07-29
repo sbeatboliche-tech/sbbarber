@@ -262,6 +262,39 @@
         .footer-meta { font-size:11px; color:var(--g700); margin-top:14px; letter-spacing:.04em; }
         .footer-meta a { color:var(--g500); text-decoration:none; }
         .footer-meta a:hover { color:#fff; }
+
+        /* ── Franja de beneficios ── */
+        .benefits { max-width:1100px; margin:6px auto 4px; padding:0 20px; display:flex; gap:9px; flex-wrap:wrap; justify-content:center; }
+        .benefit { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:var(--g400); border:1px solid var(--g800); padding:9px 14px; border-radius:999px; background:rgba(255,255,255,.02); transition:border-color .25s, color .25s, transform .25s; }
+        .benefit:hover { color:#fff; border-color:var(--g600); transform:translateY(-2px); }
+        .benefit svg { width:15px; height:15px; stroke:#4ade80; fill:none; stroke-width:1.8; flex-shrink:0; }
+        @media(max-width:520px){ .benefit { font-size:11px; padding:8px 11px; } }
+
+        /* ── Toast ── */
+        .toast { position:fixed; top:76px; left:50%; transform:translateX(-50%) translateY(-18px); z-index:400; background:#fff; color:#000; font-size:13px; font-weight:800; letter-spacing:.02em; padding:11px 20px; border-radius:999px; box-shadow:0 14px 36px rgba(0,0,0,.5); display:flex; align-items:center; gap:9px; opacity:0; pointer-events:none; transition:opacity .3s, transform .4s cubic-bezier(.16,1,.3,1); white-space:nowrap; max-width:90vw; }
+        .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+        .toast .toast-check { width:20px; height:20px; border-radius:50%; background:#16a34a; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+
+        /* ── Rebote del badge del carrito ── */
+        @keyframes cartBounce { 0%,100%{transform:scale(1);} 30%{transform:scale(1.55);} 60%{transform:scale(.85);} }
+        .cart-count.bounce { animation:cartBounce .5s ease; }
+
+        /* ── Volver arriba ── */
+        .to-top { position:fixed; right:16px; bottom:16px; z-index:140; width:46px; height:46px; border-radius:50%; background:var(--g900); border:1px solid var(--g700); display:flex; align-items:center; justify-content:center; cursor:pointer; opacity:0; pointer-events:none; transform:translateY(10px); transition:opacity .3s, transform .3s, background .2s; }
+        .to-top.show { opacity:1; pointer-events:auto; transform:translateY(0); }
+        .to-top:hover { background:var(--g800); transform:translateY(-3px); }
+        .to-top svg { width:20px; height:20px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+        @media(max-width:640px){ .to-top { bottom:86px; } }
+
+        /* ── Glow animado del hero ── */
+        .hero { position:relative; overflow:hidden; }
+        .hero::before { content:''; position:absolute; top:-45%; left:50%; width:130%; height:130%; transform:translateX(-50%); background:radial-gradient(ellipse at center, rgba(255,255,255,.055), transparent 60%); pointer-events:none; animation:heroGlow 9s ease-in-out infinite; }
+        .hero > * { position:relative; }
+        @keyframes heroGlow { 0%,100%{opacity:.55; transform:translateX(-50%) scale(1);} 50%{opacity:1; transform:translateX(-52%) scale(1.08);} }
+
+        @media (prefers-reduced-motion: reduce) {
+            .hero::before, .cart-count.bounce { animation:none; }
+        }
     </style>
     <link rel="stylesheet" href="../assets/sb-motion.css">
 </head>
@@ -292,6 +325,14 @@
     <h1 class="reveal" style="transition-delay:.08s">El estilo<br>que buscás,<br><em>en casa.</em></h1>
     <p class="hero-desc reveal" style="transition-delay:.16s">Los mismos productos que usan nuestros barberos, disponibles para vos.</p>
 </section>
+
+<!-- BENEFICIOS / CONFIANZA -->
+<div class="benefits reveal" style="transition-delay:.22s">
+    <div class="benefit"><svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><span>Envío a todo el país</span></div>
+    <div class="benefit"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg><span>Pago 100% seguro</span></div>
+    <div class="benefit"><svg viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/></svg><span>Retiro gratis en el local</span></div>
+    <div class="benefit"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Productos originales</span></div>
+</div>
 
 <!-- KITS -->
 <section class="products-section" style="padding-bottom:20px;">
@@ -365,19 +406,14 @@
         </div>
         <div id="shipping-detail" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-top:none;padding:12px 14px;margin-bottom:20px;font-size:12px;color:#737373;line-height:1.6;">
             <span id="shipping-detail-text">📍 Dávila 951, Parque Chacabuco · Lun–Sáb 12:00–19:30 · <strong style="color:#a3a3a3;">Gratis</strong></span>
-            <div id="zone-selector" style="display:none;margin-top:4px;">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);">
-                    <span style="font-size:18px;">📬</span>
-                    <span style="font-size:11px;font-weight:700;color:#a3a3a3;">Correo Argentino</span>
+            <div id="delivery-fields" style="display:none;">
+                <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);margin-bottom:10px;">
+                    <span style="font-size:16px;line-height:1.2;">📦</span>
+                    <span style="font-size:11.5px;color:#4ade80;line-height:1.5;">Envío a todo el país: <b>$7.000</b>. ¡<b>Gratis</b> en compras desde $40.000!</span>
                 </div>
-                <div style="font-size:9px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#525252;margin-bottom:8px;">Código postal de destino</div>
-                <div style="display:flex;gap:8px;">
-                    <input id="buyer-postal" class="field" type="text" inputmode="numeric" maxlength="8" placeholder="Ej: 1406" style="flex:1;height:44px;font-size:15px;">
-                    <button onclick="calcularEnvio()" id="btn-calcular-envio" style="height:44px;padding:0 16px;background:var(--white);color:var(--black);border:none;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;">Calcular</button>
-                </div>
-                <div id="shipping-result" style="margin-top:8px;font-size:12px;color:#737373;min-height:20px;"></div>
+                <input id="buyer-postal" class="field" type="text" inputmode="numeric" maxlength="8" placeholder="Código postal" style="height:46px;font-size:16px;margin-bottom:8px;">
+                <input id="buyer-address" class="field" type="text" placeholder="Dirección completa (calle, número, piso, depto)" autocomplete="street-address" style="height:46px;font-size:16px;">
             </div>
-            <input id="buyer-address" class="field" type="text" placeholder="Dirección completa (calle, número, piso, depto)" autocomplete="street-address" style="margin-top:8px;display:none;height:44px;font-size:15px;">
         </div>
 
         <div class="payment-tabs">
@@ -602,10 +638,11 @@ function addKitToCart(id) {
     const ex = cart.find(x=>x.id===id);
     if(ex) ex.qty++;
     else cart.push({ id:kit.id, name:kit.name, variant:'', price, qty:1, icon:KIT_ICON, freeShipping: !!kit.freeShipping });
-    saveCart(); updateCartUI(); openCart();
+    saveCart(); updateCartUI(); showToast('Agregado al carrito'); bounceCart();
 }
 
 const FREE_SHIP_THRESHOLD = 40000; // envío gratis desde este monto (ajustable)
+const FLAT_SHIPPING = 7000;        // costo de envío fijo a todo el país (ajustable)
 function getTotal() { return cart.reduce((s,i)=>s+i.price*i.qty,0); }
 function qualifiesFreeShip() { return cart.some(i=>i.freeShipping) || getTotal() >= FREE_SHIP_THRESHOLD; }
 function effectiveShipping() { return (shippingMode==='delivery' && !qualifiesFreeShip()) ? shippingCost : 0; }
@@ -620,58 +657,25 @@ function setShipping(mode) {
     shippingMode = mode;
     document.getElementById('ship-pickup').classList.toggle('active', mode==='pickup');
     document.getElementById('ship-delivery').classList.toggle('active', mode==='delivery');
-    const addr = document.getElementById('buyer-address');
+    const df = document.getElementById('delivery-fields');
     const txt = document.getElementById('shipping-detail-text');
-    const zoneSelector = document.getElementById('zone-selector');
     if (mode==='pickup') {
-        addr.style.display = 'none';
-        zoneSelector.style.display = 'none';
+        if (df) df.style.display = 'none';
         txt.style.display = 'inline';
         txt.innerHTML = '📍 Dávila 951, Parque Chacabuco · Lun–Sáb 12:00–19:30 · <strong style="color:#a3a3a3;">Gratis</strong>';
-        shippingCost = 0; correoLabel = '';
+        correoLabel = '';
     } else {
         txt.style.display = 'none';
-        zoneSelector.style.display = 'block';
-        addr.style.display = 'block';
-        document.getElementById('shipping-result').innerHTML = '';
-        shippingCost = 0; correoLabel = '';
+        if (df) df.style.display = 'block';
+        // Envío fijo a todo el país (el local hace el envío). Gratis si supera el umbral.
+        shippingCost = FLAT_SHIPPING;
+        carrierLabel = 'Envío a domicilio';
+        correoLabel = '';
     }
     renderSummary();
 }
 
 
-async function calcularEnvio() {
-    const cp = document.getElementById('buyer-postal').value.trim();
-    const result = document.getElementById('shipping-result');
-    const btn = document.getElementById('btn-calcular-envio');
-    if (!cp) return result.textContent = 'Ingresá tu código postal';
-    btn.textContent = '...'; btn.disabled = true;
-    result.textContent = 'Calculando...';
-    const endpoint = '/api/correo-rates';
-    const name = 'Correo Argentino';
-    try {
-        const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ postalCodeDestination: cp, deliveredType: 'D' })
-        });
-        const data = await res.json();
-        if (!res.ok || !data.rates?.length) {
-            result.innerHTML = '<span style="color:#f87171;">No se pudo calcular. Verificá el código postal.</span>';
-            shippingCost = 0; correoLabel = ''; carrierLabel = ''; renderSummary(); return;
-        }
-        const rate = data.rates[0];
-        shippingCost = Math.round(rate.price);
-        carrierLabel = name;
-        correoLabel = `CP ${cp} · ${rate.deliveryTimeMin}–${rate.deliveryTimeMax} días hábiles`;
-        result.innerHTML = `<span style="color:#4ade80;font-weight:700;">✓ ${name} — $${shippingCost.toLocaleString('es-AR')}</span> <span style="color:#525252;">(${rate.deliveryTimeMin}–${rate.deliveryTimeMax} días hábiles)</span>`;
-        renderSummary();
-    } catch {
-        result.innerHTML = '<span style="color:#f87171;">Error de conexión. Intentá de nuevo.</span>';
-    } finally {
-        btn.textContent = 'Calcular'; btn.disabled = false;
-    }
-}
 
 function renderProducts() {
     const allProdsToRender = typeof getAllProducts === 'function' ? getAllProducts() : PRODUCTS;
@@ -732,7 +736,7 @@ function addToCart(id) {
     const ex = cart.find(x=>x.id===id);
     if(ex) ex.qty++;
     else cart.push({...p, name: cfg.name || p.name, price, qty:1});
-    saveCart(); updateCartUI(); openCart();
+    saveCart(); updateCartUI(); showToast('Agregado al carrito'); bounceCart();
 }
 
 function updateQty(id, delta) {
@@ -847,8 +851,13 @@ function renderSummary() {
     const discountAmt = activeTab==='transfer' ? base-Math.round(base*(1-TRANSFER_DISCOUNT)) : 0;
     const discRow = discountAmt>0 ? `<div class="summary-item"><span class="summary-key" style="color:#4ade80;">Descuento transferencia (10%)</span><span style="font-weight:700;flex-shrink:0;color:#4ade80;">− $${discountAmt.toLocaleString('es-AR')}</span></div>` : '';
     const freeShip = qualifiesFreeShip();
+    const shipValue = freeShip
+        ? '<span style="color:#4ade80">Gratis</span>'
+        : (carrierLabel === 'Envío a coordinar'
+            ? '<span style="color:#fbbf24">A coordinar</span>'
+            : (shippingCost > 0 ? '$' + shippingCost.toLocaleString('es-AR') : 'ingresá CP'));
     const shipRow = shippingMode==='delivery'
-        ? `<div class="summary-item"><span class="summary-key">${carrierLabel||'Envío'}${correoLabel?' · '+correoLabel:''}</span><span style="font-weight:700;flex-shrink:0">${freeShip?'<span style="color:#4ade80">Gratis</span>':(shippingCost>0?'$'+shippingCost.toLocaleString('es-AR'):'ingresá CP')}</span></div>`
+        ? `<div class="summary-item"><span class="summary-key">${carrierLabel||'Envío'}${correoLabel?' · '+correoLabel:''}</span><span style="font-weight:700;flex-shrink:0">${shipValue}</span></div>`
         : `<div class="summary-item"><span class="summary-key">Retiro en local · Dávila 951</span><span style="color:#525252;font-weight:700;flex-shrink:0">Gratis</span></div>`;
     document.getElementById('order-summary').innerHTML =
         cart.map(i=>`<div class="summary-item"><span class="summary-key">${i.qty}× ${i.name} <span style="opacity:.4">${i.variant}</span></span><span style="font-weight:700;flex-shrink:0">$${(i.price*i.qty).toLocaleString('es-AR')}</span></div>`).join('')+
@@ -922,6 +931,31 @@ async function submitCheckout() {
 renderProducts();
 updateCartUI();
 
+// ── Toast / feedback al agregar ──
+let _toastT;
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.innerHTML = '<span class="toast-check">✓</span>' + msg;
+    t.classList.add('show');
+    clearTimeout(_toastT);
+    _toastT = setTimeout(() => t.classList.remove('show'), 1900);
+}
+function bounceCart() {
+    const c = document.getElementById('cart-count');
+    if (c) { c.classList.remove('bounce'); void c.offsetWidth; c.classList.add('bounce'); }
+}
+
+// ── Volver arriba ──
+function scrollTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+(function () {
+    const btn = document.getElementById('to-top');
+    if (!btn) return;
+    window.addEventListener('scroll', () => {
+        btn.classList.toggle('show', window.scrollY > 500);
+    }, { passive: true });
+})();
+
 // ── SCROLL REVEAL ──
 function initReveal() {
     const obs = new IntersectionObserver((entries) => {
@@ -945,6 +979,14 @@ initReveal();
 <a class="wa-fab" href="https://wa.me/541170583352?text=Hola!%20Quer%C3%ADa%20consultar%20por%20un%20producto%20de%20la%20tienda." target="_blank" rel="noopener" aria-label="Consultar por WhatsApp" title="Consultanos por WhatsApp">
     <svg viewBox="0 0 24 24"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 1.67c2.2 0 4.27.86 5.83 2.42a8.2 8.2 0 0 1 2.42 5.82c0 4.54-3.7 8.24-8.25 8.24a8.2 8.2 0 0 1-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.18 8.18 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24Zm-3.76 4.4c-.18 0-.47.07-.72.34-.25.27-.95.93-.95 2.27s.98 2.63 1.11 2.81c.14.18 1.9 2.9 4.6 4.06.64.28 1.14.44 1.53.57.64.2 1.23.17 1.69.1.52-.08 1.59-.65 1.81-1.28.22-.63.22-1.17.16-1.28-.07-.11-.25-.18-.52-.31-.27-.14-1.59-.79-1.84-.87-.25-.09-.43-.14-.61.14-.18.27-.7.87-.86 1.05-.16.18-.32.2-.59.07-.27-.14-1.13-.42-2.16-1.33-.8-.71-1.33-1.59-1.49-1.86-.16-.27-.02-.42.12-.55.12-.12.27-.32.41-.48.14-.16.18-.27.27-.45.09-.18.05-.34-.02-.48-.07-.14-.6-1.49-.85-2.04-.22-.53-.44-.46-.6-.46l-.51-.01Z"/></svg>
 </a>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<!-- VOLVER ARRIBA -->
+<button id="to-top" class="to-top" onclick="scrollTop()" aria-label="Volver arriba" title="Volver arriba">
+    <svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+</button>
 
 <!-- TIENDA FOOTER -->
 <div class="tienda-footer">
