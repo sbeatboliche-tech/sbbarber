@@ -353,7 +353,7 @@
             <button id="tab-transfer" class="payment-tab" onclick="setTab('transfer')">
                 <span style="display:inline-flex;align-items:center;gap:7px;justify-content:center;">
                     Transferencia
-                    <span id="transfer-badge" style="background:#fff;color:#000;font-size:9px;font-weight:800;padding:2px 6px;letter-spacing:.05em;">20% OFF</span>
+                    <span id="transfer-badge" style="background:#fff;color:#000;font-size:9px;font-weight:800;padding:2px 6px;letter-spacing:.05em;">10% OFF</span>
                 </span>
             </button>
         </div>
@@ -363,7 +363,7 @@
         </div>
 
         <div id="panel-transfer" class="info-block" style="display:none;">
-            <div style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.2);padding:10px 14px;margin-bottom:16px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;color:#4ade80;">20% OFF pagando con transferencia</div>
+            <div style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.2);padding:10px 14px;margin-bottom:16px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;color:#4ade80;">10% OFF pagando con transferencia</div>
             <div class="info-block-label">Datos para transferir</div>
             <div class="info-row">
                 <div><span class="info-key">Alias</span><br><span class="info-val">sbeat.ar</span></div>
@@ -459,7 +459,7 @@ const PRODUCTS = [
     }
 ];
 
-const TRANSFER_DISCOUNT = 0.20;
+const TRANSFER_DISCOUNT = 0.10;
 let correoLabel = '';
 let carrierLabel = 'Correo Argentino';
 let carrierId = 'correo';
@@ -526,7 +526,7 @@ function renderKits() {
         const priceBlock = hasPrice ? `
                 <div style="margin-bottom:12px;">
                     <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:4px 10px;margin-bottom:10px;">
-                        <span style="font-size:9px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#4ade80;">20% OFF</span>
+                        <span style="font-size:9px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#4ade80;">10% OFF</span>
                         <span style="font-size:9px;color:#525252;font-weight:600;text-transform:uppercase;letter-spacing:.08em;">con transferencia</span>
                     </div>
                     <div style="display:flex;align-items:baseline;gap:8px;">
@@ -668,7 +668,7 @@ function renderProducts() {
                 ${p.description ? `<div class="product-desc">${p.description}</div>` : ''}
                 <div style="margin-bottom:10px;margin-top:auto;padding-top:10px;">
                     <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:3px 8px;margin-bottom:8px;">
-                        <span style="font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#4ade80;">20% OFF</span>
+                        <span style="font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#4ade80;">10% OFF</span>
                         <span style="font-size:8px;color:#525252;font-weight:600;text-transform:uppercase;">transferencia</span>
                     </div>
                     <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
@@ -797,7 +797,7 @@ function closeCheckout() {
 function renderSummary() {
     const base=getTotal(), final=getFinalTotal();
     const discountAmt = activeTab==='transfer' ? base-Math.round(base*(1-TRANSFER_DISCOUNT)) : 0;
-    const discRow = discountAmt>0 ? `<div class="summary-item"><span class="summary-key" style="color:#4ade80;">Descuento transferencia (20%)</span><span style="font-weight:700;flex-shrink:0;color:#4ade80;">− $${discountAmt.toLocaleString('es-AR')}</span></div>` : '';
+    const discRow = discountAmt>0 ? `<div class="summary-item"><span class="summary-key" style="color:#4ade80;">Descuento transferencia (10%)</span><span style="font-weight:700;flex-shrink:0;color:#4ade80;">− $${discountAmt.toLocaleString('es-AR')}</span></div>` : '';
     const shipRow = shippingMode==='delivery'
         ? `<div class="summary-item"><span class="summary-key">${carrierLabel||'Envío'}${correoLabel?' · '+correoLabel:''}</span><span style="font-weight:700;flex-shrink:0">${shippingCost>0?'$'+shippingCost.toLocaleString('es-AR'):'ingresá CP'}</span></div>`
         : `<div class="summary-item"><span class="summary-key">Retiro en local · Dávila 951</span><span style="color:#525252;font-weight:700;flex-shrink:0">Gratis</span></div>`;

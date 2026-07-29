@@ -38,7 +38,7 @@ export default async function handler(req, res) {
 
 function sellerHtml(name, email, items, total, discount, orderId, ship) {
     const discountRow = discount > 0
-        ? `<tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Descuento 20%</td><td style="padding:8px 0;color:#f1f5f9;">− $${Number(discount).toLocaleString('es-AR')}</td></tr>`
+        ? `<tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Descuento 10%</td><td style="padding:8px 0;color:#f1f5f9;">− $${Number(discount).toLocaleString('es-AR')}</td></tr>`
         : '';
 
     let shipRows = '';
@@ -86,7 +86,7 @@ function sellerHtml(name, email, items, total, discount, orderId, ship) {
 
 function buyerHtml(name, items, total, discount, orderId, ship) {
     const discountLine = discount > 0
-        ? `<p style="color:#15803d;font-size:13px;font-weight:700;margin:4px 0 0;">Descuento 20% transferencia: − $${Number(discount).toLocaleString('es-AR')}</p>`
+        ? `<p style="color:#15803d;font-size:13px;font-weight:700;margin:4px 0 0;">Descuento 10% transferencia: − $${Number(discount).toLocaleString('es-AR')}</p>`
         : '';
 
     let shipBlock = '';
