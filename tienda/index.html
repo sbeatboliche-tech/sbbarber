@@ -825,7 +825,7 @@ function addKitToCart(id) {
     const price = kitPrice(kit);
     const ex = cart.find(x=>x.id===id);
     if(ex) ex.qty++;
-    else cart.push({ id:kit.id, name:kit.name, variant:'', price, qty:1, icon:KIT_ICON, freeShipping: !!kit.freeShipping });
+    else cart.push({ id:kit.id, name:kit.name, variant:'', price, qty:1, image:kit.image||null, icon:KIT_ICON, freeShipping: !!kit.freeShipping });
     saveCart(); updateCartUI(); showToast('Agregado al carrito'); bounceCart();
 }
 
