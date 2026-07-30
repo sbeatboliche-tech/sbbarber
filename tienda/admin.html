@@ -383,7 +383,7 @@ function switchTab(tab) {
 // ---- LISTENERS ----
 function listenProductos() {
     db.collection(PATH_PRODUCTOS).onSnapshot(function(snap) {
-        allProductos = snap.docs.map(function(d) { return Object.assign({}, d.data(), { id: d.id }); });
+        allProductos = snap.docs.map(function(d) { return Object.assign({}, d.data(), { id: d.id }); }).filter(function(p) { return !p.hidden; });
         renderProdList();
     });
 }
@@ -513,7 +513,6 @@ function cancelEditProducto() {
     document.getElementById('p-tag').value = '';
     document.getElementById('p-edit-id').value = '';
     removeFile('p-img-file','p-img-preview','p-img-zone');
-    removeFile('p-vid-file','p-vid-preview','p-vid-zone');
     document.getElementById('p-cancel-btn').style.display = 'none';
     document.getElementById('p-save-btn').textContent = 'Guardar producto';
 }
@@ -545,6 +544,12 @@ function deleteProducto(id) {
         .then(function() { showToast('Eliminado', true); })
         .catch(function() { showToast('Error al eliminar', false); });
 }
+function hideStaticProducto(id) {
+    if (!confirm('¿Ocultar este producto de la tienda?')) return;
+    db.collection(PATH_PRODUCTOS).doc(id).set({ hidden: true }, { merge: true })
+        .then(function() { showToast('Producto ocultado', true); })
+        .catch(function() { showToast('Error al ocultar', false); });
+}
 
 function prodRow(p, isCustom) {
     return '<div class="prod-row">' +
@@ -555,7 +560,7 @@ function prodRow(p, isCustom) {
         '</div>' +
         '<div class="prod-actions">' +
             '<button class="btn-edit" onclick="editProducto(\'' + p.id + '\')"><i class="fas fa-pen"></i></button>' +
-            (isCustom ? '<button class="btn-del" onclick="deleteProducto(\'' + p.id + '\')"><i class="fas fa-trash"></i></button>' : '') +
+            '<button class="btn-del" onclick="' + (isCustom ? 'deleteProducto' : 'hideStaticProducto') + '(\'' + p.id + '\')"><i class="fas fa-trash"></i></button>' +
         '</div></div>';
 }
 

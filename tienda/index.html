@@ -38,7 +38,7 @@
         header { position:sticky; top:0; z-index:100; background:rgba(255,255,255,.95); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-bottom:1px solid rgba(0,0,0,.08); }
         .header-inner { max-width:1100px; margin:0 auto; padding:0 20px; height:56px; display:flex; align-items:center; justify-content:space-between; }
         .logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
-        .logo img { height:32px; }
+        .logo img { height:32px; filter:invert(1); }
         .logo-title { font-size:13px; font-weight:900; color:var(--white); letter-spacing:.08em; text-transform:uppercase; line-height:1; }
         .logo-sub { font-size:9px; color:var(--g600); font-weight:500; letter-spacing:.2em; text-transform:uppercase; margin-top:2px; }
         .cart-btn { position:relative; width:44px; height:44px; border:1px solid rgba(0,0,0,.12); background:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .2s; -webkit-appearance:none; }
@@ -70,9 +70,9 @@
         .kits-grid-wrap { grid-template-columns:1fr; }
         @media(min-width:640px) { .kits-grid-wrap { grid-template-columns:repeat(2,1fr); } }
 
-        .product-card { background:var(--black); display:flex; flex-direction:column; transition:transform .4s cubic-bezier(.16,1,.3,1); }
+        .product-card { background:#111; display:flex; flex-direction:column; transition:transform .4s cubic-bezier(.16,1,.3,1); }
         .product-card:hover { transform:translateY(-4px); }
-        .product-image-wrap { aspect-ratio:1; background:var(--g950); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; border-bottom:1px solid rgba(255,255,255,.06); cursor:pointer; }
+        .product-image-wrap { aspect-ratio:1; background:#1a1a1a; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; border-bottom:1px solid rgba(255,255,255,.06); cursor:pointer; }
         .product-image-wrap svg { width:48px; height:48px; stroke:rgba(255,255,255,.07); }
         @media(min-width:580px) { .product-image-wrap svg { width:64px; height:64px; } }
         .product-image-wrap img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .6s cubic-bezier(.16,1,.3,1), filter .4s ease; }
@@ -80,6 +80,7 @@
         .product-image-wrap::after { content:''; position:absolute; inset:0; background:rgba(255,255,255,0); transition:background .4s ease; pointer-events:none; }
         .product-card:hover .product-image-wrap::after { background:rgba(255,255,255,.04); }
 
+        @keyframes pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
         /* ── SCROLL REVEAL ── */
         .reveal { opacity:0; transform:translateY(32px); transition:opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); }
         .reveal.visible { opacity:1; transform:translateY(0); }
@@ -87,11 +88,11 @@
         .reveal-left.visible { opacity:1; transform:translateX(0); }
         .reveal-scale { opacity:0; transform:scale(.94); transition:opacity .6s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1); }
         .reveal-scale.visible { opacity:1; transform:scale(1); }
-        .product-tag { position:absolute; top:10px; left:10px; font-size:8px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--black); background:var(--white); padding:3px 8px; }
+        .product-tag { position:absolute; top:10px; left:10px; font-size:8px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#111; background:#e8e8e8; padding:3px 8px; }
         @media(min-width:580px) { .product-tag { top:14px; left:14px; font-size:9px; padding:4px 10px; } }
         .product-info { padding:12px; flex:1; display:flex; flex-direction:column; }
         @media(min-width:580px) { .product-info { padding:20px; } }
-        .product-name { font-size:14px; font-weight:800; letter-spacing:-.02em; color:var(--white); margin-bottom:2px; line-height:1.2; }
+        .product-name { font-size:14px; font-weight:800; letter-spacing:-.02em; color:#e8e8e8; margin-bottom:2px; line-height:1.2; }
         @media(min-width:580px) { .product-name { font-size:17px; } }
         .product-variant { font-size:9px; color:var(--g700); font-weight:600; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
         .product-desc { font-size:12px; color:var(--g600); line-height:1.5; flex:1; margin-bottom:12px; white-space:pre-wrap; }
@@ -102,8 +103,8 @@
         .kit-includes li::before { content:'✓'; position:absolute; left:0; color:#4ade80; font-weight:800; }
         .kit-includes .kit-detail { display:block; color:var(--g700); font-size:11px; line-height:1.45; margin-top:3px; font-weight:400; }
         .product-footer { display:flex; align-items:center; justify-content:flex-end; gap:12px; margin-top:auto; }
-        .product-price { font-size:20px; font-weight:900; letter-spacing:-.02em; }
-        .btn-add { width:100%; height:44px; padding:0 14px; background:var(--white); color:var(--black); border:none; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:background .15s; font-family:'Inter',sans-serif; white-space:nowrap; -webkit-appearance:none; }
+        .product-price { font-size:20px; font-weight:900; letter-spacing:-.02em; color:#e8e8e8; }
+        .btn-add { width:100%; height:44px; padding:0 14px; background:#e8e8e8; color:#111; border:none; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:background .15s; font-family:'Inter',sans-serif; white-space:nowrap; -webkit-appearance:none; }
         @media(min-width:580px) { .btn-add { width:auto; flex-shrink:0; } }
         .btn-add:active { background:var(--g200); }
 
@@ -120,7 +121,7 @@
         .close-btn svg { width:14px; height:14px; stroke:var(--g400); }
         .cart-items { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
         .cart-item { display:flex; gap:14px; padding:18px 20px; border-bottom:1px solid rgba(255,255,255,.05); align-items:flex-start; }
-        .cart-item-img { width:52px; height:52px; background:var(--g900); border:1px solid rgba(255,255,255,.06); flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+        .cart-item-img { width:52px; height:52px; background:#f0f0f0; border:1px solid rgba(0,0,0,.08); flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden; }
         .cart-item-img svg { width:22px; height:22px; stroke:rgba(255,255,255,.18); }
         .cart-item-info { flex:1; min-width:0; }
         .cart-item-name { font-size:14px; font-weight:700; margin-bottom:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -335,12 +336,15 @@
 </div>
 
 <!-- KITS -->
-<section class="products-section" id="kits-section" style="padding-bottom:20px;opacity:0;transition:opacity .4s;">
+<section class="products-section" id="kits-section" style="padding-bottom:20px;">
     <div class="section-header">
         <span class="section-title">Kits · Combos</span>
         <span class="product-count">Todo junto</span>
     </div>
-    <div class="products-grid kits-grid-wrap" id="kits-grid" data-motion></div>
+    <div class="products-grid kits-grid-wrap" id="kits-grid">
+        <div style="aspect-ratio:.85;background:rgba(0,0,0,.06);animation:pulse 1.2s ease-in-out infinite;"></div>
+        <div style="aspect-ratio:.85;background:rgba(0,0,0,.06);animation:pulse 1.2s ease-in-out infinite .2s;"></div>
+    </div>
 </section>
 
 <!-- PRODUCTS -->
@@ -349,7 +353,14 @@
         <span class="section-title">Productos individuales</span>
         <span class="product-count" id="prod-count">— productos</span>
     </div>
-    <div class="products-grid" id="products-grid" data-motion></div>
+    <div class="products-grid" id="products-grid">
+        <div id="products-skeleton" style="grid-column:1/-1;display:flex;gap:12px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:140px;aspect-ratio:.85;background:rgba(0,0,0,.06);animation:pulse 1.2s ease-in-out infinite;"></div>
+            <div style="flex:1;min-width:140px;aspect-ratio:.85;background:rgba(0,0,0,.06);animation:pulse 1.2s ease-in-out infinite .15s;"></div>
+            <div style="flex:1;min-width:140px;aspect-ratio:.85;background:rgba(0,0,0,.06);animation:pulse 1.2s ease-in-out infinite .3s;"></div>
+            <div style="flex:1;min-width:140px;aspect-ratio:.85;background:rgba(0,0,0,.06);animation:pulse 1.2s ease-in-out infinite .45s;"></div>
+        </div>
+    </div>
 
 </section>
 
@@ -549,10 +560,13 @@ const KIT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke
 // No hay combos fijos en el código.
 const KITS = [];
 let _extraProductos = [], _extraKits = [];
+let _fsConfigReady = false, _fsCustomReady = false;
+function _maybeRenderProducts() {
+    if (_fsConfigReady && _fsCustomReady) renderProducts();
+}
 function getAllProducts(){
-    // _extraProductos con mismo ID que estático lo reemplaza
     const customIds = new Set(_extraProductos.map(p=>p.id));
-    return [...PRODUCTS.filter(p=>!customIds.has(p.id)), ..._extraProductos];
+    return [...PRODUCTS.filter(p=>!customIds.has(p.id)), ..._extraProductos.filter(p=>!p.hidden)];
 }
 function getAllKits(){ return [...KITS, ..._extraKits]; }
 function render(){ renderProducts(); renderKits(); }
@@ -569,7 +583,7 @@ function renderKits() {
     if(!grid) return;
     const allKitsToRender = (typeof getAllKits === 'function' ? getAllKits() : KITS).filter(k => kitHasPrice(k));
     const sec = document.getElementById('kits-section');
-    if(sec) sec.style.opacity = allKitsToRender.length ? '1' : '0';
+    if(sec) sec.style.display = allKitsToRender.length ? '' : 'none';
     grid.innerHTML = allKitsToRender.map((k,i)=>{
         const price = kitPrice(k);
         const out = kitOut(k);
@@ -600,9 +614,9 @@ function renderKits() {
                     </div>
                     <div style="font-size:10px;color:#404040;margin-top:2px;">Precio efectivo: $${price.toLocaleString('es-AR')}</div>
                 </div>`;
-        const btn = `<button class="btn-add${out?' btn-soldout':''}" onclick="addKitToCart('${k.id}')" ${out?'disabled':''}>${out?'Sin stock':'+ Agregar'}</button>`;
+        const btn = `<button class="btn-add${out?' btn-soldout':''}" onclick="event.stopPropagation();addKitToCart('${k.id}')" ${out?'disabled':''}>${out?'Sin stock':'+ Agregar'}</button>`;
         return `
-        <div class="product-card reveal" style="transition-delay:${i*.06}s">
+        <div class="product-card reveal" style="transition-delay:${i*.06}s;cursor:pointer;" onclick="openItemDetail('${k.id}','combo')">
             <div class="product-image-wrap">
                 ${collage}
                 <div class="product-tag">${k.tag}</div>
@@ -613,7 +627,6 @@ function renderKits() {
             <div class="product-info">
                 <div class="product-name">${k.name}</div>
                 <div class="product-variant">${kitCount(k)} productos${k.subtitle?' · '+k.subtitle:''}</div>
-                ${k.desc ? `<div class="product-desc" style="font-size:12px;color:#525252;margin-bottom:10px;line-height:1.5;">${k.desc}</div>` : ''}
                 <ul class="kit-includes">${includes}</ul>
                 ${priceBlock}
                 <div class="product-footer" style="margin-top:0;">
@@ -624,6 +637,138 @@ function renderKits() {
         </div>`;
     }).join('');
 }
+let _detailId = null, _detailType = null;
+
+function openItemDetail(id, type) {
+    _detailId = id; _detailType = type;
+    const modal = document.getElementById('item-detail-modal');
+
+    if (type === 'combo') {
+        const k = getAllKits().find(x=>x.id===id);
+        if(!k) return;
+        const out = kitOut(k);
+        // imagen / collage
+        const imgWrap = document.getElementById('item-detail-imgs');
+        if(k.image) {
+            imgWrap.innerHTML = `<img src="${k.image}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+        } else if(k.componentes && !k.items) {
+            const comps = k.componentes.map(prodById).filter(Boolean);
+            const imgs = comps.filter(p=>p.image).slice(0,4);
+            imgWrap.innerHTML = imgs.length
+                ? `<div style="position:absolute;inset:0;display:flex;gap:2px;">${imgs.map(p=>`<img src="${p.image}" alt="" style="flex:1;min-width:0;height:100%;object-fit:cover;display:block;">`).join('')}</div>`
+                : KIT_ICON;
+        } else { imgWrap.innerHTML = KIT_ICON; }
+        // badges
+        let badges = `<span style="font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;background:rgba(255,255,255,.1);color:#888;padding:3px 8px;">COMBO</span>`;
+        if(k.tag) badges += `<span style="font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;background:#e8e8e8;color:#111;padding:3px 8px;">${k.tag}</span>`;
+        if(k.freeShipping) badges += `<span style="font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;background:#16a34a;color:#fff;padding:3px 8px;">ENVÍO GRATIS</span>`;
+        document.getElementById('item-detail-badges').innerHTML = badges;
+        // nombre
+        document.getElementById('item-detail-name').textContent = k.name;
+        document.getElementById('item-detail-sub').textContent = `${kitCount(k)} productos${k.subtitle?' · '+k.subtitle:''}`;
+        // descripción
+        const descEl = document.getElementById('item-detail-desc');
+        if(k.desc) { descEl.textContent = k.desc; descEl.style.display = 'block'; }
+        else { descEl.style.display = 'none'; }
+        // items
+        let includes = '';
+        if(k.items) {
+            includes = `<div style="border-top:1px solid rgba(255,255,255,.07);padding-top:14px;margin-bottom:20px;">` +
+                k.items.map(it=>`<div style="font-size:12px;color:#888;line-height:1.4;padding:5px 0 5px 20px;position:relative;border-bottom:1px dashed rgba(255,255,255,.06);">
+                    <span style="position:absolute;left:0;color:#4ade80;font-weight:800;">✓</span>
+                    ${it.name}${it.detail?`<span style="display:block;color:#606060;font-size:11px;margin-top:2px;">${it.detail}</span>`:''}
+                </div>`).join('') + `</div>`;
+        } else if(k.componentes) {
+            const comps = k.componentes.map(prodById).filter(Boolean);
+            includes = `<div style="border-top:1px solid rgba(255,255,255,.07);padding-top:14px;margin-bottom:20px;">` +
+                comps.map(p=>`<div style="font-size:12px;color:#888;line-height:1.4;padding:5px 0 5px 20px;position:relative;border-bottom:1px dashed rgba(255,255,255,.06);">
+                    <span style="position:absolute;left:0;color:#4ade80;font-weight:800;">✓</span>${prodNameLive(p.id)}
+                </div>`).join('') + `</div>`;
+        }
+        document.getElementById('item-detail-includes').innerHTML = includes;
+        // precio
+        const price = kitPrice(k);
+        _renderDetailPrice(price);
+        // botón
+        const addBtn = document.getElementById('item-detail-add-btn');
+        addBtn.disabled = out;
+        addBtn.textContent = out ? 'Sin stock' : '+ Agregar al carrito';
+        addBtn.style.opacity = out ? '.4' : '1';
+        addBtn.style.cursor = out ? 'default' : 'pointer';
+
+    } else {
+        const allP = getAllProducts();
+        const p = allP.find(x=>x.id===id);
+        if(!p) return;
+        const cfg = productConfig[id] || {};
+        const price = cfg.price != null ? cfg.price : (p.price || 0);
+        const stock = cfg.stock;
+        const out = typeof stock === 'number' && stock === 0;
+        // imagen
+        const imgWrap = document.getElementById('item-detail-imgs');
+        if(p.image) {
+            imgWrap.innerHTML = `<img src="${p.image}" alt="${p.name||''}" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+        } else {
+            imgWrap.innerHTML = p.icon || `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#333;font-size:48px;">📦</div>`;
+        }
+        // badges
+        let badges = `<span style="font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;background:rgba(255,255,255,.1);color:#888;padding:3px 8px;">PRODUCTO</span>`;
+        if(p.tag && !out) badges += `<span style="font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;background:#e8e8e8;color:#111;padding:3px 8px;">${p.tag}</span>`;
+        document.getElementById('item-detail-badges').innerHTML = badges;
+        // nombre
+        document.getElementById('item-detail-name').textContent = cfg.name || p.name || '';
+        document.getElementById('item-detail-sub').textContent = p.variant || '';
+        // descripción
+        const descEl = document.getElementById('item-detail-desc');
+        const desc = p.description || cfg.description || '';
+        if(desc) { descEl.textContent = desc; descEl.style.display = 'block'; }
+        else { descEl.style.display = 'none'; }
+        // sin items
+        document.getElementById('item-detail-includes').innerHTML = '';
+        // precio
+        _renderDetailPrice(price);
+        // botón
+        const addBtn = document.getElementById('item-detail-add-btn');
+        addBtn.disabled = out;
+        addBtn.textContent = out ? 'Sin stock' : '+ Agregar al carrito';
+        addBtn.style.opacity = out ? '.4' : '1';
+        addBtn.style.cursor = out ? 'default' : 'pointer';
+    }
+
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function _renderDetailPrice(price) {
+    document.getElementById('item-detail-price').innerHTML = `
+        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:4px 10px;margin-bottom:10px;">
+            <span style="font-size:9px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#4ade80;">10% OFF</span>
+            <span style="font-size:9px;color:#525252;font-weight:600;text-transform:uppercase;letter-spacing:.08em;">con transferencia</span>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:8px;">
+            <span style="font-size:24px;font-weight:900;letter-spacing:-.02em;color:#e8e8e8;">$${Math.round(price*(1-TRANSFER_DISCOUNT)).toLocaleString('es-AR')}</span>
+            <span style="font-size:14px;color:#525252;text-decoration:line-through;">$${price.toLocaleString('es-AR')}</span>
+        </div>`;
+}
+
+function closeItemDetail(e) {
+    if(e && e.target !== document.getElementById('item-detail-modal')) return;
+    document.getElementById('item-detail-modal').classList.remove('show');
+    document.body.style.overflow = '';
+    _detailId = null; _detailType = null;
+}
+window.closeItemDetail = closeItemDetail;
+
+function addToCartFromDetail() {
+    if(!_detailId) return;
+    if(_detailType === 'combo') addKitToCart(_detailId);
+    else addToCart(_detailId);
+    document.getElementById('item-detail-modal').classList.remove('show');
+    document.body.style.overflow = '';
+}
+window.addToCartFromDetail = addToCartFromDetail;
+window.openItemDetail = openItemDetail;
+
 function addKitToCart(id) {
     const kit = getAllKits().find(k=>k.id===id);
     if(!kit || kitOut(kit) || !kitHasPrice(kit)) return;
@@ -684,7 +829,7 @@ function renderProducts() {
             ? `<img src="${p.image}" alt="${p.name || ''}" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`
             : (p.icon || '');
         return `
-        <div class="product-card reveal" style="transition-delay:${i*.06}s">
+        <div class="product-card reveal" style="transition-delay:${i*.06}s;cursor:pointer;" onclick="openItemDetail('${p.id}','product')">
             <div class="product-image-wrap">
                 ${imgHtml}
                 ${p.tag && !out ? `<div class="product-tag">${p.tag}</div>` : ''}
@@ -695,7 +840,6 @@ function renderProducts() {
             <div class="product-info">
                 <div class="product-name">${cfg.name || p.name || ''}</div>
                 ${p.variant ? `<div class="product-variant">${p.variant}</div>` : ''}
-                ${p.description ? `<div class="product-desc">${p.description}</div>` : ''}
                 <div style="margin-bottom:10px;margin-top:auto;padding-top:10px;">
                     <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:3px 8px;margin-bottom:8px;">
                         <span style="font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#4ade80;">10% OFF</span>
@@ -707,7 +851,7 @@ function renderProducts() {
                     </div>
                 </div>
                 <div class="product-footer">
-                    <button class="btn-add${out?' btn-soldout':''}" onclick="addToCart('${p.id}')" ${out?'disabled':''}>
+                    <button class="btn-add${out?' btn-soldout':''}" onclick="event.stopPropagation();addToCart('${p.id}')" ${out?'disabled':''}>
                         ${out ? 'Sin stock' : '+ Agregar'}
                     </button>
                 </div>
@@ -795,7 +939,7 @@ function updateCartUI() {
 
     itemsEl.innerHTML = cart.map(item=>`
         <div class="cart-item">
-            <div class="cart-item-img">${item.icon}</div>
+            <div class="cart-item-img">${item.image ? `<img src="${item.image}" style="width:100%;height:100%;object-fit:cover;display:block;">` : (item.icon||'<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8l-1 4h10l-1-4z"/></svg>')}</div>
             <div class="cart-item-info">
                 <div class="cart-item-name">${item.name}</div>
                 <div class="cart-item-variant">${item.variant}</div>
@@ -921,7 +1065,6 @@ async function submitCheckout() {
     }
 }
 
-renderProducts();
 updateCartUI();
 
 // ── Toast / feedback al agregar ──
@@ -1059,12 +1202,14 @@ let adminTab = 'productos';
 onSnapshot(collection(db, 'tienda_productos'), snap => {
     productConfig = {};
     snap.forEach(d => { productConfig[d.id] = d.data(); });
-    renderProducts();
+    _fsConfigReady = true;
+    _maybeRenderProducts();
 });
 
 onSnapshot(collection(db, 'tienda_productos_custom'), snap => {
     _extraProductos = snap.docs.map(d => ({ ...d.data(), id:d.id }));
-    renderProducts();
+    _fsCustomReady = true;
+    _maybeRenderProducts();
 });
 onSnapshot(collection(db, 'tienda_kits_custom'), snap => {
     _extraKits = snap.docs.map(d => ({ ...d.data(), id:d.id, custom:true }));
@@ -1226,6 +1371,23 @@ window.saveCursos = async () => {
 </script>
     <script src="../assets/sb-motion.js"></script>
 
+<!-- ITEM DETAIL MODAL -->
+<div id="item-detail-modal" class="modal-backdrop" onclick="closeItemDetail(event)">
+    <div class="modal-box" style="background:#111;border:1px solid rgba(255,255,255,.1);color:#e8e8e8;padding:0;overflow:hidden;max-width:560px;position:relative;">
+        <button onclick="closeItemDetail()" style="position:absolute;top:12px;right:12px;z-index:2;background:rgba(0,0,0,.6);border:none;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;">✕</button>
+        <div id="item-detail-imgs" style="width:100%;background:#1a1a1a;overflow:hidden;position:relative;flex-shrink:0;aspect-ratio:1;"></div>
+        <div style="padding:22px 20px 28px;">
+            <div id="item-detail-badges" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
+            <div id="item-detail-name" style="font-size:20px;font-weight:900;letter-spacing:-.02em;color:#e8e8e8;margin-bottom:4px;line-height:1.15;"></div>
+            <div id="item-detail-sub" style="font-size:10px;color:#737373;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px;"></div>
+            <div id="item-detail-desc" style="font-size:13px;color:#aaa;line-height:1.65;margin-bottom:18px;white-space:pre-wrap;display:none;"></div>
+            <ul id="item-detail-includes" style="list-style:none;padding:0;margin:0;"></ul>
+            <div id="item-detail-price" style="margin-bottom:18px;"></div>
+            <button id="item-detail-add-btn" onclick="addToCartFromDetail()" style="width:100%;height:48px;background:#e8e8e8;color:#111;border:none;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;font-family:'Inter',sans-serif;-webkit-appearance:none;"></button>
+        </div>
+    </div>
+</div>
+
 <!-- VIDEO MODAL -->
 <div id="video-modal" onclick="closeVideoModal(event)">
     <div class="video-modal-inner" id="video-modal-inner">
@@ -1257,7 +1419,15 @@ function closeVideoModal(e) {
     document.getElementById('video-modal').classList.remove('open');
     document.body.style.overflow = '';
 }
-document.addEventListener('keydown', e => { if(e.key==='Escape') { document.getElementById('video-modal-content').innerHTML=''; document.getElementById('video-modal').classList.remove('open'); document.body.style.overflow=''; }});
+document.addEventListener('keydown', e => {
+    if(e.key==='Escape') {
+        document.getElementById('video-modal-content').innerHTML='';
+        document.getElementById('video-modal').classList.remove('open');
+        document.getElementById('item-detail-modal').classList.remove('show');
+        document.body.style.overflow='';
+        _detailId=null; _detailType=null;
+    }
+});
 </script>
 </body>
 </html>
