@@ -296,6 +296,40 @@
         @media (prefers-reduced-motion: reduce) {
             .hero::before, .cart-count.bounce { animation:none; }
         }
+
+        /* ── HEADER SCROLL SHRINK ── */
+        header { transition: box-shadow .35s; }
+        header.scrolled { box-shadow: 0 2px 24px rgba(0,0,0,.1); }
+        .header-inner { transition: height .35s cubic-bezier(.16,1,.3,1); }
+        header.scrolled .header-inner { height: 48px; }
+
+        /* ── CARD HOVER OVERLAY "VER DETALLES" ── */
+        .product-image-wrap::before { content:'VER DETALLES'; position:absolute; bottom:0; left:0; right:0; z-index:3; padding:28px 12px 14px; font-size:9px; font-weight:800; letter-spacing:.22em; color:#fff; text-align:center; background:linear-gradient(to top,rgba(0,0,0,.78) 0%,transparent 100%); opacity:0; transform:translateY(8px); transition:opacity .28s ease, transform .32s cubic-bezier(.16,1,.3,1); pointer-events:none; }
+        .product-card:hover .product-image-wrap::before { opacity:1; transform:translateY(0); }
+
+        /* ── RIPPLE EN BOTÓN AGREGAR ── */
+        .btn-add { position:relative; overflow:hidden; }
+        @keyframes rippleAnim { from { transform:scale(0); opacity:.55; } to { transform:scale(3.5); opacity:0; } }
+        .ripple-el { position:absolute; border-radius:50%; background:rgba(0,0,0,.22); pointer-events:none; transform:scale(0); animation:rippleAnim .55s cubic-bezier(.16,1,.3,1) forwards; }
+
+        /* ── BENEFIT PILLS GLOW ── */
+        .benefit:hover { box-shadow:0 6px 22px rgba(74,222,128,.2); border-color:rgba(74,222,128,.5); color:var(--white); }
+
+        /* ── HERO WORD REVEAL ── */
+        .word-reveal { display:inline-block; }
+        @media (prefers-reduced-motion: no-preference) {
+            @keyframes wordReveal { from { opacity:0; transform:translateY(56px); } to { opacity:1; transform:translateY(0); } }
+            .word-reveal { opacity:0; animation:wordReveal .75s cubic-bezier(.16,1,.3,1) both; }
+        }
+
+        /* ── SKELETON SHIMMER ── */
+        @keyframes shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+        .skel { background:linear-gradient(90deg,rgba(0,0,0,.04) 0%,rgba(0,0,0,.11) 45%,rgba(0,0,0,.04) 100%); background-size:200% 100%; animation:shimmer 1.8s ease-in-out infinite; }
+
+        /* ── DETAIL MODAL CONTENT SLIDE-UP ── */
+        #item-detail-modal .modal-box > div:last-child { opacity:0; transform:translateY(18px); transition:opacity .4s cubic-bezier(.16,1,.3,1) .22s, transform .45s cubic-bezier(.16,1,.3,1) .22s; }
+        #item-detail-modal.show .modal-box > div:last-child { opacity:1; transform:translateY(0); }
+        #item-detail-modal:not(.show) .modal-box > div:last-child { transition-duration:0s; transition-delay:0s; }
     </style>
     <link rel="stylesheet" href="../assets/sb-motion.css">
 </head>
@@ -323,7 +357,13 @@
 <!-- HERO -->
 <section class="hero">
     <div class="hero-eyebrow reveal">Productos Profesionales</div>
-    <h1 class="reveal" style="transition-delay:.08s">El estilo<br>que buscás,<br><em>en casa.</em></h1>
+    <h1 style="font-size:clamp(30px,9vw,80px);font-weight:900;line-height:1.0;letter-spacing:-.03em;margin-bottom:12px;">
+        <span class="word-reveal" style="animation-delay:.06s">El</span>
+        <span class="word-reveal" style="animation-delay:.14s">estilo</span><br>
+        <span class="word-reveal" style="animation-delay:.22s">que</span>
+        <span class="word-reveal" style="animation-delay:.30s">buscás,</span><br>
+        <em class="word-reveal" style="animation-delay:.38s;font-style:normal;color:var(--g600)">en casa.</em>
+    </h1>
     <p class="hero-desc reveal" style="transition-delay:.16s">Los mismos productos que usan nuestros barberos, disponibles para vos.</p>
 </section>
 
@@ -342,8 +382,8 @@
         <span class="product-count">Todo junto</span>
     </div>
     <div class="products-grid kits-grid-wrap" id="kits-grid">
-        <div style="aspect-ratio:.85;background:rgba(0,0,0,.06);animation:pulse 1.2s ease-in-out infinite;"></div>
-        <div style="aspect-ratio:.85;background:rgba(0,0,0,.06);animation:pulse 1.2s ease-in-out infinite .2s;"></div>
+        <div class="skel" style="aspect-ratio:.85;"></div>
+        <div class="skel" style="aspect-ratio:.85;animation-delay:.25s;"></div>
     </div>
 </section>
 
@@ -355,10 +395,10 @@
     </div>
     <div class="products-grid" id="products-grid">
         <div id="products-skeleton" style="grid-column:1/-1;display:flex;gap:12px;flex-wrap:wrap;">
-            <div style="flex:1;min-width:140px;aspect-ratio:.85;background:rgba(0,0,0,.06);animation:pulse 1.2s ease-in-out infinite;"></div>
-            <div style="flex:1;min-width:140px;aspect-ratio:.85;background:rgba(0,0,0,.06);animation:pulse 1.2s ease-in-out infinite .15s;"></div>
-            <div style="flex:1;min-width:140px;aspect-ratio:.85;background:rgba(0,0,0,.06);animation:pulse 1.2s ease-in-out infinite .3s;"></div>
-            <div style="flex:1;min-width:140px;aspect-ratio:.85;background:rgba(0,0,0,.06);animation:pulse 1.2s ease-in-out infinite .45s;"></div>
+            <div class="skel" style="flex:1;min-width:140px;aspect-ratio:.85;"></div>
+            <div class="skel" style="flex:1;min-width:140px;aspect-ratio:.85;animation-delay:.2s;"></div>
+            <div class="skel" style="flex:1;min-width:140px;aspect-ratio:.85;animation-delay:.4s;"></div>
+            <div class="skel" style="flex:1;min-width:140px;aspect-ratio:.85;animation-delay:.6s;"></div>
         </div>
     </div>
 
@@ -735,6 +775,16 @@ function openItemDetail(id, type) {
         addBtn.style.cursor = out ? 'default' : 'pointer';
     }
 
+    // image zoom-in entrance
+    const _zImg = document.querySelector('#item-detail-imgs img');
+    if (_zImg) {
+        _zImg.style.transition = 'none';
+        _zImg.style.transform = 'scale(1.09)';
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            _zImg.style.transition = 'transform .85s cubic-bezier(.16,1,.3,1)';
+            _zImg.style.transform = 'scale(1)';
+        }));
+    }
     modal.classList.add('show');
     document.body.style.overflow = 'hidden';
 }
@@ -1109,6 +1159,32 @@ function revealAfterRender() {
     requestAnimationFrame(() => { requestAnimationFrame(initReveal); });
 }
 initReveal();
+
+// ── Header compression on scroll ──
+(function() {
+    var hdr = document.querySelector('header');
+    if (!hdr) return;
+    window.addEventListener('scroll', function() {
+        hdr.classList.toggle('scrolled', window.scrollY > 60);
+    }, { passive: true });
+})();
+
+// ── Ripple on add-to-cart buttons ──
+(function() {
+    var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.body.addEventListener('click', function(e) {
+        if (reducedMotion) return;
+        var btn = e.target.closest('.btn-add');
+        if (!btn || btn.disabled || btn.classList.contains('btn-soldout')) return;
+        var rect = btn.getBoundingClientRect();
+        var size = Math.max(rect.width, rect.height);
+        var rip = document.createElement('span');
+        rip.className = 'ripple-el';
+        rip.style.cssText = 'width:'+size+'px;height:'+size+'px;left:'+(e.clientX-rect.left-size/2)+'px;top:'+(e.clientY-rect.top-size/2)+'px';
+        btn.appendChild(rip);
+        rip.addEventListener('animationend', function() { rip.remove(); }, { once: true });
+    }, { capture: false });
+})();
 </script>
 
 <!-- BOTÓN WHATSAPP -->
