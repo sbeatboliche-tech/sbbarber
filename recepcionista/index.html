@@ -588,6 +588,18 @@
                     </div>
                 </div>
                 <input type="hidden" id="metodo-pago" value="efectivo">
+                <!-- Propina -->
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">
+                        <i class="fas fa-hand-holding-usd text-yellow-400 mr-1"></i> Propina (opcional)
+                    </p>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-yellow-600 font-bold text-sm">$</span>
+                        <input type="number" id="propina-monto" placeholder="0" min="0" step="100"
+                            class="w-full pl-8 pr-4 py-3.5 bg-yellow-500/5 rounded-2xl border border-yellow-500/20 focus:border-yellow-500/50 outline-none transition text-white placeholder-gray-600 text-sm">
+                    </div>
+                    <p class="text-[10px] text-gray-600 ml-1 mt-1.5">Se suma al retiro del barbero asignado · queda pendiente de aprobación</p>
+                </div>
                 <button type="submit" id="btn-submit-cut"
                     class="w-full bg-gradient-to-r from-cyan-500 to-teal-500 text-white py-4 rounded-2xl font-extrabold text-base shadow-lg shadow-cyan-900/40 uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all">
                     Confirmar
@@ -1340,15 +1352,25 @@ document.getElementById('add-cut-form').addEventListener('submit', async e => {
     const serviceName = document.getElementById('svc-name').value;
     const servicePrice = Number(document.getElementById('svc-price').value);
     const clientName = document.getElementById('client-name').value.trim();
+    const propinaAmt = Number(document.getElementById('propina-monto').value) || 0;
     if (!barber || !serviceName) return alert('Seleccioná barbero y servicio');
     const btn = document.getElementById('btn-submit-cut');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
         const metodoPago = document.getElementById('metodo-pago').value || 'efectivo';
+        const hoy = new Date().toLocaleDateString('en-CA');
         await addDoc(collection(db, PATH_CUTS), {
             barber, service: serviceName, price: servicePrice,
             clientName, metodoPago, userEmail: currentUser.email, createdAt: serverTimestamp()
         });
+        if (propinaAmt > 0) {
+            await addDoc(collection(db, 'propinas'), {
+                barbero: barber, monto: propinaAmt, fecha: hoy,
+                estado: 'pendiente',
+                descripcion: clientName ? `Propina de ${clientName}` : 'Propina de cliente',
+                userEmail: currentUser.email, creadoEn: serverTimestamp()
+            });
+        }
         closeModals();
         document.getElementById('add-cut-form').reset();
     } catch { alert('Error al guardar'); }
