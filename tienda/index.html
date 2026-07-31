@@ -213,6 +213,12 @@
         .stock-low-badge { background:rgba(0,0,0,.6); border:1px solid rgba(255,255,255,.1); color:var(--g400); }
         .btn-add:disabled, .btn-add.btn-soldout { background:var(--g900); color:var(--g700); cursor:not-allowed; }
 
+        /* ── VARIANTES (opciones a elegir: color, ml, tamaño, etc.) ── */
+        .variant-picker { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+        .variant-opt { height:28px; padding:0 11px; background:#1a1a1a; border:1px solid rgba(255,255,255,.14); color:#a3a3a3; font-size:10px; font-weight:700; letter-spacing:.04em; cursor:pointer; font-family:'Inter',sans-serif; transition:all .15s; -webkit-appearance:none; }
+        .variant-opt.active { background:#e8e8e8; color:#111; border-color:#e8e8e8; }
+        .variant-opt:hover:not(.active) { border-color:rgba(255,255,255,.35); color:#e8e8e8; }
+
         /* ── ADMIN ── */
         .admin-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.92); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); z-index:500; display:none; align-items:center; justify-content:center; padding:16px; }
         .admin-backdrop.show { display:flex; }
@@ -597,6 +603,15 @@ let courseConfig = {};
 let shippingMode = 'pickup';
 let shippingCost = 0;
 let cart = JSON.parse(localStorage.getItem('sb_cart')||'[]');
+let _selectedVariant = {}; // id de producto -> opción elegida (color/variante)
+function selectVariant(e, id, variant) {
+    if(e) e.stopPropagation();
+    _selectedVariant[id] = variant;
+    document.querySelectorAll(`[data-pid="${id}"] .variant-opt`).forEach(btn=>{
+        btn.classList.toggle('active', btn.dataset.v === variant);
+    });
+}
+window.selectVariant = selectVariant;
 let activeTab = 'mp';
 
 // ── KITS / COMBOS (precio = suma exacta de sus productos, en vivo) ──
@@ -707,6 +722,7 @@ function openItemDetail(id, type) {
         const k = getAllKits().find(x=>x.id===id);
         if(!k) return;
         const out = kitOut(k);
+        document.getElementById('item-detail-variants').style.display = 'none';
         // imagen / collage
         const imgWrap = document.getElementById('item-detail-imgs');
         if(k.image) {
@@ -778,6 +794,17 @@ function openItemDetail(id, type) {
         // nombre
         document.getElementById('item-detail-name').textContent = cfg.name || p.name || '';
         document.getElementById('item-detail-sub').textContent = p.variant || '';
+        // opciones (variantes)
+        const varWrap = document.getElementById('item-detail-variants');
+        if (p.variantes && p.variantes.length) {
+            if (!_selectedVariant[p.id]) _selectedVariant[p.id] = p.variantes[0];
+            varWrap.dataset.pid = p.id;
+            varWrap.style.display = 'flex';
+            varWrap.innerHTML = p.variantes.map(v=>`<button type="button" class="variant-opt${_selectedVariant[p.id]===v?' active':''}" data-v="${v.replace(/"/g,'&quot;')}" onclick="selectVariant(event,'${p.id}','${v.replace(/'/g,"\\'")}')">${v}</button>`).join('');
+        } else {
+            varWrap.style.display = 'none';
+            varWrap.innerHTML = '';
+        }
         // descripción
         const descEl = document.getElementById('item-detail-desc');
         const desc = p.description || cfg.description || '';
@@ -911,6 +938,10 @@ function renderProducts() {
             <div class="product-info">
                 <div class="product-name">${cfg.name || p.name || ''}</div>
                 ${p.variant ? `<div class="product-variant">${p.variant}</div>` : ''}
+                ${p.variantes && p.variantes.length ? `
+                <div class="variant-picker" data-pid="${p.id}" onclick="event.stopPropagation();">
+                    ${p.variantes.map(v=>`<button type="button" class="variant-opt${(_selectedVariant[p.id]||p.variantes[0])===v?' active':''}" data-v="${v.replace(/"/g,'&quot;')}" onclick="selectVariant(event,'${p.id}','${v.replace(/'/g,"\\'")}')">${v}</button>`).join('')}
+                </div>` : ''}
                 <div style="margin-bottom:10px;margin-top:auto;padding-top:10px;">
                     <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:3px 8px;margin-bottom:8px;">
                         <span style="font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#4ade80;">10% OFF</span>
@@ -934,7 +965,7 @@ function renderProducts() {
     if (typeof revealAfterRender === 'function') revealAfterRender();
 }
 
-function addToCart(id) {
+function addToCart(id, variant) {
     const allP = typeof getAllProducts === 'function' ? getAllProducts() : PRODUCTS;
     const p = allP.find(x=>x.id===id);
     if(!p) return;
@@ -942,23 +973,24 @@ function addToCart(id) {
     const price = cfg.price != null ? cfg.price : p.price;
     const stock = cfg.stock;
     if(typeof stock === 'number' && stock === 0) return;
-    const ex = cart.find(x=>x.id===id);
+    const selVariant = variant || (p.variantes && p.variantes.length ? (_selectedVariant[id] || p.variantes[0]) : (p.variant || ''));
+    const ex = cart.find(x=>x.id===id && x.variant===selVariant);
     if(ex) ex.qty++;
-    else cart.push({...p, name: cfg.name || p.name, price, qty:1});
+    else cart.push({...p, name: cfg.name || p.name, price, qty:1, variant: selVariant});
     saveCart(); updateCartUI(); showToast('Agregado al carrito'); bounceCart();
 }
 
-function updateQty(id, delta) {
-    const item = cart.find(x=>x.id===id);
+function updateQty(id, delta, variant) {
+    const item = cart.find(x=>x.id===id && x.variant===(variant||''));
     if(!item) return;
     item.qty = Math.max(0, item.qty+delta);
-    if(item.qty===0) cart = cart.filter(x=>x.id!==id);
+    if(item.qty===0) cart = cart.filter(x=>x!==item);
     saveCart(); updateCartUI();
     if(!cart.length) closeCart();
 }
 
-function removeFromCart(id) {
-    cart = cart.filter(x=>x.id!==id);
+function removeFromCart(id, variant) {
+    cart = cart.filter(x=>!(x.id===id && x.variant===(variant||'')));
     saveCart(); updateCartUI();
     if(!cart.length) closeCart();
 }
@@ -1016,10 +1048,10 @@ function updateCartUI() {
                 <div class="cart-item-name">${item.name}</div>
                 <div class="cart-item-variant">${item.variant}</div>
                 <div class="qty-controls">
-                    <button class="qty-btn" onclick="updateQty('${item.id}',-1)">−</button>
+                    <button class="qty-btn" onclick="updateQty('${item.id}',-1,'${(item.variant||'').replace(/'/g,"\\'")}')">−</button>
                     <span class="qty-num">${item.qty}</span>
-                    <button class="qty-btn" onclick="updateQty('${item.id}',1)">+</button>
-                    <button class="remove-btn" onclick="removeFromCart('${item.id}')">Eliminar</button>
+                    <button class="qty-btn" onclick="updateQty('${item.id}',1,'${(item.variant||'').replace(/'/g,"\\'")}')">+</button>
+                    <button class="remove-btn" onclick="removeFromCart('${item.id}','${(item.variant||'').replace(/'/g,"\\'")}')">Eliminar</button>
                 </div>
             </div>
             <div class="cart-item-price">$${(item.price*item.qty).toLocaleString('es-AR')}</div>
@@ -1488,6 +1520,7 @@ window.saveCursos = async () => {
             <div id="item-detail-sub" style="font-size:10px;color:#737373;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px;"></div>
             <div id="item-detail-desc" style="font-size:13px;color:#aaa;line-height:1.65;margin-bottom:18px;white-space:pre-wrap;display:none;"></div>
             <ul id="item-detail-includes" style="list-style:none;padding:0;margin:0;"></ul>
+            <div id="item-detail-variants" style="display:none;flex-wrap:wrap;gap:8px;margin-bottom:18px;"></div>
             <div id="item-detail-price" style="margin-bottom:18px;"></div>
             <button id="item-detail-add-btn" onclick="addToCartFromDetail()" style="width:100%;height:48px;background:#e8e8e8;color:#111;border:none;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;font-family:'Inter',sans-serif;-webkit-appearance:none;"></button>
         </div>

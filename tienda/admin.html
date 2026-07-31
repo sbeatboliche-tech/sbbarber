@@ -185,6 +185,13 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                         <div class="emoji-bar" data-emoji-bar></div>
                     </div>
                 </div>
+                <div class="form-grid full" style="margin-top:12px;">
+                    <div class="form-field">
+                        <label class="field-label">Opciones para elegir (opcional)</label>
+                        <input type="text" id="p-variantes" placeholder="Ej: Negro, Blanco, Rojo — o 100ml, 200ml, 400ml — lo que quieras">
+                        <div style="font-size:11px;color:#404040;margin-top:6px;">Separadas por coma. Poné lo que necesites: colores, mililitros, tamaños, etc. El cliente elige una antes de agregar al carrito. Dejar vacío si el producto no tiene opciones.</div>
+                    </div>
+                </div>
                 <div class="form-grid" style="margin-top:12px;">
                     <div class="form-field">
                         <label class="field-label">URL de imagen (Imgur, Google Drive, etc.)</label>
@@ -500,11 +507,15 @@ function saveProducto() {
 
         var imgPromise = imgFile ? compressToBase64(imgFile) : Promise.resolve(imgUrl || null);
 
+        var variantes = document.getElementById('p-variantes').value.split(',')
+            .map(function(v) { return v.trim(); }).filter(function(v) { return v; });
+
         imgPromise.then(function(imgResult) {
             var now  = new Date();
             var data = {
                 name: name,
                 variant: document.getElementById('p-variant').value.trim(),
+                variantes: variantes,
                 price: price,
                 tag: document.getElementById('p-tag').value || null,
                 description: document.getElementById('p-desc').value.trim(),
@@ -535,7 +546,7 @@ function saveProducto() {
 
 function cancelEditProducto() {
     editingProductoId = null;
-    ['p-name','p-variant','p-price','p-desc','p-video','p-img-url'].forEach(function(id) {
+    ['p-name','p-variant','p-variantes','p-price','p-desc','p-video','p-img-url'].forEach(function(id) {
         document.getElementById(id).value = '';
     });
     document.getElementById('p-tag').value = '';
@@ -553,6 +564,7 @@ function editProducto(id) {
     editingProductoId = id;
     document.getElementById('p-name').value    = p.name || '';
     document.getElementById('p-variant').value = p.variant || '';
+    document.getElementById('p-variantes').value = (p.variantes || []).join(', ');
     document.getElementById('p-price').value   = p.price || '';
     document.getElementById('p-tag').value     = p.tag || '';
     document.getElementById('p-desc').value    = p.description || '';
@@ -599,7 +611,7 @@ function prodRow(p, isCustom, hidden) {
         (p.image ? '<img class="prod-thumb" src="' + p.image + '" alt="" onerror="this.style.display=\'none\'">' : '<div class="prod-thumb-placeholder">📦</div>') +
         '<div class="prod-info">' +
             '<div class="prod-name">' + p.name + (p.tag ? '<span class="prod-tag-badge">' + p.tag + '</span>' : '') + (!isCustom ? '<span class="prod-tag-badge" style="background:rgba(99,102,241,.15);color:#818cf8;">WEB</span>' : '') + (hidden ? '<span class="prod-tag-badge" style="background:rgba(248,113,113,.15);color:#f87171;">OCULTO</span>' : '') + '</div>' +
-            '<div class="prod-meta">$' + (p.price||0).toLocaleString('es-AR') + (p.variant?' · '+p.variant:'') + (p.videoUrl?' · 🎥':'') + '</div>' +
+            '<div class="prod-meta">$' + (p.price||0).toLocaleString('es-AR') + (p.variant?' · '+p.variant:'') + (p.variantes&&p.variantes.length?' · '+p.variantes.length+' opciones ('+p.variantes.join('/')+')':'') + (p.videoUrl?' · 🎥':'') + '</div>' +
         '</div>' +
         '<div class="prod-actions">' +
             '<button class="btn-edit" onclick="editProducto(\'' + p.id + '\')" title="Editar"><i class="fas fa-pen"></i></button>' +
