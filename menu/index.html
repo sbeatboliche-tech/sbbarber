@@ -111,6 +111,18 @@
 
     .empty { color: var(--muted); font-size: 0.85rem; text-align: center; padding: 1rem 0; }
 
+    /* ---- Skeleton ---- */
+    @keyframes skel-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    .skel-item { display:flex; align-items:center; gap:.75rem; padding:.9rem 0; border-bottom:1px dashed rgba(255,255,255,.08); }
+    .skel-item:last-child { border-bottom:none; }
+    .skel-thumb { width:52px; height:52px; border-radius:12px; flex:0 0 auto; }
+    .skel-line { border-radius:4px; background:linear-gradient(90deg,#1a1a1a 0%,#2a2a2a 45%,#1a1a1a 100%); background-size:200% 100%; animation:skel-shimmer 1.6s ease-in-out infinite; }
+    .skel-name { height:14px; width:120px; margin-bottom:6px; }
+    .skel-sub  { height:10px; width:70px; }
+    .skel-price{ height:16px; width:60px; flex:0 0 auto; margin-left:auto; }
+    .skel-dots { flex:1; }
+    .skel-thumb.skel-line { background:linear-gradient(90deg,#1a1a1a 0%,#2a2a2a 45%,#1a1a1a 100%); background-size:200% 100%; animation:skel-shimmer 1.6s ease-in-out infinite; }
+
     footer {
         text-align: center; color: #555; font-size: 0.7rem; font-weight: 700;
         letter-spacing: 0.16em; text-transform: uppercase; margin-top: 3rem;
@@ -229,7 +241,12 @@
                 <span class="line"></span>
                 <span class="count" id="bebidas-count"></span>
             </div>
-            <div id="bebidas-list"></div>
+            <div id="bebidas-list">
+                <div class="skel-item"><div class="skel-thumb skel-line"></div><div class="skel-dots"><div class="skel-line skel-name"></div><div class="skel-line skel-sub"></div></div><div class="skel-line skel-price"></div></div>
+                <div class="skel-item"><div class="skel-thumb skel-line"></div><div class="skel-dots"><div class="skel-line skel-name"></div><div class="skel-line skel-sub"></div></div><div class="skel-line skel-price"></div></div>
+                <div class="skel-item"><div class="skel-thumb skel-line"></div><div class="skel-dots"><div class="skel-line skel-name"></div><div class="skel-line skel-sub"></div></div><div class="skel-line skel-price"></div></div>
+                <div class="skel-item"><div class="skel-thumb skel-line"></div><div class="skel-dots"><div class="skel-line skel-name"></div><div class="skel-line skel-sub"></div></div><div class="skel-line skel-price"></div></div>
+            </div>
 
             <!-- Editor de bebidas (admin) -->
             <div class="admin-only" style="flex-direction:column; margin-top:16px;">
@@ -248,7 +265,13 @@
                 <span class="line"></span>
                 <span class="count" id="productos-count"></span>
             </div>
-            <div id="productos-list"></div>
+            <div id="productos-list">
+                <div class="skel-item"><div class="skel-thumb skel-line"></div><div class="skel-dots"><div class="skel-line skel-name"></div><div class="skel-line skel-sub"></div></div><div class="skel-line skel-price"></div></div>
+                <div class="skel-item"><div class="skel-thumb skel-line"></div><div class="skel-dots"><div class="skel-line skel-name"></div><div class="skel-line skel-sub"></div></div><div class="skel-line skel-price"></div></div>
+                <div class="skel-item"><div class="skel-thumb skel-line"></div><div class="skel-dots"><div class="skel-line skel-name"></div><div class="skel-line skel-sub"></div></div><div class="skel-line skel-price"></div></div>
+                <div class="skel-item"><div class="skel-thumb skel-line"></div><div class="skel-dots"><div class="skel-line skel-name"></div><div class="skel-line skel-sub"></div></div><div class="skel-line skel-price"></div></div>
+                <div class="skel-item"><div class="skel-thumb skel-line"></div><div class="skel-dots"><div class="skel-line skel-name"></div><div class="skel-line skel-sub"></div></div><div class="skel-line skel-price"></div></div>
+            </div>
             <p class="admin-only" style="color:var(--muted); font-size:0.72rem; margin-top:12px;">
                 Los precios de productos se editan desde la Tienda (se sincronizan acá automáticamente).
             </p>
@@ -467,10 +490,7 @@
             document.getElementById('sec-productos').classList.toggle('hidden-sec', tab !== 'productos');
         };
 
-        // Render inicial inmediato (antes de que llegue Firestore)
-        bebidas = DEFAULT_BEBIDAS.map(b => ({ ...b }));
-        renderBebidas();
-        renderProductos();
+        // Skeletons shown in HTML; Firestore callbacks replace them on first fire.
     </script>
 </body>
 </html>
