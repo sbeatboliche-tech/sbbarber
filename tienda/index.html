@@ -198,7 +198,7 @@
         @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
         /* ── CHECKOUT: tema oscuro a juego con el resto del sitio ── */
-        #checkout-modal .modal-box { background:#111; border-color:rgba(255,255,255,.08); }
+        #checkout-modal .modal-box { background:#111; border-color:rgba(255,255,255,.08); color:#e8e8e8; }
         #checkout-modal .modal-header { border-bottom-color:rgba(255,255,255,.08); }
         #checkout-modal .modal-title { color:#888; }
         #checkout-modal .close-btn { border-color:rgba(255,255,255,.12); }
@@ -524,7 +524,7 @@
             </button>
         </div>
 
-        <div id="panel-mp" class="info-block" style="font-size:13px;line-height:1.6;">
+        <div id="panel-mp" class="info-block" style="font-size:13px;line-height:1.6;color:#a3a3a3;">
             Pago seguro con MercadoPago. Tarjeta de débito, crédito o saldo MP.
         </div>
 
@@ -928,7 +928,7 @@ function setShipping(mode) {
     if (mode==='pickup') {
         if (df) df.style.display = 'none';
         txt.style.display = 'inline';
-        txt.innerHTML = '📍 <strong style="color:#111;">Dávila 951, Parque Chacabuco</strong><br><span style="color:#555;padding-left:18px;">Lun–Sáb 12:00–19:30 · <strong style="color:#111;">Gratis</strong></span>';
+        txt.innerHTML = '📍 <strong>Dávila 951, Parque Chacabuco</strong><br><span class="ship-sub">Lun–Sáb 12:00–19:30 · <strong>Gratis</strong></span>';
         correoLabel = '';
     } else {
         txt.style.display = 'none';
@@ -1134,7 +1134,7 @@ function renderSummary() {
     document.getElementById('order-summary').innerHTML =
         cart.map(i=>`<div class="summary-item"><span class="summary-key">${i.qty}× ${i.name} <span style="opacity:.4">${i.variant}</span></span><span style="font-weight:700;flex-shrink:0">$${(i.price*i.qty).toLocaleString('es-AR')}</span></div>`).join('')+
         discRow + shipRow +
-        `<div class="summary-item summary-total"><span class="summary-key" style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#525252">Total</span><span class="summary-val">$${final.toLocaleString('es-AR')}</span></div>`;
+        `<div class="summary-item summary-total"><span class="summary-key" style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#888">Total</span><span class="summary-val">$${final.toLocaleString('es-AR')}</span></div>`;
 }
 
 function setTab(tab) {
@@ -1144,9 +1144,6 @@ function setTab(tab) {
     document.getElementById('panel-mp').style.display=tab==='mp'?'block':'none';
     document.getElementById('panel-transfer').style.display=tab==='transfer'?'block':'none';
     document.getElementById('btn-pay').textContent=tab==='mp'?'Pagar con MercadoPago':'Confirmar pedido';
-    const badge=document.getElementById('transfer-badge');
-    badge.style.background=tab==='transfer'?'#000':'#fff';
-    badge.style.color=tab==='transfer'?'#fff':'#000';
     renderSummary();
 }
 
