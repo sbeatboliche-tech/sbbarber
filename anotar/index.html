@@ -593,9 +593,10 @@
                 <div id="stock-venta-group" class="hidden space-y-4">
                     <div>
                         <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">¿Quién la compra?</label>
-                        <div class="grid grid-cols-2 gap-2 mt-1">
-                            <button type="button" id="comp-cliente" onclick="window.setComprador('cliente')" class="p-3 rounded-xl border font-bold text-sm transition">👤 Cliente</button>
-                            <button type="button" id="comp-barbero" onclick="window.setComprador('barbero')" class="p-3 rounded-xl border font-bold text-sm transition">✂️ Barbero</button>
+                        <div class="grid grid-cols-3 gap-2 mt-1">
+                            <button type="button" id="comp-cliente" onclick="window.setComprador('cliente')" class="p-3 rounded-xl border font-bold text-xs transition">👤 Cliente</button>
+                            <button type="button" id="comp-barbero" onclick="window.setComprador('barbero')" class="p-3 rounded-xl border font-bold text-xs transition">✂️ Barbero</button>
+                            <button type="button" id="comp-feme" onclick="window.setComprador('feme')" class="p-3 rounded-xl border font-bold text-xs transition">🛎️ FEME</button>
                         </div>
                     </div>
                     <!-- Panel Cliente -->
@@ -616,6 +617,13 @@
                     <div id="venta-barbero-panel" class="hidden">
                         <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Barbero — se suma a sus retiros</label>
                         <div id="venta-barbero-list" class="grid grid-cols-2 gap-2 mt-1"></div>
+                    </div>
+                    <!-- Panel FEME -->
+                    <div id="venta-feme-panel" class="hidden">
+                        <div class="flex items-center gap-2 p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
+                            <span class="text-lg">🛎️</span>
+                            <span class="text-xs text-cyan-300">Se suma a los <b>retiros de FEME</b> (recepción · mensual).</span>
+                        </div>
                     </div>
                 </div>
                 <button type="submit" id="btn-submit-stock" class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest no-select">Confirmar</button>
@@ -1736,8 +1744,10 @@ window.setComprador = (t) => {
     ventaComprador = t;
     document.getElementById('comp-cliente').className = t === 'cliente' ? _btnOn : _btnOff;
     document.getElementById('comp-barbero').className = t === 'barbero' ? _btnOn : _btnOff;
+    document.getElementById('comp-feme').className = t === 'feme' ? _btnOn : _btnOff;
     document.getElementById('venta-cliente-panel').classList.toggle('hidden', t !== 'cliente');
     document.getElementById('venta-barbero-panel').classList.toggle('hidden', t !== 'barbero');
+    document.getElementById('venta-feme-panel').classList.toggle('hidden', t !== 'feme');
     if (t === 'barbero') renderVentaBarberos();
 };
 window.setVentaBarbero = (name) => {
@@ -1747,7 +1757,7 @@ window.setVentaBarbero = (name) => {
     });
 };
 function renderVentaBarberos() {
-    const nombres = [...new Set(Object.values(BARBER_EMAIL_MAP)), 'FEME'];
+    const nombres = [...new Set(Object.values(BARBER_EMAIL_MAP))];
     document.getElementById('venta-barbero-list').innerHTML = nombres.map(n =>
         `<button type="button" data-name="${n}" onclick="window.setVentaBarbero('${n.replace(/'/g,"\\'")}')" class="${_btnOff}">${n}</button>`
     ).join('');
@@ -1789,20 +1799,21 @@ document.getElementById('stock-item-form').addEventListener('submit', async e=>{
                 const precio=item?.price||0;
                 const total=precio*qty;
                 const hoy=new Date().toLocaleDateString('en-CA');
-                const esBarbero = ventaComprador==='barbero';
+                const esRetiro = ventaComprador==='barbero' || ventaComprador==='feme';
+                const persona = ventaComprador==='feme' ? 'FEME' : ventaBarbero;
                 const cliente=(document.getElementById('stock-cliente').value||'').trim();
                 await addDoc(collection(db,PATH_VENTAS),{
                     producto:currentStockAction.itemName, tipo:'bebida',
                     precio, cantidad:qty, total,
                     barbero:'Admin', userEmail:currentUser.email,
-                    comprador: esBarbero ? ventaBarbero : (cliente||null),
-                    compradorTipo: esBarbero ? 'barbero' : 'cliente',
-                    metodoPago: esBarbero ? null : ventaMetodoPago,
+                    comprador: esRetiro ? persona : (cliente||null),
+                    compradorTipo: ventaComprador,
+                    metodoPago: esRetiro ? null : ventaMetodoPago,
                     fecha:hoy, creadoEn:serverTimestamp()
                 });
-                if(esBarbero){
+                if(esRetiro){
                     await addDoc(collection(db,PATH_RETIROS),{
-                        barbero:ventaBarbero, userEmail:currentUser.email, monto:total,
+                        barbero:persona, userEmail:currentUser.email, monto:total,
                         fecha:hoy, estado:'confirmado',
                         descripcion:`🥤 ${currentStockAction.itemName}${qty>1?' ×'+qty:''}`,
                         creadoEn:serverTimestamp()
