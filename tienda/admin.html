@@ -582,7 +582,21 @@ function editProducto(id) {
 }
 
 function deleteProducto(id) {
-    showConfirm('¿Eliminar este producto? Si es un producto de la web, vuelve a mostrarse con sus datos originales.', function() {
+    var base = STATIC_PRODUCTS.find(function(s) { return s.id === id; });
+    if (base) {
+        // Un producto "de la web" está fijo en el código: borrar el override lo hace
+        // reaparecer con sus datos originales. Para que quede realmente eliminado,
+        // lo dejamos oculto permanentemente en vez de borrar el documento.
+        showConfirm('¿Eliminar este producto? Al ser un producto de la web va a quedar oculto para siempre (no puede borrarse del código).', function() {
+            var override = allProductos.find(function(p) { return p.id === id; });
+            var data = Object.assign({}, base, override || {}, { hidden: true, updatedAt: new Date() });
+            db.collection(PATH_PRODUCTOS).doc(id).set(data, { merge: true })
+                .then(function() { showToast('Eliminado', true); })
+                .catch(function(e) { console.error('deleteProducto(web) error:', e); showToast('Error al eliminar (' + (e.code||e.message) + ')', false, 4000); });
+        });
+        return;
+    }
+    showConfirm('¿Eliminar este producto?', function() {
         db.collection(PATH_PRODUCTOS).doc(id).delete()
             .then(function() { showToast('Eliminado', true); })
             .catch(function(e) { console.error('deleteProducto error:', e); showToast('Error al eliminar (' + (e.code||e.message) + ')', false, 4000); });
@@ -616,7 +630,7 @@ function prodRow(p, isCustom, hidden) {
         '<div class="prod-actions">' +
             '<button class="btn-edit" onclick="editProducto(\'' + p.id + '\')" title="Editar"><i class="fas fa-pen"></i></button>' +
             '<button class="btn-edit" onclick="toggleHideProducto(\'' + p.id + '\')" title="' + (hidden?'Mostrar':'Ocultar') + '"><i class="fas fa-' + (hidden?'eye':'eye-slash') + '"></i></button>' +
-            (isCustom ? '<button class="btn-del" onclick="deleteProducto(\'' + p.id + '\')" title="Eliminar"><i class="fas fa-trash"></i></button>' : '') +
+            '<button class="btn-del" onclick="deleteProducto(\'' + p.id + '\')" title="Eliminar"><i class="fas fa-trash"></i></button>' +
         '</div></div>';
 }
 
