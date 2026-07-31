@@ -35,7 +35,7 @@ export default async function handler(req, res) {
         await transporter.sendMail({
             from: '"SB Barber Tienda" <sbbaarber@gmail.com>',
             to: 'sbbaarber@gmail.com',
-            subject: `🛒 ¡Vendiste un producto! — ${orderId}`,
+            subject: `🛒 ¡Vendiste un producto! — ${orderLabel(orderId)}`,
             html: sellerHtml(buyerName, buyerEmail, itemsSummary, total, orderId, shipping)
         });
 
@@ -52,52 +52,74 @@ export default async function handler(req, res) {
     }
 }
 
+function orderLabel(orderId) {
+    return orderId?.startsWith('SBB-') ? '#' + orderId.slice(4) : orderId;
+}
+
+function emailShell(bodyHtml, { eyebrow = 'TIENDA', title, subtitle } = {}) {
+    return `<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;background:#f4f4f5;margin:0;padding:24px;">
+<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);">
+  <div style="background:#0a0a0a;padding:30px 32px;text-align:center;">
+    <p style="color:#4ade80;font-size:11px;font-weight:800;letter-spacing:.25em;text-transform:uppercase;margin:0 0 8px;">SB BARBER · ${eyebrow}</p>
+    <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">${title}</h1>
+    ${subtitle ? `<p style="color:#a3a3a3;margin:8px 0 0;font-size:14px;">${subtitle}</p>` : ''}
+  </div>
+  <div style="padding:28px 32px;">
+    ${bodyHtml}
+  </div>
+</div></body></html>`;
+}
+
 function sellerHtml(name, email, items, total, orderId, shipping) {
     const shipRow = shipping.mode === 'delivery'
-        ? `<tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Entrega</td><td style="padding:8px 0;color:#f1f5f9;">Envío — ${shipping.address}</td></tr>`
-        : `<tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Entrega</td><td style="padding:8px 0;color:#f1f5f9;">Retiro en local</td></tr>`;
-    return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#080b12;margin:0;padding:24px;">
-<div style="max-width:480px;margin:0 auto;background:#0d1320;border-radius:16px;padding:32px;border:1px solid rgba(255,255,255,0.08);">
-  <p style="color:#fff;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin:0 0 8px;">SB Barber · Tienda</p>
-  <h1 style="color:#fff;font-size:22px;margin:0 0 24px;">🛒 ¡Nueva venta!</h1>
-  <table style="width:100%;border-collapse:collapse;">
-    <tr><td style="padding:8px 0;color:#64748b;font-size:13px;width:40%;">Cliente</td><td style="padding:8px 0;color:#f1f5f9;font-weight:600;">${name}</td></tr>
-    <tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Email</td><td style="padding:8px 0;color:#f1f5f9;">${email || '—'}</td></tr>
-    <tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Productos</td><td style="padding:8px 0;color:#f1f5f9;">${items}</td></tr>
-    ${shipRow}
-    <tr style="border-top:1px solid rgba(255,255,255,0.06);">
-      <td style="padding:14px 0;color:#fff;font-size:18px;font-weight:800;">Total</td>
-      <td style="padding:14px 0;color:#fff;font-size:18px;font-weight:800;">$${total.toLocaleString('es-AR')}</td>
-    </tr>
-  </table>
-  <p style="color:#334155;font-size:11px;margin-top:16px;">Pago ID: ${orderId}</p>
-</div></body></html>`;
+        ? `<tr><td style="padding:9px 0;color:#71717a;font-size:12px;">Entrega</td><td style="padding:9px 0;color:#18181b;text-align:right;">Envío — ${shipping.address}</td></tr>`
+        : `<tr><td style="padding:9px 0;color:#71717a;font-size:12px;">Entrega</td><td style="padding:9px 0;color:#18181b;text-align:right;">Retiro en local</td></tr>`;
+    const body = `
+    <div style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);border-radius:12px;padding:14px 16px;margin-bottom:20px;text-align:center;">
+      <p style="color:#16a34a;font-size:13px;font-weight:800;margin:0;">💰 Pago confirmado por MercadoPago</p>
+    </div>
+    <table style="width:100%;border-collapse:collapse;">
+      <tr><td style="padding:9px 0;color:#71717a;font-size:12px;width:38%;">Cliente</td><td style="padding:9px 0;color:#18181b;font-weight:700;text-align:right;">${name}</td></tr>
+      <tr style="border-top:1px solid #f0f0f0;"><td style="padding:9px 0;color:#71717a;font-size:12px;">Email</td><td style="padding:9px 0;color:#18181b;text-align:right;">${email || '—'}</td></tr>
+      <tr style="border-top:1px solid #f0f0f0;"><td style="padding:9px 0;color:#71717a;font-size:12px;">Productos</td><td style="padding:9px 0;color:#18181b;text-align:right;">${items}</td></tr>
+      <tr style="border-top:1px solid #f0f0f0;">${shipRow}</tr>
+    </table>
+    <div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid #18181b;padding-top:16px;margin-top:16px;">
+      <span style="color:#18181b;font-weight:800;">Total</span>
+      <span style="color:#16a34a;font-size:20px;font-weight:900;">$${total.toLocaleString('es-AR')}</span>
+    </div>
+    <p style="text-align:center;color:#a1a1aa;font-size:11px;margin:20px 0 0;">Pedido ${orderLabel(orderId)}</p>`;
+    return emailShell(body, { eyebrow: 'NUEVA VENTA', title: '🛒 ¡Vendiste un producto!', subtitle: 'Pagado con MercadoPago' });
 }
 
 function buyerHtml(name, items, total, orderId, shipping) {
     const shipBlock = shipping.mode === 'delivery'
-        ? `<div style="background:#eff6ff;border-radius:12px;padding:16px 20px;margin-bottom:20px;border:1px solid #bfdbfe;"><p style="color:#1d4ed8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;">Envío a domicilio</p><p style="color:#1e40af;font-size:14px;margin:0;">${shipping.address}</p></div>`
-        : `<div style="background:#f0fdf4;border-radius:12px;padding:16px 20px;margin-bottom:20px;border:1px solid #bbf7d0;"><p style="color:#166534;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;">Retiro en local</p><p style="color:#15803d;font-size:13px;margin:0;">Dávila 951, Parque Chacabuco<br>Lun–Sáb 12:00–19:30</p></div>`;
-    return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f1f5f9;margin:0;padding:24px;">
-<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.08);">
-  <div style="text-align:center;margin-bottom:28px;">
-    <div style="width:64px;height:64px;background:#d1fae5;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px;">✅</div>
-    <h1 style="color:#0f172a;font-size:22px;margin:0 0 6px;">¡Gracias por tu compra!</h1>
-    <p style="color:#64748b;margin:0;">Hola ${name}, tu pago fue confirmado.</p>
-  </div>
-  <div style="background:#f8fafc;border-radius:12px;padding:20px;margin-bottom:16px;border:1px solid #e2e8f0;">
-    <p style="color:#475569;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px;">Tu pedido</p>
-    <p style="color:#1e293b;font-size:14px;margin:0;">${items}</p>
-  </div>
-  ${shipBlock}
-  <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px 20px;margin-bottom:20px;text-align:center;">
-    <p style="color:#166534;font-size:14px;font-weight:800;margin:0;">${shipping.mode==='delivery'?'🚚 En breve estaremos despachando tu producto':'🏬 Ya podés pasar a retirarlo por el local'}</p>
-    ${shipping.mode==='delivery'?'<p style="color:#15803d;font-size:12px;margin:6px 0 0;">Te avisamos cuando salga el envío.</p>':''}
-  </div>
-  <div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid #e2e8f0;padding-top:16px;margin-bottom:24px;">
-    <span style="color:#0f172a;font-weight:700;">Total pagado</span>
-    <span style="color:#0f172a;font-size:20px;font-weight:900;">$${total.toLocaleString('es-AR')}</span>
-  </div>
-  <p style="text-align:center;color:#94a3b8;font-size:11px;margin:0;">SB Barber · Dávila 951, CABA<br>Orden: ${orderId}</p>
-</div></body></html>`;
+        ? `<div style="background:#f8f8f8;border-radius:12px;padding:16px 20px;margin-bottom:18px;border:1px solid #ececec;">
+            <p style="color:#52525b;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;">📦 Envío a domicilio</p>
+            <p style="color:#18181b;font-size:13px;margin:0;">${shipping.address}</p>
+        </div>`
+        : `<div style="background:#f8f8f8;border-radius:12px;padding:16px 20px;margin-bottom:18px;border:1px solid #ececec;">
+            <p style="color:#52525b;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;">🏬 Retiro en local</p>
+            <p style="color:#18181b;font-size:13px;margin:0;">Dávila 951, Parque Chacabuco<br>Lun–Sáb 12:00–19:30</p>
+        </div>`;
+    const body = `
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="width:56px;height:56px;background:rgba(74,222,128,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px;">✅</div>
+      <p style="color:#18181b;margin:0;font-size:15px;">Hola ${name}, tu pago fue confirmado.</p>
+    </div>
+    <div style="background:#f8f8f8;border-radius:12px;padding:18px 20px;margin-bottom:16px;border:1px solid #ececec;">
+      <p style="color:#52525b;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px;">Tu pedido</p>
+      <p style="color:#18181b;font-size:14px;margin:0;">${items}</p>
+    </div>
+    ${shipBlock}
+    <div style="background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);border-radius:12px;padding:16px 20px;margin-bottom:20px;text-align:center;">
+      <p style="color:#16a34a;font-size:14px;font-weight:800;margin:0;">${shipping.mode === 'delivery' ? '🚚 En breve estaremos despachando tu producto' : '🏬 Ya podés pasar a retirarlo por el local'}</p>
+      ${shipping.mode === 'delivery' ? '<p style="color:#16a34a;font-size:12px;margin:6px 0 0;opacity:.85;">Te avisamos cuando salga el envío.</p>' : ''}
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid #18181b;padding-top:16px;margin-bottom:22px;">
+      <span style="color:#18181b;font-weight:800;">Total pagado</span>
+      <span style="color:#18181b;font-size:20px;font-weight:900;">$${total.toLocaleString('es-AR')}</span>
+    </div>
+    <p style="text-align:center;color:#a1a1aa;font-size:11px;margin:0;">SB Barber · Dávila 951, CABA<br>Pedido ${orderLabel(orderId)}</p>`;
+    return emailShell(body, { title: '¡Gracias por tu compra! 🖤' });
 }

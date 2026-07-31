@@ -85,7 +85,7 @@
     const views = { success:'view-success', transfer:'view-transfer', pending:'view-pending' };
     document.getElementById(views[p.get('status')] || 'view-success').style.display = 'block';
     const ord = p.get('order');
-    if (ord) document.getElementById('order-id').textContent = ord;
+    if (ord) document.getElementById('order-id').textContent = 'Pedido ' + (ord.startsWith('SBB-') ? '#' + ord.slice(4) : ord);
 
     const isPickup = !p.get('shipping') || p.get('shipping') === 'pickup';
     const shipHtml = isPickup
