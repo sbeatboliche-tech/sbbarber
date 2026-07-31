@@ -383,14 +383,21 @@ function switchTab(tab) {
 // ---- LISTENERS ----
 function listenProductos() {
     db.collection(PATH_PRODUCTOS).onSnapshot(function(snap) {
-        allProductos = snap.docs.map(function(d) { return Object.assign({}, d.data(), { id: d.id }); }).filter(function(p) { return !p.hidden; });
+        // Incluye ocultos: el admin necesita verlos para poder volver a mostrarlos.
+        allProductos = snap.docs.map(function(d) { return Object.assign({}, d.data(), { id: d.id }); });
         renderProdList();
+    }, function(err) {
+        console.error('listenProductos error:', err);
+        showToast('No se pudieron cargar los productos (' + (err.code||err.message) + ')', false, 4000);
     });
 }
 function listenCombos() {
     db.collection(PATH_COMBOS).onSnapshot(function(snap) {
         allCombos = snap.docs.map(function(d) { return Object.assign({}, d.data(), { id: d.id }); });
         renderComboList();
+    }, function(err) {
+        console.error('listenCombos error:', err);
+        showToast('No se pudieron cargar los combos (' + (err.code||err.message) + ')', false, 4000);
     });
 }
 
@@ -518,7 +525,10 @@ function cancelEditProducto() {
 }
 
 function editProducto(id) {
-    var p = allProductos.find(function(x) { return x.id === id; }) || STATIC_PRODUCTS.find(function(x) { return x.id === id; }); if (!p) return;
+    var override = allProductos.find(function(x) { return x.id === id; });
+    var base = STATIC_PRODUCTS.find(function(x) { return x.id === id; });
+    var p = base ? Object.assign({}, base, override || {}) : override;
+    if (!p) return;
     editingProductoId = id;
     document.getElementById('p-name').value    = p.name || '';
     document.getElementById('p-variant').value = p.variant || '';
@@ -539,44 +549,61 @@ function editProducto(id) {
 }
 
 function deleteProducto(id) {
-    if (!confirm('¿Eliminar este producto?')) return;
+    if (!confirm('¿Eliminar este producto? Si es un producto de la web, vuelve a mostrarse con sus datos originales.')) return;
     db.collection(PATH_PRODUCTOS).doc(id).delete()
         .then(function() { showToast('Eliminado', true); })
-        .catch(function() { showToast('Error al eliminar', false); });
+        .catch(function(e) { console.error('deleteProducto error:', e); showToast('Error al eliminar (' + (e.code||e.message) + ')', false, 4000); });
 }
-function hideStaticProducto(id) {
-    if (!confirm('¿Ocultar este producto de la tienda?')) return;
-    db.collection(PATH_PRODUCTOS).doc(id).set({ hidden: true }, { merge: true })
-        .then(function() { showToast('Producto ocultado', true); })
-        .catch(function() { showToast('Error al ocultar', false); });
+function toggleHideProducto(id) {
+    var override = allProductos.find(function(p) { return p.id === id; });
+    var willHide = !(override && override.hidden);
+    var base = STATIC_PRODUCTS.find(function(s) { return s.id === id; });
+    var data;
+    if (override) {
+        data = { hidden: willHide };
+    } else if (base) {
+        // Primera vez que se oculta un producto de la web: clonamos sus datos para no perderlos.
+        data = Object.assign({}, base, { hidden: willHide, updatedAt: new Date() });
+    } else {
+        return;
+    }
+    db.collection(PATH_PRODUCTOS).doc(id).set(data, { merge: true })
+        .then(function() { showToast(willHide ? 'Producto ocultado' : 'Producto visible', true); })
+        .catch(function(e) { console.error('toggleHideProducto error:', e); showToast('Error al cambiar visibilidad (' + (e.code||e.message) + ')', false, 4000); });
 }
 
-function prodRow(p, isCustom) {
-    return '<div class="prod-row">' +
+function prodRow(p, isCustom, hidden) {
+    return '<div class="prod-row"' + (hidden ? ' style="opacity:.5;"' : '') + '>' +
         (p.image ? '<img class="prod-thumb" src="' + p.image + '" alt="" onerror="this.style.display=\'none\'">' : '<div class="prod-thumb-placeholder">📦</div>') +
         '<div class="prod-info">' +
-            '<div class="prod-name">' + p.name + (p.tag ? '<span class="prod-tag-badge">' + p.tag + '</span>' : '') + (!isCustom ? '<span class="prod-tag-badge" style="background:rgba(99,102,241,.15);color:#818cf8;">WEB</span>' : '') + '</div>' +
+            '<div class="prod-name">' + p.name + (p.tag ? '<span class="prod-tag-badge">' + p.tag + '</span>' : '') + (!isCustom ? '<span class="prod-tag-badge" style="background:rgba(99,102,241,.15);color:#818cf8;">WEB</span>' : '') + (hidden ? '<span class="prod-tag-badge" style="background:rgba(248,113,113,.15);color:#f87171;">OCULTO</span>' : '') + '</div>' +
             '<div class="prod-meta">$' + (p.price||0).toLocaleString('es-AR') + (p.variant?' · '+p.variant:'') + (p.videoUrl?' · 🎥':'') + '</div>' +
         '</div>' +
         '<div class="prod-actions">' +
-            '<button class="btn-edit" onclick="editProducto(\'' + p.id + '\')"><i class="fas fa-pen"></i></button>' +
-            '<button class="btn-del" onclick="' + (isCustom ? 'deleteProducto' : 'hideStaticProducto') + '(\'' + p.id + '\')"><i class="fas fa-trash"></i></button>' +
+            '<button class="btn-edit" onclick="editProducto(\'' + p.id + '\')" title="Editar"><i class="fas fa-pen"></i></button>' +
+            '<button class="btn-edit" onclick="toggleHideProducto(\'' + p.id + '\')" title="' + (hidden?'Mostrar':'Ocultar') + '"><i class="fas fa-' + (hidden?'eye':'eye-slash') + '"></i></button>' +
+            (isCustom ? '<button class="btn-del" onclick="deleteProducto(\'' + p.id + '\')" title="Eliminar"><i class="fas fa-trash"></i></button>' : '') +
         '</div></div>';
 }
 
 function renderProdList() {
     var el = document.getElementById('prod-list');
-    var customIds = allProductos.map(function(p) { return p.id; });
-    var staticToShow = STATIC_PRODUCTS.filter(function(p) { return customIds.indexOf(p.id) === -1; });
+    var customMap = {};
+    allProductos.forEach(function(p) { customMap[p.id] = p; });
+    var pureCustom = allProductos.filter(function(p) { return !STATIC_PRODUCTS.some(function(s) { return s.id === p.id; }); });
 
     var html = '';
-    if (allProductos.length) {
+    if (pureCustom.length) {
         html += '<div style="font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#404040;margin-bottom:8px;">Personalizados</div>';
-        html += allProductos.map(function(p) { return prodRow(p, true); }).join('');
+        html += pureCustom.map(function(p) { return prodRow(p, true, !!p.hidden); }).join('');
     }
-    if (staticToShow.length) {
-        html += '<div style="font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#404040;margin:' + (allProductos.length?'16px':'0') + ' 0 8px;">Productos de la web · Clic en editar para modificar</div>';
-        html += staticToShow.map(function(p) { return prodRow(p, false); }).join('');
+    if (STATIC_PRODUCTS.length) {
+        html += '<div style="font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#404040;margin:' + (pureCustom.length?'16px':'0') + ' 0 8px;">Productos de la web · Clic en editar para modificar</div>';
+        html += STATIC_PRODUCTS.map(function(s) {
+            var override = customMap[s.id];
+            var merged = Object.assign({}, s, override || {});
+            return prodRow(merged, false, !!(override && override.hidden));
+        }).join('');
     }
     if (!html) {
         html = '<div class="empty-state"><i class="fas fa-box-open"></i><p>No hay productos.</p></div>';
@@ -721,7 +748,14 @@ function deleteCombo(id) {
     if (!confirm('¿Eliminar este combo?')) return;
     db.collection(PATH_COMBOS).doc(id).delete()
         .then(function() { showToast('Eliminado', true); })
-        .catch(function() { showToast('Error al eliminar', false); });
+        .catch(function(e) { console.error('deleteCombo error:', e); showToast('Error al eliminar (' + (e.code||e.message) + ')', false, 4000); });
+}
+function toggleHideCombo(id) {
+    var k = allCombos.find(function(x) { return x.id === id; }); if (!k) return;
+    var willHide = !k.hidden;
+    db.collection(PATH_COMBOS).doc(id).set({ hidden: willHide }, { merge: true })
+        .then(function() { showToast(willHide ? 'Combo ocultado' : 'Combo visible', true); })
+        .catch(function(e) { console.error('toggleHideCombo error:', e); showToast('Error al cambiar visibilidad (' + (e.code||e.message) + ')', false, 4000); });
 }
 
 function renderComboList() {
@@ -731,15 +765,17 @@ function renderComboList() {
         return;
     }
     el.innerHTML = allCombos.map(function(k) {
-        return '<div class="prod-row">' +
+        var hidden = !!k.hidden;
+        return '<div class="prod-row"' + (hidden ? ' style="opacity:.5;"' : '') + '>' +
             (k.image ? '<img class="prod-thumb" src="' + k.image + '" alt="" onerror="this.style.display=\'none\'">' : '<div class="prod-thumb-placeholder">🎁</div>') +
             '<div class="prod-info">' +
-                '<div class="prod-name">' + k.name + '<span class="prod-tag-badge">COMBO</span></div>' +
+                '<div class="prod-name">' + k.name + '<span class="prod-tag-badge">COMBO</span>' + (hidden ? '<span class="prod-tag-badge" style="background:rgba(248,113,113,.15);color:#f87171;">OCULTO</span>' : '') + '</div>' +
                 '<div class="prod-meta">' + (k.price!=null?'$'+k.price.toLocaleString('es-AR'):'Consultá') + (k.freeShipping?' · ENVÍO GRATIS':'') + (k.items&&k.items.length?' · '+k.items.length+' items':'') + '</div>' +
             '</div>' +
             '<div class="prod-actions">' +
-                '<button class="btn-edit" onclick="editCombo(\'' + k.id + '\')"><i class="fas fa-pen"></i></button>' +
-                '<button class="btn-del" onclick="deleteCombo(\'' + k.id + '\')"><i class="fas fa-trash"></i></button>' +
+                '<button class="btn-edit" onclick="editCombo(\'' + k.id + '\')" title="Editar"><i class="fas fa-pen"></i></button>' +
+                '<button class="btn-edit" onclick="toggleHideCombo(\'' + k.id + '\')" title="' + (hidden?'Mostrar':'Ocultar') + '"><i class="fas fa-' + (hidden?'eye':'eye-slash') + '"></i></button>' +
+                '<button class="btn-del" onclick="deleteCombo(\'' + k.id + '\')" title="Eliminar"><i class="fas fa-trash"></i></button>' +
             '</div></div>';
     }).join('');
 }

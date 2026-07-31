@@ -604,7 +604,17 @@ const KIT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke
 // Combos: se administran desde el panel admin (colección tienda_kits_custom).
 // No hay combos fijos en el código.
 const KITS = [];
-let _extraProductos = [], _extraKits = [];
+// ── Caché local: pinta al instante con lo último visto, mientras Firestore actualiza atrás ──
+function _cacheGet(key, fallback) {
+    try { const v = localStorage.getItem('sb_cache_'+key); return v ? JSON.parse(v) : fallback; }
+    catch(e) { return fallback; }
+}
+function _cacheSet(key, value) {
+    try { localStorage.setItem('sb_cache_'+key, JSON.stringify(value)); } catch(e) {}
+}
+let _extraProductos = _cacheGet('extraProductos', []), _extraKits = _cacheGet('extraKits', []);
+let productConfigCache = _cacheGet('productConfig', {});
+if (Object.keys(productConfigCache).length) productConfig = productConfigCache;
 let _fsConfigReady = false, _fsCustomReady = false;
 let _prodFirst = true, _kitFirst = true;   // animar solo la 1ra vez (evita parpadeo en updates)
 function _maybeRenderProducts() {
@@ -616,7 +626,7 @@ function getAllProducts(){
     const customIds = new Set(_extraProductos.map(p=>p.id));
     return [...PRODUCTS.filter(p=>!customIds.has(p.id)), ..._extraProductos.filter(p=>!p.hidden)];
 }
-function getAllKits(){ return [...KITS, ..._extraKits]; }
+function getAllKits(){ return [...KITS, ..._extraKits.filter(k=>!k.hidden)]; }
 function render(){ renderProducts(); renderKits(); }
 function prodById(id){ return getAllProducts().find(p=>p.id===id); }
 function prodPriceLive(id){ const p=prodById(id); const cfg=productConfig[id]||{}; return cfg.price!=null?cfg.price:(p?p.price:0); }
@@ -1265,7 +1275,7 @@ initReveal();
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, onSnapshot, getDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -1285,31 +1295,37 @@ const COURSES = [
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-enableIndexedDbPersistence(db).catch(()=>{});
 let adminUser = null;
 let adminTab = 'productos';
+
+function _fsListenError(label) {
+    return err => console.error(`[tienda] Error escuchando ${label}:`, err.code || err.message || err);
+}
 
 onSnapshot(collection(db, 'tienda_productos'), snap => {
     productConfig = {};
     snap.forEach(d => { productConfig[d.id] = d.data(); });
+    _cacheSet('productConfig', productConfig);
     _fsConfigReady = true;
     _maybeRenderProducts();
-});
+}, _fsListenError('tienda_productos'));
 
 onSnapshot(collection(db, 'tienda_productos_custom'), snap => {
     _extraProductos = snap.docs.map(d => ({ ...d.data(), id:d.id }));
+    _cacheSet('extraProductos', _extraProductos);
     _fsCustomReady = true;
     _maybeRenderProducts();
-});
+}, _fsListenError('tienda_productos_custom'));
 onSnapshot(collection(db, 'tienda_kits_custom'), snap => {
     _extraKits = snap.docs.map(d => ({ ...d.data(), id:d.id, custom:true }));
+    _cacheSet('extraKits', _extraKits);
     renderKits();
-});
+}, _fsListenError('tienda_kits_custom'));
 
 onSnapshot(collection(db, 'tienda_cursos'), snap => {
     courseConfig = {};
     snap.forEach(d => { courseConfig[d.id] = d.data(); });
-});
+}, _fsListenError('tienda_cursos'));
 
 onSnapshot(doc(db, 'tienda_config', 'general'), d => {
     if (d.exists()) {
