@@ -100,6 +100,21 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
 .empty-state i{font-size:32px;margin-bottom:12px;display:block;}
 .empty-state p{font-size:13px;}
 
+/* VISITAS */
+.visit-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.visit-stat{background:#111;border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px 10px;text-align:center;}
+.visit-stat-num{font-size:22px;font-weight:900;color:#fff;letter-spacing:-.02em;}
+.visit-stat-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#525252;margin-top:4px;}
+.visit-row{display:flex;align-items:center;gap:12px;background:#111;border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px 16px;}
+.visit-ip{font-family:monospace;font-size:12px;color:#e5e5e5;font-weight:700;}
+.visit-loc{font-size:11px;color:#737373;margin-top:2px;}
+.visit-meta{flex:1;min-width:0;}
+.visit-badge{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:999px;white-space:nowrap;flex-shrink:0;}
+.visit-badge.completed{background:rgba(74,222,128,.15);color:#4ade80;}
+.visit-badge.checkout{background:rgba(251,191,36,.15);color:#fbbf24;}
+.visit-badge.viewing{background:rgba(255,255,255,.06);color:#737373;}
+.visit-count{font-size:11px;color:#404040;text-align:right;flex-shrink:0;}
+
 /* STATUS */
 .status-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a1a;border:1px solid rgba(255,255,255,.12);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;transition:transform .3s;z-index:9999;white-space:nowrap;}
 .status-toast.show{transform:translateX(-50%) translateY(0);}
@@ -148,6 +163,7 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
         <div class="tabs">
             <button class="tab-btn active" id="tab-productos" onclick="switchTab('productos')">Productos</button>
             <button class="tab-btn" id="tab-combos" onclick="switchTab('combos')">Combos</button>
+            <button class="tab-btn" id="tab-visitas" onclick="switchTab('visitas')">Visitas</button>
         </div>
 
         <!-- TAB PRODUCTOS -->
@@ -296,6 +312,19 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                 <div class="empty-state"><i class="fas fa-layer-group"></i><p>Cargando...</p></div>
             </div>
         </div>
+
+        <!-- TAB VISITAS -->
+        <div id="panel-visitas" style="display:none;">
+            <div class="section-title">Visitas a la tienda</div>
+            <div class="visit-stats">
+                <div class="visit-stat"><div class="visit-stat-num" id="vstat-total">—</div><div class="visit-stat-label">IPs únicas</div></div>
+                <div class="visit-stat"><div class="visit-stat-num" id="vstat-checkout">—</div><div class="visit-stat-label">Llegaron al checkout</div></div>
+                <div class="visit-stat"><div class="visit-stat-num" id="vstat-completed">—</div><div class="visit-stat-label">Completaron pedido</div></div>
+            </div>
+            <div id="visit-list" class="prod-list" style="margin-top:16px;">
+                <div class="empty-state"><i class="fas fa-globe"></i><p>Cargando...</p></div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -345,7 +374,7 @@ var STATIC_PRODUCTS = [
     { id:'desinfectante-everest',     name:'Desinfectante Aerosol',             variant:'Everest 5 en 1',   price:10200, tag:null,          image:'https://i.imgur.com/c7oqrOb.jpeg',  description:'Desinfectante profesional de uso múltiple. Elimina bacterias, virus y hongos en instrumental.' }
 ];
 
-let allProductos = [], allCombos = [];
+let allProductos = [], allCombos = [], allVisitas = [];
 let freeShipping = false;
 let editingProductoId = null, editingComboId = null;
 let kitItemRows = [];
@@ -373,6 +402,7 @@ auth.onAuthStateChanged(function(user) {
             });
         listenProductos();
         listenCombos();
+        listenVisitas();
     } else {
         document.getElementById('login-view').style.display = 'flex';
         document.getElementById('dashboard-view').style.display = 'none';
@@ -404,8 +434,10 @@ function doLogout() { auth.signOut(); }
 function switchTab(tab) {
     document.getElementById('panel-productos').style.display = tab === 'productos' ? 'block' : 'none';
     document.getElementById('panel-combos').style.display   = tab === 'combos'    ? 'block' : 'none';
+    document.getElementById('panel-visitas').style.display  = tab === 'visitas'   ? 'block' : 'none';
     document.getElementById('tab-productos').classList.toggle('active', tab === 'productos');
     document.getElementById('tab-combos').classList.toggle('active', tab === 'combos');
+    document.getElementById('tab-visitas').classList.toggle('active', tab === 'visitas');
 }
 
 // ---- LISTENERS ----
@@ -427,6 +459,54 @@ function listenCombos() {
         console.error('listenCombos error:', err);
         showToast('No se pudieron cargar los combos (' + (err.code||err.message) + ')', false, 4000);
     });
+}
+function listenVisitas() {
+    db.collection('tienda_visitas').orderBy('lastVisit', 'desc').limit(300).onSnapshot(function(snap) {
+        allVisitas = snap.docs.map(function(d) { return Object.assign({}, d.data(), { id: d.id }); });
+        renderVisitList();
+    }, function(err) {
+        console.error('listenVisitas error:', err);
+        showToast('No se pudieron cargar las visitas (' + (err.code||err.message) + ')', false, 4000);
+    });
+}
+
+function timeAgo(date) {
+    if (!date) return '';
+    var diff = Math.max(0, (Date.now() - date.getTime()) / 1000);
+    if (diff < 60) return 'hace instantes';
+    if (diff < 3600) return 'hace ' + Math.floor(diff / 60) + ' min';
+    if (diff < 86400) return 'hace ' + Math.floor(diff / 3600) + ' h';
+    return 'hace ' + Math.floor(diff / 86400) + ' d';
+}
+
+function renderVisitList() {
+    var el = document.getElementById('visit-list');
+    var total = allVisitas.length;
+    var checkoutCount = allVisitas.filter(function(v) { return v.reachedCheckout; }).length;
+    var completedCount = allVisitas.filter(function(v) { return v.completedOrder; }).length;
+    document.getElementById('vstat-total').textContent = total;
+    document.getElementById('vstat-checkout').textContent = checkoutCount;
+    document.getElementById('vstat-completed').textContent = completedCount;
+
+    if (!total) {
+        el.innerHTML = '<div class="empty-state"><i class="fas fa-globe"></i><p>Todavía no hay visitas registradas.</p></div>';
+        return;
+    }
+    el.innerHTML = allVisitas.map(function(v) {
+        var badge = v.completedOrder
+            ? '<span class="visit-badge completed">Completó pedido</span>'
+            : (v.reachedCheckout ? '<span class="visit-badge checkout">Llegó al checkout</span>' : '<span class="visit-badge viewing">Solo miró</span>');
+        var lastVisit = (v.lastVisit && v.lastVisit.toDate) ? timeAgo(v.lastVisit.toDate()) : '';
+        var loc = [v.provincia, v.pais].filter(Boolean).join(' · ');
+        return '<div class="visit-row">' +
+            '<div class="visit-meta">' +
+                '<div class="visit-ip">' + (v.ip || v.id) + '</div>' +
+                '<div class="visit-loc">' + (loc || 'Ubicación desconocida') + (v.ciudad ? ' · ' + v.ciudad : '') + '</div>' +
+            '</div>' +
+            badge +
+            '<div class="visit-count">' + (v.visits || 1) + ' visita' + ((v.visits || 1) !== 1 ? 's' : '') + '<br>' + lastVisit + '</div>' +
+        '</div>';
+    }).join('');
 }
 
 // ---- IMAGEN: comprime/redimensiona a base64 para entrar SIEMPRE bajo el límite de Firestore (1MB/doc) ----

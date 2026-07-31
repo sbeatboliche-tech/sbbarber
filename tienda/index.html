@@ -435,7 +435,6 @@
 <!-- BENEFICIOS / CONFIANZA -->
 <div class="benefits reveal" style="transition-delay:.22s">
     <div class="benefit"><svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><span>Envío a todo el país</span></div>
-    <div class="benefit"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg><span>Pago 100% seguro</span></div>
     <div class="benefit"><svg viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/></svg><span>Retiro gratis en el local</span></div>
     <div class="benefit"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Productos originales</span></div>
 </div>
@@ -1148,6 +1147,7 @@ function openCheckout() {
     renderSummary();
     document.getElementById('checkout-modal').classList.add('show');
     document.body.style.overflow='hidden';
+    if (typeof window._markReachedCheckout === 'function') window._markReachedCheckout();
 }
 
 function closeCheckout() {
@@ -1207,7 +1207,8 @@ async function submitCheckout() {
     btn.disabled=true;
     btn.innerHTML='<div class="spinner"></div>';
 
-    const orderId='SBB-'+Date.now();
+    const orderNum = typeof window.getNextOrderNumber === 'function' ? await window.getNextOrderNumber() : Date.now();
+    const orderId='SBB-'+orderNum;
     const buyer={name,email};
     const postalCode = shippingMode==='delivery' ? (document.getElementById('buyer-postal').value.trim()||null) : null;
     const shipping={mode:shippingMode,address,cost:effectiveShipping(),carrier:shippingMode==='delivery'?carrierId:null,carrierLabel:shippingMode==='delivery'?(qualifiesFreeShip()?'Envío gratis':carrierLabel):null,postalCode};
@@ -1218,12 +1219,14 @@ async function submitCheckout() {
             const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,buyer,orderId,shipping})});
             const data=await res.json();
             if(!res.ok||!data.init_point) throw new Error(data.error||'Error al procesar el pago');
+            if (typeof window._markCompletedOrder === 'function') window._markCompletedOrder();
             window.location.href=data.init_point;
         } else {
             const base=getTotal();
             const discountAmt=activeTab==='transfer'?base-Math.round(base*(1-TRANSFER_DISCOUNT)):0;
             const res=await fetch('/api/notify-transfer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,buyer,orderId,total:getFinalTotal(),discount:discountAmt,shipping})});
             if(!res.ok) throw new Error('Error al confirmar el pedido');
+            if (typeof window._markCompletedOrder === 'function') window._markCompletedOrder();
             cart=[];saveCart();updateCartUI();
             window.location.href=`/gracias.html?order=${orderId}&status=transfer&shipping=${shippingMode}`;
         }
@@ -1373,7 +1376,7 @@ initReveal();
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, onSnapshot, getDoc, runTransaction, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -1399,6 +1402,51 @@ let adminTab = 'productos';
 function _fsListenError(label) {
     return err => console.error(`[tienda] Error escuchando ${label}:`, err.code || err.message || err);
 }
+
+// ── Numeración de pedidos secuencial (arranca en 2342) ──
+async function getNextOrderNumber() {
+    const counterRef = doc(db, 'tienda_config', 'orderCounter');
+    try {
+        return await runTransaction(db, async (tx) => {
+            const snap = await tx.get(counterRef);
+            const current = (snap.exists() && typeof snap.data().next === 'number') ? snap.data().next : 2342;
+            tx.set(counterRef, { next: current + 1 }, { merge: true });
+            return current;
+        });
+    } catch (e) {
+        console.error('[tienda] Error generando número de pedido:', e);
+        return 2342 + Math.floor(Date.now() / 1000) % 1000; // fallback improbable, evita romper el checkout
+    }
+}
+window.getNextOrderNumber = getNextOrderNumber;
+
+// ── Tracking de visitas: IP única, provincia, y si llegó al checkout ──
+let _visitId = null;
+(async function trackVisit() {
+    try {
+        const res = await fetch('https://ipapi.co/json/');
+        if (!res.ok) return;
+        const geo = await res.json();
+        if (!geo || !geo.ip || geo.error) return;
+        _visitId = String(geo.ip).replace(/[.:]/g, '_');
+        await setDoc(doc(db, 'tienda_visitas', _visitId), {
+            ip: geo.ip,
+            provincia: geo.region || 'Desconocida',
+            ciudad: geo.city || '',
+            pais: geo.country_name || '',
+            lastVisit: serverTimestamp(),
+            visits: increment(1)
+        }, { merge: true });
+    } catch (e) { console.error('[tienda] trackVisit error:', e); }
+})();
+window._markReachedCheckout = function () {
+    if (!_visitId) return;
+    setDoc(doc(db, 'tienda_visitas', _visitId), { reachedCheckout: true }, { merge: true }).catch(() => {});
+};
+window._markCompletedOrder = function () {
+    if (!_visitId) return;
+    setDoc(doc(db, 'tienda_visitas', _visitId), { completedOrder: true }, { merge: true }).catch(() => {});
+};
 
 onSnapshot(collection(db, 'tienda_productos'), snap => {
     productConfig = {};
