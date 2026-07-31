@@ -197,34 +197,57 @@
         @keyframes spin { to { transform:rotate(360deg); } }
         @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
-        /* ── CHECKOUT: tema oscuro a juego con el resto del sitio ── */
-        #checkout-modal .modal-box { background:#111; border-color:rgba(255,255,255,.08); color:#e8e8e8; }
+        /* ── CHECKOUT: rediseño completo, a juego con el resto del sitio ── */
+        #checkout-modal .modal-box { background:#111; border-color:rgba(255,255,255,.08); color:#e8e8e8; max-width:480px; }
         #checkout-modal .modal-header { border-bottom-color:rgba(255,255,255,.08); }
         #checkout-modal .modal-title { color:#888; }
         #checkout-modal .close-btn { border-color:rgba(255,255,255,.12); }
         #checkout-modal .close-btn svg { stroke:#a3a3a3; }
+
+        #checkout-modal .co-section { margin-bottom:26px; }
+        #checkout-modal .co-section:last-of-type { margin-bottom:0; }
+        #checkout-modal .co-section-label { display:flex; align-items:center; gap:8px; font-size:10px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:#e8e8e8; margin-bottom:14px; }
+        #checkout-modal .co-num { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; font-size:9px; font-weight:800; color:#4ade80; border:1px solid rgba(74,222,128,.4); flex-shrink:0; }
+
         #checkout-modal .field-label { color:#737373; }
         #checkout-modal .field { background:#1a1a1a; border-color:rgba(255,255,255,.1); color:#e8e8e8; }
-        #checkout-modal .field:focus { border-color:rgba(255,255,255,.35); }
+        #checkout-modal .field:focus { border-color:rgba(74,222,128,.5); }
         #checkout-modal .field::placeholder { color:#525252; }
-        #checkout-modal .payment-tabs { border-color:rgba(255,255,255,.1); }
-        #checkout-modal .payment-tab { color:#737373; border-right-color:rgba(255,255,255,.08); }
-        #checkout-modal .payment-tab.active { background:#e8e8e8; color:#111; }
-        #checkout-modal #shipping-detail { background:#1a1a1a; border:1px solid rgba(255,255,255,.1); border-top:none; padding:12px 14px; margin-bottom:20px; font-size:12px; color:#a3a3a3; line-height:1.7; }
+
+        /* Tarjetas de entrega (retiro / envío) */
+        #checkout-modal .ship-options { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        #checkout-modal .ship-opt { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:16px 8px; background:#1a1a1a; border:1px solid rgba(255,255,255,.1); cursor:pointer; font-family:'Inter',sans-serif; transition:border-color .2s, background .2s; -webkit-appearance:none; }
+        #checkout-modal .ship-opt svg { width:19px; height:19px; stroke:#737373; transition:stroke .2s; }
+        #checkout-modal .ship-opt span { font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#737373; transition:color .2s; }
+        #checkout-modal .ship-opt.active { border-color:#4ade80; background:rgba(74,222,128,.07); }
+        #checkout-modal .ship-opt.active svg { stroke:#4ade80; }
+        #checkout-modal .ship-opt.active span { color:#e8e8e8; }
+
+        #checkout-modal .co-card { background:#1a1a1a; border:1px solid rgba(255,255,255,.1); padding:14px; margin-top:10px; font-size:12px; color:#a3a3a3; line-height:1.7; }
         #checkout-modal #shipping-detail-text strong { color:#e8e8e8; }
         #checkout-modal #shipping-detail-text .ship-sub { color:#737373; padding-left:18px; }
-        #checkout-modal .info-block { background:#1a1a1a; border-color:rgba(255,255,255,.08); }
+
+        /* Método de pago */
+        #checkout-modal .payment-tabs { border-color:rgba(255,255,255,.1); margin:0; }
+        #checkout-modal .payment-tab { color:#737373; border-right-color:rgba(255,255,255,.08); }
+        #checkout-modal .payment-tab.active { background:#e8e8e8; color:#111; }
+        #checkout-modal .info-block { background:#1a1a1a; border-color:rgba(255,255,255,.08); margin:10px 0 0; }
         #checkout-modal .info-block-label { color:#888; }
         #checkout-modal .info-key { color:#737373; }
         #checkout-modal .info-val { color:#e8e8e8; }
         #checkout-modal .copy-btn { border-color:rgba(255,255,255,.16); color:#a3a3a3; }
         #checkout-modal .copy-btn:active { background:rgba(255,255,255,.06); }
-        #checkout-modal .order-summary { border-color:rgba(255,255,255,.08); }
-        #checkout-modal .summary-item { border-bottom-color:rgba(255,255,255,.06); }
+
+        /* Resumen */
+        #checkout-modal .order-summary { border-color:rgba(255,255,255,.08); margin:0; }
+        #checkout-modal .summary-item { border-bottom-color:rgba(255,255,255,.06); padding:11px 14px; }
+        #checkout-modal .qty-tag { display:inline-block; min-width:18px; color:#525252; font-weight:700; }
         #checkout-modal .summary-key { color:#a3a3a3; }
         #checkout-modal .summary-val { color:#e8e8e8; }
-        #checkout-modal .summary-total { background:rgba(255,255,255,.04); }
-        #checkout-modal .btn-pay { background:#e8e8e8; color:#111; }
+        #checkout-modal .summary-total { background:rgba(74,222,128,.05); border-top:1px solid rgba(74,222,128,.25); }
+        #checkout-modal .summary-total .summary-val { color:#4ade80; font-size:19px; }
+
+        #checkout-modal .btn-pay { margin-top:22px; background:#e8e8e8; color:#111; }
         #checkout-modal .btn-pay:active:not(:disabled) { background:#d4d4d4; }
         #checkout-modal .spinner { border-color:rgba(0,0,0,.15); border-top-color:#111; }
 
@@ -487,64 +510,79 @@
             </button>
         </div>
 
-        <div class="field-group"><label class="field-label">Nombre completo</label><input class="field" id="buyer-name" type="text" placeholder="Tu nombre" autocomplete="name"></div>
-        <div class="field-group"><label class="field-label">Email</label><input class="field" id="buyer-email" type="email" placeholder="Para recibir la confirmación" autocomplete="email" inputmode="email"></div>
-
-        <div style="margin:20px 0 0;">
-            <label class="field-label" style="margin-bottom:8px;display:block;">Entrega</label>
-            <div class="payment-tabs" style="margin-bottom:0;">
-                <button id="ship-pickup" class="payment-tab active" onclick="setShipping('pickup')">Retiro en local</button>
-                <button id="ship-delivery" class="payment-tab" onclick="setShipping('delivery')">Envío a domicilio</button>
-            </div>
+        <div class="co-section">
+            <div class="co-section-label"><span class="co-num">1</span>Tus datos</div>
+            <div class="field-group"><label class="field-label">Nombre completo</label><input class="field" id="buyer-name" type="text" placeholder="Tu nombre" autocomplete="name"></div>
+            <div class="field-group" style="margin-bottom:0;"><label class="field-label">Email</label><input class="field" id="buyer-email" type="email" placeholder="Para recibir la confirmación" autocomplete="email" inputmode="email"></div>
         </div>
-        <div id="shipping-detail">
-            <span id="shipping-detail-text">📍 <strong>Dávila 951, Parque Chacabuco</strong><br><span class="ship-sub">Lun–Sáb 12:00–19:30 · <strong>Gratis</strong></span></span>
-            <div id="delivery-fields" style="display:none;">
-                <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);margin-bottom:10px;">
-                    <span style="font-size:16px;line-height:1.2;">📦</span>
-                    <span style="font-size:11.5px;color:#4ade80;line-height:1.5;">Envío a todo el país: <b>$7.000</b>. ¡<b>Gratis</b> en compras desde $40.000!</span>
+
+        <div class="co-section">
+            <div class="co-section-label"><span class="co-num">2</span>Entrega</div>
+            <div class="ship-options">
+                <button id="ship-pickup" class="ship-opt active" onclick="setShipping('pickup')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/></svg>
+                    <span>Retiro en local</span>
+                </button>
+                <button id="ship-delivery" class="ship-opt" onclick="setShipping('delivery')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                    <span>Envío a domicilio</span>
+                </button>
+            </div>
+            <div id="shipping-detail" class="co-card">
+                <span id="shipping-detail-text">📍 <strong>Dávila 951, Parque Chacabuco</strong><br><span class="ship-sub">Lun–Sáb 12:00–19:30 · <strong>Gratis</strong></span></span>
+                <div id="delivery-fields" style="display:none;">
+                    <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);margin-bottom:10px;">
+                        <span style="font-size:16px;line-height:1.2;">📦</span>
+                        <span style="font-size:11.5px;color:#4ade80;line-height:1.5;">Envío a todo el país: <b>$7.000</b>. ¡<b>Gratis</b> en compras desde $40.000!</span>
+                    </div>
+                    <input id="buyer-postal" class="field" type="text" inputmode="numeric" maxlength="8" placeholder="Código postal" style="height:46px;font-size:16px;margin-bottom:8px;">
+                    <input id="buyer-address" class="field" type="text" placeholder="Dirección completa (calle, número, piso, depto)" autocomplete="street-address" style="height:46px;font-size:16px;">
                 </div>
-                <input id="buyer-postal" class="field" type="text" inputmode="numeric" maxlength="8" placeholder="Código postal" style="height:46px;font-size:16px;margin-bottom:8px;">
-                <input id="buyer-address" class="field" type="text" placeholder="Dirección completa (calle, número, piso, depto)" autocomplete="street-address" style="height:46px;font-size:16px;">
             </div>
         </div>
 
-        <div class="payment-tabs">
-            <button id="tab-mp" class="payment-tab active" onclick="setTab('mp')">
-                <span style="display:inline-flex;align-items:center;gap:7px;justify-content:center;">
-                    <img src="https://i.imgur.com/itxduYb.png" alt="MercadoPago" style="height:18px;width:auto;object-fit:contain;">
-                    MercadoPago
-                </span>
-            </button>
-            <button id="tab-transfer" class="payment-tab" onclick="setTab('transfer')">
-                <span style="display:inline-flex;align-items:center;gap:7px;justify-content:center;">
-                    Transferencia
-                    <span id="transfer-badge" style="background:#4ade80;color:#111;font-size:9px;font-weight:800;padding:2px 6px;letter-spacing:.05em;">10% OFF</span>
-                </span>
-            </button>
+        <div class="co-section">
+            <div class="co-section-label"><span class="co-num">3</span>Método de pago</div>
+            <div class="payment-tabs">
+                <button id="tab-mp" class="payment-tab active" onclick="setTab('mp')">
+                    <span style="display:inline-flex;align-items:center;gap:7px;justify-content:center;">
+                        <img src="https://i.imgur.com/itxduYb.png" alt="MercadoPago" style="height:18px;width:auto;object-fit:contain;">
+                        MercadoPago
+                    </span>
+                </button>
+                <button id="tab-transfer" class="payment-tab" onclick="setTab('transfer')">
+                    <span style="display:inline-flex;align-items:center;gap:7px;justify-content:center;">
+                        Transferencia
+                        <span id="transfer-badge" style="background:#4ade80;color:#111;font-size:9px;font-weight:800;padding:2px 6px;letter-spacing:.05em;">10% OFF</span>
+                    </span>
+                </button>
+            </div>
+
+            <div id="panel-mp" class="info-block" style="font-size:13px;line-height:1.6;color:#a3a3a3;">
+                Pago seguro con MercadoPago. Tarjeta de débito, crédito o saldo MP.
+            </div>
+
+            <div id="panel-transfer" class="info-block" style="display:none;">
+                <div style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.2);padding:10px 14px;margin-bottom:16px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;color:#4ade80;">10% OFF pagando con transferencia</div>
+                <div class="info-block-label">Datos para transferir</div>
+                <div class="info-row">
+                    <div><span class="info-key">Alias</span><br><span class="info-val">tienda.sbbarber</span></div>
+                    <button class="copy-btn" onclick="copyText('tienda.sbbarber',this)">Copiar</button>
+                </div>
+                <div class="info-row">
+                    <div><span class="info-key">CVU</span><br><span class="info-val" style="font-size:11px;font-family:monospace;letter-spacing:.03em">0000003100061376563207</span></div>
+                    <button class="copy-btn" onclick="copyText('0000003100061376563207',this)">Copiar</button>
+                </div>
+                <div class="info-row">
+                    <div><span class="info-key">Titular</span><br><span class="info-val">Agustín Abalo</span></div>
+                </div>
+            </div>
         </div>
 
-        <div id="panel-mp" class="info-block" style="font-size:13px;line-height:1.6;color:#a3a3a3;">
-            Pago seguro con MercadoPago. Tarjeta de débito, crédito o saldo MP.
+        <div class="co-section">
+            <div class="co-section-label"><span class="co-num">4</span>Resumen</div>
+            <div class="order-summary" id="order-summary"></div>
         </div>
-
-        <div id="panel-transfer" class="info-block" style="display:none;">
-            <div style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.2);padding:10px 14px;margin-bottom:16px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;color:#4ade80;">10% OFF pagando con transferencia</div>
-            <div class="info-block-label">Datos para transferir</div>
-            <div class="info-row">
-                <div><span class="info-key">Alias</span><br><span class="info-val">tienda.sbbarber</span></div>
-                <button class="copy-btn" onclick="copyText('tienda.sbbarber',this)">Copiar</button>
-            </div>
-            <div class="info-row">
-                <div><span class="info-key">CVU</span><br><span class="info-val" style="font-size:11px;font-family:monospace;letter-spacing:.03em">0000003100061376563207</span></div>
-                <button class="copy-btn" onclick="copyText('0000003100061376563207',this)">Copiar</button>
-            </div>
-            <div class="info-row">
-                <div><span class="info-key">Titular</span><br><span class="info-val">Agustín Abalo</span></div>
-            </div>
-        </div>
-
-        <div class="order-summary" id="order-summary"></div>
 
         <button id="btn-pay" class="btn-pay" onclick="submitCheckout()">Pagar con MercadoPago</button>
         <p id="checkout-error" class="error-msg"></p>
@@ -1132,7 +1170,7 @@ function renderSummary() {
         ? `<div class="summary-item"><span class="summary-key">${carrierLabel||'Envío'}${correoLabel?' · '+correoLabel:''}</span><span style="font-weight:700;flex-shrink:0">${shipValue}</span></div>`
         : `<div class="summary-item"><span class="summary-key">Retiro en local · Dávila 951</span><span style="color:#4ade80;font-weight:700;flex-shrink:0">Gratis</span></div>`;
     document.getElementById('order-summary').innerHTML =
-        cart.map(i=>`<div class="summary-item"><span class="summary-key">${i.qty}× ${i.name} <span style="opacity:.4">${i.variant}</span></span><span style="font-weight:700;flex-shrink:0">$${(i.price*i.qty).toLocaleString('es-AR')}</span></div>`).join('')+
+        cart.map(i=>`<div class="summary-item"><span class="summary-key"><span class="qty-tag">${i.qty}×</span> ${i.name} <span style="opacity:.4">${i.variant}</span></span><span style="font-weight:700;flex-shrink:0">$${(i.price*i.qty).toLocaleString('es-AR')}</span></div>`).join('')+
         discRow + shipRow +
         `<div class="summary-item summary-total"><span class="summary-key" style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#888">Total</span><span class="summary-val">$${final.toLocaleString('es-AR')}</span></div>`;
 }
