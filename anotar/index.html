@@ -1747,7 +1747,7 @@ window.setVentaBarbero = (name) => {
     });
 };
 function renderVentaBarberos() {
-    const nombres = [...new Set(Object.values(BARBER_EMAIL_MAP))];
+    const nombres = [...new Set(Object.values(BARBER_EMAIL_MAP)), 'FEME'];
     document.getElementById('venta-barbero-list').innerHTML = nombres.map(n =>
         `<button type="button" data-name="${n}" onclick="window.setVentaBarbero('${n.replace(/'/g,"\\'")}')" class="${_btnOff}">${n}</button>`
     ).join('');

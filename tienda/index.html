@@ -88,6 +88,9 @@
         .reveal-left.visible { opacity:1; transform:translateX(0); }
         .reveal-scale { opacity:0; transform:scale(.94); transition:opacity .6s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1); }
         .reveal-scale.visible { opacity:1; transform:scale(1); }
+        /* Entrada automática de tarjetas (no depende del scroll) */
+        @keyframes cardIn { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:none; } }
+        .card-in { animation:cardIn .55s cubic-bezier(.16,1,.3,1) both; }
         .product-tag { position:absolute; top:10px; left:10px; font-size:8px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#111; background:#e8e8e8; padding:3px 8px; }
         @media(min-width:580px) { .product-tag { top:14px; left:14px; font-size:9px; padding:4px 10px; } }
         .product-info { padding:12px; flex:1; display:flex; flex-direction:column; }
@@ -601,8 +604,11 @@ const KIT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke
 const KITS = [];
 let _extraProductos = [], _extraKits = [];
 let _fsConfigReady = false, _fsCustomReady = false;
+let _prodFirst = true, _kitFirst = true;   // animar solo la 1ra vez (evita parpadeo en updates)
 function _maybeRenderProducts() {
-    if (_fsConfigReady && _fsCustomReady) renderProducts();
+    // Render inmediato: no esperamos a Firestore. Los productos base se ven al toque
+    // y se actualizan (precios/custom) cuando llegan los snapshots.
+    renderProducts();
 }
 function getAllProducts(){
     const customIds = new Set(_extraProductos.map(p=>p.id));
@@ -656,7 +662,7 @@ function renderKits() {
                 </div>`;
         const btn = `<button class="btn-add${out?' btn-soldout':''}" onclick="event.stopPropagation();addKitToCart('${k.id}')" ${out?'disabled':''}>${out?'Sin stock':'+ Agregar'}</button>`;
         return `
-        <div class="product-card reveal" style="transition-delay:${i*.06}s;cursor:pointer;" onclick="openItemDetail('${k.id}','combo')">
+        <div class="product-card ${_kitFirst ? 'card-in' : ''}" style="${_kitFirst ? `animation-delay:${i*.05}s;` : ''}cursor:pointer;" onclick="openItemDetail('${k.id}','combo')">
             <div class="product-image-wrap">
                 ${collage}
                 <div class="product-tag">${k.tag}</div>
@@ -676,6 +682,8 @@ function renderKits() {
             </div>
         </div>`;
     }).join('');
+    if (allKitsToRender.length) _kitFirst = false;
+    if (typeof revealAfterRender === 'function') revealAfterRender();
 }
 let _detailId = null, _detailType = null;
 
@@ -867,6 +875,7 @@ function setShipping(mode) {
 
 function renderProducts() {
     const allProdsToRender = typeof getAllProducts === 'function' ? getAllProducts() : PRODUCTS;
+    const rc = _prodFirst ? 'card-in' : '';
     const el = document.getElementById('prod-count');
     if(el) el.textContent = allProdsToRender.length + ' producto' + (allProdsToRender.length !== 1 ? 's' : '');
     document.getElementById('products-grid').innerHTML = allProdsToRender.map((p,i)=>{
@@ -879,7 +888,7 @@ function renderProducts() {
             ? `<img src="${p.image}" alt="${p.name || ''}" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`
             : (p.icon || '');
         return `
-        <div class="product-card reveal" style="transition-delay:${i*.06}s;cursor:pointer;" onclick="openItemDetail('${p.id}','product')">
+        <div class="product-card ${rc}" style="${_prodFirst ? `animation-delay:${i*.05}s;` : ''}cursor:pointer;" onclick="openItemDetail('${p.id}','product')">
             <div class="product-image-wrap">
                 ${imgHtml}
                 ${p.tag && !out ? `<div class="product-tag">${p.tag}</div>` : ''}
@@ -908,6 +917,7 @@ function renderProducts() {
             </div>
         </div>`;
     }).join('');
+    _prodFirst = false;
     renderKits();
     if (typeof revealAfterRender === 'function') revealAfterRender();
 }
@@ -1115,6 +1125,7 @@ async function submitCheckout() {
     }
 }
 
+renderProducts();   // muestra los productos base al instante (sin esperar a Firestore)
 updateCartUI();
 
 // ── Toast / feedback al agregar ──
