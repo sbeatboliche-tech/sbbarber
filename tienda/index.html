@@ -197,6 +197,37 @@
         @keyframes spin { to { transform:rotate(360deg); } }
         @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
+        /* ── CHECKOUT: tema oscuro a juego con el resto del sitio ── */
+        #checkout-modal .modal-box { background:#111; border-color:rgba(255,255,255,.08); }
+        #checkout-modal .modal-header { border-bottom-color:rgba(255,255,255,.08); }
+        #checkout-modal .modal-title { color:#888; }
+        #checkout-modal .close-btn { border-color:rgba(255,255,255,.12); }
+        #checkout-modal .close-btn svg { stroke:#a3a3a3; }
+        #checkout-modal .field-label { color:#737373; }
+        #checkout-modal .field { background:#1a1a1a; border-color:rgba(255,255,255,.1); color:#e8e8e8; }
+        #checkout-modal .field:focus { border-color:rgba(255,255,255,.35); }
+        #checkout-modal .field::placeholder { color:#525252; }
+        #checkout-modal .payment-tabs { border-color:rgba(255,255,255,.1); }
+        #checkout-modal .payment-tab { color:#737373; border-right-color:rgba(255,255,255,.08); }
+        #checkout-modal .payment-tab.active { background:#e8e8e8; color:#111; }
+        #checkout-modal #shipping-detail { background:#1a1a1a; border:1px solid rgba(255,255,255,.1); border-top:none; padding:12px 14px; margin-bottom:20px; font-size:12px; color:#a3a3a3; line-height:1.7; }
+        #checkout-modal #shipping-detail-text strong { color:#e8e8e8; }
+        #checkout-modal #shipping-detail-text .ship-sub { color:#737373; padding-left:18px; }
+        #checkout-modal .info-block { background:#1a1a1a; border-color:rgba(255,255,255,.08); }
+        #checkout-modal .info-block-label { color:#888; }
+        #checkout-modal .info-key { color:#737373; }
+        #checkout-modal .info-val { color:#e8e8e8; }
+        #checkout-modal .copy-btn { border-color:rgba(255,255,255,.16); color:#a3a3a3; }
+        #checkout-modal .copy-btn:active { background:rgba(255,255,255,.06); }
+        #checkout-modal .order-summary { border-color:rgba(255,255,255,.08); }
+        #checkout-modal .summary-item { border-bottom-color:rgba(255,255,255,.06); }
+        #checkout-modal .summary-key { color:#a3a3a3; }
+        #checkout-modal .summary-val { color:#e8e8e8; }
+        #checkout-modal .summary-total { background:rgba(255,255,255,.04); }
+        #checkout-modal .btn-pay { background:#e8e8e8; color:#111; }
+        #checkout-modal .btn-pay:active:not(:disabled) { background:#d4d4d4; }
+        #checkout-modal .spinner { border-color:rgba(0,0,0,.15); border-top-color:#111; }
+
         /* ── VIDEO ── */
         .video-play-btn { position:absolute; bottom:10px; right:10px; width:36px; height:36px; border-radius:50%; background:rgba(0,0,0,.72); border:1.5px solid rgba(255,255,255,.25); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .2s,transform .2s; z-index:2; }
         .video-play-btn:hover { background:rgba(0,0,0,.9); transform:scale(1.1); }
@@ -466,8 +497,8 @@
                 <button id="ship-delivery" class="payment-tab" onclick="setShipping('delivery')">Envío a domicilio</button>
             </div>
         </div>
-        <div id="shipping-detail" style="background:#f8f8f8;border:1px solid rgba(0,0,0,.1);border-top:none;padding:12px 14px;margin-bottom:20px;font-size:12px;color:#333;line-height:1.7;">
-            <span id="shipping-detail-text">📍 <strong style="color:#111;">Dávila 951, Parque Chacabuco</strong><br><span style="color:#555;padding-left:18px;">Lun–Sáb 12:00–19:30 · <strong style="color:#111;">Gratis</strong></span></span>
+        <div id="shipping-detail">
+            <span id="shipping-detail-text">📍 <strong>Dávila 951, Parque Chacabuco</strong><br><span class="ship-sub">Lun–Sáb 12:00–19:30 · <strong>Gratis</strong></span></span>
             <div id="delivery-fields" style="display:none;">
                 <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);margin-bottom:10px;">
                     <span style="font-size:16px;line-height:1.2;">📦</span>
@@ -488,12 +519,12 @@
             <button id="tab-transfer" class="payment-tab" onclick="setTab('transfer')">
                 <span style="display:inline-flex;align-items:center;gap:7px;justify-content:center;">
                     Transferencia
-                    <span id="transfer-badge" style="background:#fff;color:#000;font-size:9px;font-weight:800;padding:2px 6px;letter-spacing:.05em;">10% OFF</span>
+                    <span id="transfer-badge" style="background:#4ade80;color:#111;font-size:9px;font-weight:800;padding:2px 6px;letter-spacing:.05em;">10% OFF</span>
                 </span>
             </button>
         </div>
 
-        <div id="panel-mp" class="info-block" style="font-size:13px;color:#737373;line-height:1.6;">
+        <div id="panel-mp" class="info-block" style="font-size:13px;line-height:1.6;">
             Pago seguro con MercadoPago. Tarjeta de débito, crédito o saldo MP.
         </div>
 
@@ -1099,7 +1130,7 @@ function renderSummary() {
             : (shippingCost > 0 ? '$' + shippingCost.toLocaleString('es-AR') : 'ingresá CP'));
     const shipRow = shippingMode==='delivery'
         ? `<div class="summary-item"><span class="summary-key">${carrierLabel||'Envío'}${correoLabel?' · '+correoLabel:''}</span><span style="font-weight:700;flex-shrink:0">${shipValue}</span></div>`
-        : `<div class="summary-item"><span class="summary-key">Retiro en local · Dávila 951</span><span style="color:#111;font-weight:700;flex-shrink:0">Gratis</span></div>`;
+        : `<div class="summary-item"><span class="summary-key">Retiro en local · Dávila 951</span><span style="color:#4ade80;font-weight:700;flex-shrink:0">Gratis</span></div>`;
     document.getElementById('order-summary').innerHTML =
         cart.map(i=>`<div class="summary-item"><span class="summary-key">${i.qty}× ${i.name} <span style="opacity:.4">${i.variant}</span></span><span style="font-weight:700;flex-shrink:0">$${(i.price*i.qty).toLocaleString('es-AR')}</span></div>`).join('')+
         discRow + shipRow +
