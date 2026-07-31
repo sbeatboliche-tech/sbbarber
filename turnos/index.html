@@ -512,6 +512,18 @@
                 db = fsMod.getFirestore(appMod.initializeApp(firebaseConfig));
                 fb = { collection: fsMod.collection, addDoc: fsMod.addDoc, query: fsMod.query, where: fsMod.where, getDocs: fsMod.getDocs };
                 fbReady = true;
+                // Precios de servicios configurados desde recepción
+                try {
+                    const snap = await fsMod.getDoc(fsMod.doc(db, 'config_precios', 'servicios'));
+                    if (snap.exists()) {
+                        const p = snap.data() || {};
+                        const norm = s => (s||'').toLowerCase().trim();
+                        const map = {}; Object.keys(p).forEach(k => { map[norm(k)] = p[k]; });
+                        SERVICIOS.forEach(s => { const v = map[norm(s.nombre)]; if (v != null) s.precio = Number(v); });
+                        const sl = document.getElementById('service-list');
+                        if (sl && sl.children.length) renderServices();
+                    }
+                } catch(e) {}
             } catch(e) { console.warn('Firebase no disponible:', e); }
         })();
     </script>
