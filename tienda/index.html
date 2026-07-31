@@ -92,7 +92,7 @@
         .reveal-scale.visible { opacity:1; transform:scale(1); }
         /* Entrada automática de tarjetas (no depende del scroll) */
         @keyframes cardIn { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:none; } }
-        .card-in { animation:cardIn .55s cubic-bezier(.16,1,.3,1) both; }
+        .card-in { animation:cardIn .9s cubic-bezier(.16,1,.3,1) both; }
         .product-tag { position:absolute; top:10px; left:10px; font-size:8px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#111; background:#e8e8e8; padding:3px 8px; }
         @media(min-width:580px) { .product-tag { top:14px; left:14px; font-size:9px; padding:4px 10px; } }
         .product-info { padding:12px; flex:1; display:flex; flex-direction:column; }
@@ -674,7 +674,7 @@ function renderKits() {
                 </div>`;
         const btn = `<button class="btn-add${out?' btn-soldout':''}" onclick="event.stopPropagation();addKitToCart('${k.id}')" ${out?'disabled':''}>${out?'Sin stock':'+ Agregar'}</button>`;
         return `
-        <div class="product-card ${_kitFirst ? 'card-in' : ''}" style="${_kitFirst ? `animation-delay:${i*.05}s;` : ''}cursor:pointer;" onclick="openItemDetail('${k.id}','combo')">
+        <div class="product-card ${_kitFirst ? 'card-in' : ''}" style="${_kitFirst ? `animation-delay:${i*.1}s;` : ''}cursor:pointer;" onclick="openItemDetail('${k.id}','combo')">
             <div class="product-image-wrap">
                 ${collage}
                 <div class="product-tag">${k.tag}</div>
@@ -900,7 +900,7 @@ function renderProducts() {
             ? `<img src="${p.image}" alt="${p.name || ''}" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`
             : (p.icon || '');
         return `
-        <div class="product-card ${rc}" style="${_prodFirst ? `animation-delay:${i*.05}s;` : ''}cursor:pointer;" onclick="openItemDetail('${p.id}','product')">
+        <div class="product-card ${rc}" style="${_prodFirst ? `animation-delay:${i*.1}s;` : ''}cursor:pointer;" onclick="openItemDetail('${p.id}','product')">
             <div class="product-image-wrap">
                 ${imgHtml}
                 ${p.tag && !out ? `<div class="product-tag">${p.tag}</div>` : ''}
