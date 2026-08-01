@@ -2726,9 +2726,6 @@ function renderWeeklyTotalsRec() {
 }
 
 function renderHistoryRec() {
-    const today = new Date(); const wd = today.getDay()||7;
-    const ws = new Date(today); if(wd!==1) ws.setDate(today.getDate()-(wd-1)); ws.setHours(0,0,0,0);
-    const weekStartStr = ws.toLocaleDateString('en-CA');
     const combined = [
         ...allRetiros.filter(r => r.estado !== 'pendiente' && r.fecha >= periodStartFor(r.barbero)).map(r => ({...r, tipo:'retiro'})),
         ...allPropinas.filter(p => p.estado !== 'pendiente' && p.fecha >= periodStartFor(p.barbero)).map(p => ({...p, tipo:'propina'}))

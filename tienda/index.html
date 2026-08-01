@@ -697,12 +697,15 @@ function _cacheSet(key, value) {
 }
 let _extraProductos = _cacheGet('extraProductos', []), _extraKits = _cacheGet('extraKits', []);
 let productConfigCache = _cacheGet('productConfig', {});
-if (Object.keys(productConfigCache).length) productConfig = productConfigCache;
+let _hasProductCache = Object.keys(productConfigCache).length > 0;
+if (_hasProductCache) productConfig = productConfigCache;
 let _fsConfigReady = false, _fsCustomReady = false;
 let _prodFirst = true, _kitFirst = true;   // animar solo la 1ra vez (evita parpadeo en updates)
 function _maybeRenderProducts() {
-    // Render inmediato: no esperamos a Firestore. Los productos base se ven al toque
-    // y se actualizan (precios/custom) cuando llegan los snapshots.
+    // Si hay caché local, pintamos al toque con lo último visto (usuario recurrente).
+    // Si es un visitante nuevo (sin caché), esperamos a que lleguen los datos reales
+    // de Firestore para no mostrar los precios/productos base desactualizados del código.
+    if (!_hasProductCache && !(_fsConfigReady && _fsCustomReady)) return;
     renderProducts();
 }
 function getAllProducts(){
@@ -1238,7 +1241,8 @@ async function submitCheckout() {
     }
 }
 
-renderProducts();   // muestra los productos base al instante (sin esperar a Firestore)
+if (_hasProductCache) renderProducts();   // usuario recurrente: pinta al instante con la caché
+// si no hay caché, el skeleton del HTML queda visible hasta el primer snapshot de Firestore
 updateCartUI();
 
 // ── Toast / feedback al agregar ──
