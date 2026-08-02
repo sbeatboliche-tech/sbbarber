@@ -532,8 +532,10 @@
                 <div id="delivery-fields" style="display:none;">
                     <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);margin-bottom:10px;">
                         <span style="font-size:16px;line-height:1.2;">📦</span>
-                        <span style="font-size:11.5px;color:#4ade80;line-height:1.5;">Envío a todo el país: <b>$7.000</b>. ¡<b>Gratis</b> en compras desde $40.000!</span>
+                        <span style="font-size:11.5px;color:#4ade80;line-height:1.5;">Elegí tu <b>provincia</b> y calculamos el envío. ¡<b>Gratis</b> en compras desde $40.000!</span>
                     </div>
+                    <select id="buyer-provincia" class="field" onchange="calcularEnvio()" style="height:46px;font-size:16px;margin-bottom:8px;-webkit-appearance:menulist;appearance:menulist;"></select>
+                    <div id="ship-zone-result" style="font-size:12px;margin:0 0 8px;min-height:18px;"></div>
                     <input id="buyer-postal" class="field" type="text" inputmode="numeric" maxlength="8" placeholder="Código postal" style="height:46px;font-size:16px;margin-bottom:8px;">
                     <input id="buyer-address" class="field" type="text" placeholder="Dirección completa (calle, número, piso, depto)" autocomplete="street-address" style="height:46px;font-size:16px;">
                 </div>
@@ -948,7 +950,37 @@ function addKitToCart(id) {
 }
 
 const FREE_SHIP_THRESHOLD = 40000; // envío gratis desde este monto (ajustable)
-const FLAT_SHIPPING = 7000;        // costo de envío fijo a todo el país (ajustable)
+// Tarifas de envío por zona (ajustables). Gratis si supera el umbral.
+const ZONE_RATES = { CABA: 6000, GBA: 7500, Interior: 9700 };
+const PROVINCIAS = [
+    'Ciudad Autónoma de Buenos Aires','Buenos Aires','Catamarca','Chaco','Chubut','Córdoba',
+    'Corrientes','Entre Ríos','Formosa','Jujuy','La Pampa','La Rioja','Mendoza','Misiones',
+    'Neuquén','Río Negro','Salta','San Juan','San Luis','Santa Cruz','Santa Fe',
+    'Santiago del Estero','Tierra del Fuego','Tucumán'
+];
+let shippingZone = null, shippingProvincia = '';
+function zonaPorProvincia(prov) {
+    if (prov === 'Ciudad Autónoma de Buenos Aires') return 'CABA';
+    if (prov === 'Buenos Aires') return 'GBA';
+    return prov ? 'Interior' : null;
+}
+function calcularEnvio() {
+    const prov = document.getElementById('buyer-provincia').value;
+    const res = document.getElementById('ship-zone-result');
+    const zona = zonaPorProvincia(prov);
+    if (!zona) {
+        shippingZone = null; shippingProvincia = ''; shippingCost = 0; carrierLabel = 'Envío a domicilio';
+        if (res) res.innerHTML = '';
+        renderSummary(); return;
+    }
+    shippingZone = zona; shippingProvincia = prov;
+    shippingCost = ZONE_RATES[zona];
+    carrierLabel = 'Envío ' + prov;
+    const free = qualifiesFreeShip();
+    if (res) res.innerHTML = '<span style="color:#4ade80;font-weight:700;">✓ ' + prov + '</span> · ' +
+        (free ? '<b style="color:#4ade80;">¡Envío gratis!</b>' : '<b>$' + shippingCost.toLocaleString('es-AR') + '</b>');
+    renderSummary();
+}
 function getTotal() { return cart.reduce((s,i)=>s+i.price*i.qty,0); }
 function qualifiesFreeShip() { return cart.some(i=>i.freeShipping) || getTotal() >= FREE_SHIP_THRESHOLD; }
 function effectiveShipping() { return (shippingMode==='delivery' && !qualifiesFreeShip()) ? shippingCost : 0; }
@@ -973,10 +1005,8 @@ function setShipping(mode) {
     } else {
         txt.style.display = 'none';
         if (df) df.style.display = 'block';
-        // Envío fijo a todo el país (el local hace el envío). Gratis si supera el umbral.
-        shippingCost = FLAT_SHIPPING;
-        carrierLabel = 'Envío a domicilio';
         correoLabel = '';
+        calcularEnvio();   // usa la provincia elegida (0 hasta que elijan)
     }
     renderSummary();
 }
@@ -1204,6 +1234,7 @@ async function submitCheckout() {
 
     if(!name){errEl.textContent='Ingresá tu nombre.';errEl.style.display='block';return;}
     if(!email||!email.includes('@')){errEl.textContent='Ingresá un email válido.';errEl.style.display='block';return;}
+    if(shippingMode==='delivery'&&!shippingProvincia){errEl.textContent='Elegí tu provincia para calcular el envío.';errEl.style.display='block';return;}
     if(shippingMode==='delivery'&&!address){errEl.textContent='Ingresá tu dirección de entrega.';errEl.style.display='block';return;}
 
     const btn=document.getElementById('btn-pay');
@@ -1214,7 +1245,7 @@ async function submitCheckout() {
     const orderId='SBB-'+orderNum;
     const buyer={name,email};
     const postalCode = shippingMode==='delivery' ? (document.getElementById('buyer-postal').value.trim()||null) : null;
-    const shipping={mode:shippingMode,address,cost:effectiveShipping(),carrier:shippingMode==='delivery'?carrierId:null,carrierLabel:shippingMode==='delivery'?(qualifiesFreeShip()?'Envío gratis':carrierLabel):null,postalCode};
+    const shipping={mode:shippingMode,address,provincia:shippingMode==='delivery'?shippingProvincia:null,zona:shippingMode==='delivery'?shippingZone:null,cost:effectiveShipping(),carrier:shippingMode==='delivery'?carrierId:null,carrierLabel:shippingMode==='delivery'?(qualifiesFreeShip()?'Envío gratis':carrierLabel):null,postalCode};
     const items=cart.map(i=>({id:i.id,name:`${i.name} ${i.variant}`,price:i.price,quantity:i.qty}));
 
     try {
@@ -1244,6 +1275,8 @@ async function submitCheckout() {
 if (_hasProductCache) renderProducts();   // usuario recurrente: pinta al instante con la caché
 // si no hay caché, el skeleton del HTML queda visible hasta el primer snapshot de Firestore
 updateCartUI();
+// Poblar el selector de provincias del checkout
+(function(){ const sel=document.getElementById('buyer-provincia'); if(sel) sel.innerHTML='<option value="">Elegí tu provincia</option>'+PROVINCIAS.map(p=>`<option>${p}</option>`).join(''); })();
 
 // ── Toast / feedback al agregar ──
 let _toastT;
