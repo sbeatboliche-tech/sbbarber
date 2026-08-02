@@ -57,17 +57,31 @@ function orderLabel(orderId) {
 }
 
 function emailShell(bodyHtml, { eyebrow = 'TIENDA', title, subtitle } = {}) {
-    return `<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;background:#f4f4f5;margin:0;padding:24px;">
-<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);">
-  <div style="background:#0a0a0a;padding:30px 32px;text-align:center;">
-    <p style="color:#4ade80;font-size:11px;font-weight:800;letter-spacing:.25em;text-transform:uppercase;margin:0 0 8px;">SB BARBER · ${eyebrow}</p>
-    <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">${title}</h1>
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:Arial,Helvetica,sans-serif;background:#f4f4f5;margin:0;padding:24px;">
+<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 6px 30px rgba(0,0,0,.1);">
+  <!-- Header con logo -->
+  <div style="background:#0a0a0a;background-image:linear-gradient(180deg,#141414,#0a0a0a);padding:34px 32px 28px;text-align:center;">
+    <img src="https://i.imgur.com/xyjMT6X.png" alt="SB BARBER" width="128" style="width:128px;max-width:60%;height:auto;margin:0 auto 18px;display:block;">
+    <p style="color:#4ade80;font-size:10px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;margin:0 0 8px;">${eyebrow}</p>
+    <h1 style="color:#ffffff;font-size:22px;line-height:1.2;margin:0;font-weight:800;letter-spacing:-.01em;">${title}</h1>
     ${subtitle ? `<p style="color:#a3a3a3;margin:8px 0 0;font-size:14px;">${subtitle}</p>` : ''}
   </div>
+  <!-- Cuerpo -->
   <div style="padding:28px 32px;">
     ${bodyHtml}
   </div>
-</div></body></html>`;
+  <!-- Footer -->
+  <div style="background:#fafafa;border-top:1px solid #eeeeee;padding:22px 32px;text-align:center;">
+    <p style="margin:0 0 6px;font-size:12px;font-weight:800;letter-spacing:.16em;color:#0a0a0a;text-transform:uppercase;">SB BARBER</p>
+    <p style="margin:0 0 12px;font-size:12px;color:#71717a;line-height:1.6;">Dávila 951, Parque Chacabuco · CABA<br>Lun a Sáb · 12:00 a 19:30</p>
+    <a href="https://wa.me/541170583352" style="display:inline-block;font-size:12px;font-weight:700;color:#16a34a;text-decoration:none;">WhatsApp</a>
+    <span style="color:#d4d4d8;margin:0 8px;">·</span>
+    <a href="https://tienda.sbbarber.com.ar" style="display:inline-block;font-size:12px;font-weight:700;color:#0a0a0a;text-decoration:none;">Nuestra tienda</a>
+  </div>
+</div>
+<p style="text-align:center;color:#a1a1aa;font-size:10px;margin:14px 0 0;">Correo automático de SB Barber · Dávila 951, CABA</p>
+</body></html>`;
 }
 
 function sellerHtml(name, email, items, total, orderId, shipping) {
