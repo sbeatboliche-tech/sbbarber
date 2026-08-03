@@ -512,7 +512,8 @@
         <div class="co-section">
             <div class="co-section-label"><span class="co-num">1</span>Tus datos</div>
             <div class="field-group"><label class="field-label">Nombre completo</label><input class="field" id="buyer-name" type="text" placeholder="Tu nombre" autocomplete="name"></div>
-            <div class="field-group" style="margin-bottom:0;"><label class="field-label">Email</label><input class="field" id="buyer-email" type="email" placeholder="Para recibir la confirmación" autocomplete="email" inputmode="email"></div>
+            <div class="field-group"><label class="field-label">Email</label><input class="field" id="buyer-email" type="email" placeholder="Para recibir la confirmación" autocomplete="email" inputmode="email"></div>
+            <div class="field-group" style="margin-bottom:0;"><label class="field-label">Teléfono</label><input class="field" id="buyer-phone" type="tel" placeholder="Tu teléfono" autocomplete="tel" inputmode="tel"></div>
         </div>
 
         <div class="co-section">
@@ -537,6 +538,7 @@
                     <select id="buyer-provincia" class="field" onchange="calcularEnvio()" style="height:46px;font-size:16px;margin-bottom:8px;-webkit-appearance:menulist;appearance:menulist;"></select>
                     <div id="ship-zone-result" style="font-size:12px;margin:0 0 8px;min-height:18px;"></div>
                     <input id="buyer-postal" class="field" type="text" inputmode="numeric" maxlength="8" placeholder="Código postal" style="height:46px;font-size:16px;margin-bottom:8px;">
+                    <input id="buyer-city" class="field" type="text" placeholder="Ciudad / Localidad" autocomplete="address-level2" style="height:46px;font-size:16px;margin-bottom:8px;">
                     <input id="buyer-address" class="field" type="text" placeholder="Dirección completa (calle, número, piso, depto)" autocomplete="street-address" style="height:46px;font-size:16px;">
                 </div>
             </div>
@@ -1228,13 +1230,17 @@ function copyText(text,btn) {
 async function submitCheckout() {
     const name=document.getElementById('buyer-name').value.trim();
     const email=document.getElementById('buyer-email').value.trim();
+    const phone=document.getElementById('buyer-phone').value.trim();
     const address=shippingMode==='delivery'?document.getElementById('buyer-address').value.trim():'';
+    const city=shippingMode==='delivery'?document.getElementById('buyer-city').value.trim():'';
     const errEl=document.getElementById('checkout-error');
     errEl.style.display='none';
 
     if(!name){errEl.textContent='Ingresá tu nombre.';errEl.style.display='block';return;}
     if(!email||!email.includes('@')){errEl.textContent='Ingresá un email válido.';errEl.style.display='block';return;}
+    if(!phone){errEl.textContent='Ingresá tu teléfono.';errEl.style.display='block';return;}
     if(shippingMode==='delivery'&&!shippingProvincia){errEl.textContent='Elegí tu provincia para calcular el envío.';errEl.style.display='block';return;}
+    if(shippingMode==='delivery'&&!city){errEl.textContent='Ingresá tu ciudad o localidad.';errEl.style.display='block';return;}
     if(shippingMode==='delivery'&&!address){errEl.textContent='Ingresá tu dirección de entrega.';errEl.style.display='block';return;}
 
     const btn=document.getElementById('btn-pay');
@@ -1243,9 +1249,9 @@ async function submitCheckout() {
 
     const orderNum = typeof window.getNextOrderNumber === 'function' ? await window.getNextOrderNumber() : Date.now();
     const orderId='SBB-'+orderNum;
-    const buyer={name,email};
+    const buyer={name,email,phone};
     const postalCode = shippingMode==='delivery' ? (document.getElementById('buyer-postal').value.trim()||null) : null;
-    const shipping={mode:shippingMode,address,provincia:shippingMode==='delivery'?shippingProvincia:null,zona:shippingMode==='delivery'?shippingZone:null,cost:effectiveShipping(),carrier:shippingMode==='delivery'?carrierId:null,carrierLabel:shippingMode==='delivery'?(qualifiesFreeShip()?'Envío gratis':carrierLabel):null,postalCode};
+    const shipping={mode:shippingMode,address,city:shippingMode==='delivery'?city:null,provincia:shippingMode==='delivery'?shippingProvincia:null,zona:shippingMode==='delivery'?shippingZone:null,cost:effectiveShipping(),carrier:shippingMode==='delivery'?carrierId:null,carrierLabel:shippingMode==='delivery'?(qualifiesFreeShip()?'Envío gratis':carrierLabel):null,postalCode};
     const items=cart.map(i=>({id:i.id,name:`${i.name} ${i.variant}`,price:i.price,quantity:i.qty}));
 
     try {
@@ -1253,6 +1259,7 @@ async function submitCheckout() {
             const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,buyer,orderId,shipping})});
             const data=await res.json();
             if(!res.ok||!data.init_point) throw new Error(data.error||'Error al procesar el pago');
+            if (typeof window.saveOrder === 'function') window.saveOrder(orderId,{buyer,shipping,items,total:getFinalTotal(),status:'pendiente_pago',metodoPago:'mercadopago'});
             if (typeof window._markCompletedOrder === 'function') window._markCompletedOrder();
             window.location.href=data.init_point;
         } else {
@@ -1260,6 +1267,7 @@ async function submitCheckout() {
             const discountAmt=activeTab==='transfer'?base-Math.round(base*(1-TRANSFER_DISCOUNT)):0;
             const res=await fetch('/api/notify-transfer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,buyer,orderId,total:getFinalTotal(),discount:discountAmt,shipping})});
             if(!res.ok) throw new Error('Error al confirmar el pedido');
+            if (typeof window.saveOrder === 'function') await window.saveOrder(orderId,{buyer,shipping,items,total:getFinalTotal(),discount:discountAmt,status:'pendiente_transferencia',metodoPago:'transferencia'});
             if (typeof window._markCompletedOrder === 'function') window._markCompletedOrder();
             cart=[];saveCart();updateCartUI();
             window.location.href=`/gracias.html?order=${orderId}&status=transfer&shipping=${shippingMode}`;
@@ -1456,6 +1464,19 @@ async function getNextOrderNumber() {
     }
 }
 window.getNextOrderNumber = getNextOrderNumber;
+
+// ── Persistir pedido (para etiquetas de envío en el admin) ──
+async function saveOrder(orderId, data) {
+    try {
+        await setDoc(doc(db, 'tienda_pedidos', orderId), {
+            ...data,
+            creadoEn: serverTimestamp()
+        });
+    } catch (e) {
+        console.error('[tienda] Error guardando pedido:', e);
+    }
+}
+window.saveOrder = saveOrder;
 
 // ── Tracking de visitas: IP única, provincia, y si llegó al checkout ──
 let _visitId = null;

@@ -115,6 +115,29 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
 .visit-badge.viewing{background:rgba(255,255,255,.06);color:#737373;}
 .visit-count{font-size:11px;color:#404040;text-align:right;flex-shrink:0;}
 
+/* PEDIDOS */
+.pedido-row{display:flex;align-items:center;gap:12px;background:#111;border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px 16px;margin-bottom:10px;}
+.pedido-meta{flex:1;min-width:0;}
+.pedido-id{font-family:monospace;font-size:12px;color:#e5e5e5;font-weight:700;}
+.pedido-buyer{font-size:12px;color:#e5e5e5;margin-top:2px;}
+.pedido-addr{font-size:11px;color:#737373;margin-top:2px;}
+.pedido-time{font-size:10px;color:#404040;margin-top:4px;}
+.btn-print{flex-shrink:0;background:#fff;color:#000;border:none;font-size:11px;font-weight:800;letter-spacing:.05em;padding:10px 14px;border-radius:8px;cursor:pointer;white-space:nowrap;}
+.btn-print:hover{background:#e5e5e5;}
+
+/* ETIQUETA IMPRIMIBLE */
+#label-print-area{display:none;}
+@media print {
+    body *{visibility:hidden;}
+    #label-print-area,#label-print-area *{visibility:visible;}
+    #label-print-area{display:block;position:fixed;top:0;left:0;width:100%;}
+    .label-box{width:100mm;padding:6mm;border:2px solid #000;color:#000;background:#fff;font-family:'Inter',sans-serif;}
+    .label-store{font-size:20px;font-weight:900;letter-spacing:.05em;margin-bottom:10px;border-bottom:2px solid #000;padding-bottom:6px;}
+    .label-row{font-size:13px;margin-bottom:6px;line-height:1.4;}
+    .label-key{font-weight:800;}
+    .label-order{margin-top:10px;font-weight:800;font-size:12px;}
+}
+
 /* STATUS */
 .status-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a1a;border:1px solid rgba(255,255,255,.12);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;transition:transform .3s;z-index:9999;white-space:nowrap;}
 .status-toast.show{transform:translateX(-50%) translateY(0);}
@@ -164,6 +187,7 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
             <button class="tab-btn active" id="tab-productos" onclick="switchTab('productos')">Productos</button>
             <button class="tab-btn" id="tab-combos" onclick="switchTab('combos')">Combos</button>
             <button class="tab-btn" id="tab-visitas" onclick="switchTab('visitas')">Visitas</button>
+            <button class="tab-btn" id="tab-pedidos" onclick="switchTab('pedidos')">Pedidos</button>
         </div>
 
         <!-- TAB PRODUCTOS -->
@@ -325,8 +349,19 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                 <div class="empty-state"><i class="fas fa-globe"></i><p>Cargando...</p></div>
             </div>
         </div>
+
+        <!-- TAB PEDIDOS -->
+        <div id="panel-pedidos" style="display:none;">
+            <div class="section-title">Pedidos de envío</div>
+            <div id="pedido-list" class="prod-list">
+                <div class="empty-state"><i class="fas fa-box"></i><p>Cargando...</p></div>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- ETIQUETA DE ENVÍO IMPRIMIBLE -->
+<div id="label-print-area"></div>
 
 <div class="status-toast" id="toast"></div>
 
@@ -374,7 +409,7 @@ var STATIC_PRODUCTS = [
     { id:'desinfectante-everest',     name:'Desinfectante Aerosol',             variant:'Everest 5 en 1',   price:10200, tag:null,          image:'https://i.imgur.com/c7oqrOb.jpeg',  description:'Desinfectante profesional de uso múltiple. Elimina bacterias, virus y hongos en instrumental.' }
 ];
 
-let allProductos = [], allCombos = [], allVisitas = [];
+let allProductos = [], allCombos = [], allVisitas = [], allPedidos = [];
 let freeShipping = false;
 let editingProductoId = null, editingComboId = null;
 let kitItemRows = [];
@@ -403,6 +438,7 @@ auth.onAuthStateChanged(function(user) {
         listenProductos();
         listenCombos();
         listenVisitas();
+        listenPedidos();
     } else {
         document.getElementById('login-view').style.display = 'flex';
         document.getElementById('dashboard-view').style.display = 'none';
@@ -435,9 +471,11 @@ function switchTab(tab) {
     document.getElementById('panel-productos').style.display = tab === 'productos' ? 'block' : 'none';
     document.getElementById('panel-combos').style.display   = tab === 'combos'    ? 'block' : 'none';
     document.getElementById('panel-visitas').style.display  = tab === 'visitas'   ? 'block' : 'none';
+    document.getElementById('panel-pedidos').style.display  = tab === 'pedidos'   ? 'block' : 'none';
     document.getElementById('tab-productos').classList.toggle('active', tab === 'productos');
     document.getElementById('tab-combos').classList.toggle('active', tab === 'combos');
     document.getElementById('tab-visitas').classList.toggle('active', tab === 'visitas');
+    document.getElementById('tab-pedidos').classList.toggle('active', tab === 'pedidos');
 }
 
 // ---- LISTENERS ----
@@ -467,6 +505,15 @@ function listenVisitas() {
     }, function(err) {
         console.error('listenVisitas error:', err);
         showToast('No se pudieron cargar las visitas (' + (err.code||err.message) + ')', false, 4000);
+    });
+}
+function listenPedidos() {
+    db.collection('tienda_pedidos').orderBy('creadoEn', 'desc').limit(300).onSnapshot(function(snap) {
+        allPedidos = snap.docs.map(function(d) { return Object.assign({}, d.data(), { id: d.id }); });
+        renderPedidoList();
+    }, function(err) {
+        console.error('listenPedidos error:', err);
+        showToast('No se pudieron cargar los pedidos (' + (err.code||err.message) + ')', false, 4000);
     });
 }
 
@@ -507,6 +554,49 @@ function renderVisitList() {
             '<div class="visit-count">' + (v.visits || 1) + ' visita' + ((v.visits || 1) !== 1 ? 's' : '') + '<br>' + lastVisit + '</div>' +
         '</div>';
     }).join('');
+}
+
+// ---- PEDIDOS / ETIQUETAS DE ENVÍO ----
+function renderPedidoList() {
+    var el = document.getElementById('pedido-list');
+    var pedidos = allPedidos.filter(function(p) { return p.shipping && p.shipping.mode === 'delivery'; });
+    if (!pedidos.length) {
+        el.innerHTML = '<div class="empty-state"><i class="fas fa-box"></i><p>Todavía no hay pedidos con envío a domicilio.</p></div>';
+        return;
+    }
+    el.innerHTML = pedidos.map(function(p) {
+        var b = p.buyer || {};
+        var s = p.shipping || {};
+        var fecha = (p.creadoEn && p.creadoEn.toDate) ? timeAgo(p.creadoEn.toDate()) : '';
+        var direccion = [s.address, s.city, s.provincia].filter(Boolean).join(', ');
+        return '<div class="pedido-row">' +
+            '<div class="pedido-meta">' +
+                '<div class="pedido-id">' + p.id + '</div>' +
+                '<div class="pedido-buyer">' + (b.name || 'Sin nombre') + ' · ' + (b.phone || 'Sin teléfono') + '</div>' +
+                '<div class="pedido-addr">' + (direccion || 'Sin dirección') + (s.postalCode ? ' (CP ' + s.postalCode + ')' : '') + '</div>' +
+                '<div class="pedido-time">' + fecha + '</div>' +
+            '</div>' +
+            '<button class="btn-print" onclick="printLabel(\'' + p.id + '\')"><i class="fas fa-print"></i> Etiqueta</button>' +
+        '</div>';
+    }).join('');
+}
+
+function printLabel(pedidoId) {
+    var p = allPedidos.find(function(x) { return x.id === pedidoId; });
+    if (!p) return;
+    var b = p.buyer || {};
+    var s = p.shipping || {};
+    var html =
+        '<div class="label-box">' +
+            '<div class="label-store">SB BARBER</div>' +
+            '<div class="label-row"><span class="label-key">Cliente:</span> ' + (b.name || '-') + '</div>' +
+            '<div class="label-row"><span class="label-key">Dirección:</span> ' + (s.address || '-') + '</div>' +
+            '<div class="label-row"><span class="label-key">Localidad:</span> ' + [s.city, s.provincia].filter(Boolean).join(', ') + (s.postalCode ? ' (CP ' + s.postalCode + ')' : '') + '</div>' +
+            '<div class="label-row"><span class="label-key">Teléfono:</span> ' + (b.phone || '-') + '</div>' +
+            '<div class="label-row label-order">Pedido ' + p.id + '</div>' +
+        '</div>';
+    document.getElementById('label-print-area').innerHTML = html;
+    window.print();
 }
 
 // ---- IMAGEN: comprime/redimensiona a base64 para entrar SIEMPRE bajo el límite de Firestore (1MB/doc) ----
