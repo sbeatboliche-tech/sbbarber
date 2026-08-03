@@ -1,0 +1,32 @@
+{
+  "name": "sbbarber-recepcion",
+  "productName": "SB Barber Recepcion",
+  "version": "1.0.0",
+  "description": "Sistema de recepcion SB Barber",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.sbbarber.recepcion",
+    "productName": "SB Barber Recepcion",
+    "asar": false,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "offline.html",
+      "build/icon.png"
+    ],
+    "win": {
+      "target": [{ "target": "zip", "arch": "x64" }],
+      "icon": "build/icon.png"
+    }
+  },
+  "devDependencies": {
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8"
+  }
+}

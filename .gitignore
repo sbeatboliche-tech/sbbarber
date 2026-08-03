@@ -15,3 +15,7 @@ desktop.ini
 
 # Node (por si se agrega en el futuro)
 node_modules/
+
+# Electron app (SB Barber Recepcion)
+electron-app/dist/
+electron-app/rcedit.exe
