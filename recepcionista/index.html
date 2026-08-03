@@ -1910,14 +1910,16 @@ window.selectProductoVenta = (i, el) => {
 };
 
 window.cambiarCantVenta = d => {
-    cantVenta = Math.max(1, Math.min(20, cantVenta + d));
+    const stockActual = selectedProducto ? ((productoStock[selectedProducto.id]?.stock) || 0) : 0;
+    const maxVendible = Math.max(1, Math.min(20, stockActual - 1));
+    cantVenta = Math.max(1, Math.min(maxVendible, cantVenta + d));
     document.getElementById('venta-cantidad-display').textContent = cantVenta;
 };
 
 window.submitVenta = async () => {
     if (!selectedProducto) return alert('Seleccioná un producto');
     const stockActual = (productoStock[selectedProducto.id]?.stock) || 0;
-    if (cantVenta > stockActual) return alert(`Stock insuficiente. Disponible: ${stockActual}`);
+    if (cantVenta >= stockActual) return alert(`No podés vender esa cantidad: siempre debe quedar al menos 1 unidad en stock. Disponible: ${stockActual}`);
     const btn = document.getElementById('btn-submit-venta');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
