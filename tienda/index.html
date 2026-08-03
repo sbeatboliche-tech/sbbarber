@@ -535,7 +535,8 @@
                         <span style="font-size:16px;line-height:1.2;">📦</span>
                         <span style="font-size:11.5px;color:#4ade80;line-height:1.5;">Elegí tu <b>provincia</b> y calculamos el envío. ¡<b>Gratis</b> en compras desde $40.000!</span>
                     </div>
-                    <select id="buyer-provincia" class="field" onchange="calcularEnvio()" style="height:46px;font-size:16px;margin-bottom:8px;-webkit-appearance:menulist;appearance:menulist;"></select>
+                    <select id="buyer-provincia" class="field" onchange="onProvinciaChange()" style="height:46px;font-size:16px;margin-bottom:8px;-webkit-appearance:menulist;appearance:menulist;"></select>
+                    <select id="buyer-partido" class="field" onchange="calcularEnvio()" style="display:none;height:46px;font-size:16px;margin-bottom:8px;-webkit-appearance:menulist;appearance:menulist;"></select>
                     <div id="ship-zone-result" style="font-size:12px;margin:0 0 8px;min-height:18px;"></div>
                     <input id="buyer-postal" class="field" type="text" inputmode="numeric" maxlength="8" placeholder="Código postal" style="height:46px;font-size:16px;margin-bottom:8px;">
                     <input id="buyer-city" class="field" type="text" placeholder="Ciudad / Localidad" autocomplete="address-level2" style="height:46px;font-size:16px;margin-bottom:8px;">
@@ -953,33 +954,61 @@ function addKitToCart(id) {
 
 const FREE_SHIP_THRESHOLD = 40000; // envío gratis desde este monto (ajustable)
 // Tarifas de envío por zona (ajustables). Gratis si supera el umbral.
-const ZONE_RATES = { CABA: 6000, GBA: 7500, Interior: 9700 };
+// CABA/GBA1/GBA2/GBA3 = zonas cubiertas por Mercado Flex (se puede imprimir etiqueta en el admin).
+// Interior = se coordina por Correo Argentino aparte (no tiene etiqueta imprimible acá).
+const ZONE_RATES = { CABA: 3500, GBA1: 4300, GBA2: 6000, GBA3: 8300, Interior: 9700 };
+const ZONE_LABELS = { CABA: 'CABA', GBA1: 'Zona 1', GBA2: 'Zona 2', GBA3: 'Zona 3', Interior: 'Envío' };
+// Partidos de GBA agrupados por cordón/distancia (zonificación tipo Mercado Flex, orientativa).
+const PARTIDOS_GBA = {
+    GBA1: ['Avellaneda','Vicente López','San Isidro','San Martín','Tres de Febrero','Hurlingham','Ituzaingó','Morón','La Matanza','Lomas de Zamora','Lanús','Quilmes','San Fernando'],
+    GBA2: ['Tigre','Malvinas Argentinas','San Miguel','José C. Paz','Moreno','Merlo','Esteban Echeverría','Ezeiza','Almirante Brown','Berazategui','Florencio Varela'],
+    GBA3: ['Pilar','Escobar','General Rodríguez','Marcos Paz','Cañuelas','San Vicente','Presidente Perón','General Las Heras']
+};
 const PROVINCIAS = [
     'Ciudad Autónoma de Buenos Aires','Buenos Aires','Catamarca','Chaco','Chubut','Córdoba',
     'Corrientes','Entre Ríos','Formosa','Jujuy','La Pampa','La Rioja','Mendoza','Misiones',
     'Neuquén','Río Negro','Salta','San Juan','San Luis','Santa Cruz','Santa Fe',
     'Santiago del Estero','Tierra del Fuego','Tucumán'
 ];
-let shippingZone = null, shippingProvincia = '';
-function zonaPorProvincia(prov) {
-    if (prov === 'Ciudad Autónoma de Buenos Aires') return 'CABA';
-    if (prov === 'Buenos Aires') return 'GBA';
-    return prov ? 'Interior' : null;
+let shippingZone = null, shippingProvincia = '', shippingPartido = '';
+function zonaPorPartido(partido) {
+    for (const z of ['GBA1','GBA2','GBA3']) if (PARTIDOS_GBA[z].includes(partido)) return z;
+    return 'GBA3'; // partido de Buenos Aires no listado: se asume el más alejado por seguridad
+}
+function onProvinciaChange() {
+    const prov = document.getElementById('buyer-provincia').value;
+    const partidoSel = document.getElementById('buyer-partido');
+    const citySel = document.getElementById('buyer-city');
+    if (prov === 'Buenos Aires') {
+        const todos = [...PARTIDOS_GBA.GBA1, ...PARTIDOS_GBA.GBA2, ...PARTIDOS_GBA.GBA3].sort((a,b)=>a.localeCompare(b));
+        partidoSel.innerHTML = '<option value="">Elegí tu partido</option>' + todos.map(p=>`<option>${p}</option>`).join('');
+        partidoSel.style.display = 'block';
+        citySel.style.display = 'none';
+    } else {
+        partidoSel.style.display = 'none';
+        citySel.style.display = 'block';
+    }
+    calcularEnvio();
 }
 function calcularEnvio() {
     const prov = document.getElementById('buyer-provincia').value;
+    const partido = document.getElementById('buyer-partido').value;
     const res = document.getElementById('ship-zone-result');
-    const zona = zonaPorProvincia(prov);
+    let zona = null;
+    if (prov === 'Ciudad Autónoma de Buenos Aires') zona = 'CABA';
+    else if (prov === 'Buenos Aires') zona = partido ? zonaPorPartido(partido) : null;
+    else if (prov) zona = 'Interior';
+
     if (!zona) {
-        shippingZone = null; shippingProvincia = ''; shippingCost = 0; carrierLabel = 'Envío a domicilio';
+        shippingZone = null; shippingProvincia = ''; shippingPartido = ''; shippingCost = 0; carrierLabel = 'Envío a domicilio';
         if (res) res.innerHTML = '';
         renderSummary(); return;
     }
-    shippingZone = zona; shippingProvincia = prov;
+    shippingZone = zona; shippingProvincia = prov; shippingPartido = (prov === 'Buenos Aires') ? partido : '';
     shippingCost = ZONE_RATES[zona];
-    carrierLabel = 'Envío ' + prov;
+    carrierLabel = 'Envío ' + (shippingPartido || prov);
     const free = qualifiesFreeShip();
-    if (res) res.innerHTML = '<span style="color:#4ade80;font-weight:700;">✓ ' + prov + '</span> · ' +
+    if (res) res.innerHTML = '<span style="color:#4ade80;font-weight:700;">✓ ' + (shippingPartido || prov) + '</span> · ' +
         (free ? '<b style="color:#4ade80;">¡Envío gratis!</b>' : '<b>$' + shippingCost.toLocaleString('es-AR') + '</b>');
     renderSummary();
 }
@@ -1232,7 +1261,8 @@ async function submitCheckout() {
     const email=document.getElementById('buyer-email').value.trim();
     const phone=document.getElementById('buyer-phone').value.trim();
     const address=shippingMode==='delivery'?document.getElementById('buyer-address').value.trim():'';
-    const city=shippingMode==='delivery'?document.getElementById('buyer-city').value.trim():'';
+    const isBA=shippingProvincia==='Buenos Aires';
+    const city=shippingMode==='delivery'?(isBA?shippingPartido:document.getElementById('buyer-city').value.trim()):'';
     const errEl=document.getElementById('checkout-error');
     errEl.style.display='none';
 
@@ -1240,6 +1270,7 @@ async function submitCheckout() {
     if(!email||!email.includes('@')){errEl.textContent='Ingresá un email válido.';errEl.style.display='block';return;}
     if(!phone){errEl.textContent='Ingresá tu teléfono.';errEl.style.display='block';return;}
     if(shippingMode==='delivery'&&!shippingProvincia){errEl.textContent='Elegí tu provincia para calcular el envío.';errEl.style.display='block';return;}
+    if(shippingMode==='delivery'&&isBA&&!shippingPartido){errEl.textContent='Elegí tu partido para calcular el envío.';errEl.style.display='block';return;}
     if(shippingMode==='delivery'&&!city){errEl.textContent='Ingresá tu ciudad o localidad.';errEl.style.display='block';return;}
     if(shippingMode==='delivery'&&!address){errEl.textContent='Ingresá tu dirección de entrega.';errEl.style.display='block';return;}
 
