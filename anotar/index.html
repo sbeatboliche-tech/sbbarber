@@ -936,6 +936,7 @@ function init() {
             if(bName){ document.getElementById('settings-btn').classList.remove('hidden'); document.getElementById('settings-user-name').textContent=bName; }
             listenToBarberProfiles();
             listenToSettings();
+            listenToPrecios();
             checkUpdatesBadge();
             listenToBarberos();
             if(ADMINS.includes(user.email)){
@@ -1459,6 +1460,18 @@ window.openUpdatesModal = () => {
             <div class="text-xs text-gray-400 mt-1">${u.details}</div>
         </div>`).join('');
 };
+
+// ---- PRECIOS DE SERVICIOS (editables desde recepción, en vivo) ----
+const PATH_PRECIOS_SERV = 'config_precios';
+function listenToPrecios() {
+    onSnapshot(doc(db, PATH_PRECIOS_SERV, 'servicios'), snap => {
+        if (!snap.exists()) return;
+        const overrides = snap.data() || {};
+        SERVICES.forEach(s => { if (overrides[s.name] != null) s.price = Number(overrides[s.name]); });
+        const sel = document.querySelector('input[name="barber"]:checked');
+        if (sel && typeof window.renderServices === 'function') window.renderServices(sel.value);
+    });
+}
 
 // ---- COMISIONES ----
 function listenToSettings() {
