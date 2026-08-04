@@ -136,6 +136,11 @@
                     <i class="fas fa-receipt text-xs"></i>
                     <span class="hidden md:inline">Gastos</span>
                 </button>
+                <!-- Botón stock de bebidas -->
+                <button onclick="window.openBebidasPanel()" class="flex items-center gap-1.5 bg-cyan-600/20 border border-cyan-500/40 text-cyan-300 px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-cyan-600/40 transition">
+                    <span class="text-sm leading-none">🥤</span>
+                    <span class="hidden md:inline">BEBIDAS</span>
+                </button>
                 <!-- Botón cierre de caja: siempre visible -->
                 <button onclick="window.openCierreCaja()" class="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-lg hover:scale-[1.02] transition active:scale-95">
                     <i class="fas fa-cash-register text-xs"></i>
@@ -270,24 +275,17 @@
                     </div>
                 </div>
 
-                <!-- Lista bebidas -->
-                <div class="glass-card rounded-2xl p-5 animate-enter">
-                    <div class="flex justify-between items-center mb-4">
+                <!-- Acceso a stock de bebidas -->
+                <button onclick="window.openBebidasPanel()" class="w-full glass-card rounded-2xl p-4 flex items-center justify-between hover:bg-white/5 transition text-left animate-enter">
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-xl bg-cyan-900/30 flex items-center justify-center text-xl flex-shrink-0">🥤</div>
                         <div>
-                            <h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-wine-bottle text-cyan-400 text-xs"></i> Bebidas</h3>
-                            <div class="flex gap-3 mt-0.5">
-                                <span class="text-[10px] text-gray-500"><span id="stat-total-units" class="text-cyan-300 font-bold">0</span> unid.</span>
-                                <span id="low-stock-badge" class="hidden text-[10px] text-red-400 font-bold"><span id="stat-low-stock">0</span> stock bajo</span>
-                            </div>
+                            <h3 class="text-sm font-bold text-white">Stock de bebidas</h3>
+                            <p class="text-[10px] text-gray-500 mt-0.5">Gaseosas, aguas y más</p>
                         </div>
-                        <button id="btn-add-stock-item" onclick="window.openAddItemModal()" class="hidden bg-cyan-700/40 border border-cyan-500/30 text-cyan-400 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-cyan-700/60 transition flex items-center gap-1.5">
-                            <i class="fas fa-plus text-[10px]"></i> Agregar
-                        </button>
                     </div>
-                    <div id="stock-list" class="space-y-2">
-                        <p class="text-xs text-gray-600 text-center py-4">Cargando...</p>
-                    </div>
-                </div>
+                    <i class="fas fa-chevron-right text-gray-600 text-xs"></i>
+                </button>
 
                 <!-- Historial de ventas por día -->
                 <div class="glass-card rounded-2xl p-5 animate-enter">
@@ -427,6 +425,37 @@
             </div>
         </div>
     </div><!-- /stock-productos-panel -->
+
+    <!-- ============================================================
+         PANEL STOCK DE BEBIDAS
+    ============================================================ -->
+    <div id="bebidas-panel" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+        <header class="px-5 py-4 glass flex items-center gap-4 flex-shrink-0">
+            <button onclick="window.closeBebidasPanel()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition">
+                <i class="fas fa-arrow-left text-sm"></i>
+            </button>
+            <div>
+                <h1 class="text-sm font-bold text-white leading-none">🥤 STOCK DE BEBIDAS</h1>
+                <span class="text-[10px] text-cyan-400 font-medium">Gaseosas, aguas y más</span>
+            </div>
+        </header>
+        <div class="flex-1 overflow-y-auto p-4 pb-10">
+            <div class="glass-card rounded-2xl p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="flex gap-3">
+                        <span class="text-[10px] text-gray-500"><span id="stat-total-units" class="text-cyan-300 font-bold">0</span> unid.</span>
+                        <span id="low-stock-badge" class="hidden text-[10px] text-red-400 font-bold"><span id="stat-low-stock">0</span> stock bajo</span>
+                    </div>
+                    <button id="btn-add-stock-item" onclick="window.openAddItemModal()" class="hidden bg-cyan-700/40 border border-cyan-500/30 text-cyan-400 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-cyan-700/60 transition flex items-center gap-1.5">
+                        <i class="fas fa-plus text-[10px]"></i> Agregar
+                    </button>
+                </div>
+                <div id="stock-list" class="space-y-2">
+                    <p class="text-xs text-gray-600 text-center py-4">Cargando...</p>
+                </div>
+            </div>
+        </div>
+    </div><!-- /bebidas-panel -->
 
     <!-- ============================================================
          PANEL RETIROS Y PROPINAS
@@ -966,40 +995,42 @@
 
     <!-- Venta de producto de barber -->
     <div id="ventas-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
-        <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 shadow-2xl rounded-t-3xl max-h-[92vh] flex flex-col">
-            <div class="flex justify-between items-center p-5 pb-3 flex-shrink-0">
+        <div class="glass-modal md:rounded-3xl md:max-w-3xl md:mx-auto w-full border-t md:border border-white/10 shadow-2xl rounded-t-3xl max-h-[92vh] md:max-h-[85vh] flex flex-col overflow-hidden">
+            <div class="flex justify-between items-center p-5 pb-3 md:pb-4 flex-shrink-0 md:border-b md:border-white/5">
                 <h2 class="text-xl font-bold text-white"><i class="fas fa-shopping-bag text-indigo-400 mr-2"></i>Venta de producto</h2>
-                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:bg-white/20 transition"><i class="fas fa-times"></i></button>
             </div>
-            <div class="overflow-y-auto flex-1 px-5 pb-1">
-            <div class="grid grid-cols-2 gap-1.5 mb-4" id="productos-grid"></div>
-            </div><!-- /scroll -->
-            <div class="px-5 pb-5 pt-3 flex-shrink-0 border-t border-white/5 space-y-3">
-                <div class="flex items-center justify-between bg-black/30 rounded-xl px-4 py-2.5">
-                    <span class="text-sm text-gray-300 font-medium">Cantidad</span>
-                    <div class="flex items-center gap-3">
-                        <button onclick="window.cambiarCantVenta(-1)" class="w-8 h-8 rounded-full bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 transition">−</button>
-                        <span id="venta-cantidad-display" class="text-lg font-bold text-white w-6 text-center">1</span>
-                        <button onclick="window.cambiarCantVenta(1)" class="w-8 h-8 rounded-full bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 transition">+</button>
+            <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+                <div class="overflow-y-auto flex-1 px-5 pb-1 md:pb-5 md:pt-1">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-1.5 md:gap-2.5 mb-4" id="productos-grid"></div>
+                </div><!-- /scroll -->
+                <div class="px-5 pb-5 pt-3 md:pt-5 flex-shrink-0 border-t md:border-t-0 md:border-l border-white/5 space-y-3 md:w-72 md:overflow-y-auto">
+                    <div class="flex items-center justify-between bg-black/30 rounded-xl px-4 py-2.5">
+                        <span class="text-sm text-gray-300 font-medium">Cantidad</span>
+                        <div class="flex items-center gap-3">
+                            <button onclick="window.cambiarCantVenta(-1)" class="w-8 h-8 rounded-full bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 transition">−</button>
+                            <span id="venta-cantidad-display" class="text-lg font-bold text-white w-6 text-center">1</span>
+                            <button onclick="window.cambiarCantVenta(1)" class="w-8 h-8 rounded-full bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 transition">+</button>
+                        </div>
                     </div>
-                </div>
-                <div>
-                    <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-1.5">Canal de venta</p>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button type="button" id="venta-canal-local" onclick="window.setVentaCanal('local')" class="p-2.5 bg-indigo-600/20 border border-indigo-500 rounded-xl font-bold text-sm text-indigo-300 transition">🏪 Local</button>
-                        <button type="button" id="venta-canal-ml" onclick="window.setVentaCanal('ml')" class="p-2.5 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition">🛒 MercadoLibre</button>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-1.5">Canal de venta</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" id="venta-canal-local" onclick="window.setVentaCanal('local')" class="p-2.5 bg-indigo-600/20 border border-indigo-500 rounded-xl font-bold text-sm text-indigo-300 transition">🏪 Local</button>
+                            <button type="button" id="venta-canal-ml" onclick="window.setVentaCanal('ml')" class="p-2.5 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition">🛒 MercadoLibre</button>
+                        </div>
+                        <input type="hidden" id="venta-canal" value="local">
                     </div>
-                    <input type="hidden" id="venta-canal" value="local">
-                </div>
-                <div id="venta-metodo-wrap">
-                    <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-1.5">Método de pago</p>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button type="button" id="venta-mp-efectivo" onclick="window.setVentaMetodo('efectivo')" class="p-2.5 bg-emerald-600/20 border border-emerald-500 rounded-xl font-bold text-sm text-emerald-300 transition">💵 Efectivo</button>
-                        <button type="button" id="venta-mp-transferencia" onclick="window.setVentaMetodo('transferencia')" class="p-2.5 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition">📲 Transferencia</button>
+                    <div id="venta-metodo-wrap">
+                        <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-1.5">Método de pago</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" id="venta-mp-efectivo" onclick="window.setVentaMetodo('efectivo')" class="p-2.5 bg-emerald-600/20 border border-emerald-500 rounded-xl font-bold text-sm text-emerald-300 transition">💵 Efectivo</button>
+                            <button type="button" id="venta-mp-transferencia" onclick="window.setVentaMetodo('transferencia')" class="p-2.5 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition">📲 Transferencia</button>
+                        </div>
+                        <input type="hidden" id="venta-metodo-pago" value="efectivo">
                     </div>
-                    <input type="hidden" id="venta-metodo-pago" value="efectivo">
+                    <button onclick="window.submitVenta()" id="btn-submit-venta" class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white p-3.5 rounded-xl font-bold text-base shadow-lg uppercase tracking-widest hover:shadow-indigo-500/30 hover:scale-[1.01] transition">Registrar venta</button>
                 </div>
-                <button onclick="window.submitVenta()" id="btn-submit-venta" class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white p-3.5 rounded-xl font-bold text-base shadow-lg uppercase tracking-widest">Registrar venta</button>
             </div>
         </div>
     </div>
@@ -1870,9 +1901,15 @@ function renderProductosGrid() {
         const stockColor = sinStock ? 'text-red-400' : stock <= 3 ? 'text-yellow-400' : 'text-gray-500';
         const safeId = p.id.replace(/'/g, "\\'");
         const safeName = p.name.replace(/'/g, "\\'");
-        return `<div onclick="${sinStock ? '' : `window.selectProductoVenta(${i},this)`}"
-            class="prod-btn p-2.5 ${sinStock ? 'bg-gray-900/40 opacity-50 cursor-not-allowed' : 'bg-gray-800/50 cursor-pointer hover:bg-gray-700/60 active:scale-95'} border border-gray-700/60 rounded-xl flex flex-col gap-1 transition relative">
-            <span class="text-xs font-semibold text-gray-200 leading-tight pr-5">${p.name}</span>
+        const isSelected = !sinStock && selectedProducto?.id === p.id;
+        const stateClasses = sinStock
+            ? 'bg-gray-900/40 opacity-50 cursor-not-allowed border-gray-700/60'
+            : isSelected
+                ? 'bg-indigo-600/20 cursor-pointer border-indigo-500 scale-[1.01] shadow-lg'
+                : 'bg-gray-800/50 cursor-pointer hover:bg-gray-700/60 md:hover:border-indigo-500/40 active:scale-95 border-gray-700/60';
+        return `<div onclick="${sinStock ? '' : `window.selectProductoVenta(${i})`}"
+            class="prod-btn p-2.5 md:p-3 ${stateClasses} border rounded-xl flex flex-col gap-1 transition relative">
+            <span class="text-xs md:text-sm font-semibold text-gray-200 leading-tight pr-5">${p.name}</span>
             <div class="flex justify-between items-center">
                 <span class="${stockColor} text-[10px] font-bold">${sinStock ? 'Sin stock' : stock + ' u.'}</span>
                 ${p.precio > 0 ? `<span class="text-[10px] font-bold text-white/60">$${(p.precio/1000).toFixed(0)}k</span>` : ''}
@@ -1885,7 +1922,7 @@ function renderProductosGrid() {
     };
 
     const header = (label) =>
-        `<div class="col-span-2 text-[10px] font-bold text-gray-600 uppercase tracking-wider pt-1">${label}</div>`;
+        `<div class="col-span-full text-[10px] font-bold text-gray-600 uppercase tracking-wider pt-1">${label}</div>`;
 
     document.getElementById('productos-grid').innerHTML =
         header('🏪 Local') +
@@ -1903,15 +1940,14 @@ window.openVentaModal = () => {
     showModal('ventas-modal');
 };
 
-window.selectProductoVenta = (i, el) => {
+window.selectProductoVenta = (i) => {
     selectedProducto = PRODUCTOS_BARBER[i];
-    document.querySelectorAll('.prod-btn').forEach(b => b.className = 'prod-btn p-3 bg-gray-800/50 border border-gray-700 rounded-xl flex justify-between items-center cursor-pointer hover:bg-gray-800 transition');
-    el.className = 'prod-btn p-3 bg-indigo-600/20 border border-indigo-500 rounded-xl flex justify-between items-center cursor-pointer transition scale-[1.01] shadow-lg';
+    renderProductosGrid();
 };
 
 window.cambiarCantVenta = d => {
     const stockActual = selectedProducto ? ((productoStock[selectedProducto.id]?.stock) || 0) : 0;
-    const maxVendible = Math.max(1, Math.min(20, stockActual - 1));
+    const maxVendible = Math.max(1, Math.min(20, stockActual));
     cantVenta = Math.max(1, Math.min(maxVendible, cantVenta + d));
     document.getElementById('venta-cantidad-display').textContent = cantVenta;
 };
@@ -1919,7 +1955,7 @@ window.cambiarCantVenta = d => {
 window.submitVenta = async () => {
     if (!selectedProducto) return alert('Seleccioná un producto');
     const stockActual = (productoStock[selectedProducto.id]?.stock) || 0;
-    if (cantVenta >= stockActual) return alert(`No podés vender esa cantidad: siempre debe quedar al menos 1 unidad en stock. Disponible: ${stockActual}`);
+    if (cantVenta > stockActual) return alert(`No podés vender esa cantidad. Disponible: ${stockActual}`);
     const btn = document.getElementById('btn-submit-venta');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
@@ -2889,6 +2925,16 @@ window.openStockProductosPanel = () => {
 };
 window.closeStockProductosPanel = () => {
     const p = document.getElementById('stock-productos-panel');
+    p.classList.add('hidden'); p.classList.remove('flex', 'flex-col');
+};
+
+// ---- PANEL STOCK BEBIDAS ----
+window.openBebidasPanel = () => {
+    const p = document.getElementById('bebidas-panel');
+    p.classList.remove('hidden'); p.classList.add('flex', 'flex-col');
+};
+window.closeBebidasPanel = () => {
+    const p = document.getElementById('bebidas-panel');
     p.classList.add('hidden'); p.classList.remove('flex', 'flex-col');
 };
 
