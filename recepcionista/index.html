@@ -136,11 +136,6 @@
                     <i class="fas fa-receipt text-xs"></i>
                     <span class="hidden md:inline">Gastos</span>
                 </button>
-                <!-- Botón stock de bebidas -->
-                <button onclick="window.openBebidasPanel()" class="flex items-center gap-1.5 bg-cyan-600/20 border border-cyan-500/40 text-cyan-300 px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-cyan-600/40 transition">
-                    <span class="text-sm leading-none">🥤</span>
-                    <span class="hidden md:inline">BEBIDAS</span>
-                </button>
                 <!-- Botón cierre de caja: siempre visible -->
                 <button onclick="window.openCierreCaja()" class="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-lg hover:scale-[1.02] transition active:scale-95">
                     <i class="fas fa-cash-register text-xs"></i>
@@ -275,8 +270,31 @@
                     </div>
                 </div>
 
-                <!-- Acceso a stock de bebidas -->
-                <button onclick="window.openBebidasPanel()" class="w-full glass-card rounded-2xl p-4 flex items-center justify-between hover:bg-white/5 transition text-left animate-enter">
+                <!-- Lista bebidas: siempre inline en desktop; en mobile se oculta y se accede por el botón de abajo -->
+                <div id="bebidas-card-anchor"></div>
+                <div id="bebidas-card" class="hidden md:block glass-card rounded-2xl p-5 animate-enter">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-wine-bottle text-cyan-400 text-xs"></i> Bebidas</h3>
+                            <div class="flex gap-3 mt-0.5">
+                                <span class="text-[10px] text-gray-500"><span id="stat-total-units" class="text-cyan-300 font-bold">0</span> unid.</span>
+                                <span id="low-stock-badge" class="hidden text-[10px] text-red-400 font-bold"><span id="stat-low-stock">0</span> stock bajo</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="btn-add-stock-item" onclick="window.openAddItemModal()" class="hidden bg-cyan-700/40 border border-cyan-500/30 text-cyan-400 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-cyan-700/60 transition flex items-center gap-1.5">
+                                <i class="fas fa-plus text-[10px]"></i> Agregar
+                            </button>
+                            <button onclick="window.closeBebidasPanel()" class="md:hidden w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition"><i class="fas fa-arrow-left text-xs"></i></button>
+                        </div>
+                    </div>
+                    <div id="stock-list" class="space-y-2">
+                        <p class="text-xs text-gray-600 text-center py-4">Cargando...</p>
+                    </div>
+                </div>
+
+                <!-- Acceso a stock de bebidas: solo mobile -->
+                <button onclick="window.openBebidasPanel()" class="md:hidden w-full glass-card rounded-2xl p-4 flex items-center justify-between hover:bg-white/5 transition text-left animate-enter">
                     <div class="flex items-center gap-3">
                         <div class="w-11 h-11 rounded-xl bg-cyan-900/30 flex items-center justify-center text-xl flex-shrink-0">🥤</div>
                         <div>
@@ -439,22 +457,7 @@
                 <span class="text-[10px] text-cyan-400 font-medium">Gaseosas, aguas y más</span>
             </div>
         </header>
-        <div class="flex-1 overflow-y-auto p-4 pb-10">
-            <div class="glass-card rounded-2xl p-5">
-                <div class="flex justify-between items-center mb-4">
-                    <div class="flex gap-3">
-                        <span class="text-[10px] text-gray-500"><span id="stat-total-units" class="text-cyan-300 font-bold">0</span> unid.</span>
-                        <span id="low-stock-badge" class="hidden text-[10px] text-red-400 font-bold"><span id="stat-low-stock">0</span> stock bajo</span>
-                    </div>
-                    <button id="btn-add-stock-item" onclick="window.openAddItemModal()" class="hidden bg-cyan-700/40 border border-cyan-500/30 text-cyan-400 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-cyan-700/60 transition flex items-center gap-1.5">
-                        <i class="fas fa-plus text-[10px]"></i> Agregar
-                    </button>
-                </div>
-                <div id="stock-list" class="space-y-2">
-                    <p class="text-xs text-gray-600 text-center py-4">Cargando...</p>
-                </div>
-            </div>
-        </div>
+        <div id="bebidas-panel-body" class="flex-1 overflow-y-auto p-4 pb-10"></div>
     </div><!-- /bebidas-panel -->
 
     <!-- ============================================================
@@ -2928,12 +2931,20 @@ window.closeStockProductosPanel = () => {
     p.classList.add('hidden'); p.classList.remove('flex', 'flex-col');
 };
 
-// ---- PANEL STOCK BEBIDAS ----
+// ---- PANEL STOCK BEBIDAS (mobile) ----
+// En desktop la tarjeta de bebidas queda siempre inline (ver #bebidas-card, hidden md:block).
+// En mobile se reutiliza el mismo elemento moviéndolo dentro de este panel a pantalla completa.
 window.openBebidasPanel = () => {
+    const card = document.getElementById('bebidas-card');
+    document.getElementById('bebidas-panel-body').appendChild(card);
+    card.classList.remove('hidden');
     const p = document.getElementById('bebidas-panel');
     p.classList.remove('hidden'); p.classList.add('flex', 'flex-col');
 };
 window.closeBebidasPanel = () => {
+    const card = document.getElementById('bebidas-card');
+    document.getElementById('bebidas-card-anchor').after(card);
+    card.classList.add('hidden');
     const p = document.getElementById('bebidas-panel');
     p.classList.add('hidden'); p.classList.remove('flex', 'flex-col');
 };
