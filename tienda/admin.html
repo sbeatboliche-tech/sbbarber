@@ -130,15 +130,21 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
 
 /* ETIQUETA IMPRIMIBLE */
 #label-print-area{display:none;}
+@page{margin:0;}
 @media print {
     body *{visibility:hidden;}
     #label-print-area,#label-print-area *{visibility:visible;}
-    #label-print-area{display:block;position:fixed;top:0;left:0;width:100%;}
-    .label-box{width:100mm;padding:6mm;border:2px solid #000;color:#000;background:#fff;font-family:'Inter',sans-serif;}
-    .label-store{font-size:20px;font-weight:900;letter-spacing:.05em;margin-bottom:10px;border-bottom:2px solid #000;padding-bottom:6px;}
-    .label-row{font-size:13px;margin-bottom:6px;line-height:1.4;}
-    .label-key{font-weight:800;}
-    .label-order{margin-top:10px;font-weight:800;font-size:12px;}
+    #label-print-area{display:block;position:fixed;inset:0;width:100%;height:100%;}
+    .label-box{width:100%;height:100%;box-sizing:border-box;padding:16mm;color:#000;background:#fff;font-family:'Inter',sans-serif;display:flex;flex-direction:column;}
+    .label-brand{display:flex;align-items:center;gap:16px;border-bottom:4px solid #000;padding-bottom:18px;margin-bottom:32px;}
+    .label-brand-mark{width:64px;height:64px;border-radius:50%;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;letter-spacing:-.02em;flex-shrink:0;}
+    .label-store{font-size:38px;font-weight:900;letter-spacing:.06em;line-height:1.1;}
+    .label-store small{display:block;font-size:13px;font-weight:700;letter-spacing:.18em;color:#525252;margin-top:4px;}
+    .label-body{flex:1;display:flex;flex-direction:column;gap:22px;}
+    .label-row{font-size:22px;line-height:1.4;}
+    .label-key{display:block;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#525252;margin-bottom:3px;}
+    .label-order{margin-top:auto;padding-top:22px;border-top:3px solid #000;display:flex;justify-content:space-between;align-items:flex-end;font-weight:800;font-size:18px;}
+    .label-date{font-size:12px;font-weight:600;color:#525252;}
 }
 
 /* STATUS */
@@ -355,7 +361,12 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
 
         <!-- TAB PEDIDOS -->
         <div id="panel-pedidos" style="display:none;">
-            <div class="section-title">Pedidos de envío</div>
+            <div class="section-title">Pendientes de aprobar (transferencia)</div>
+            <div id="pedido-list-pendientes" class="prod-list">
+                <div class="empty-state"><i class="fas fa-clock"></i><p>Cargando...</p></div>
+            </div>
+
+            <div class="section-title" style="margin-top:28px;">Listos para envío</div>
             <div id="pedido-list" class="prod-list">
                 <div class="empty-state"><i class="fas fa-box"></i><p>Cargando...</p></div>
             </div>
@@ -564,13 +575,38 @@ function renderVisitList() {
 var ZONAS_FLEX = ['CABA', 'GBA1', 'GBA2', 'GBA3'];
 var ZONA_LABELS = { CABA: 'CABA', GBA1: 'Zona 1', GBA2: 'Zona 2', GBA3: 'Zona 3', Interior: 'Interior' };
 function renderPedidoList() {
+    var deliveryPedidos = allPedidos.filter(function(p) { return p.shipping && p.shipping.mode === 'delivery'; });
+    // Las transferencias necesitan confirmación manual antes de poder imprimir etiqueta.
+    var pendientes = deliveryPedidos.filter(function(p) { return p.metodoPago === 'transferencia' && !p.aprobado; });
+    var listos     = deliveryPedidos.filter(function(p) { return !(p.metodoPago === 'transferencia' && !p.aprobado); });
+
+    var elPend = document.getElementById('pedido-list-pendientes');
+    if (!pendientes.length) {
+        elPend.innerHTML = '<div class="empty-state"><i class="fas fa-clock"></i><p>No hay transferencias pendientes de aprobar.</p></div>';
+    } else {
+        elPend.innerHTML = pendientes.map(function(p) {
+            var b = p.buyer || {};
+            var s = p.shipping || {};
+            var fecha = (p.creadoEn && p.creadoEn.toDate) ? timeAgo(p.creadoEn.toDate()) : '';
+            var direccion = [s.address, s.city, s.provincia].filter(Boolean).join(', ');
+            return '<div class="pedido-row">' +
+                '<div class="pedido-meta">' +
+                    '<div class="pedido-id">' + p.id + '</div>' +
+                    '<div class="pedido-buyer">' + (b.name || 'Sin nombre') + ' · ' + (b.phone || 'Sin teléfono') + '</div>' +
+                    '<div class="pedido-addr">' + (direccion || 'Sin dirección') + (s.postalCode ? ' (CP ' + s.postalCode + ')' : '') + '</div>' +
+                    '<div class="pedido-time">' + fecha + '</div>' +
+                '</div>' +
+                '<button class="btn-print" style="background:#16a34a;color:#fff;" onclick="aprobarPedido(\'' + p.id + '\')"><i class="fas fa-check"></i> Aprobar pago</button>' +
+            '</div>';
+        }).join('');
+    }
+
     var el = document.getElementById('pedido-list');
-    var pedidos = allPedidos.filter(function(p) { return p.shipping && p.shipping.mode === 'delivery'; });
-    if (!pedidos.length) {
-        el.innerHTML = '<div class="empty-state"><i class="fas fa-box"></i><p>Todavía no hay pedidos con envío a domicilio.</p></div>';
+    if (!listos.length) {
+        el.innerHTML = '<div class="empty-state"><i class="fas fa-box"></i><p>Todavía no hay pedidos listos para enviar.</p></div>';
         return;
     }
-    el.innerHTML = pedidos.map(function(p) {
+    el.innerHTML = listos.map(function(p) {
         var b = p.buyer || {};
         var s = p.shipping || {};
         var fecha = (p.creadoEn && p.creadoEn.toDate) ? timeAgo(p.creadoEn.toDate()) : '';
@@ -592,20 +628,41 @@ function renderPedidoList() {
     }).join('');
 }
 
+function aprobarPedido(pedidoId) {
+    db.collection('tienda_pedidos').doc(pedidoId).update({
+        aprobado: true,
+        aprobadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function() {
+        showToast('Pago aprobado ✓', true);
+    }).catch(function(e) {
+        console.error('aprobarPedido error:', e);
+        showToast('No se pudo aprobar (' + (e.code || e.message) + ')', false, 4000);
+    });
+}
+
 function printLabel(pedidoId) {
     var p = allPedidos.find(function(x) { return x.id === pedidoId; });
     if (!p) return;
     var b = p.buyer || {};
     var s = p.shipping || {};
     if (ZONAS_FLEX.indexOf(s.zona) === -1) { showToast('Este pedido no está en zona de Mercado Flex.', false, 3000); return; }
+    var fechaImpresion = new Date().toLocaleDateString('es-AR');
     var html =
         '<div class="label-box">' +
-            '<div class="label-store">SB BARBER</div>' +
-            '<div class="label-row"><span class="label-key">Cliente:</span> ' + (b.name || '-') + '</div>' +
-            '<div class="label-row"><span class="label-key">Dirección:</span> ' + (s.address || '-') + '</div>' +
-            '<div class="label-row"><span class="label-key">Localidad:</span> ' + [s.city, s.provincia].filter(Boolean).join(', ') + (s.postalCode ? ' (CP ' + s.postalCode + ')' : '') + '</div>' +
-            '<div class="label-row"><span class="label-key">Teléfono:</span> ' + (b.phone || '-') + '</div>' +
-            '<div class="label-row label-order">Pedido ' + p.id + '</div>' +
+            '<div class="label-brand">' +
+                '<div class="label-brand-mark">SB</div>' +
+                '<div class="label-store">SB BARBER<small>ENVÍO A DOMICILIO</small></div>' +
+            '</div>' +
+            '<div class="label-body">' +
+                '<div class="label-row"><span class="label-key">Cliente</span>' + (b.name || '-') + '</div>' +
+                '<div class="label-row"><span class="label-key">Dirección</span>' + (s.address || '-') + '</div>' +
+                '<div class="label-row"><span class="label-key">Localidad</span>' + [s.city, s.provincia].filter(Boolean).join(', ') + (s.postalCode ? ' (CP ' + s.postalCode + ')' : '') + '</div>' +
+                '<div class="label-row"><span class="label-key">Teléfono</span>' + (b.phone || '-') + '</div>' +
+            '</div>' +
+            '<div class="label-order">' +
+                '<span>Pedido ' + p.id + '</span>' +
+                '<span class="label-date">Impreso el ' + fechaImpresion + '</span>' +
+            '</div>' +
         '</div>';
     document.getElementById('label-print-area').innerHTML = html;
     window.print();
