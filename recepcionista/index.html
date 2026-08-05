@@ -3572,22 +3572,23 @@ window.savePrecios = async () => {
 };
 
 // ---- CHECKLIST DE RECEPCIÓN (ítems editables por admin, tildado diario) ----
-const PATH_CHECKLIST_ITEMS  = 'config_checklist';
-const PATH_CHECKLIST_ESTADO = 'checklist_estado';
+// Reutiliza la colección 'config_precios' (ya habilitada en las reglas de Firestore)
+// en vez de crear colecciones nuevas que podrían no tener permisos configurados.
+const PATH_CHECKLIST = PATH_PRECIOS_SERV;
 let checklistItems = [];
 let checklistEstado = {};
 
 function listenToChecklist() {
     if (!db) return;
-    onSnapshot(doc(db, PATH_CHECKLIST_ITEMS, 'items'), d => {
+    onSnapshot(doc(db, PATH_CHECKLIST, 'checklist_items'), d => {
         checklistItems = (d.exists() ? d.data().items : []) || [];
         renderChecklist();
-    });
+    }, e => console.error('checklist items listener error:', e));
     const hoy = new Date().toLocaleDateString('en-CA');
-    onSnapshot(doc(db, PATH_CHECKLIST_ESTADO, hoy), d => {
+    onSnapshot(doc(db, PATH_CHECKLIST, 'checklist_estado_' + hoy), d => {
         checklistEstado = (d.exists() ? d.data() : {}) || {};
         renderChecklist();
-    });
+    }, e => console.error('checklist estado listener error:', e));
 }
 
 function renderChecklist() {
@@ -3611,10 +3612,13 @@ function renderChecklist() {
 window.toggleChecklistItem = async (i, checked) => {
     const hoy = new Date().toLocaleDateString('en-CA');
     try {
-        await setDoc(doc(db, PATH_CHECKLIST_ESTADO, hoy), {
+        await setDoc(doc(db, PATH_CHECKLIST, 'checklist_estado_' + hoy), {
             [i]: checked, userEmail: currentUser?.email || null, actualizadoEn: serverTimestamp()
         }, { merge: true });
-    } catch (e) { console.error('checklist toggle error:', e); }
+    } catch (e) {
+        console.error('checklist toggle error:', e);
+        alert('No se pudo guardar el check. Verificá tu conexión / permisos.\n' + (e?.message || e));
+    }
 };
 
 window.openChecklistEditor = () => {
@@ -3647,11 +3651,12 @@ window.saveChecklistItems = async () => {
     btn.disabled = true; const prev = btn.textContent; btn.textContent = 'Guardando...';
     try {
         const items = Array.from(document.querySelectorAll('.checklist-editor-input')).map(i => i.value.trim()).filter(Boolean);
-        await setDoc(doc(db, PATH_CHECKLIST_ITEMS, 'items'), { items }, { merge: true });
+        await setDoc(doc(db, PATH_CHECKLIST, 'checklist_items'), { items }, { merge: true });
         btn.textContent = '✓ Guardado';
         setTimeout(() => { btn.disabled = false; btn.textContent = prev; closeModals(); }, 900);
     } catch (e) {
-        alert('No se pudo guardar. Verificá tu conexión / permisos.');
+        console.error('checklist save error:', e);
+        alert('No se pudo guardar. Verificá tu conexión / permisos.\n' + (e?.message || e));
         btn.disabled = false; btn.textContent = prev;
     }
 };
