@@ -1424,10 +1424,11 @@ function renderVentasHistorial() {
         const rows = items.map(v => {
             const icon = v.tipo==='bebida' ? '🥤' : '💈';
             const cant = v.cantidad>1 ? ` <span class="text-indigo-300 font-bold">×${v.cantidad}</span>` : '';
+            const regaloTag = v.esRegalo ? ` <span class="text-[10px] text-pink-400">🎁${v.motivo ? ' ' + v.motivo : ''}</span>` : '';
             return `<div class="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
                 <div class="flex items-center gap-2">
                     <span class="text-sm leading-none">${icon}</span>
-                    <span class="text-xs text-gray-200">${v.producto}${cant}</span>
+                    <span class="text-xs text-gray-200">${v.producto}${cant}${regaloTag}</span>
                 </div>
                 ${(v.total||0)>0?`<span class="text-xs font-bold text-indigo-300">$${v.total.toLocaleString('es-AR')}</span>`:''}
             </div>`;
@@ -1947,15 +1948,17 @@ function render() {
                 const icon = v.tipo==='bebida' ? '🥤' : '💈';
                 const border = v.tipo==='bebida' ? 'border-cyan-500/40' : 'border-indigo-500/40';
                 const time = v.creadoEn ? v.creadoEn.toDate().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : v.fecha||'';
+                const regaloTag = v.esRegalo ? ` <span class="text-pink-400">🎁</span>` : '';
+                const meta = [v.barbero, time, v.esRegalo && v.motivo ? v.motivo : null].filter(Boolean).join(' · ');
                 return `<div class="flex justify-between items-center bg-black/30 p-3 rounded-xl border-l-2 ${border}">
                     <div class="flex items-center gap-2">
                         <span class="text-base leading-none">${icon}</span>
                         <div>
-                            <div class="text-xs font-bold text-white">${v.producto}${v.cantidad>1?` <span class="text-indigo-300">×${v.cantidad}</span>`:''}</div>
-                            <div class="text-[10px] text-gray-500">${v.barbero?v.barbero+' · ':''}${time}</div>
+                            <div class="text-xs font-bold text-white">${v.producto}${v.cantidad>1?` <span class="text-indigo-300">×${v.cantidad}</span>`:''}${regaloTag}</div>
+                            <div class="text-[10px] text-gray-500">${meta}</div>
                         </div>
                     </div>
-                    ${(v.total||0)>0?`<span class="text-sm font-bold text-indigo-300">$${v.total.toLocaleString('es-AR')}</span>`:''}
+                    ${v.esRegalo ? `<span class="text-xs font-bold text-pink-400">Regalo</span>` : (v.total||0)>0?`<span class="text-sm font-bold text-indigo-300">$${v.total.toLocaleString('es-AR')}</span>`:''}
                 </div>`;
             }).join('');
             const ventasDiv = document.createElement('div');

@@ -695,6 +695,11 @@
                         <input type="hidden" id="mv-metodo-pago" value="efectivo">
                     </div>
                 </div>
+                <!-- Motivo del regalo (solo cuando no es venta) -->
+                <div id="mv-motivo-wrap" class="hidden">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">¿Por qué es un regalo? (opcional)</label>
+                    <input type="text" id="mv-motivo" placeholder="Ej: cliente frecuente, cumpleaños..." class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-indigo-500 outline-none transition text-white placeholder-gray-500 mt-1">
+                </div>
                 <div>
                     <label id="movement-qty-label" class="text-[10px] font-bold text-gray-500 uppercase ml-1">Cantidad</label>
                     <input type="number" id="movement-qty" placeholder="0" min="1" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none transition text-white placeholder-gray-500 mt-1">
@@ -1503,6 +1508,7 @@ window.setDrinkSalidaTipo = (tipo) => {
     document.getElementById('mv-tipo-venta').className = `p-3 rounded-xl border text-sm font-bold transition ${esVenta ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
     document.getElementById('mv-tipo-regalo').className = `p-3 rounded-xl border text-sm font-bold transition ${!esVenta ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
     document.getElementById('mv-comprador-wrap').classList.toggle('hidden', !esVenta);
+    document.getElementById('mv-motivo-wrap').classList.toggle('hidden', esVenta);
     if (esVenta) { window.setDrinkComprador('cliente', document.getElementById('mv-comp-cliente')); }
 };
 
@@ -1538,8 +1544,10 @@ window.openMovement = (itemId, itemName, type) => {
     btn.textContent = isCompra ? 'REGISTRAR COMPRA' : 'CONFIRMAR SALIDA';
     btn.className = `w-full text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest bg-gradient-to-r ${isCompra ? 'from-emerald-600 to-teal-600' : 'from-red-600 to-rose-600'}`;
     document.getElementById('movement-qty').value = '';
+    document.getElementById('mv-motivo').value = '';
     document.getElementById('mv-tipo-wrap').classList.toggle('hidden', isCompra);
     document.getElementById('mv-comprador-wrap').classList.add('hidden');
+    document.getElementById('mv-motivo-wrap').classList.add('hidden');
     if (!isCompra) { drinkSalidaTipo = 'venta'; window.setDrinkSalidaTipo('venta'); }
     showModal('movement-modal');
 };
@@ -1576,6 +1584,18 @@ document.getElementById('movement-form').addEventListener('submit', async e => {
                     userEmail: currentUser?.email || null, creadoEn: serverTimestamp()
                 });
             }
+        } else if (type === 'venta' && drinkSalidaTipo === 'regalo') {
+            const item = allStock.find(i => i.id === itemId);
+            const precio = item?.price || 0;
+            const hoy = new Date().toLocaleDateString('en-CA');
+            const motivo = document.getElementById('mv-motivo').value.trim();
+            await addDoc(collection(db, PATH_VENTAS), {
+                producto: itemName, tipo: 'bebida',
+                precio, cantidad: qty, total: 0,
+                esRegalo: true, motivo: motivo || null,
+                userEmail: currentUser.email,
+                fecha: hoy, creadoEn: serverTimestamp()
+            });
         }
         closeModals();
     } catch(err) { console.error('movement error:', err); alert('Error al guardar: ' + (err?.message || err)); }
@@ -1772,13 +1792,14 @@ function renderVentas() {
         const icon = v.tipo === 'bebida' ? '🥤' : esML ? '🛒' : '💈';
         const border = v.tipo === 'bebida' ? 'border-cyan-500/40' : esML ? 'border-yellow-500/30' : 'border-indigo-500/40';
         const metodoTag = !esML && v.metodoPago ? ` <span class="${v.metodoPago==='transferencia'?'text-blue-400':'text-emerald-400'}">${v.metodoPago==='transferencia'?'📲':'💵'}</span>` : esML ? ' <span class="text-yellow-600 text-[10px] font-bold">ML</span>' : '';
-        const totalStr = esML ? `<span class="text-xs text-yellow-600">ML</span>` : (v.total || 0) > 0 ? `<span class="text-sm font-bold text-indigo-300">$${v.total.toLocaleString('es-AR')}</span>` : `<span class="text-xs text-gray-500">—</span>`;
+        const regaloTag = v.esRegalo ? ` <span class="text-pink-400">🎁</span>` : '';
+        const totalStr = esML ? `<span class="text-xs text-yellow-600">ML</span>` : v.esRegalo ? `<span class="text-xs font-bold text-pink-400">🎁 Regalo</span>` : (v.total || 0) > 0 ? `<span class="text-sm font-bold text-indigo-300">$${v.total.toLocaleString('es-AR')}</span>` : `<span class="text-xs text-gray-500">—</span>`;
         return `<div class="flex justify-between items-center bg-black/30 p-3 rounded-xl border-l-2 ${border}">
             <div class="flex items-center gap-2 flex-1 min-w-0">
                 <span class="text-base leading-none">${icon}</span>
                 <div class="min-w-0">
-                    <div class="text-xs font-bold text-white">${v.producto}${v.cantidad > 1 ? ` <span class="text-indigo-300">×${v.cantidad}</span>` : ''}${metodoTag}</div>
-                    <div class="text-[10px] text-gray-500">${time}</div>
+                    <div class="text-xs font-bold text-white">${v.producto}${v.cantidad > 1 ? ` <span class="text-indigo-300">×${v.cantidad}</span>` : ''}${metodoTag}${regaloTag}</div>
+                    <div class="text-[10px] text-gray-500">${time}${v.esRegalo && v.motivo ? ` · ${v.motivo}` : ''}</div>
                 </div>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
@@ -1846,10 +1867,11 @@ function renderSalesHistory() {
             const cant = v.cantidad > 1 ? ` ×${v.cantidad}` : '';
             const valColor = v.tipo === 'bebida' ? 'text-cyan-300' : 'text-indigo-300';
             const metodoTag = v.metodoPago ? ` <span class="text-[10px] ${v.metodoPago==='transferencia'?'text-blue-400':'text-emerald-400'}">${v.metodoPago==='transferencia'?'📲':'💵'}</span>` : '';
+            const regaloTag = v.esRegalo ? ` <span class="text-[10px] text-pink-400">🎁${v.motivo ? ' ' + v.motivo : ''}</span>` : '';
             return `<div class="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
                 <div class="flex items-center gap-2">
                     <span class="text-sm leading-none">${icon}</span>
-                    <span class="text-xs text-gray-200">${v.producto}${cant}${metodoTag}</span>
+                    <span class="text-xs text-gray-200">${v.producto}${cant}${metodoTag}${regaloTag}</span>
                 </div>
                 ${(v.total||0) > 0 ? `<span class="text-xs font-bold ${valColor}">$${v.total.toLocaleString('es-AR')}</span>` : ''}
             </div>`;
