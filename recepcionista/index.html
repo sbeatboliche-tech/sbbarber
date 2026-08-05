@@ -2527,9 +2527,28 @@ function renderCierreCaja() {
                     totalGastos > 0 ? totalGastos : null
                 )}
             </div>
-        </div>`;
+        </div>
+        ${regalosBebidasMesCard()}`;
 
     document.getElementById('cierre-caja-content').innerHTML = html;
+}
+
+// Cuenta aparte: valor de bebidas regaladas en el mes en curso.
+// No forma parte de ninguna suma del cierre (totalGeneral, netoReal, etc).
+function regalosBebidasMesCard() {
+    const mesActual = new Date().toLocaleDateString('en-CA').slice(0, 7); // YYYY-MM
+    const regalosMes = allVentas.filter(v => v.esRegalo && !v.eliminado && (v.fecha || '').slice(0, 7) === mesActual);
+    if (regalosMes.length === 0) return '';
+    const totalRegalosMes = regalosMes.reduce((s, v) => s + (v.precio || 0) * (v.cantidad || 1), 0);
+    const nombreMes = new Date().toLocaleDateString('es-AR', { month: 'long' });
+    return `
+        <div class="glass-card rounded-2xl p-5 md:p-6 border border-pink-500/20 mt-4">
+            <div class="flex justify-between items-center gap-3">
+                <div class="text-[10px] md:text-xs font-bold text-pink-400 uppercase tracking-widest flex items-center gap-2">🎁 Bebidas regaladas · ${nombreMes}</div>
+                <span class="text-lg md:text-2xl font-extrabold text-pink-300 whitespace-nowrap">$${totalRegalosMes.toLocaleString('es-AR')}</span>
+            </div>
+            <p class="text-[10px] text-gray-500 mt-1">${regalosMes.length} bebida${regalosMes.length !== 1 ? 's' : ''} regalada${regalosMes.length !== 1 ? 's' : ''} este mes · cuenta aparte, no afecta el cierre de caja</p>
+        </div>`;
 }
 
 function renderCierreCajaSemanal() {
@@ -2616,6 +2635,7 @@ function renderCierreCajaSemanal() {
     const html = `
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">${barberCards}</div>
         ${gastosCard ? `<div class="mt-4">${gastosCard}</div>` : ''}
+        ${regalosBebidasMesCard()}
     `;
 
     document.getElementById('cierre-caja-content').innerHTML = html;
