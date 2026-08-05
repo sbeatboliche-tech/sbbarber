@@ -191,6 +191,21 @@
             <!-- Columna izquierda / Tab cortes -->
             <div id="tab-cortes" class="tab-content active p-4 pb-28 md:pb-6 space-y-4 md:border-r md:border-gray-800/50">
 
+                <!-- Checklist de recepción -->
+                <div id="checklist-card" class="glass-card rounded-2xl p-5 animate-enter">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-gray-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                            <i class="fas fa-clipboard-check text-emerald-400"></i> Checklist del día
+                        </span>
+                        <button id="btn-edit-checklist" onclick="window.openChecklistEditor()" class="hidden w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition">
+                            <i class="fas fa-pen text-[10px]"></i>
+                        </button>
+                    </div>
+                    <div id="checklist-list" class="space-y-2">
+                        <p class="text-xs text-gray-600 text-center py-2">Cargando...</p>
+                    </div>
+                </div>
+
                 <!-- Resumen del día -->
                 <div class="glass-card rounded-2xl p-5 animate-enter">
                     <div class="flex items-center justify-between mb-3">
@@ -878,6 +893,22 @@
         </div>
     </div>
 
+    <!-- Checklist de recepción (editable solo admin) -->
+    <div id="checklist-editor-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
+        <div class="glass-modal md:rounded-3xl md:max-w-md md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl max-h-[88vh] flex flex-col">
+            <div class="flex justify-between items-center mb-1">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2"><i class="fas fa-clipboard-check text-emerald-400"></i> Checklist de recepción</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <p class="text-[11px] text-gray-500 mb-4">Tareas que ve el/la recepcionista cada día. El estado marcado se reinicia solo al otro día.</p>
+            <div id="checklist-editor-list" class="space-y-2 overflow-y-auto flex-1 pr-1 -mr-1"></div>
+            <button type="button" onclick="window.addChecklistItemRow()" class="w-full mt-3 border border-dashed border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 rounded-xl py-2.5 text-sm font-bold transition flex-shrink-0">
+                <i class="fas fa-plus text-xs mr-1"></i> Agregar ítem
+            </button>
+            <button onclick="window.saveChecklistItems()" id="btn-save-checklist" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-4 rounded-xl font-bold text-base shadow-lg uppercase tracking-widest mt-4 flex-shrink-0">Guardar checklist</button>
+        </div>
+    </div>
+
     <!-- Nuevo Gasto -->
     <div id="nuevo-gasto-modal" class="absolute inset-0 bg-black/75 backdrop-blur-md z-50 hidden flex-col justify-end md:justify-center">
         <div class="glass-modal md:rounded-3xl md:max-w-md md:mx-auto w-full border-t md:border border-white/10 pt-3 pb-8 px-5 shadow-2xl rounded-t-3xl max-h-[90vh] overflow-y-auto" style="animation:slideUp 0.32s cubic-bezier(0.16,1,0.3,1)">
@@ -1169,6 +1200,7 @@ async function init() {
             listenToGastos();
             listenToMenuData();
             listenToPrecios();
+            listenToChecklist();
         } else {
             if (localStorage.getItem('rec-gate') === '1') {
                 // Gate ya pasado — entrar anónimamente sin pedir contraseña
@@ -3539,7 +3571,92 @@ window.savePrecios = async () => {
     }
 };
 
-const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal', 'nuevo-gasto-modal', 'precios-modal'];
+// ---- CHECKLIST DE RECEPCIÓN (ítems editables por admin, tildado diario) ----
+const PATH_CHECKLIST_ITEMS  = 'config_checklist';
+const PATH_CHECKLIST_ESTADO = 'checklist_estado';
+let checklistItems = [];
+let checklistEstado = {};
+
+function listenToChecklist() {
+    if (!db) return;
+    onSnapshot(doc(db, PATH_CHECKLIST_ITEMS, 'items'), d => {
+        checklistItems = (d.exists() ? d.data().items : []) || [];
+        renderChecklist();
+    });
+    const hoy = new Date().toLocaleDateString('en-CA');
+    onSnapshot(doc(db, PATH_CHECKLIST_ESTADO, hoy), d => {
+        checklistEstado = (d.exists() ? d.data() : {}) || {};
+        renderChecklist();
+    });
+}
+
+function renderChecklist() {
+    const list = document.getElementById('checklist-list');
+    if (!list) return;
+    const editBtn = document.getElementById('btn-edit-checklist');
+    if (editBtn) editBtn.classList.toggle('hidden', !isAdmin);
+    if (checklistItems.length === 0) {
+        list.innerHTML = `<p class="text-xs text-gray-600 text-center py-2">${isAdmin ? 'Sin tareas cargadas. Tocá el lápiz para agregar.' : 'Sin tareas cargadas'}</p>`;
+        return;
+    }
+    list.innerHTML = checklistItems.map((item, i) => {
+        const checked = !!checklistEstado[i];
+        return `<label class="flex items-center gap-3 bg-black/30 p-3 rounded-xl border border-white/5 cursor-pointer select-none hover:border-white/10 transition">
+            <input type="checkbox" ${checked ? 'checked' : ''} onchange="window.toggleChecklistItem(${i}, this.checked)" class="w-4 h-4 rounded accent-emerald-500 flex-shrink-0">
+            <span class="text-sm ${checked ? 'text-gray-500 line-through' : 'text-gray-200'} transition">${item}</span>
+        </label>`;
+    }).join('');
+}
+
+window.toggleChecklistItem = async (i, checked) => {
+    const hoy = new Date().toLocaleDateString('en-CA');
+    try {
+        await setDoc(doc(db, PATH_CHECKLIST_ESTADO, hoy), {
+            [i]: checked, userEmail: currentUser?.email || null, actualizadoEn: serverTimestamp()
+        }, { merge: true });
+    } catch (e) { console.error('checklist toggle error:', e); }
+};
+
+window.openChecklistEditor = () => {
+    if (!isAdmin) return;
+    renderChecklistEditorRows(checklistItems.length ? checklistItems : ['']);
+    showModal('checklist-editor-modal');
+};
+
+function checklistRowHtml(value) {
+    const safe = (value || '').replace(/"/g, '&quot;');
+    return `<div class="flex items-center gap-2">
+        <input type="text" value="${safe}" placeholder="Ej: Abrir caja..." class="checklist-editor-input flex-1 bg-black/40 border border-gray-700 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-500">
+        <button type="button" onclick="this.parentElement.remove()" class="w-9 h-9 flex-shrink-0 rounded-lg bg-red-600/10 border border-red-500/20 text-red-400 hover:bg-red-600/20 transition"><i class="fas fa-trash text-xs"></i></button>
+    </div>`;
+}
+
+function renderChecklistEditorRows(items) {
+    document.getElementById('checklist-editor-list').innerHTML = items.map(checklistRowHtml).join('');
+}
+
+window.addChecklistItemRow = () => {
+    const cont = document.getElementById('checklist-editor-list');
+    cont.insertAdjacentHTML('beforeend', checklistRowHtml(''));
+    const inputs = cont.querySelectorAll('.checklist-editor-input');
+    inputs[inputs.length - 1].focus();
+};
+
+window.saveChecklistItems = async () => {
+    const btn = document.getElementById('btn-save-checklist');
+    btn.disabled = true; const prev = btn.textContent; btn.textContent = 'Guardando...';
+    try {
+        const items = Array.from(document.querySelectorAll('.checklist-editor-input')).map(i => i.value.trim()).filter(Boolean);
+        await setDoc(doc(db, PATH_CHECKLIST_ITEMS, 'items'), { items }, { merge: true });
+        btn.textContent = '✓ Guardado';
+        setTimeout(() => { btn.disabled = false; btn.textContent = prev; closeModals(); }, 900);
+    } catch (e) {
+        alert('No se pudo guardar. Verificá tu conexión / permisos.');
+        btn.disabled = false; btn.textContent = prev;
+    }
+};
+
+const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal', 'nuevo-gasto-modal', 'precios-modal', 'checklist-editor-modal'];
 function showModal(id) {
     document.getElementById(id).classList.remove('hidden');
     document.getElementById(id).classList.add('flex', 'flex-col');
