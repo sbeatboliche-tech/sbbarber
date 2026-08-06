@@ -24,16 +24,20 @@
     <meta name="twitter:description" content="Productos profesionales de barbería. Envío a todo el país.">
     <meta name="twitter:image" content="https://i.imgur.com/PzcD4W2.jpeg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://i.imgur.com">
+    <link rel="dns-prefetch" href="https://i.imgur.com">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        :root { --black:#fff; --white:#111; --g100:#1a1a1a; --g200:#333; --g400:#555; --g500:#737373; --g600:#888; --g700:#b0b0b0; --g800:#d4d4d4; --g900:#ebebeb; --g950:#f5f5f5; }
+        /* --paper: fondo claro del "shell" (header/hero). --ink: gris casi negro (texto claro / botones oscuros). */
+        :root { --paper:#fff; --ink:#111; --g100:#1a1a1a; --g200:#333; --g400:#555; --g500:#737373; --g600:#888; --g700:#b0b0b0; --g800:#d4d4d4; --g900:#ebebeb; --g950:#f5f5f5; }
         html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-        body { font-family:'Inter',sans-serif; background:var(--black); color:var(--white); overflow-x:hidden; min-height:100vh; -webkit-font-smoothing:antialiased; }
+        body { font-family:'Inter',sans-serif; background:var(--paper); color:var(--ink); overflow-x:hidden; min-height:100vh; -webkit-font-smoothing:antialiased; }
         ::-webkit-scrollbar { width:4px; }
-        ::-webkit-scrollbar-track { background:var(--black); }
+        ::-webkit-scrollbar-track { background:var(--paper); }
         ::-webkit-scrollbar-thumb { background:var(--g800); border-radius:2px; }
 
         /* ── HEADER ── */
@@ -41,13 +45,13 @@
         .header-inner { max-width:1100px; margin:0 auto; padding:0 20px; height:56px; display:flex; align-items:center; justify-content:space-between; }
         .logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
         .logo img { height:32px; filter:invert(1); }
-        .logo-title { font-size:13px; font-weight:900; color:var(--white); letter-spacing:.08em; text-transform:uppercase; line-height:1; }
+        .logo-title { font-size:13px; font-weight:900; color:var(--ink); letter-spacing:.08em; text-transform:uppercase; line-height:1; }
         .logo-sub { font-size:9px; color:var(--g600); font-weight:500; letter-spacing:.2em; text-transform:uppercase; margin-top:2px; }
         .cart-btn { position:relative; width:44px; height:44px; border:1px solid rgba(0,0,0,.12); background:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .2s; -webkit-appearance:none; }
         .cart-btn:hover { background:rgba(0,0,0,.05); }
         .cart-btn:active { background:rgba(0,0,0,.1); }
-        .cart-btn svg { width:18px; height:18px; stroke:var(--white); }
-        .cart-count { display:none; position:absolute; top:-5px; right:-5px; width:18px; height:18px; background:var(--white); color:var(--black); font-size:9px; font-weight:800; border-radius:50%; align-items:center; justify-content:center; border:2px solid var(--black); }
+        .cart-btn svg { width:18px; height:18px; stroke:var(--ink); }
+        .cart-count { display:none; position:absolute; top:-5px; right:-5px; width:18px; height:18px; background:var(--ink); color:var(--paper); font-size:9px; font-weight:800; border-radius:50%; align-items:center; justify-content:center; border:2px solid var(--paper); }
 
         /* ── HERO ── */
         .hero { max-width:1100px; margin:0 auto; padding:32px 16px 28px; border-bottom:1px solid rgba(0,0,0,.08); }
@@ -83,13 +87,8 @@
         .product-card:hover .product-image-wrap::after { background:rgba(255,255,255,.04); }
 
         @keyframes pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
-        /* ── SCROLL REVEAL ── */
-        .reveal { opacity:0; transform:translateY(32px); transition:opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); }
-        .reveal.visible { opacity:1; transform:translateY(0); }
-        .reveal-left { opacity:0; transform:translateX(-32px); transition:opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); }
-        .reveal-left.visible { opacity:1; transform:translateX(0); }
-        .reveal-scale { opacity:0; transform:scale(.94); transition:opacity .6s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1); }
-        .reveal-scale.visible { opacity:1; transform:scale(1); }
+        /* El reveal-on-scroll de .reveal (hero-eyebrow, hero-desc, benefits) lo maneja
+           assets/sb-motion.css/js, compartido con el resto del sitio. */
         /* Entrada automática de tarjetas (no depende del scroll) */
         @keyframes cardIn { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:none; } }
         .card-in { animation:cardIn .9s cubic-bezier(.16,1,.3,1) both; }
@@ -144,17 +143,17 @@
         .cart-total-row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px; }
         .cart-total-label { font-size:10px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--g700); }
         .cart-total-value { font-size:26px; font-weight:900; letter-spacing:-.03em; }
-        .btn-checkout { width:100%; height:54px; background:var(--white); color:var(--black); border:none; font-size:12px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; cursor:pointer; font-family:'Inter',sans-serif; -webkit-appearance:none; transition:background .15s; }
+        .btn-checkout { width:100%; height:54px; background:var(--ink); color:var(--paper); border:none; font-size:12px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; cursor:pointer; font-family:'Inter',sans-serif; -webkit-appearance:none; transition:background .15s; }
         .btn-checkout:active { background:var(--g200); }
 
         /* ── MOBILE CART BAR ── */
-        .mobile-cart-bar { display:none; position:fixed; bottom:0; left:0; right:0; z-index:90; background:var(--white); padding:12px 20px; padding-bottom:max(12px,env(safe-area-inset-bottom)); border-top:1px solid var(--g200); }
+        .mobile-cart-bar { display:none; position:fixed; bottom:0; left:0; right:0; z-index:90; background:var(--ink); padding:12px 20px; padding-bottom:max(12px,env(safe-area-inset-bottom)); border-top:1px solid var(--g200); }
         .mobile-cart-bar.show { display:flex; align-items:center; justify-content:space-between; }
         .mcb-left { display:flex; align-items:center; gap:10px; }
-        .mcb-badge { width:28px; height:28px; background:var(--black); color:var(--white); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; }
-        .mcb-text { font-size:12px; font-weight:700; color:var(--black); letter-spacing:.04em; }
-        .mcb-total { font-size:16px; font-weight:900; color:var(--black); letter-spacing:-.02em; }
-        .mcb-btn { height:44px; padding:0 20px; background:var(--black); color:var(--white); border:none; font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; font-family:'Inter',sans-serif; -webkit-appearance:none; }
+        .mcb-badge { width:28px; height:28px; background:var(--paper); color:var(--ink); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+        .mcb-text { font-size:12px; font-weight:700; color:var(--paper); letter-spacing:.04em; }
+        .mcb-total { font-size:16px; font-weight:900; color:var(--paper); letter-spacing:-.02em; }
+        .mcb-btn { height:44px; padding:0 20px; background:var(--paper); color:var(--ink); border:none; font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; font-family:'Inter',sans-serif; -webkit-appearance:none; }
         @media(min-width:640px) { .mobile-cart-bar { display:none !important; } }
 
         /* ── MODAL ── */
@@ -189,11 +188,11 @@
         .summary-key { color:#444; flex:1; min-width:0; }
         .summary-val { font-size:16px; font-weight:900; flex-shrink:0; color:#111; }
         .summary-total { background:#f5f5f5; }
-        .btn-pay { width:100%; height:56px; background:var(--white); color:var(--black); border:none; font-size:12px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; cursor:pointer; font-family:'Inter',sans-serif; -webkit-appearance:none; transition:background .15s; }
+        .btn-pay { width:100%; height:56px; background:var(--ink); color:var(--paper); border:none; font-size:12px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; cursor:pointer; font-family:'Inter',sans-serif; -webkit-appearance:none; transition:background .15s; }
         .btn-pay:disabled { opacity:.5; cursor:not-allowed; }
         .btn-pay:active:not(:disabled) { background:var(--g200); }
         .error-msg { display:none; color:#f87171; font-size:12px; text-align:center; margin-top:12px; line-height:1.5; }
-        .spinner { width:18px; height:18px; border:2px solid rgba(0,0,0,.2); border-top-color:var(--black); border-radius:50%; animation:spin .6s linear infinite; display:inline-block; vertical-align:middle; }
+        .spinner { width:18px; height:18px; border:2px solid rgba(0,0,0,.2); border-top-color:var(--paper); border-radius:50%; animation:spin .6s linear infinite; display:inline-block; vertical-align:middle; }
         @keyframes spin { to { transform:rotate(360deg); } }
         @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
@@ -281,7 +280,7 @@
         .admin-box-title { font-size:10px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--g600); }
         .admin-tabs { display:flex; border-bottom:1px solid rgba(255,255,255,.07); flex-shrink:0; }
         .admin-tab { flex:1; padding:11px; font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; background:none; border:none; border-bottom:2px solid transparent; color:var(--g600); cursor:pointer; font-family:'Inter',sans-serif; transition:color .2s; }
-        .admin-tab.active { color:var(--white); border-bottom-color:var(--white); }
+        .admin-tab.active { color:var(--ink); border-bottom-color:var(--ink); }
         .admin-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0 16px 16px; }
         .admin-hdr { display:grid; align-items:center; padding:10px 0 6px; border-bottom:1px solid rgba(255,255,255,.08); margin-bottom:4px; gap:8px; }
         .admin-hdr-3 { grid-template-columns:1fr 90px 80px; }
@@ -294,16 +293,16 @@
         .admin-row-2 { grid-template-columns:1fr 120px; }
         .admin-prod-name { font-size:13px; font-weight:700; line-height:1.2; }
         .admin-prod-variant { font-size:10px; color:var(--g600); margin-top:1px; }
-        .admin-input { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09); color:var(--white); padding:7px 9px; font-size:13px; font-family:'Inter',sans-serif; width:100%; text-align:right; -webkit-appearance:none; border-radius:0; }
+        .admin-input { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09); color:var(--ink); padding:7px 9px; font-size:13px; font-family:'Inter',sans-serif; width:100%; text-align:right; -webkit-appearance:none; border-radius:0; }
         .admin-input:focus { outline:none; border-color:rgba(255,255,255,.3); }
-        .admin-save { width:100%; height:44px; background:var(--white); color:var(--black); border:none; font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; font-family:'Inter',sans-serif; margin-top:14px; transition:background .15s; }
+        .admin-save { width:100%; height:44px; background:var(--ink); color:var(--paper); border:none; font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; font-family:'Inter',sans-serif; margin-top:14px; transition:background .15s; }
         .admin-save:active { background:var(--g200); }
         .admin-save:disabled { opacity:.5; cursor:not-allowed; }
         .admin-footer-bar { padding:12px 16px; border-top:1px solid rgba(255,255,255,.07); flex-shrink:0; }
         .btn-logout { width:100%; height:40px; background:none; border:1px solid rgba(255,255,255,.1); color:var(--g600); font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; font-family:'Inter',sans-serif; }
-        .admin-fab { position:fixed; bottom:76px; right:16px; width:44px; height:44px; background:var(--white); border:none; cursor:pointer; display:none; align-items:center; justify-content:center; z-index:200; box-shadow:0 2px 16px rgba(0,0,0,.7); -webkit-appearance:none; }
+        .admin-fab { position:fixed; bottom:76px; right:16px; width:44px; height:44px; background:var(--ink); border:none; cursor:pointer; display:none; align-items:center; justify-content:center; z-index:200; box-shadow:0 2px 16px rgba(0,0,0,.7); -webkit-appearance:none; }
         .admin-fab.show { display:flex; }
-        .admin-fab svg { width:18px; height:18px; stroke:var(--black); }
+        .admin-fab svg { width:18px; height:18px; stroke:var(--paper); }
         @media(min-width:640px) { .admin-fab { bottom:20px; } }
         .tienda-footer { text-align:center; padding:16px 20px 52px; }
         .admin-trigger { font-size:11px; color:var(--g950); background:none; border:none; cursor:pointer; font-family:'Inter',sans-serif; padding:8px; user-select:none; }
@@ -378,7 +377,7 @@
         .ripple-el { position:absolute; border-radius:50%; background:rgba(0,0,0,.22); pointer-events:none; transform:scale(0); animation:rippleAnim .55s cubic-bezier(.16,1,.3,1) forwards; }
 
         /* ── BENEFIT PILLS GLOW ── */
-        .benefit:hover { box-shadow:0 6px 22px rgba(74,222,128,.2); border-color:rgba(74,222,128,.5); color:var(--white); }
+        .benefit:hover { box-shadow:0 6px 22px rgba(74,222,128,.2); border-color:rgba(74,222,128,.5); color:var(--ink); }
 
         /* ── HERO WORD REVEAL ── */
         .word-reveal { display:inline-block; }
@@ -429,11 +428,11 @@
         <span class="word-reveal" style="animation-delay:.30s">buscás,</span><br>
         <em class="word-reveal" style="animation-delay:.38s;font-style:normal;color:var(--g600)">en casa.</em>
     </h1>
-    <p class="hero-desc reveal" style="transition-delay:.16s">Los mismos productos que usan nuestros barberos, disponibles para vos.</p>
+    <p class="hero-desc reveal" style="animation-delay:.16s">Los mismos productos que usan nuestros barberos, disponibles para vos.</p>
 </section>
 
 <!-- BENEFICIOS / CONFIANZA -->
-<div class="benefits reveal" style="transition-delay:.22s">
+<div class="benefits reveal" style="animation-delay:.22s">
     <div class="benefit"><svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><span>Envío a todo el país</span></div>
     <div class="benefit"><svg viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/></svg><span>Retiro gratis en el local</span></div>
     <div class="benefit"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Productos originales</span></div>
@@ -668,6 +667,26 @@ const PRODUCTS = [
 ];
 
 const TRANSFER_DISCOUNT = 0.10;
+// Bloque de precio compartido por card de producto, card de kit y modal de detalle.
+// El precio grande es el real (el que cobra MercadoPago); el ahorro por transferencia
+// se muestra como nota aparte, no como tachado, para no parecer una oferta falsa.
+const PRICE_BLOCK_SIZES = {
+    sm: { main:18, note:9,  badge:8 },
+    md: { main:20, note:10, badge:9 },
+    lg: { main:24, note:11, badge:9 }
+};
+function priceBlockHTML(price, size) {
+    const s = PRICE_BLOCK_SIZES[size] || PRICE_BLOCK_SIZES.sm;
+    const discounted = Math.round(price*(1-TRANSFER_DISCOUNT));
+    return `
+        <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+            <span style="font-size:${s.main}px;font-weight:900;letter-spacing:-.02em;color:#e8e8e8;">$${price.toLocaleString('es-AR')}</span>
+        </div>
+        <div style="display:inline-flex;align-items:center;gap:6px;">
+            <span style="font-size:${s.badge}px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#4ade80;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);padding:2px 6px;">-10%</span>
+            <span style="font-size:${s.note}px;color:var(--g500);font-weight:600;">$${discounted.toLocaleString('es-AR')} transfiriendo</span>
+        </div>`;
+}
 let correoLabel = '';
 let carrierLabel = 'Correo Argentino';
 let carrierId = 'correo';
@@ -740,7 +759,7 @@ function renderKits() {
         let collage, includes;
         if (k.custom) {
             collage = k.image
-                ? `<img src="${k.image}" alt="${k.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')"><div style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;">${KIT_ICON}</div>`
+                ? `<img src="${k.image}" alt="${k.name}" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')"><div style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;">${KIT_ICON}</div>`
                 : KIT_ICON;
             includes = (k.items||[]).map(it =>
                 `<li>${it.name}${it.detail?`<span class="kit-detail">${it.detail}</span>`:''}</li>`).join('');
@@ -748,22 +767,11 @@ function renderKits() {
             const comps = k.componentes.map(prodById).filter(Boolean);
             const imgs = comps.filter(p=>p.image).slice(0,4);
             collage = imgs.length
-                ? `<div style="position:absolute;inset:0;display:flex;gap:2px;">${imgs.map(p=>`<img src="${p.image}" alt="" style="flex:1;min-width:0;height:100%;object-fit:cover;display:block;">`).join('')}</div>`
+                ? `<div style="position:absolute;inset:0;display:flex;gap:2px;">${imgs.map(p=>`<img src="${p.image}" alt="" loading="lazy" decoding="async" style="flex:1;min-width:0;height:100%;object-fit:cover;display:block;">`).join('')}</div>`
                 : KIT_ICON;
             includes = comps.map(p=>`<li>${prodNameLive(p.id)}</li>`).join('');
         }
-        const priceBlock = `
-                <div style="margin-bottom:12px;">
-                    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:4px 10px;margin-bottom:10px;">
-                        <span style="font-size:9px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#4ade80;">10% OFF</span>
-                        <span style="font-size:9px;color:#525252;font-weight:600;text-transform:uppercase;letter-spacing:.08em;">con transferencia</span>
-                    </div>
-                    <div style="display:flex;align-items:baseline;gap:8px;">
-                        <span style="font-size:20px;font-weight:900;letter-spacing:-.02em;color:#e8e8e8;">$${Math.round(price*(1-TRANSFER_DISCOUNT)).toLocaleString('es-AR')}</span>
-                        <span style="font-size:13px;color:#525252;text-decoration:line-through;">$${price.toLocaleString('es-AR')}</span>
-                    </div>
-                    <div style="font-size:10px;color:#404040;margin-top:2px;">Precio efectivo: $${price.toLocaleString('es-AR')}</div>
-                </div>`;
+        const priceBlock = `<div style="margin-bottom:12px;">${priceBlockHTML(price,'md')}</div>`;
         const btn = `<button class="btn-add${out?' btn-soldout':''}" onclick="event.stopPropagation();addKitToCart('${k.id}')" ${out?'disabled':''}>${out?'Sin stock':'+ Agregar'}</button>`;
         return `
         <div class="product-card ${_kitFirst ? 'card-in' : ''}" style="${_kitFirst ? `animation-delay:${i*.1}s;` : ''}cursor:pointer;" onclick="openItemDetail('${k.id}','combo')">
@@ -787,7 +795,6 @@ function renderKits() {
         </div>`;
     }).join('');
     if (allKitsToRender.length) _kitFirst = false;
-    if (typeof revealAfterRender === 'function') revealAfterRender();
 }
 let _detailId = null, _detailType = null;
 
@@ -829,7 +836,7 @@ function openItemDetail(id, type) {
             includes = `<div style="border-top:1px solid rgba(255,255,255,.07);padding-top:14px;margin-bottom:20px;">` +
                 k.items.map(it=>`<div style="font-size:12px;color:#888;line-height:1.4;padding:5px 0 5px 20px;position:relative;border-bottom:1px dashed rgba(255,255,255,.06);">
                     <span style="position:absolute;left:0;color:#4ade80;font-weight:800;">✓</span>
-                    ${it.name}${it.detail?`<span style="display:block;color:#606060;font-size:11px;margin-top:2px;">${it.detail}</span>`:''}
+                    ${it.name}${it.detail?`<span style="display:block;color:var(--g700);font-size:11px;margin-top:2px;">${it.detail}</span>`:''}
                 </div>`).join('') + `</div>`;
         } else if(k.componentes) {
             const comps = k.componentes.map(prodById).filter(Boolean);
@@ -914,15 +921,7 @@ function openItemDetail(id, type) {
 }
 
 function _renderDetailPrice(price) {
-    document.getElementById('item-detail-price').innerHTML = `
-        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:4px 10px;margin-bottom:10px;">
-            <span style="font-size:9px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#4ade80;">10% OFF</span>
-            <span style="font-size:9px;color:#525252;font-weight:600;text-transform:uppercase;letter-spacing:.08em;">con transferencia</span>
-        </div>
-        <div style="display:flex;align-items:baseline;gap:8px;">
-            <span style="font-size:24px;font-weight:900;letter-spacing:-.02em;color:#e8e8e8;">$${Math.round(price*(1-TRANSFER_DISCOUNT)).toLocaleString('es-AR')}</span>
-            <span style="font-size:14px;color:#525252;text-decoration:line-through;">$${price.toLocaleString('es-AR')}</span>
-        </div>`;
+    document.getElementById('item-detail-price').innerHTML = priceBlockHTML(price, 'lg');
 }
 
 function closeItemDetail(e) {
@@ -1058,7 +1057,7 @@ function renderProducts() {
         const out = typeof stock === 'number' && stock === 0;
         const low = typeof stock === 'number' && stock > 0 && stock <= 5;
         const imgHtml = p.image
-            ? `<img src="${p.image}" alt="${p.name || ''}" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`
+            ? `<img src="${p.image}" alt="${p.name || ''}" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`
             : (p.icon || '');
         return `
         <div class="product-card ${rc}" style="${_prodFirst ? `animation-delay:${i*.1}s;` : ''}cursor:pointer;" onclick="openItemDetail('${p.id}','product')">
@@ -1076,16 +1075,7 @@ function renderProducts() {
                 <div class="variant-picker" data-pid="${p.id}" onclick="event.stopPropagation();">
                     ${p.variantes.map(v=>`<button type="button" class="variant-opt${(_selectedVariant[p.id]||p.variantes[0])===v?' active':''}" data-v="${v.replace(/"/g,'&quot;')}" onclick="selectVariant(event,'${p.id}','${v.replace(/'/g,"\\'")}')">${v}</button>`).join('')}
                 </div>` : ''}
-                <div style="margin-bottom:10px;margin-top:auto;padding-top:10px;">
-                    <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:3px 8px;margin-bottom:8px;">
-                        <span style="font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#4ade80;">10% OFF</span>
-                        <span style="font-size:8px;color:#525252;font-weight:600;text-transform:uppercase;">transferencia</span>
-                    </div>
-                    <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-                        <span style="font-size:18px;font-weight:900;letter-spacing:-.02em;color:#e8e8e8;">$${Math.round(price*(1-TRANSFER_DISCOUNT)).toLocaleString('es-AR')}</span>
-                        <span style="font-size:12px;color:#525252;text-decoration:line-through;">$${price.toLocaleString('es-AR')}</span>
-                    </div>
-                </div>
+                <div style="margin-bottom:10px;margin-top:auto;padding-top:10px;">${priceBlockHTML(price,'sm')}</div>
                 <div class="product-footer">
                     <button class="btn-add${out?' btn-soldout':''}" onclick="event.stopPropagation();addToCart('${p.id}')" ${out?'disabled':''}>
                         ${out ? 'Sin stock' : '+ Agregar'}
@@ -1096,7 +1086,6 @@ function renderProducts() {
     }).join('');
     _prodFirst = false;
     renderKits();
-    if (typeof revealAfterRender === 'function') revealAfterRender();
 }
 
 function addToCart(id, variant) {
@@ -1177,7 +1166,7 @@ function updateCartUI() {
 
     itemsEl.innerHTML = cart.map(item=>`
         <div class="cart-item">
-            <div class="cart-item-img">${item.image ? `<img src="${item.image}" style="width:100%;height:100%;object-fit:cover;display:block;">` : (item.icon||'<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8l-1 4h10l-1-4z"/></svg>')}</div>
+            <div class="cart-item-img">${item.image ? `<img src="${item.image}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;">` : (item.icon||'<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8l-1 4h10l-1-4z"/></svg>')}</div>
             <div class="cart-item-info">
                 <div class="cart-item-name">${item.name}</div>
                 <div class="cart-item-variant">${item.variant}</div>
@@ -1347,23 +1336,7 @@ function scrollTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
     }, { passive: true });
 })();
 
-// ── SCROLL REVEAL ──
-function initReveal() {
-    const obs = new IntersectionObserver((entries) => {
-        entries.forEach(el => {
-            if (el.isIntersecting) {
-                el.target.classList.add('visible');
-                obs.unobserve(el.target);
-            }
-        });
-    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
-    document.querySelectorAll('.reveal, .reveal-left, .reveal-scale').forEach(el => obs.observe(el));
-}
-// Re-run after renderProducts (cards are created dynamically)
-function revealAfterRender() {
-    requestAnimationFrame(() => { requestAnimationFrame(initReveal); });
-}
-initReveal();
+// El reveal de .reveal (hero-eyebrow, hero-desc, benefits) lo maneja assets/sb-motion.js.
 
 // ── Header compression on scroll ──
 (function() {
