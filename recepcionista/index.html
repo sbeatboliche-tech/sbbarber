@@ -900,7 +900,8 @@
                 <h2 class="text-xl font-bold text-white flex items-center gap-2"><i class="fas fa-clipboard-check text-emerald-400"></i> Checklist de recepción</h2>
                 <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
             </div>
-            <p class="text-[11px] text-gray-500 mb-4">Tareas que ve el/la recepcionista cada día. El estado marcado se reinicia solo al otro día.</p>
+            <p class="text-[11px] text-gray-500 mb-3">Tareas por día de la semana. El/la recepcionista ve las del día actual; el tildado se reinicia solo al otro día.</p>
+            <div id="checklist-dias-tabs" class="grid grid-cols-7 gap-1 mb-3 flex-shrink-0"></div>
             <div id="checklist-editor-list" class="space-y-2 overflow-y-auto flex-1 pr-1 -mr-1"></div>
             <button type="button" onclick="window.addChecklistItemRow()" class="w-full mt-3 border border-dashed border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 rounded-xl py-2.5 text-sm font-bold transition flex-shrink-0">
                 <i class="fas fa-plus text-xs mr-1"></i> Agregar ítem
@@ -3575,13 +3576,19 @@ window.savePrecios = async () => {
 // Reutiliza la colección 'config_precios' (ya habilitada en las reglas de Firestore)
 // en vez de crear colecciones nuevas que podrían no tener permisos configurados.
 const PATH_CHECKLIST = PATH_PRECIOS_SERV;
-let checklistItems = [];
+const DIAS_KEYS = ['dom','lun','mar','mie','jue','vie','sab'];
+const DIAS_SHORT = { dom:'Dom', lun:'Lun', mar:'Mar', mie:'Mié', jue:'Jue', vie:'Vie', sab:'Sáb' };
+function hoyDiaKey() { return DIAS_KEYS[new Date().getDay()]; }
+let checklistDias = {};      // { lun:[...], mar:[...], ... }
+let checklistLegacy = [];    // modelo viejo (una sola lista) — compatibilidad
 let checklistEstado = {};
 
 function listenToChecklist() {
     if (!db) return;
     onSnapshot(doc(db, PATH_CHECKLIST, 'checklist_items'), d => {
-        checklistItems = (d.exists() ? d.data().items : []) || [];
+        const data = d.exists() ? d.data() : {};
+        checklistDias = data.dias || {};
+        checklistLegacy = data.items || [];
         renderChecklist();
     }, e => console.error('checklist items listener error:', e));
     const hoy = new Date().toLocaleDateString('en-CA');
@@ -3591,16 +3598,22 @@ function listenToChecklist() {
     }, e => console.error('checklist estado listener error:', e));
 }
 
+function itemsDeHoy() {
+    if (Object.keys(checklistDias).length) return checklistDias[hoyDiaKey()] || [];
+    return checklistLegacy;  // aún no migrado al modelo por día
+}
+
 function renderChecklist() {
     const list = document.getElementById('checklist-list');
     if (!list) return;
     const editBtn = document.getElementById('btn-edit-checklist');
     if (editBtn) editBtn.classList.toggle('hidden', !isAdmin);
-    if (checklistItems.length === 0) {
-        list.innerHTML = `<p class="text-[11px] text-gray-600 text-center py-1">${isAdmin ? 'Sin tareas cargadas. Tocá el lápiz para agregar.' : 'Sin tareas cargadas'}</p>`;
+    const items = itemsDeHoy();
+    if (items.length === 0) {
+        list.innerHTML = `<p class="text-[11px] text-gray-600 text-center py-1">${isAdmin ? 'Sin tareas para hoy. Tocá el lápiz para agregar.' : 'Sin tareas para hoy'}</p>`;
         return;
     }
-    list.innerHTML = checklistItems.map((item, i) => {
+    list.innerHTML = items.map((item, i) => {
         const checked = !!checklistEstado[i];
         return `<label class="flex items-center gap-2 bg-black/30 px-2.5 py-1.5 rounded-lg border border-white/5 cursor-pointer select-none hover:border-white/10 transition">
             <input type="checkbox" ${checked ? 'checked' : ''} onchange="window.toggleChecklistItem(${i}, this.checked)" class="w-3.5 h-3.5 rounded accent-emerald-500 flex-shrink-0">
@@ -3621,10 +3634,43 @@ window.toggleChecklistItem = async (i, checked) => {
     }
 };
 
+// ---- Editor por día de la semana (admin) ----
+let editorDias = {};
+let editorDiaActual = 'lun';
+
 window.openChecklistEditor = () => {
     if (!isAdmin) return;
-    renderChecklistEditorRows(checklistItems.length ? checklistItems : ['']);
+    editorDias = {};
+    DIAS_KEYS.forEach(k => { editorDias[k] = Array.isArray(checklistDias[k]) ? checklistDias[k].slice() : []; });
+    // migración suave: si no había nada por día pero sí lista vieja, la pongo en el día de hoy
+    if (!Object.keys(checklistDias).length && checklistLegacy.length) {
+        editorDias[hoyDiaKey()] = checklistLegacy.slice();
+    }
+    editorDiaActual = hoyDiaKey();
+    renderChecklistDiasTabs();
+    renderChecklistEditorRows(editorDias[editorDiaActual]);
     showModal('checklist-editor-modal');
+};
+
+function renderChecklistDiasTabs() {
+    const cont = document.getElementById('checklist-dias-tabs');
+    if (!cont) return;
+    cont.innerHTML = DIAS_KEYS.map(k => {
+        const active = k === editorDiaActual;
+        const count = (editorDias[k] || []).filter(Boolean).length;
+        return `<button type="button" onclick="window.setEditorDia('${k}')" class="py-1.5 rounded-lg text-[11px] font-bold transition ${active ? 'bg-emerald-600 text-white' : 'bg-white/5 text-gray-400 hover:text-white'}">${DIAS_SHORT[k]}${count ? `<span class="block text-[9px] font-normal ${active?'text-emerald-200':'text-gray-600'}">${count}</span>` : ''}</button>`;
+    }).join('');
+}
+
+function collectEditorRows() {
+    return Array.from(document.querySelectorAll('.checklist-editor-input')).map(i => i.value.trim()).filter(Boolean);
+}
+
+window.setEditorDia = (k) => {
+    editorDias[editorDiaActual] = collectEditorRows();
+    editorDiaActual = k;
+    renderChecklistDiasTabs();
+    renderChecklistEditorRows(editorDias[k]);
 };
 
 function checklistRowHtml(value) {
@@ -3636,7 +3682,8 @@ function checklistRowHtml(value) {
 }
 
 function renderChecklistEditorRows(items) {
-    document.getElementById('checklist-editor-list').innerHTML = items.map(checklistRowHtml).join('');
+    const arr = (items && items.length) ? items : [''];
+    document.getElementById('checklist-editor-list').innerHTML = arr.map(checklistRowHtml).join('');
 }
 
 window.addChecklistItemRow = () => {
@@ -3650,8 +3697,8 @@ window.saveChecklistItems = async () => {
     const btn = document.getElementById('btn-save-checklist');
     btn.disabled = true; const prev = btn.textContent; btn.textContent = 'Guardando...';
     try {
-        const items = Array.from(document.querySelectorAll('.checklist-editor-input')).map(i => i.value.trim()).filter(Boolean);
-        await setDoc(doc(db, PATH_CHECKLIST, 'checklist_items'), { items }, { merge: true });
+        editorDias[editorDiaActual] = collectEditorRows();
+        await setDoc(doc(db, PATH_CHECKLIST, 'checklist_items'), { dias: editorDias }, { merge: true });
         btn.textContent = '✓ Guardado';
         setTimeout(() => { btn.disabled = false; btn.textContent = prev; closeModals(); }, 900);
     } catch (e) {
