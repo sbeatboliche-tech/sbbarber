@@ -858,6 +858,13 @@
                     <input type="number" id="ret-man-monto" placeholder="Ej: 8000" min="1" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-violet-500 outline-none transition text-white placeholder-gray-500 mt-1">
                 </div>
                 <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">¿De dónde sale?</label>
+                    <div class="grid grid-cols-2 gap-2 mt-1">
+                        <button type="button" id="ret-man-efectivo" onclick="window.setRetMetodo('efectivo')" class="p-3 rounded-xl border font-bold text-sm transition bg-emerald-600/25 border-emerald-500 text-white">💵 Efectivo</button>
+                        <button type="button" id="ret-man-transferencia" onclick="window.setRetMetodo('transferencia')" class="p-3 rounded-xl border font-bold text-sm transition bg-black/30 border-gray-700 text-gray-400">📲 Transferencia</button>
+                    </div>
+                </div>
+                <div>
                     <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Fecha</label>
                     <input type="date" id="ret-man-fecha" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-violet-500 outline-none transition text-white mt-1">
                 </div>
@@ -2440,8 +2447,14 @@ function renderCierreCaja() {
     const ventasProductos = ventasHoy.filter(v => v.tipo !== 'bebida');
 
     const totalCortes   = cuts.reduce((s, c) => s + (c.price || 0), 0);
-    const efectivo      = cuts.filter(c => c.metodoPago !== 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
-    const transferencia = cuts.filter(c => c.metodoPago === 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
+    const efectivoBruto = cuts.filter(c => c.metodoPago !== 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
+    const transferenciaBruto = cuts.filter(c => c.metodoPago === 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
+    // Retiros de hoy (por cuándo se hicieron), restados según su método
+    const retirosHoy = allRetiros.filter(r => !r.eliminado && r.estado === 'confirmado' && r.creadoEn && r.creadoEn.toDate() >= today);
+    const retiroEfectivo = retirosHoy.filter(r => r.metodoPago !== 'transferencia').reduce((s, r) => s + (r.monto || 0), 0);
+    const retiroTransferencia = retirosHoy.filter(r => r.metodoPago === 'transferencia').reduce((s, r) => s + (r.monto || 0), 0);
+    const efectivo      = efectivoBruto - retiroEfectivo;
+    const transferencia = transferenciaBruto - retiroTransferencia;
     const totalProductos = ventasProductos.reduce((s, v) => s + (v.total || 0), 0);
     const totalGeneral   = totalCortes + totalProductos;
     const gastosHoy = allGastos.filter(g => !g.eliminado && g.fecha === hoy);
@@ -2506,12 +2519,12 @@ function renderCierreCaja() {
             <div class="glass-card rounded-2xl p-4 md:p-5 text-center">
                 <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mb-1">Efectivo</div>
                 <div class="text-xl md:text-3xl font-extrabold text-emerald-300">$${efectivo.toLocaleString('es-AR')}</div>
-                <div class="text-[10px] md:text-xs text-emerald-800 mt-1">💵</div>
+                <div class="text-[10px] md:text-xs mt-1 ${retiroEfectivo>0?'text-rose-400':'text-emerald-800'}">${retiroEfectivo>0?`−$${retiroEfectivo.toLocaleString('es-AR')} retiros`:'💵'}</div>
             </div>
             <div class="glass-card rounded-2xl p-4 md:p-5 text-center">
                 <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mb-1">Transferencia</div>
                 <div class="text-xl md:text-3xl font-extrabold text-blue-300">$${transferencia.toLocaleString('es-AR')}</div>
-                <div class="text-[10px] md:text-xs text-blue-800 mt-1">📲</div>
+                <div class="text-[10px] md:text-xs mt-1 ${retiroTransferencia>0?'text-rose-400':'text-blue-800'}">${retiroTransferencia>0?`−$${retiroTransferencia.toLocaleString('es-AR')} retiros`:'📲'}</div>
             </div>
             <div class="glass-card rounded-2xl p-4 md:p-5 text-center col-span-2 md:col-span-1">
                 <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mb-1">Total del día</div>
@@ -2950,12 +2963,22 @@ window.deleteRetiroRec = async (id) => {
     try { await updateDoc(doc(db, PATH_RETIROS, id), { eliminado: true }); } catch { alert('Error al eliminar'); }
 };
 
+let retManMetodo = 'efectivo';
+window.setRetMetodo = (m) => {
+    retManMetodo = m;
+    const on = 'p-3 rounded-xl border font-bold text-sm transition bg-emerald-600/25 border-emerald-500 text-white';
+    const onT = 'p-3 rounded-xl border font-bold text-sm transition bg-blue-600/25 border-blue-500 text-white';
+    const off = 'p-3 rounded-xl border font-bold text-sm transition bg-black/30 border-gray-700 text-gray-400';
+    document.getElementById('ret-man-efectivo').className = m === 'efectivo' ? on : off;
+    document.getElementById('ret-man-transferencia').className = m === 'transferencia' ? onT : off;
+};
 window.openRetiroManualModal = () => {
     const today = new Date(); const wd = today.getDay()||7;
     const ws = new Date(today); if(wd!==1) ws.setDate(today.getDate()-(wd-1)); ws.setHours(0,0,0,0);
     document.getElementById('ret-man-fecha').value = ws.toLocaleDateString('en-CA');
     document.getElementById('ret-man-monto').value = '';
     document.getElementById('ret-man-barbero').value = '';
+    setRetMetodo('efectivo');
     showModal('retiro-manual-rec-modal');
 };
 
@@ -2969,7 +2992,7 @@ document.getElementById('retiro-manual-rec-form').addEventListener('submit', asy
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
         await addDoc(collection(db, PATH_RETIROS), {
-            barbero, monto, fecha, estado: 'confirmado',
+            barbero, monto, fecha, estado: 'confirmado', metodoPago: retManMetodo,
             userEmail: currentUser.email, creadoEn: serverTimestamp()
         });
         closeModals();
