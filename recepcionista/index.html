@@ -112,6 +112,18 @@
                     <h1 class="text-sm font-bold text-white leading-none tracking-wider">SB BARBER</h1>
                     <span class="text-[10px] text-cyan-400 font-medium">Recepción</span>
                 </div>
+                <!-- Botón precios de servicios -->
+                <button onclick="window.openPreciosModal()" class="flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 text-amber-300 px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-amber-500/25 transition ml-1">
+                    <i class="fas fa-tags text-xs"></i>
+                    <span class="hidden md:inline">PRECIOS</span>
+                    <span class="md:hidden">$</span>
+                </button>
+                <!-- Botón modificar menú -->
+                <button onclick="window.openMenuEditor()" class="flex items-center gap-1.5 bg-white/10 border border-white/20 text-white px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/20 transition">
+                    <i class="fas fa-list-ul text-xs"></i>
+                    <span class="hidden md:inline">MODIFICAR MENÚ</span>
+                    <span class="md:hidden">MENÚ</span>
+                </button>
             </div>
             <div class="flex items-center gap-2">
                 <!-- Botón nuevo corte solo visible en desktop -->
@@ -141,18 +153,6 @@
                     <i class="fas fa-cash-register text-xs"></i>
                     <span class="hidden sm:inline">CIERRE DE CAJA</span>
                     <span class="sm:hidden">CIERRE</span>
-                </button>
-                <!-- Botón precios de servicios -->
-                <button onclick="window.openPreciosModal()" class="flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 text-amber-300 px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-amber-500/25 transition">
-                    <i class="fas fa-tags text-xs"></i>
-                    <span class="hidden md:inline">PRECIOS</span>
-                    <span class="md:hidden">$</span>
-                </button>
-                <!-- Botón modificar menú -->
-                <button onclick="window.openMenuEditor()" class="flex items-center gap-1.5 bg-white/10 border border-white/20 text-white px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/20 transition">
-                    <i class="fas fa-list-ul text-xs"></i>
-                    <span class="hidden md:inline">MODIFICAR MENÚ</span>
-                    <span class="md:hidden">MENÚ</span>
                 </button>
                 <button onclick="window.logout()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-red-400 transition">
                     <i class="fas fa-power-off text-xs"></i>
