@@ -864,10 +864,6 @@
                         <button type="button" id="ret-man-transferencia" onclick="window.setRetMetodo('transferencia')" class="p-3 rounded-xl border font-bold text-sm transition bg-black/30 border-gray-700 text-gray-400">📲 Transferencia</button>
                     </div>
                 </div>
-                <div>
-                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Fecha</label>
-                    <input type="date" id="ret-man-fecha" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-violet-500 outline-none transition text-white mt-1">
-                </div>
                 <button type="submit" id="btn-submit-ret-manual" class="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest">Confirmar</button>
             </form>
         </div>
@@ -2973,9 +2969,6 @@ window.setRetMetodo = (m) => {
     document.getElementById('ret-man-transferencia').className = m === 'transferencia' ? onT : off;
 };
 window.openRetiroManualModal = () => {
-    const today = new Date(); const wd = today.getDay()||7;
-    const ws = new Date(today); if(wd!==1) ws.setDate(today.getDate()-(wd-1)); ws.setHours(0,0,0,0);
-    document.getElementById('ret-man-fecha').value = ws.toLocaleDateString('en-CA');
     document.getElementById('ret-man-monto').value = '';
     document.getElementById('ret-man-barbero').value = '';
     setRetMetodo('efectivo');
@@ -2986,8 +2979,8 @@ document.getElementById('retiro-manual-rec-form').addEventListener('submit', asy
     e.preventDefault();
     const barbero = document.getElementById('ret-man-barbero').value;
     const monto = parseInt(document.getElementById('ret-man-monto').value);
-    const fecha = document.getElementById('ret-man-fecha').value;
-    if (!barbero || !monto || !fecha) return;
+    const fecha = new Date().toLocaleDateString('en-CA');   // el momento del retiro
+    if (!barbero || !monto) return;
     const btn = document.getElementById('btn-submit-ret-manual');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
