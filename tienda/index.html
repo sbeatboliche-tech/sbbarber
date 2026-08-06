@@ -776,7 +776,7 @@ function renderKits() {
             </div>
             <div class="product-info">
                 <div class="product-name">${k.name}</div>
-                <div class="product-variant">${kitCount(k)} productos${k.subtitle?' · '+k.subtitle:''}</div>
+                <div class="product-variant">${[kitCount(k) ? kitCount(k)+' productos' : '', k.subtitle].filter(Boolean).join(' · ')}</div>
                 <ul class="kit-includes">${includes}</ul>
                 ${priceBlock}
                 <div class="product-footer" style="margin-top:0;">
@@ -818,7 +818,7 @@ function openItemDetail(id, type) {
         document.getElementById('item-detail-badges').innerHTML = badges;
         // nombre
         document.getElementById('item-detail-name').textContent = k.name;
-        document.getElementById('item-detail-sub').textContent = `${kitCount(k)} productos${k.subtitle?' · '+k.subtitle:''}`;
+        document.getElementById('item-detail-sub').textContent = [kitCount(k) ? kitCount(k)+' productos' : '', k.subtitle].filter(Boolean).join(' · ');
         // descripción
         const descEl = document.getElementById('item-detail-desc');
         if(k.desc) { descEl.textContent = k.desc; descEl.style.display = 'block'; }
