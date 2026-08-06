@@ -1924,7 +1924,6 @@ function renderSalesHistory() {
 }
 
 window.setVentaCanal = (canal) => {
-    selectedProducto = null;
     document.getElementById('venta-canal').value = canal;
     const esML = canal === 'ml';
     document.getElementById('venta-canal-local').className = `p-3 rounded-xl font-bold text-sm transition ${!esML ? 'bg-indigo-600/20 border border-indigo-500 text-indigo-300' : 'bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500'}`;
