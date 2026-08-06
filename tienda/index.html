@@ -706,6 +706,7 @@ let _hasProductCache = Object.keys(productConfigCache).length > 0;
 if (_hasProductCache) productConfig = productConfigCache;
 let _fsConfigReady = false, _fsCustomReady = false;
 let _prodFirst = true, _kitFirst = true;   // animar solo la 1ra vez (evita parpadeo en updates)
+let _productsRendered = false;
 function _maybeRenderProducts() {
     // Si hay caché local, pintamos al toque con lo último visto (usuario recurrente).
     // Si es un visitante nuevo (sin caché), esperamos a que lleguen los datos reales
@@ -1045,6 +1046,7 @@ function setShipping(mode) {
 
 
 function renderProducts() {
+    _productsRendered = true;
     const allProdsToRender = typeof getAllProducts === 'function' ? getAllProducts() : PRODUCTS;
     const rc = _prodFirst ? 'card-in' : '';
     const el = document.getElementById('prod-count');
@@ -1312,7 +1314,10 @@ async function submitCheckout() {
 }
 
 if (_hasProductCache) renderProducts();   // usuario recurrente: pinta al instante con la caché
-// si no hay caché, el skeleton del HTML queda visible hasta el primer snapshot de Firestore
+// si no hay caché, el skeleton queda hasta el 1er snapshot de Firestore...
+// ...pero como red de seguridad, si en 3s no se pintó nada (Firestore lento/caído),
+// mostramos igual los productos (estáticos/caché) para no dejar skeletons para siempre.
+setTimeout(() => { if (!_productsRendered) { _fsConfigReady = true; _fsCustomReady = true; renderProducts(); } }, 3000);
 updateCartUI();
 // Poblar el selector de provincias del checkout
 (function(){ const sel=document.getElementById('buyer-provincia'); if(sel) sel.innerHTML='<option value="">Elegí tu provincia</option>'+PROVINCIAS.map(p=>`<option>${p}</option>`).join(''); })();
@@ -1476,7 +1481,14 @@ let adminUser = null;
 let adminTab = 'productos';
 
 function _fsListenError(label) {
-    return err => console.error(`[tienda] Error escuchando ${label}:`, err.code || err.message || err);
+    return err => {
+        console.error(`[tienda] Error escuchando ${label}:`, err.code || err.message || err);
+        // Si una lectura falla (permiso/red), NO bloqueamos la tienda: mostramos
+        // lo que haya (productos estáticos / caché) en vez de dejar skeletons para siempre.
+        _fsConfigReady = true; _fsCustomReady = true;
+        _maybeRenderProducts();
+        if (typeof renderKits === 'function') renderKits();
+    };
 }
 
 // ── Numeración de pedidos secuencial (arranca en 2342) ──
