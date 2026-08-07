@@ -211,6 +211,11 @@
         #checkout-modal .co-pay-total .lbl { font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#888; }
         #checkout-modal .co-pay-total .val { font-size:22px; font-weight:900; color:#fff; letter-spacing:-.02em; }
         @media(min-width:640px){ #checkout-modal .co-pay-bar { margin:16px -28px 0; padding:18px 28px; } }
+        /* Mobile: checkout a pantalla completa (header fijo arriba, pago fijo abajo) */
+        @media(max-width:639px){
+            #checkout-modal .modal-box { height:100dvh; max-height:100dvh; }
+            #checkout-modal .modal-header { position:sticky; top:0; z-index:3; background:#111; margin:-28px -20px 20px; padding:20px 20px 16px; }
+        }
         #checkout-modal .co-section-label { display:flex; align-items:center; gap:8px; font-size:10px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:#e8e8e8; margin-bottom:14px; }
         #checkout-modal .co-num { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; font-size:9px; font-weight:800; color:#4ade80; border:1px solid rgba(74,222,128,.4); flex-shrink:0; }
 
