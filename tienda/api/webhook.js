@@ -134,6 +134,6 @@ function buyerHtml(name, items, total, orderId, shipping) {
       <span style="color:#18181b;font-weight:800;">Total pagado</span>
       <span style="color:#18181b;font-size:20px;font-weight:900;">$${total.toLocaleString('es-AR')}</span>
     </div>
-    <p style="text-align:center;color:#a1a1aa;font-size:11px;margin:0;">SB Barber · Dávila 951, CABA<br>Pedido ${orderLabel(orderId)}</p>`;
+    <p style="text-align:center;color:#a1a1aa;font-size:11px;margin:0;">Pedido ${orderLabel(orderId)}</p>`;
     return emailShell(body, { title: '¡Gracias por tu compra! 🖤' });
 }

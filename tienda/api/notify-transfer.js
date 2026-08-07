@@ -158,6 +158,6 @@ function buyerHtml(name, items, total, discount, orderId, ship) {
       <p style="color:#15803d;font-size:13px;margin:0 0 14px;line-height:1.5;">Hacé la transferencia y mandanos la <b>captura del pago</b> por WhatsApp para confirmar tu pedido.</p>
       <a href="${waLink}" style="display:inline-block;background:#25D366;color:#fff;font-size:14px;font-weight:800;text-decoration:none;padding:13px 26px;border-radius:999px;">Enviar captura por WhatsApp</a>
     </div>
-    <p style="text-align:center;color:#a1a1aa;font-size:11px;margin:0;">SB Barber · Dávila 951, CABA · Pedido ${orderLabel(orderId)}</p>`;
+    <p style="text-align:center;color:#a1a1aa;font-size:11px;margin:0;">Pedido ${orderLabel(orderId)}</p>`;
     return emailShell(body, { title: '¡Gracias por tu compra! 🖤' });
 }
