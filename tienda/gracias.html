@@ -28,6 +28,15 @@
         .back-link:hover{color:#fff;}
         .back-link svg{width:14px;height:14px;stroke:currentColor;}
         .order-id{font-size:11px;color:#262626;margin-bottom:24px;font-family:monospace;}
+        .copy-mini{background:none;border:1px solid rgba(255,255,255,.16);color:#a3a3a3;font-family:'Inter',sans-serif;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:6px 10px;cursor:pointer;flex-shrink:0;margin-left:12px;transition:all .15s;}
+        .copy-mini:active{background:rgba(255,255,255,.08);}
+        .copy-mini.done{border-color:#4ade80;color:#4ade80;}
+        .data-row .data-left{min-width:0;}
+        .monto-row{background:rgba(74,222,128,.06);}
+        .monto-row .data-val{color:#4ade80;font-size:18px;font-weight:900;}
+        .wa-cta{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:#25D366;color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:800;letter-spacing:.04em;text-decoration:none;padding:15px;margin-bottom:28px;}
+        .wa-cta svg{width:18px;height:18px;fill:#fff;}
+        .transfer-note{font-size:12px;color:#737373;line-height:1.6;margin-bottom:16px;}
     </style>
 </head>
 <body>
@@ -55,13 +64,18 @@
             </svg>
         </div>
         <h1>Pedido<br>recibido.</h1>
-        <p class="sub">En cuanto confirmemos la transferencia, preparamos tu pedido.</p>
+        <p class="sub">Transferí a los datos de abajo y mandanos el comprobante por WhatsApp. En cuanto lo confirmemos, preparamos tu pedido.</p>
         <div class="data-block">
-            <div class="data-row"><span class="data-key">Alias</span><span class="data-val">sbeat.ar</span></div>
-            <div class="data-row"><span class="data-key">CVU</span><span class="data-val" style="font-family:monospace;font-size:12px">0000003100061376563207</span></div>
-            <div class="data-row"><span class="data-key">Titular</span><span class="data-val">Agustín Abalo</span></div>
+            <div class="data-row"><span class="data-left"><span class="data-key">Alias</span><br><span class="data-val">tienda.sbbarber</span></span><button class="copy-mini" onclick="copyVal('tienda.sbbarber',this)">Copiar</button></div>
+            <div class="data-row"><span class="data-left"><span class="data-key">CVU</span><br><span class="data-val" style="font-family:monospace;font-size:12px">0000003100061376563207</span></span><button class="copy-mini" onclick="copyVal('0000003100061376563207',this)">Copiar</button></div>
+            <div class="data-row"><span class="data-left"><span class="data-key">Titular</span><br><span class="data-val">Agustín Abalo</span></span></div>
+            <div id="monto-row" class="data-row monto-row" style="display:none;"><span class="data-left"><span class="data-key">Monto a transferir</span></span><span class="data-val" id="monto-val"></span></div>
         </div>
-        <div id="transfer-ship" class="data-block" style="display:none;margin-top:16px;"></div>
+        <div id="transfer-ship" class="data-block" style="display:none;margin-bottom:24px;"></div>
+        <a id="wa-comprobante" class="wa-cta" href="#" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.1-.6.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.9-2.9-1.5-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.3 0-.5s-.6-1.5-.9-2c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.3 5.2 4.5 1.9.8 2.7.9 3.6.7.6-.1 1.7-.7 1.9-1.4.2-.6.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 2a10 10 0 00-8.6 15l-1.3 4.7 4.9-1.3A10 10 0 1012 2z"/></svg>
+            Enviar comprobante por WhatsApp
+        </a>
     </div>
 
     <div id="view-pending" style="display:none">
@@ -95,6 +109,27 @@
         const el = document.getElementById(id);
         if (el) { el.innerHTML = shipHtml; el.style.display = 'block'; }
     });
+
+    // Datos específicos de la vista transferencia: monto y WhatsApp
+    if (p.get('status') === 'transfer') {
+        const total = parseInt(p.get('total'), 10);
+        if (total > 0) {
+            document.getElementById('monto-val').textContent = '$' + total.toLocaleString('es-AR');
+            document.getElementById('monto-row').style.display = 'flex';
+        }
+        const ordLabel = ord ? (ord.startsWith('SBB-') ? '#' + ord.slice(4) : ord) : '';
+        const msg = encodeURIComponent(`Hola! Te paso el comprobante de mi transferencia. Pedido: ${ordLabel}`);
+        document.getElementById('wa-comprobante').href = `https://wa.me/541170583352?text=${msg}`;
+    }
+
+    function copyVal(text, btn) {
+        navigator.clipboard.writeText(text).then(() => {
+            const prev = btn.textContent;
+            btn.textContent = '¡Copiado!'; btn.classList.add('done');
+            setTimeout(() => { btn.textContent = prev; btn.classList.remove('done'); }, 1600);
+        });
+    }
+    window.copyVal = copyVal;
 
     localStorage.removeItem('sb_cart');
 </script>
