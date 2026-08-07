@@ -197,14 +197,20 @@
         @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
         /* ── CHECKOUT: rediseño completo, a juego con el resto del sitio ── */
-        #checkout-modal .modal-box { background:#111; border-color:rgba(255,255,255,.08); color:#e8e8e8; max-width:480px; }
+        #checkout-modal .modal-box { background:#111; border-color:rgba(255,255,255,.08); color:#e8e8e8; max-width:480px; padding-bottom:0; }
         #checkout-modal .modal-header { border-bottom-color:rgba(255,255,255,.08); }
         #checkout-modal .modal-title { color:#888; }
         #checkout-modal .close-btn { border-color:rgba(255,255,255,.12); }
         #checkout-modal .close-btn svg { stroke:#a3a3a3; }
 
-        #checkout-modal .co-section { margin-bottom:26px; }
+        #checkout-modal .co-section { margin-bottom:18px; }
         #checkout-modal .co-section:last-of-type { margin-bottom:0; }
+        /* Barra de pago fija abajo (siempre visible, con total) */
+        #checkout-modal .co-pay-bar { position:sticky; bottom:0; z-index:2; margin:16px -20px 0; padding:12px 20px calc(12px + env(safe-area-inset-bottom)); background:#111; border-top:1px solid rgba(255,255,255,.1); box-shadow:0 -8px 24px rgba(0,0,0,.4); }
+        #checkout-modal .co-pay-total { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+        #checkout-modal .co-pay-total .lbl { font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#888; }
+        #checkout-modal .co-pay-total .val { font-size:22px; font-weight:900; color:#fff; letter-spacing:-.02em; }
+        @media(min-width:640px){ #checkout-modal .co-pay-bar { margin:16px -28px 0; padding:18px 28px; } }
         #checkout-modal .co-section-label { display:flex; align-items:center; gap:8px; font-size:10px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:#e8e8e8; margin-bottom:14px; }
         #checkout-modal .co-num { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; font-size:9px; font-weight:800; color:#4ade80; border:1px solid rgba(74,222,128,.4); flex-shrink:0; }
 
@@ -587,8 +593,11 @@
             <div class="order-summary" id="order-summary"></div>
         </div>
 
-        <button id="btn-pay" class="btn-pay" onclick="submitCheckout()">Pagar con MercadoPago</button>
-        <p id="checkout-error" class="error-msg"></p>
+        <div class="co-pay-bar">
+            <div class="co-pay-total"><span class="lbl">Total</span><span class="val" id="pay-total">$0</span></div>
+            <button id="btn-pay" class="btn-pay" onclick="submitCheckout()">Pagar con MercadoPago</button>
+            <p id="checkout-error" class="error-msg"></p>
+        </div>
     </div>
 </div>
 
@@ -1228,6 +1237,8 @@ function renderSummary() {
         cart.map(i=>`<div class="summary-item"><span class="summary-key"><span class="qty-tag">${i.qty}×</span> ${i.name} <span style="opacity:.4">${i.variant}</span></span><span style="font-weight:700;flex-shrink:0">$${(i.price*i.qty).toLocaleString('es-AR')}</span></div>`).join('')+
         discRow + shipRow +
         `<div class="summary-item summary-total"><span class="summary-key" style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#888">Total</span><span class="summary-val">$${final.toLocaleString('es-AR')}</span></div>`;
+    const payTotalEl = document.getElementById('pay-total');
+    if (payTotalEl) payTotalEl.textContent = '$' + final.toLocaleString('es-AR');
 }
 
 function setTab(tab) {
