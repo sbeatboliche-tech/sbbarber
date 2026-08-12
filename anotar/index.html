@@ -856,7 +856,8 @@ let BARBER_EMAIL_MAP = { 'gomezmaximilianorodrigo@gmail.com':'Maxi', 'ap1773508@
 let BARBER_THEME = {
     Tony:  { color:'blue',   text:'text-blue-400',   border:'border-blue-500',   bg:'bg-blue-500',   initial:'T' },
     Maxi:  { color:'emerald',text:'text-emerald-400', border:'border-emerald-500', bg:'bg-emerald-500', initial:'M' },
-    Stefa: { color:'purple', text:'text-purple-400', border:'border-purple-500', bg:'bg-purple-500', initial:'S' }
+    Stefa: { color:'purple', text:'text-purple-400', border:'border-purple-500', bg:'bg-purple-500', initial:'S' },
+    Santi: { color:'orange', text:'text-orange-400', border:'border-orange-500', bg:'bg-orange-500', initial:'Sa' }
 };
 const BARBER_EXTRA_THEMES = [
     { color:'orange', text:'text-orange-400', border:'border-orange-500', bg:'bg-orange-500' },
@@ -877,7 +878,7 @@ const PATH_RETIROS  = `retiros`;
 const PATH_PROPINAS = `propinas`;
 const PATH_VENTAS   = `ventas_productos`;
 const PATH_TURNOS   = `turnos`;
-let BARBERS_LIST  = ['Tony', 'Maxi', 'Stefa'];
+let BARBERS_LIST  = ['Tony', 'Maxi', 'Stefa', 'Santi'];
 const PATH_GASTOS = 'gastos';
 const GASTOS_CATS = [
     { id:'insumos',   label:'Insumos',   icon:'🧴' },
@@ -902,7 +903,7 @@ let anotarTurnosDay=0, anotarTurnoModalDay=0, anotarTurnoModalBarber='', anotarT
 let anotarTurnosCustomDate=null, anotarTurnoModalCustomDate=null;
 let activePeriod='dia', customDateFilter=null;
 let barberProfilesData={}, currentBase64Image=null;
-let barberCommissions={ Tony:0.5, Maxi:0.5, Stefa:0.5 };
+let barberCommissions={ Tony:0.5, Maxi:0.5, Stefa:0.5, Santi:0.5 };
 let fixedExpenses={};
 let expensePeriod='semanal';
 let currentStockAction=null;
