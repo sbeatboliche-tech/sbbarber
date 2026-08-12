@@ -2968,8 +2968,12 @@ window.setRetMetodo = (m) => {
     document.getElementById('ret-man-transferencia').className = m === 'transferencia' ? onT : off;
 };
 window.openRetiroManualModal = () => {
+    // Poblar barberos dinámicamente (incluye los agregados nuevos) + FEME
+    const sel = document.getElementById('ret-man-barbero');
+    sel.innerHTML = '<option value="" disabled selected>Elegí</option>'
+        + BARBERS.map(b => `<option>${b}</option>`).join('')
+        + '<option value="FEME">FEME (Recepción · mensual)</option>';
     document.getElementById('ret-man-monto').value = '';
-    document.getElementById('ret-man-barbero').value = '';
     setRetMetodo('efectivo');
     showModal('retiro-manual-rec-modal');
 };

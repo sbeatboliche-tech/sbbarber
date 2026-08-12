@@ -53,6 +53,9 @@
         .money-hidden #top-performer-amount::after { font-size:1.125rem; color:#facc15; }
         #money-eye-btn { color:#6b7280; transition:color .2s, transform .2s; }
         #money-eye-btn:hover { color:#e5e7eb; }
+        /* Ocultar cantidad de cortes (ojito aparte) */
+        .cortes-hidden #total-services-count { font-size:0 !important; }
+        .cortes-hidden #total-services-count::after { content:"•••"; font-size:1.125rem; color:#93c5fd; letter-spacing:0.05em; }
     </style>
 </head>
 <body class="h-full bg-[#0f1115] text-white flex items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0f1115] to-black">
@@ -126,7 +129,7 @@
                 <div class="h-px bg-gradient-to-r from-gray-700 via-gray-600 to-transparent w-full my-4 opacity-50"></div>
                 <div class="grid grid-cols-2 gap-4">
                     <div><span class="text-[10px] text-gray-500 uppercase font-bold block">Facturación</span><span id="total-revenue-full" class="js-money font-mono text-gray-300 text-sm">$0</span></div>
-                    <div class="text-right"><span class="text-[10px] text-gray-500 uppercase font-bold block">Cortes</span><span id="total-services-count" class="font-bold text-blue-300 text-lg bg-blue-900/30 px-2 rounded-md">0</span></div>
+                    <div class="text-right"><span class="text-[10px] text-gray-500 uppercase font-bold flex items-center justify-end gap-1.5">Cortes<button id="cortes-eye-btn" type="button" onclick="window.toggleCortesVisibility()" title="Mostrar/ocultar cortes" aria-label="Mostrar u ocultar cortes" class="w-4 h-4 flex items-center justify-center text-gray-500 hover:text-blue-300 transition"><i id="cortes-eye-icon" class="fas fa-eye text-[10px]"></i></button></span><span id="total-services-count" class="font-bold text-blue-300 text-lg bg-blue-900/30 px-2 rounded-md">0</span></div>
                 </div>
             </div>
 
@@ -1086,9 +1089,9 @@ function renderHistoryBarber(barberName) {
         const lbl=item.tipo==='retiro'?'Retiro':`Propina${item.descripcion?' · '+item.descripcion:''}`;
         const f=item.creadoEn?item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
         const delPath=`${item.tipo==='retiro'?PATH_RETIROS:PATH_PROPINAS}/${item.id}`;
-        return `<div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${bdr}">
-            <div><div class="text-xs font-bold text-gray-200">${lbl}</div><div class="text-[10px] text-gray-500">${f}</div></div>
-            <div class="flex items-center gap-3"><span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span><button class="btn-delete-action text-gray-600 hover:text-red-400 transition" data-path="${delPath}" title="Eliminar"><i class="fas fa-trash-alt text-[10px]"></i></button></div>
+        return `<div class="flex items-center justify-between gap-3 bg-black/30 p-3 rounded-xl border ${bdr}">
+            <div class="min-w-0 flex-1"><div class="text-xs font-bold text-gray-200 break-words">${lbl}</div><div class="text-[10px] text-gray-500 mt-0.5">${f}</div></div>
+            <div class="flex items-center gap-2 shrink-0"><span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span><button class="btn-delete-action text-gray-600 hover:text-red-400 transition" data-path="${delPath}" title="Eliminar"><i class="fas fa-trash-alt text-[10px]"></i></button></div>
         </div>`;
     }).join('');
 }
@@ -1112,9 +1115,9 @@ function renderHistoryAdmin() {
         const f=item.creadoEn?item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
         const notaBtn=item.tipo==='retiro'?`<button onclick="window.openRetiroNota('${item.id}','${item.descripcion||''}',${item.monto},'${item.barbero}')" class="text-gray-600 hover:text-violet-400 transition ml-1" title="Agregar nota"><i class="fas fa-pencil-alt text-[10px]"></i></button>`:'';
         const delBtn=item.tipo==='retiro'?`<button onclick="window.deleteRetiro('${item.id}')" class="text-gray-700 hover:text-red-400 transition" title="Eliminar retiro"><i class="fas fa-trash text-[10px]"></i></button>`:'';
-        return `<div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${bdr}">
-            <div><div class="text-xs font-bold text-gray-200 flex items-center gap-1">${lbl}${notaBtn}</div><div class="text-[10px] text-gray-500">${f}</div></div>
-            <div class="flex items-center gap-3">${delBtn}<span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span></div>
+        return `<div class="flex items-center justify-between gap-3 bg-black/30 p-3 rounded-xl border ${bdr}">
+            <div class="min-w-0 flex-1"><div class="text-xs font-bold text-gray-200 flex items-center flex-wrap gap-1">${lbl}${notaBtn}</div><div class="text-[10px] text-gray-500 mt-0.5">${f}</div></div>
+            <div class="flex items-center gap-2 shrink-0">${delBtn}<span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span></div>
         </div>`;
     }).join('');
 }
@@ -1148,12 +1151,12 @@ function renderWeeklyTotalsAdmin() {
                 const prop = propTotals[barbero] || 0;
                 const total = ret + prop;
                 const neto = ret - prop;
-                return `<button onclick="window.openBarberDetail('${barbero}')" class="bg-black/30 rounded-xl p-3 text-left hover:bg-white/5 active:scale-95 transition w-full">
-                    <div class="text-xs font-bold ${t.text||'text-gray-400'} mb-2">${barbero}</div>
+                return `<button onclick="window.openBarberDetail('${barbero}')" class="bg-black/30 rounded-xl p-3 text-left hover:bg-white/5 active:scale-95 transition w-full min-w-0">
+                    <div class="text-xs font-bold ${t.text||'text-gray-400'} mb-2 truncate">${barbero}</div>
                     <div class="space-y-0.5">
-                        <div class="flex justify-between items-center"><span class="text-[9px] text-gray-500">Retirado</span><span class="text-[11px] font-bold text-violet-300">$${ret.toLocaleString('es-AR')}</span></div>
-                        ${prop > 0 ? `<div class="flex justify-between items-center"><span class="text-[9px] text-yellow-500">Propinas</span><span class="text-[11px] font-bold text-yellow-400">− $${prop.toLocaleString('es-AR')}</span></div>
-                        <div class="flex justify-between items-center border-t border-white/10 pt-1 mt-1"><span class="text-[9px] text-gray-300 font-bold">Neto</span><span class="text-sm font-extrabold ${neto>=0?'text-white':'text-emerald-300'}">$${neto.toLocaleString('es-AR')}</span></div>` : ''}
+                        <div class="flex justify-between items-center gap-1"><span class="text-[9px] text-gray-500 shrink-0">Retirado</span><span class="text-[11px] font-bold text-violet-300 truncate">$${ret.toLocaleString('es-AR')}</span></div>
+                        ${prop > 0 ? `<div class="flex justify-between items-center gap-1"><span class="text-[9px] text-yellow-500 shrink-0">Propinas</span><span class="text-[11px] font-bold text-yellow-400 truncate">− $${prop.toLocaleString('es-AR')}</span></div>
+                        <div class="flex justify-between items-center gap-1 border-t border-white/10 pt-1 mt-1"><span class="text-[9px] text-gray-300 font-bold shrink-0">Neto</span><span class="text-sm font-extrabold truncate ${neto>=0?'text-white':'text-emerald-300'}">$${neto.toLocaleString('es-AR')}</span></div>` : ''}
                     </div>
                     <div class="text-[9px] text-gray-600 mt-1.5">ver historial →</div>
                 </button>`;
@@ -1183,12 +1186,12 @@ function renderPendingPanel() {
                 const icoBg=item.tipo==='retiro'?'bg-violet-600/20 text-violet-400':'bg-yellow-600/20 text-yellow-400';
                 const ico=item.tipo==='retiro'?'fa-money-bill-wave':'fa-hand-holding-usd';
                 return `<div class="bg-black/30 p-3 rounded-xl border border-white/5">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center gap-2">
-                            <div class="w-7 h-7 rounded-lg ${icoBg} flex items-center justify-center text-xs"><i class="fas ${ico}"></i></div>
-                            <div><div class="text-xs font-bold text-gray-200">${lbl}</div><div class="text-[10px] text-gray-500">${f}</div></div>
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                            <div class="w-7 h-7 rounded-lg ${icoBg} flex items-center justify-center text-xs shrink-0"><i class="fas ${ico}"></i></div>
+                            <div class="min-w-0"><div class="text-xs font-bold text-gray-200 break-words">${lbl}</div><div class="text-[10px] text-gray-500">${f}</div></div>
                         </div>
-                        <span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span>
+                        <span class="text-sm font-bold text-white shrink-0">$${item.monto.toLocaleString('es-AR')}</span>
                     </div>
                     <div class="grid grid-cols-3 gap-2">
                         <button onclick="window.approveItem('${path}','${item.id}')" class="bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold py-2 rounded-lg hover:bg-emerald-600/30 transition">✓ Confirmar</button>
@@ -1300,7 +1303,10 @@ window.openRetiroManualModal = () => {
     if (wd !== 1) ws.setDate(today.getDate() - (wd - 1));
     document.getElementById('retiro-manual-fecha').value = ws.toLocaleDateString('en-CA');
     document.getElementById('retiro-manual-monto').value = '';
-    document.getElementById('retiro-manual-barbero').value = '';
+    // Poblar barberos dinámicamente (incluye los agregados nuevos)
+    document.getElementById('retiro-manual-barbero').innerHTML =
+        '<option value="">Seleccioná un barbero</option>'
+        + BARBERS_LIST.map(b => `<option value="${b}">${b}</option>`).join('');
     showModal('retiro-manual-modal');
 };
 
@@ -3012,6 +3018,22 @@ init();
         const icon = document.getElementById('money-eye-icon');
         if (icon) icon.className = 'fas text-sm ' + (hidden ? 'fa-eye-slash' : 'fa-eye');
     };
+    window.toggleCortesVisibility = function () {
+        const hidden = document.body.classList.toggle('cortes-hidden');
+        try { localStorage.setItem('sb_cortes_hidden', hidden ? '1' : '0'); } catch (e) {}
+        const icon = document.getElementById('cortes-eye-icon');
+        if (icon) icon.className = 'fas text-[10px] ' + (hidden ? 'fa-eye-slash' : 'fa-eye');
+    };
+    (function () {
+        let hidden = false;
+        try { hidden = localStorage.getItem('sb_cortes_hidden') === '1'; } catch (e) {}
+        if (hidden) document.body.classList.add('cortes-hidden');
+        const apply = function () {
+            const icon = document.getElementById('cortes-eye-icon');
+            if (icon) icon.className = 'fas text-[10px] ' + (hidden ? 'fa-eye-slash' : 'fa-eye');
+        };
+        if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', apply); } else { apply(); }
+    })();
     (function () {
         let hidden = false;
         try { hidden = localStorage.getItem('sb_money_hidden') === '1'; } catch (e) {}
