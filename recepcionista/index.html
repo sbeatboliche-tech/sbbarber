@@ -2814,7 +2814,7 @@ function renderWeeklyTotalsRec() {
     allRetiros.filter(r => !r.eliminado && r.estado !== 'rechazado' && r.fecha >= periodStartFor(r.barbero))
         .forEach(r => { totals[r.barbero] = (totals[r.barbero]||0) + r.monto; });
     const propTotals = {};
-    allPropinas.filter(p => p.estado === 'confirmado' && p.fecha >= periodStartFor(p.barbero))
+    allPropinas.filter(p => !p.eliminado && p.estado === 'confirmado' && p.fecha >= periodStartFor(p.barbero))
         .forEach(p => { propTotals[p.barbero] = (propTotals[p.barbero]||0) + p.monto; });
     const allBarbers = new Set([...Object.keys(totals), ...Object.keys(propTotals)]);
     const el = document.getElementById('ret-weekly-totals');
@@ -2869,7 +2869,7 @@ function renderHistoryRec() {
         const lbl = item.tipo === 'retiro' ? `Retiro · ${item.barbero}${desc}` : `Propina · ${item.barbero}${item.descripcion ? ' · '+item.descripcion : ''}`;
         const f = item.creadoEn ? item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) : '';
         const notaBtn = (!eliminado && item.tipo === 'retiro') ? `<button onclick="window.openRetiroNotaRec('${item.id}','${(item.descripcion||'').replace(/'/g,"\\'")}',${item.monto},'${item.barbero}')" class="text-gray-600 hover:text-violet-400 transition ml-2"><i class="fas fa-pencil-alt text-xs"></i></button>` : '';
-        const delBtn = (!eliminado && item.tipo === 'retiro') ? `<button onclick="window.deleteRetiroRec('${item.id}')" class="text-gray-700 hover:text-red-400 transition ml-1"><i class="fas fa-trash text-xs"></i></button>` : '';
+        const delBtn = eliminado ? '' : item.tipo === 'retiro' ? `<button onclick="window.deleteRetiroRec('${item.id}')" class="text-gray-700 hover:text-red-400 transition ml-1"><i class="fas fa-trash text-xs"></i></button>` : `<button onclick="window.deletePropinaRec('${item.id}')" class="text-gray-700 hover:text-red-400 transition ml-1"><i class="fas fa-trash text-xs"></i></button>`;
         return `<div class="flex items-center justify-between bg-black/30 p-3 md:p-4 rounded-xl border ${bdr} ${eliminado ? 'opacity-50' : ''}">
             <div><div class="text-sm md:text-base font-bold ${textCls} flex items-center gap-1">${lbl}${notaBtn}${delBtn}</div><div class="text-xs text-gray-500 mt-0.5">${f}${eliminado ? ' · <span class="text-red-700 text-[10px]">eliminado</span>' : ''}</div></div>
             <div class="flex items-center gap-3 md:gap-4"><span class="${ec} text-base font-bold">${ei}</span><span class="text-base md:text-lg font-bold ${montoCls}">$${item.monto.toLocaleString('es-AR')}</span></div>
@@ -2900,7 +2900,7 @@ function renderBarberDetail(name) {
     const myRetiros = allRetiros.filter(r => r.barbero === name && r.fecha >= periodStart);
     const myPropinas = allPropinas.filter(p => p.barbero === name && p.fecha >= periodStart);
     const totalRet = myRetiros.filter(r => !r.eliminado && r.estado === 'confirmado').reduce((s,r) => s+r.monto, 0);
-    const totalProp = myPropinas.filter(p => p.estado === 'confirmado').reduce((s,p) => s+p.monto, 0);
+    const totalProp = myPropinas.filter(p => !p.eliminado && p.estado === 'confirmado').reduce((s,p) => s+p.monto, 0);
     const neto = totalRet - totalProp;
     const combined = [
         ...myRetiros.map(r => ({...r, tipo:'retiro'})),
@@ -2918,7 +2918,7 @@ function renderBarberDetail(name) {
             const desc = item.descripcion ? ` · <span class="font-normal">${item.descripcion}</span>` : '';
             const lbl = item.tipo==='retiro' ? `Retiro${desc}` : `Propina${item.descripcion?' · '+item.descripcion:''}`;
             const notaBtn = (!eliminado && item.tipo==='retiro') ? `<button onclick="window.openRetiroNotaRec('${item.id}','${(item.descripcion||'').replace(/'/g,"\\'")}',${item.monto},'${name}')" class="ml-2 text-gray-600 hover:text-violet-400 transition"><i class="fas fa-pencil-alt text-xs"></i></button>` : '';
-            const delBtn = (!eliminado && item.tipo==='retiro') ? `<button onclick="window.deleteRetiroRec('${item.id}')" class="ml-1 text-gray-700 hover:text-red-400 transition"><i class="fas fa-trash text-xs"></i></button>` : '';
+            const delBtn = eliminado ? '' : item.tipo==='retiro' ? `<button onclick="window.deleteRetiroRec('${item.id}')" class="ml-1 text-gray-700 hover:text-red-400 transition"><i class="fas fa-trash text-xs"></i></button>` : `<button onclick="window.deletePropinaRec('${item.id}')" class="ml-1 text-gray-700 hover:text-red-400 transition"><i class="fas fa-trash text-xs"></i></button>`;
             const f = item.creadoEn ? item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) : '';
             return `<div class="flex items-center justify-between bg-black/30 p-3 md:p-4 rounded-xl border ${bdr} ${eliminado ? 'opacity-50' : ''}">
                 <div><div class="text-sm md:text-base font-bold ${textCls} flex items-center gap-1">${lbl}${notaBtn}${delBtn}</div><div class="text-xs text-gray-500 mt-0.5">${f}${eliminado ? ' · <span class="text-red-700 text-[10px]">eliminado</span>' : ''}</div></div>
@@ -2956,6 +2956,12 @@ window.deleteRetiroRec = async (id) => {
     allRetiros = allRetiros.map(r => r.id === id ? {...r, eliminado: true} : r);
     renderRetirosPanel();
     try { await updateDoc(doc(db, PATH_RETIROS, id), { eliminado: true }); } catch { alert('Error al eliminar'); }
+};
+window.deletePropinaRec = async (id) => {
+    if (!await customConfirm('¿Eliminar esta propina?')) return;
+    allPropinas = allPropinas.map(p => p.id === id ? {...p, eliminado: true} : p);
+    renderRetirosPanel();
+    try { await updateDoc(doc(db, PATH_PROPINAS, id), { eliminado: true }); } catch { alert('Error al eliminar'); }
 };
 
 let retManMetodo = 'efectivo';
