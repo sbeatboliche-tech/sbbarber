@@ -1304,10 +1304,11 @@ window.openRetiroManualModal = () => {
     if (wd !== 1) ws.setDate(today.getDate() - (wd - 1));
     document.getElementById('retiro-manual-fecha').value = ws.toLocaleDateString('en-CA');
     document.getElementById('retiro-manual-monto').value = '';
-    // Poblar barberos dinámicamente (incluye los agregados nuevos)
+    // Poblar barberos dinámicamente (incluye los agregados nuevos) + FEME
     document.getElementById('retiro-manual-barbero').innerHTML =
         '<option value="">Seleccioná un barbero</option>'
-        + BARBERS_LIST.map(b => `<option value="${b}">${b}</option>`).join('');
+        + BARBERS_LIST.map(b => `<option value="${b}">${b}</option>`).join('')
+        + '<option value="FEME">FEME</option>';
     showModal('retiro-manual-modal');
 };
 
@@ -1778,7 +1779,7 @@ window.setVentaBarbero = (name) => {
     });
 };
 function renderVentaBarberos() {
-    const nombres = [...new Set(Object.values(BARBER_EMAIL_MAP))];
+    const nombres = [...new Set(BARBERS_LIST)];
     document.getElementById('venta-barbero-list').innerHTML = nombres.map(n =>
         `<button type="button" data-name="${n}" onclick="window.setVentaBarbero('${n.replace(/'/g,"\\'")}')" class="${_btnOff}">${n}</button>`
     ).join('');
