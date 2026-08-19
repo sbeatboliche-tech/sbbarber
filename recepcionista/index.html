@@ -2443,21 +2443,31 @@ function renderCierreCaja() {
 
     const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today);
     const ventasHoy = allVentas.filter(v => v.fecha === hoy && !v.eliminado);
-    const ventasProductos = ventasHoy.filter(v => v.tipo !== 'bebida');
+    // Cuenta como venta real (Productos + caja) solo lo vendido en el local a un cliente:
+    // se excluyen las ventas por canal ML (esa plata no pasa por la caja física) y el
+    // consumo interno de barberos/FEME (esConsumoStaff — eso ya se resta de lo que se le
+    // paga al barbero, no de la caja del negocio).
+    const ventasProductos = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff);
 
     const totalCortes   = cuts.reduce((s, c) => s + (c.price || 0), 0);
-    const efectivoBruto = cuts.filter(c => c.metodoPago !== 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
-    const transferenciaBruto = cuts.filter(c => c.metodoPago === 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
-    // Retiros de hoy (por cuándo se hicieron), restados según su método
-    const retirosHoy = allRetiros.filter(r => !r.eliminado && r.estado === 'confirmado' && r.creadoEn && r.creadoEn.toDate() >= today);
+    const productosEfectivo = ventasProductos.filter(v => v.metodoPago !== 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
+    const productosTransferencia = ventasProductos.filter(v => v.metodoPago === 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
+    const efectivoBruto = cuts.filter(c => c.metodoPago !== 'transferencia').reduce((s, c) => s + (c.price || 0), 0) + productosEfectivo;
+    const transferenciaBruto = cuts.filter(c => c.metodoPago === 'transferencia').reduce((s, c) => s + (c.price || 0), 0) + productosTransferencia;
+    // Retiros de hoy (por cuándo se hicieron), restados según su método.
+    // Los retiros de bebida (origen:'bebida') NO restan de la caja: ya se le descontó al
+    // barbero/FEME de lo que se le paga, pero la bebida la pagó la barbería con otra plata.
+    const retirosHoy = allRetiros.filter(r => !r.eliminado && r.estado === 'confirmado' && r.creadoEn && r.creadoEn.toDate() >= today && r.origen !== 'bebida');
     const retiroEfectivo = retirosHoy.filter(r => r.metodoPago !== 'transferencia').reduce((s, r) => s + (r.monto || 0), 0);
     const retiroTransferencia = retirosHoy.filter(r => r.metodoPago === 'transferencia').reduce((s, r) => s + (r.monto || 0), 0);
-    const efectivo      = efectivoBruto - retiroEfectivo;
-    const transferencia = transferenciaBruto - retiroTransferencia;
-    const totalProductos = ventasProductos.reduce((s, v) => s + (v.total || 0), 0);
-    const totalGeneral   = totalCortes + totalProductos;
     const gastosHoy = allGastos.filter(g => !g.eliminado && g.fecha === hoy);
     const totalGastos = gastosHoy.reduce((s, g) => s + (g.monto || 0), 0);
+    const gastoEfectivo = gastosHoy.filter(g => g.metodoPago !== 'transferencia').reduce((s, g) => s + (g.monto || 0), 0);
+    const gastoTransferencia = gastosHoy.filter(g => g.metodoPago === 'transferencia').reduce((s, g) => s + (g.monto || 0), 0);
+    const efectivo      = efectivoBruto - retiroEfectivo - gastoEfectivo;
+    const transferencia = transferenciaBruto - retiroTransferencia - gastoTransferencia;
+    const totalProductos = ventasProductos.reduce((s, v) => s + (v.total || 0), 0);
+    const totalGeneral   = totalCortes + totalProductos;
     const netoReal = totalGeneral - totalGastos;
 
     // Cortes por barbero
