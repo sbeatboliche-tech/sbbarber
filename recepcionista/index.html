@@ -1604,19 +1604,21 @@ document.getElementById('movement-form').addEventListener('submit', async e => {
             const precio = item?.price || 0;
             const hoy = new Date().toLocaleDateString('en-CA');
             const comprador = document.getElementById('mv-comprador').value || 'cliente';
-            const metodo = BARBERS.includes(comprador) ? null : (document.getElementById('mv-metodo-pago').value || 'efectivo');
+            const esStaff = BARBERS.includes(comprador) || comprador === 'FEME';
+            const metodo = esStaff ? null : (document.getElementById('mv-metodo-pago').value || 'efectivo');
             await addDoc(collection(db, PATH_VENTAS), {
                 producto: itemName, tipo: 'bebida',
                 precio, cantidad: qty, total: precio * qty,
                 barbero: comprador,
                 ...(metodo ? { metodoPago: metodo } : {}),
+                esConsumoStaff: esStaff,
                 userEmail: currentUser.email,
                 fecha: hoy, creadoEn: serverTimestamp()
             });
-            if (BARBERS.includes(comprador)) {
+            if (esStaff) {
                 await addDoc(collection(db, PATH_RETIROS), {
                     barbero: comprador, monto: Number(precio) * qty, fecha: hoy,
-                    estado: 'confirmado', tipo: 'retiro',
+                    estado: 'confirmado', tipo: 'retiro', origen: 'bebida',
                     descripcion: `Bebida: ${itemName}${qty > 1 ? ' ×' + qty : ''}`,
                     userEmail: currentUser?.email || null, creadoEn: serverTimestamp()
                 });
