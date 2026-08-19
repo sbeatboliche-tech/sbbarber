@@ -2282,6 +2282,7 @@ window.submitVenta = async () => {
             cantidad: cantVenta,
             total: selectedProducto.precio * cantVenta,
             barbero: myName,
+            metodoPago: 'efectivo',
             userEmail: currentUser.email,
             fecha: hoy,
             creadoEn: serverTimestamp()
@@ -2394,7 +2395,7 @@ function renderCierreDia() {
     // Cuenta como venta real (Productos + caja) solo lo vendido en el local a un cliente:
     // se excluyen las ventas por canal ML y el consumo interno de barberos/FEME
     // (esConsumoStaff — eso resta de lo que se le paga al barbero, no de la caja).
-    const ventasProductos = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff);
+    const ventasProductos = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo);
 
     const totalCortes    = cuts.reduce((s, c) => s + (c.price || 0), 0);
     const productosEfectivo = ventasProductos.filter(v => v.metodoPago !== 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
@@ -2584,7 +2585,7 @@ function renderCierreSemana() {
         const d = new Date(v.fecha+'T00:00:00');
         return d >= weekStart && d <= today;
     });
-    const ventasProductos = ventasSemana.filter(v => v.tipo !== 'bebida');
+    const ventasProductos = ventasSemana.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo);
 
     const totalCortes    = cuts.reduce((s, c) => s + (c.price || 0), 0);
     const totalComm      = cuts.reduce((s, c) => s + c.price*(barberCommissions[c.barber]||0.5), 0);

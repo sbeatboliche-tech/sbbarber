@@ -1856,7 +1856,7 @@ function renderVentas() {
             </div>
         </div>`;
     }).join('');
-    const total = ventasHoy.filter(v => v.canal !== 'ml').reduce((s, v) => s + (v.total || 0), 0);
+    const total = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff).reduce((s, v) => s + (v.total || 0), 0);
     document.getElementById('ventas-total').textContent = `$${total.toLocaleString('es-AR')}`;
     totalRow.classList.remove('hidden'); totalRow.classList.add('flex');
     const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= new Date(new Date().setHours(0,0,0,0)));
@@ -1866,7 +1866,7 @@ function renderVentas() {
 function updateDailyTotalStat(cutsBilling, ventasTotal = null) {
     if (ventasTotal === null) {
         const hoy = new Date().toLocaleDateString('en-CA');
-        ventasTotal = allVentas.filter(v => v.fecha === hoy && !v.eliminado && v.canal !== 'ml').reduce((s,v) => s+(v.total||0), 0);
+        ventasTotal = allVentas.filter(v => v.fecha === hoy && !v.eliminado && v.canal !== 'ml' && !v.esConsumoStaff).reduce((s,v) => s+(v.total||0), 0);
     }
     const ventasRow = document.getElementById('stat-ventas-row');
     const totalRow = document.getElementById('stat-total-row');
@@ -2197,6 +2197,7 @@ document.getElementById('producto-movement-form').addEventListener('submit', asy
                 cantidad: qty,
                 total: (prod?.precio || 0) * qty,
                 barbero: 'Recepción',
+                metodoPago: 'efectivo',
                 userEmail: currentUser.email,
                 fecha: hoy,
                 creadoEn: serverTimestamp()
@@ -2455,7 +2456,7 @@ function renderCierreCaja() {
     // se excluyen las ventas por canal ML (esa plata no pasa por la caja física) y el
     // consumo interno de barberos/FEME (esConsumoStaff — eso ya se resta de lo que se le
     // paga al barbero, no de la caja del negocio).
-    const ventasProductos = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff);
+    const ventasProductos = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo);
 
     const totalCortes   = cuts.reduce((s, c) => s + (c.price || 0), 0);
     const productosEfectivo = ventasProductos.filter(v => v.metodoPago !== 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
