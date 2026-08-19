@@ -2390,15 +2390,22 @@ function renderCierreDia() {
 
     const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today);
     const ventasHoy = allVentas.filter(v => v.fecha === hoy && !v.eliminado);
-    const ventasProductos = ventasHoy.filter(v => v.tipo !== 'bebida');
+    // Cuenta como venta real (Productos + caja) solo lo vendido en el local a un cliente:
+    // se excluyen las ventas por canal ML y el consumo interno de barberos/FEME
+    // (esConsumoStaff — eso resta de lo que se le paga al barbero, no de la caja).
+    const ventasProductos = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff);
 
     const totalCortes    = cuts.reduce((s, c) => s + (c.price || 0), 0);
-    const efectivo       = cuts.filter(c => c.metodoPago !== 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
-    const transferencia  = cuts.filter(c => c.metodoPago === 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
-    const totalProductos = ventasProductos.reduce((s, v) => s + (v.total || 0), 0);
-    const totalGeneral   = totalCortes + totalProductos;
+    const productosEfectivo = ventasProductos.filter(v => v.metodoPago !== 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
+    const productosTransferencia = ventasProductos.filter(v => v.metodoPago === 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
     const gastosHoy      = allGastos.filter(g => !g.eliminado && g.fecha === hoy);
     const totalGastos    = gastosHoy.reduce((s, g) => s + (g.monto || 0), 0);
+    const gastoEfectivo  = gastosHoy.filter(g => g.metodoPago !== 'transferencia').reduce((s, g) => s + (g.monto || 0), 0);
+    const gastoTransferencia = gastosHoy.filter(g => g.metodoPago === 'transferencia').reduce((s, g) => s + (g.monto || 0), 0);
+    const efectivo       = cuts.filter(c => c.metodoPago !== 'transferencia').reduce((s, c) => s + (c.price || 0), 0) + productosEfectivo - gastoEfectivo;
+    const transferencia  = cuts.filter(c => c.metodoPago === 'transferencia').reduce((s, c) => s + (c.price || 0), 0) + productosTransferencia - gastoTransferencia;
+    const totalProductos = ventasProductos.reduce((s, v) => s + (v.total || 0), 0);
+    const totalGeneral   = totalCortes + totalProductos;
     const netoReal       = totalGeneral - totalGastos;
     const dateStr        = today.toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
 
