@@ -696,6 +696,14 @@
                             class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
                             Stefa
                         </button>
+                        <button type="button" onclick="window.setDrinkComprador('Santi', this)" id="mv-comp-Santi"
+                            class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
+                            Santi
+                        </button>
+                        <button type="button" onclick="window.setDrinkComprador('FEME', this)" id="mv-comp-FEME"
+                            class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
+                            FEME
+                        </button>
                     </div>
                     <input type="hidden" id="mv-comprador" value="cliente">
                     <!-- Método de pago (solo venta a cliente) -->
@@ -1551,8 +1559,8 @@ window.setDrinkSalidaTipo = (tipo) => {
 
 window.setDrinkComprador = (quien, el) => {
     document.getElementById('mv-comprador').value = quien;
-    const esBarber = BARBERS.includes(quien);
-    ['cliente', ...BARBERS].forEach(k => {
+    const esBarber = BARBERS.includes(quien) || quien === 'FEME';
+    ['cliente', ...BARBERS, 'FEME'].forEach(k => {
         const btn = document.getElementById(`mv-comp-${k}`);
         if (!btn) return;
         const t = BARBER_THEME[k];
@@ -1749,7 +1757,7 @@ window.setQsMetodo = (metodo) => {
 window.openQuickSaleModal = () => {
     window.setQsMetodo('efectivo');
     document.getElementById('qs-barbero').value = '';
-    document.getElementById('qs-barber-grid').innerHTML = BARBERS.map(b => {
+    document.getElementById('qs-barber-grid').innerHTML = [...BARBERS, 'FEME'].map(b => {
         const t = BARBER_THEME[b];
         return `
         <label class="cursor-pointer select-none">
