@@ -1786,12 +1786,13 @@ window.quickSale = async id => {
             producto: item.name, tipo: 'bebida',
             precio: item.price || 0, cantidad: 1, total: item.price || 0,
             metodoPago: metodo,
+            esConsumoStaff: true,
             barbero, userEmail: currentUser.email,
             fecha: hoy, creadoEn: serverTimestamp()
         });
         await addDoc(collection(db, PATH_RETIROS), {
             barbero, monto: Number(item.price) || 0, fecha: hoy,
-            estado: 'confirmado', tipo: 'retiro',
+            estado: 'confirmado', tipo: 'retiro', origen: 'bebida',
             descripcion: `Bebida: ${item.name}`,
             userEmail: currentUser?.email || null, creadoEn: serverTimestamp()
         });
