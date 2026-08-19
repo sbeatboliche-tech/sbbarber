@@ -1830,12 +1830,13 @@ document.getElementById('stock-item-form').addEventListener('submit', async e=>{
                     comprador: esRetiro ? persona : (cliente||null),
                     compradorTipo: ventaComprador,
                     metodoPago: esRetiro ? null : ventaMetodoPago,
+                    esConsumoStaff: esRetiro,
                     fecha:hoy, creadoEn:serverTimestamp()
                 });
                 if(esRetiro){
                     await addDoc(collection(db,PATH_RETIROS),{
                         barbero:persona, userEmail:currentUser.email, monto:total,
-                        fecha:hoy, estado:'confirmado',
+                        fecha:hoy, estado:'confirmado', origen:'bebida',
                         descripcion:`🥤 ${currentStockAction.itemName}${qty>1?' ×'+qty:''}`,
                         creadoEn:serverTimestamp()
                     });
