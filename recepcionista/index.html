@@ -48,6 +48,9 @@
         .money-hidden #stat-total-billing::after { font-size:1rem; }
         #money-eye-btn { color:#6b7280; transition:color .2s, transform .2s; }
         #money-eye-btn:hover { color:#e5e7eb; }
+        /* Ocultar cantidad de cortes (ojito aparte) */
+        .cortes-hidden #stat-cuts-count { font-size:0 !important; }
+        .cortes-hidden #stat-cuts-count::after { content:"•••"; font-size:1.5rem; color:#93c5fd; letter-spacing:0.05em; }
         /* Mobile tabs */
         .tab-content { display:none; }
         .tab-content.active { display:flex; flex-direction:column; }
@@ -175,6 +178,13 @@
             </nav>
         </div>
 
+        <!-- Navegación por fecha: Hoy / Ayer / buscar fecha -->
+        <div class="bg-[#0f1115] px-4 md:px-6 py-2 border-b border-gray-800/50 flex items-center gap-2 flex-shrink-0">
+            <button onclick="window.setDashboardFechaHoy()" id="dash-fecha-hoy-btn" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-cyan-600/20 border border-cyan-500 text-cyan-300 transition">HOY</button>
+            <button onclick="window.setDashboardFechaAyer()" id="dash-fecha-ayer-btn" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition">AYER</button>
+            <input type="date" id="dash-fecha-input" onchange="window.setDashboardFecha(this.value)" class="flex-1 min-w-0 max-w-[170px] bg-black/30 border border-gray-700 rounded-lg px-2 py-1.5 text-[11px] text-gray-300 focus:border-cyan-500 outline-none">
+        </div>
+
         <!-- Títulos de columna: solo en desktop -->
         <div class="hidden md:grid md:grid-cols-2 flex-shrink-0 border-b border-gray-800/50">
             <div class="px-6 py-2 border-r border-gray-800/50">
@@ -210,7 +220,7 @@
                 <div class="glass-card rounded-2xl p-5 animate-enter">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-gray-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                            <i class="fas fa-calendar-day text-cyan-400"></i> Hoy
+                            <i class="fas fa-calendar-day text-cyan-400"></i> <span id="dash-fecha-label">Hoy</span>
                         </span>
                         <button id="money-eye-btn" type="button" onclick="window.toggleMoneyVisibility()" title="Mostrar/ocultar saldo" aria-label="Mostrar u ocultar saldo" class="w-8 h-8 flex items-center justify-center rounded-lg">
                             <i id="money-eye-icon" class="fas fa-eye text-sm"></i>
@@ -219,7 +229,12 @@
                     <div class="grid grid-cols-3 gap-3">
                         <div class="bg-black/30 rounded-xl p-3 text-center col-span-1">
                             <div id="stat-cuts-count" class="text-2xl font-extrabold text-blue-300">0</div>
-                            <div class="text-[10px] text-gray-500 mt-0.5">cortes</div>
+                            <div class="text-[10px] text-gray-500 mt-0.5 flex items-center justify-center gap-1">
+                                cortes
+                                <button id="cortes-eye-btn" type="button" onclick="window.toggleCortesVisibility()" title="Mostrar/ocultar cortes" aria-label="Mostrar u ocultar cortes" class="w-3.5 h-3.5 flex items-center justify-center text-gray-500 hover:text-blue-300 transition">
+                                    <i id="cortes-eye-icon" class="fas fa-eye text-[9px]"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="bg-black/30 rounded-xl p-3 text-center col-span-2">
                             <div class="flex items-baseline justify-center gap-1">
@@ -387,6 +402,13 @@
                 <button id="cc-tab-semanal" onclick="window.setCierreCajaTab('semanal')" class="px-3 py-1.5 rounded-lg text-gray-500 hover:text-gray-300 transition">Semanal</button>
             </div>
         </header>
+
+        <!-- Navegación por fecha (solo pestaña diario) -->
+        <div id="cc-fecha-nav" class="hidden px-4 md:px-8 pt-3 pb-1 flex items-center gap-2 flex-shrink-0 max-w-4xl md:mx-auto w-full">
+            <button onclick="window.setCierreCajaFechaHoy()" id="cc-fecha-hoy-btn" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-600/20 border border-emerald-500 text-emerald-300 transition">HOY</button>
+            <button onclick="window.setCierreCajaFechaAyer()" id="cc-fecha-ayer-btn" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition">AYER</button>
+            <input type="date" id="cc-fecha-input" onchange="window.setCierreCajaFecha(this.value)" class="flex-1 min-w-0 max-w-[170px] bg-black/30 border border-gray-700 rounded-lg px-2 py-1.5 text-[11px] text-gray-300 focus:border-emerald-500 outline-none">
+        </div>
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-10 max-w-4xl md:mx-auto w-full" id="cierre-caja-content">
             <p class="text-xs text-gray-600 text-center py-6">Cargando...</p>
@@ -1278,10 +1300,44 @@ function listenToCuts() {
     );
 }
 
+// ---- Navegación por fecha del dashboard (Hoy / Ayer / buscar) ----
+let dashboardFechaSel = null; // null = hoy; si no, 'YYYY-MM-DD'
+function getDashFecha() {
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    const hoy = dashboardFechaSel || hoyStr;
+    const today = new Date(hoy + 'T00:00:00');
+    const todayEnd = new Date(today); todayEnd.setDate(todayEnd.getDate() + 1);
+    return { hoy, today, todayEnd };
+}
+const _dashFechaBtnOn = 'px-3 py-1.5 rounded-lg text-[10px] font-bold bg-cyan-600/20 border border-cyan-500 text-cyan-300 transition';
+const _dashFechaBtnOff = 'px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition';
+function updateDashFechaUI() {
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    const ayerStr = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
+    document.getElementById('dash-fecha-hoy-btn').className = !dashboardFechaSel ? _dashFechaBtnOn : _dashFechaBtnOff;
+    document.getElementById('dash-fecha-ayer-btn').className = dashboardFechaSel === ayerStr ? _dashFechaBtnOn : _dashFechaBtnOff;
+    document.getElementById('dash-fecha-input').value = dashboardFechaSel || hoyStr;
+    const label = document.getElementById('dash-fecha-label');
+    if (!dashboardFechaSel) label.textContent = 'Hoy';
+    else if (dashboardFechaSel === ayerStr) label.textContent = 'Ayer';
+    else label.textContent = new Date(dashboardFechaSel + 'T00:00:00').toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+window.setDashboardFechaHoy = () => { dashboardFechaSel = null; updateDashFechaUI(); renderCuts(); renderVentas(); };
+window.setDashboardFechaAyer = () => {
+    dashboardFechaSel = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
+    updateDashFechaUI(); renderCuts(); renderVentas();
+};
+window.setDashboardFecha = (value) => {
+    if (!value) return;
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    dashboardFechaSel = value === hoyStr ? null : value;
+    updateDashFechaUI(); renderCuts(); renderVentas();
+};
+
 function renderCuts() {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todayCuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today);
+    const { today, todayEnd } = getDashFecha();
+    updateDashFechaUI();
+    const todayCuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today && c.createdAt.toDate() < todayEnd);
 
     const totalBilling = todayCuts.reduce((s, c) => s + (c.price || 0), 0);
     document.getElementById('stat-cuts-count').textContent = todayCuts.length;
@@ -1323,7 +1379,7 @@ function renderCuts() {
         barberSummary.classList.add('hidden');
     }
 
-    const allTodayCuts = allCuts.filter(c => c.createdAt && c.createdAt.toDate() >= today);
+    const allTodayCuts = allCuts.filter(c => c.createdAt && c.createdAt.toDate() >= today && c.createdAt.toDate() < todayEnd);
     const list = document.getElementById('cuts-list');
     if (allTodayCuts.length === 0) {
         list.innerHTML = '<p class="text-xs text-gray-600 text-center py-4">Sin cortes registrados hoy</p>';
@@ -1825,7 +1881,7 @@ function listenToVentas() {
 }
 
 function renderVentas() {
-    const hoy = new Date().toLocaleDateString('en-CA');
+    const { hoy, today, todayEnd } = getDashFecha();
     const ventasHoy = allVentas.filter(v => v.fecha === hoy && !v.eliminado).sort((a,b) => (b.creadoEn?.seconds||0) - (a.creadoEn?.seconds||0));
     const list = document.getElementById('ventas-list');
     const totalRow = document.getElementById('ventas-total-row');
@@ -1859,13 +1915,13 @@ function renderVentas() {
     const total = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff).reduce((s, v) => s + (v.total || 0), 0);
     document.getElementById('ventas-total').textContent = `$${total.toLocaleString('es-AR')}`;
     totalRow.classList.remove('hidden'); totalRow.classList.add('flex');
-    const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= new Date(new Date().setHours(0,0,0,0)));
+    const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today && c.createdAt.toDate() < todayEnd);
     updateDailyTotalStat(cuts.reduce((s,c) => s+(c.price||0), 0), total);
 }
 
 function updateDailyTotalStat(cutsBilling, ventasTotal = null) {
     if (ventasTotal === null) {
-        const hoy = new Date().toLocaleDateString('en-CA');
+        const { hoy } = getDashFecha();
         ventasTotal = allVentas.filter(v => v.fecha === hoy && !v.eliminado && v.canal !== 'ml' && !v.esConsumoStaff).reduce((s,v) => s+(v.total||0), 0);
     }
     const ventasRow = document.getElementById('stat-ventas-row');
@@ -2258,6 +2314,29 @@ window.logout = () => signOut(auth);
 
 // ---- CIERRE DE CAJA ----
 let cierreCajaTab = 'diario';
+let cierreCajaFechaSel = null; // null = hoy; si no, 'YYYY-MM-DD'
+
+const _ccFechaBtnOn = 'px-3 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-600/20 border border-emerald-500 text-emerald-300 transition';
+const _ccFechaBtnOff = 'px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition';
+function updateCierreCajaFechaUI() {
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    const ayerStr = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
+    document.getElementById('cc-fecha-hoy-btn').className = !cierreCajaFechaSel ? _ccFechaBtnOn : _ccFechaBtnOff;
+    document.getElementById('cc-fecha-ayer-btn').className = cierreCajaFechaSel === ayerStr ? _ccFechaBtnOn : _ccFechaBtnOff;
+    document.getElementById('cc-fecha-input').value = cierreCajaFechaSel || hoyStr;
+}
+window.setCierreCajaFechaHoy = () => { cierreCajaFechaSel = null; updateCierreCajaFechaUI(); renderCierreCaja(); };
+window.setCierreCajaFechaAyer = () => {
+    const ayerStr = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
+    cierreCajaFechaSel = ayerStr; updateCierreCajaFechaUI(); renderCierreCaja();
+};
+window.setCierreCajaFecha = (value) => {
+    if (!value) return;
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    cierreCajaFechaSel = value === hoyStr ? null : value;
+    updateCierreCajaFechaUI(); renderCierreCaja();
+};
+
 window.openCierreCaja = () => {
     const modal = document.getElementById('cierre-pass-modal');
     const input = document.getElementById('cierre-pass-input');
@@ -2279,6 +2358,7 @@ window.confirmCierrePass = () => {
     const v = document.getElementById('cierre-caja-view');
     v.classList.remove('hidden'); v.classList.add('flex', 'flex-col');
     cierreCajaTab = 'diario';
+    cierreCajaFechaSel = null;
     setCierreCajaTab('diario');
 };
 window.closeCierreCaja = () => {
@@ -2291,7 +2371,8 @@ window.setCierreCajaTab = (tab) => {
     const inactive = 'px-3 py-1.5 rounded-lg text-gray-500 hover:text-gray-300 transition';
     document.getElementById('cc-tab-diario').className = tab === 'diario' ? active : inactive;
     document.getElementById('cc-tab-semanal').className = tab === 'semanal' ? active : inactive;
-    if (tab === 'diario') renderCierreCaja();
+    document.getElementById('cc-fecha-nav').classList.toggle('hidden', tab !== 'diario');
+    if (tab === 'diario') { updateCierreCajaFechaUI(); renderCierreCaja(); }
     else renderCierreCajaSemanal();
 };
 
@@ -2443,14 +2524,15 @@ window.saveMenuEditor = async () => {
 };
 
 function renderCierreCaja() {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const hoy = now.toLocaleDateString('en-CA');
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    const hoy = cierreCajaFechaSel || hoyStr;
+    const today = new Date(hoy + 'T00:00:00');
+    const todayEnd = new Date(today); todayEnd.setDate(todayEnd.getDate() + 1);
 
     document.getElementById('cierre-caja-fecha').textContent =
         today.toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
-    const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today);
+    const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today && c.createdAt.toDate() < todayEnd);
     const ventasHoy = allVentas.filter(v => v.fecha === hoy && !v.eliminado);
     // Cuenta como venta real (Productos + caja) solo lo vendido en el local a un cliente:
     // se excluyen las ventas por canal ML (esa plata no pasa por la caja física) y el
@@ -2466,7 +2548,7 @@ function renderCierreCaja() {
     // Retiros de hoy (por cuándo se hicieron), restados según su método.
     // Los retiros de bebida (origen:'bebida') NO restan de la caja: ya se le descontó al
     // barbero/FEME de lo que se le paga, pero la bebida la pagó la barbería con otra plata.
-    const retirosHoy = allRetiros.filter(r => !r.eliminado && r.estado === 'confirmado' && r.creadoEn && r.creadoEn.toDate() >= today && r.origen !== 'bebida');
+    const retirosHoy = allRetiros.filter(r => !r.eliminado && r.estado === 'confirmado' && r.creadoEn && r.creadoEn.toDate() >= today && r.creadoEn.toDate() < todayEnd && r.origen !== 'bebida');
     const retiroEfectivo = retirosHoy.filter(r => r.metodoPago !== 'transferencia').reduce((s, r) => s + (r.monto || 0), 0);
     const retiroTransferencia = retirosHoy.filter(r => r.metodoPago === 'transferencia').reduce((s, r) => s + (r.monto || 0), 0);
     const gastosHoy = allGastos.filter(g => !g.eliminado && g.fecha === hoy);
@@ -3777,6 +3859,26 @@ init();
             const apply = function () {
                 const icon = document.getElementById('money-eye-icon');
                 if (icon) icon.className = 'fas text-sm ' + (hidden ? 'fa-eye-slash' : 'fa-eye');
+            };
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', apply);
+            } else { apply(); }
+        })();
+
+        // Mostrar/ocultar cantidad de cortes (ojito aparte, persistente y sincronizado con anotar)
+        window.toggleCortesVisibility = function () {
+            const hidden = document.body.classList.toggle('cortes-hidden');
+            try { localStorage.setItem('sb_cortes_hidden', hidden ? '1' : '0'); } catch (e) {}
+            const icon = document.getElementById('cortes-eye-icon');
+            if (icon) icon.className = 'fas text-[9px] ' + (hidden ? 'fa-eye-slash' : 'fa-eye');
+        };
+        (function () {
+            let hidden = false;
+            try { hidden = localStorage.getItem('sb_cortes_hidden') === '1'; } catch (e) {}
+            if (hidden) document.body.classList.add('cortes-hidden');
+            const apply = function () {
+                const icon = document.getElementById('cortes-eye-icon');
+                if (icon) icon.className = 'fas text-[9px] ' + (hidden ? 'fa-eye-slash' : 'fa-eye');
             };
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', apply);

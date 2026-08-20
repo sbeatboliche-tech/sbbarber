@@ -431,6 +431,13 @@
             </nav>
         </div>
 
+        <!-- Navegación por fecha (solo admin, solo pestaña día) -->
+        <div id="cierre-fecha-nav" class="hidden bg-[#0f1115] px-4 pb-3 flex items-center gap-2">
+            <button onclick="window.setCierreFechaHoy()" id="cierre-fecha-hoy-btn" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-indigo-600/20 border border-indigo-500 text-indigo-300 transition">HOY</button>
+            <button onclick="window.setCierreFechaAyer()" id="cierre-fecha-ayer-btn" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition">AYER</button>
+            <input type="date" id="cierre-fecha-input" onchange="window.setCierreFecha(this.value)" class="flex-1 min-w-0 bg-black/30 border border-gray-700 rounded-lg px-2 py-1.5 text-[11px] text-gray-300 focus:border-indigo-500 outline-none">
+        </div>
+
         <div class="flex-1 overflow-y-auto p-4 space-y-4 pb-10" id="cierre-content">
             <p class="text-xs text-gray-600 text-center py-3">Cargando...</p>
         </div>
@@ -2340,11 +2347,13 @@ function renderVentasCard(ventasFiltradas) {
 
 // ---- CIERRE DEL DÍA / SEMANA ----
 let cierreTab = 'dia';
+let cierreFechaSel = null; // null = hoy; si no, 'YYYY-MM-DD'
 
 window.openCierreView = () => {
     const v = document.getElementById('cierre-view');
     v.classList.remove('hidden'); v.classList.add('flex','flex-col');
     cierreTab = 'dia';
+    cierreFechaSel = null;
     document.querySelectorAll('.cierre-tab').forEach(b => b.className = 'cierre-tab flex-1 py-2 rounded-lg text-[10px] font-medium text-gray-500 hover:text-gray-300 transition-all');
     document.getElementById('cierre-tab-dia').className = 'cierre-tab flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-gradient-to-r from-emerald-600 to-green-600 shadow-md transition-all';
     renderCierreView();
@@ -2360,9 +2369,32 @@ window.setCierreTab = (tab, el) => {
     renderCierreView();
 };
 
+const _cierreFechaBtnOn = 'px-3 py-1.5 rounded-lg text-[10px] font-bold bg-indigo-600/20 border border-indigo-500 text-indigo-300 transition';
+const _cierreFechaBtnOff = 'px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition';
+function updateCierreFechaUI() {
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    const ayerStr = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
+    document.getElementById('cierre-fecha-hoy-btn').className = !cierreFechaSel ? _cierreFechaBtnOn : _cierreFechaBtnOff;
+    document.getElementById('cierre-fecha-ayer-btn').className = cierreFechaSel === ayerStr ? _cierreFechaBtnOn : _cierreFechaBtnOff;
+    document.getElementById('cierre-fecha-input').value = cierreFechaSel || hoyStr;
+}
+window.setCierreFechaHoy = () => { cierreFechaSel = null; updateCierreFechaUI(); renderCierreDia(); };
+window.setCierreFechaAyer = () => {
+    const ayerStr = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
+    cierreFechaSel = ayerStr; updateCierreFechaUI(); renderCierreDia();
+};
+window.setCierreFecha = (value) => {
+    if (!value) return;
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    cierreFechaSel = value === hoyStr ? null : value;
+    updateCierreFechaUI(); renderCierreDia();
+};
+
 function renderCierreView() {
+    const isAdmin = ADMINS.includes(currentUser.email);
     document.getElementById('cierre-header-sub').textContent = cierreTab === 'dia' ? 'Resumen del día' : 'Resumen de la semana';
-    if (cierreTab === 'dia') renderCierreDia(); else renderCierreSemana();
+    document.getElementById('cierre-fecha-nav').classList.toggle('hidden', !(cierreTab === 'dia' && isAdmin));
+    if (cierreTab === 'dia') { updateCierreFechaUI(); renderCierreDia(); } else renderCierreSemana();
 }
 
 function buildBarberRows(barberData) {
@@ -2387,13 +2419,14 @@ function buildBarberRows(barberData) {
 }
 
 function renderCierreDia() {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const hoy = now.toLocaleDateString('en-CA');
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    const hoy = cierreFechaSel || hoyStr;
+    const today = new Date(hoy + 'T00:00:00');
+    const todayEnd = new Date(today); todayEnd.setDate(todayEnd.getDate() + 1);
     const isAdmin = ADMINS.includes(currentUser.email);
     const myName = BARBER_EMAIL_MAP[currentUser.email];
 
-    const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today);
+    const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today && c.createdAt.toDate() < todayEnd);
     const ventasHoy = allVentas.filter(v => v.fecha === hoy && !v.eliminado);
     // Cuenta como venta real (Productos + caja) solo lo vendido en el local a un cliente:
     // se excluyen las ventas por canal ML y el consumo interno de barberos/FEME
