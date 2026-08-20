@@ -226,6 +226,18 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                             <option value="OFERTA">OFERTA</option>
                         </select>
                     </div>
+                    <div class="form-field">
+                        <label class="field-label">Categoría</label>
+                        <select id="p-categoria">
+                            <option value="otros">Otros</option>
+                            <option value="ceras">Ceras</option>
+                            <option value="peines">Peines</option>
+                            <option value="navajas">Navajas</option>
+                            <option value="alfombras">Alfombras</option>
+                            <option value="aftershave">Aftershave</option>
+                            <option value="capas">Capas</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-grid full" style="margin-top:12px;">
                     <div class="form-field">
@@ -757,6 +769,7 @@ function saveProducto() {
                 variantes: variantes,
                 price: price,
                 tag: document.getElementById('p-tag').value || null,
+                categoria: document.getElementById('p-categoria').value || 'otros',
                 description: document.getElementById('p-desc').value.trim(),
                 updatedAt: now
             };
@@ -789,6 +802,7 @@ function cancelEditProducto() {
         document.getElementById(id).value = '';
     });
     document.getElementById('p-tag').value = '';
+    document.getElementById('p-categoria').value = 'otros';
     document.getElementById('p-edit-id').value = '';
     removeFile('p-img-file','p-img-preview','p-img-zone');
     document.getElementById('p-cancel-btn').style.display = 'none';
@@ -806,6 +820,7 @@ function editProducto(id) {
     document.getElementById('p-variantes').value = (p.variantes || []).join(', ');
     document.getElementById('p-price').value   = p.price || '';
     document.getElementById('p-tag').value     = p.tag || '';
+    document.getElementById('p-categoria').value = p.categoria || 'otros';
     document.getElementById('p-desc').value    = p.description || '';
     document.getElementById('p-video').value   = p.videoUrl || '';
     document.getElementById('p-img-url').value = p.image || '';
