@@ -707,8 +707,9 @@ const PRODUCTS = [
 
 const TRANSFER_DISCOUNT = 0.10;
 // Bloque de precio compartido por card de producto, card de kit y modal de detalle.
-// El precio grande es el real (el que cobra MercadoPago); el ahorro por transferencia
-// se muestra como nota aparte, no como tachado, para no parecer una oferta falsa.
+// El precio grande y en verde es el de transferencia (el más barato) — es el que
+// queremos que el cliente vea primero. El precio de Mercado Pago sigue visible,
+// como nota debajo, sin tachar, para que quede claro que no es una oferta trucha.
 const PRICE_BLOCK_SIZES = {
     sm: { main:18, note:9,  badge:8 },
     md: { main:20, note:10, badge:9 },
@@ -719,11 +720,11 @@ function priceBlockHTML(price, size) {
     const discounted = Math.round(price*(1-TRANSFER_DISCOUNT));
     return `
         <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
-            <span style="font-size:${s.main}px;font-weight:900;letter-spacing:-.02em;color:#e8e8e8;">$${price.toLocaleString('es-AR')}</span>
+            <span style="font-size:${s.main}px;font-weight:900;letter-spacing:-.02em;color:#4ade80;">$${discounted.toLocaleString('es-AR')}</span>
+            <span style="font-size:${s.badge}px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#4ade80;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);padding:2px 6px;">Transfiriendo</span>
         </div>
         <div style="display:inline-flex;align-items:center;gap:6px;">
-            <span style="font-size:${s.badge}px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#4ade80;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);padding:2px 6px;">-10%</span>
-            <span style="font-size:${s.note}px;color:var(--g500);font-weight:600;">$${discounted.toLocaleString('es-AR')} transfiriendo</span>
+            <span style="font-size:${s.note}px;color:var(--g500);font-weight:600;">$${price.toLocaleString('es-AR')} con Mercado Pago</span>
         </div>`;
 }
 let correoLabel = '';
