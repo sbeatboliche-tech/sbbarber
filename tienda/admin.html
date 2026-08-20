@@ -386,6 +386,11 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
             <div id="pedido-list" class="prod-list">
                 <div class="empty-state"><i class="fas fa-box"></i><p>Cargando...</p></div>
             </div>
+
+            <div class="section-title" style="margin-top:28px;">Enviados recientemente</div>
+            <div id="pedido-list-enviados" class="prod-list">
+                <div class="empty-state"><i class="fas fa-check-circle"></i><p>Cargando...</p></div>
+            </div>
         </div>
     </div>
 </div>
@@ -594,7 +599,8 @@ function renderPedidoList() {
     var deliveryPedidos = allPedidos.filter(function(p) { return p.shipping && p.shipping.mode === 'delivery'; });
     // Las transferencias necesitan confirmación manual antes de poder imprimir etiqueta.
     var pendientes = deliveryPedidos.filter(function(p) { return p.metodoPago === 'transferencia' && !p.aprobado; });
-    var listos     = deliveryPedidos.filter(function(p) { return !(p.metodoPago === 'transferencia' && !p.aprobado); });
+    var listos     = deliveryPedidos.filter(function(p) { return !(p.metodoPago === 'transferencia' && !p.aprobado) && !p.enviado; });
+    var enviados   = deliveryPedidos.filter(function(p) { return !(p.metodoPago === 'transferencia' && !p.aprobado) && p.enviado; });
 
     var elPend = document.getElementById('pedido-list-pendientes');
     if (!pendientes.length) {
@@ -620,28 +626,58 @@ function renderPedidoList() {
     var el = document.getElementById('pedido-list');
     if (!listos.length) {
         el.innerHTML = '<div class="empty-state"><i class="fas fa-box"></i><p>Todavía no hay pedidos listos para enviar.</p></div>';
-        return;
+    } else {
+        el.innerHTML = listos.map(function(p) {
+            var b = p.buyer || {};
+            var s = p.shipping || {};
+            var fecha = (p.creadoEn && p.creadoEn.toDate) ? timeAgo(p.creadoEn.toDate()) : '';
+            var direccion = [s.address, s.city, s.provincia].filter(Boolean).join(', ');
+            var esFlex = ZONAS_FLEX.indexOf(s.zona) !== -1;
+            var zonaTag = '<span class="pedido-zona' + (esFlex ? ' flex' : '') + '">' + (ZONA_LABELS[s.zona] || s.zona || '?') + '</span>';
+            var accion = esFlex
+                ? '<button class="btn-print" onclick="printLabel(\'' + p.id + '\')"><i class="fas fa-print"></i> Etiqueta</button>'
+                : '<span class="pedido-no-flex">Correo Argentino</span>';
+            var enviarBtn = '<button class="btn-print" style="background:#16a34a;color:#fff;" onclick="marcarEnviado(\'' + p.id + '\')"><i class="fas fa-check"></i> Enviado</button>';
+            return '<div class="pedido-row">' +
+                '<div class="pedido-meta">' +
+                    '<div class="pedido-id">' + p.id + ' ' + zonaTag + '</div>' +
+                    '<div class="pedido-buyer">' + (b.name || 'Sin nombre') + ' · ' + (b.phone || 'Sin teléfono') + '</div>' +
+                    '<div class="pedido-addr">' + (direccion || 'Sin dirección') + (s.postalCode ? ' (CP ' + s.postalCode + ')' : '') + '</div>' +
+                    '<div class="pedido-time">' + fecha + '</div>' +
+                '</div>' +
+                '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:stretch;">' + accion + enviarBtn + '</div>' +
+            '</div>';
+        }).join('');
     }
-    el.innerHTML = listos.map(function(p) {
-        var b = p.buyer || {};
-        var s = p.shipping || {};
-        var fecha = (p.creadoEn && p.creadoEn.toDate) ? timeAgo(p.creadoEn.toDate()) : '';
-        var direccion = [s.address, s.city, s.provincia].filter(Boolean).join(', ');
-        var esFlex = ZONAS_FLEX.indexOf(s.zona) !== -1;
-        var zonaTag = '<span class="pedido-zona' + (esFlex ? ' flex' : '') + '">' + (ZONA_LABELS[s.zona] || s.zona || '?') + '</span>';
-        var accion = esFlex
-            ? '<button class="btn-print" onclick="printLabel(\'' + p.id + '\')"><i class="fas fa-print"></i> Etiqueta</button>'
-            : '<span class="pedido-no-flex">Correo Argentino</span>';
-        return '<div class="pedido-row">' +
-            '<div class="pedido-meta">' +
-                '<div class="pedido-id">' + p.id + ' ' + zonaTag + '</div>' +
-                '<div class="pedido-buyer">' + (b.name || 'Sin nombre') + ' · ' + (b.phone || 'Sin teléfono') + '</div>' +
-                '<div class="pedido-addr">' + (direccion || 'Sin dirección') + (s.postalCode ? ' (CP ' + s.postalCode + ')' : '') + '</div>' +
-                '<div class="pedido-time">' + fecha + '</div>' +
-            '</div>' +
-            accion +
-        '</div>';
-    }).join('');
+
+    var elEnv = document.getElementById('pedido-list-enviados');
+    if (elEnv) {
+        elEnv.innerHTML = !enviados.length
+            ? '<div class="empty-state"><i class="fas fa-check-circle"></i><p>Todavía no marcaste ningún envío como despachado.</p></div>'
+            : enviados.slice(0, 30).map(function(p) {
+                var b = p.buyer || {};
+                var s = p.shipping || {};
+                var direccion = [s.address, s.city, s.provincia].filter(Boolean).join(', ');
+                var fechaEnv = (p.enviadoEn && p.enviadoEn.toDate) ? timeAgo(p.enviadoEn.toDate()) : '';
+                return '<div class="pedido-row" style="opacity:.6;">' +
+                    '<div class="pedido-meta">' +
+                        '<div class="pedido-id">' + p.id + '</div>' +
+                        '<div class="pedido-buyer">' + (b.name || 'Sin nombre') + '</div>' +
+                        '<div class="pedido-addr">' + (direccion || 'Sin dirección') + '</div>' +
+                        '<div class="pedido-time">Enviado ' + fechaEnv + '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+    }
+}
+
+function marcarEnviado(pedidoId) {
+    db.collection('tienda_pedidos').doc(pedidoId).update({
+        enviado: true,
+        enviadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    })
+        .then(function() { showToast('Pedido marcado como enviado ✓', true); })
+        .catch(function(e) { console.error('marcarEnviado error:', e); showToast('Error al marcar como enviado (' + (e.code||e.message) + ')', false, 4000); });
 }
 
 function aprobarPedido(pedidoId) {
