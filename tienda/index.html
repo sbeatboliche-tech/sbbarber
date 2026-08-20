@@ -780,7 +780,7 @@ function getAllProducts(){
 function getAllKits(){ return [...KITS, ..._extraKits.filter(k=>!k.hidden)]; }
 function render(){ renderProducts(); renderKits(); }
 function prodById(id){ return getAllProducts().find(p=>p.id===id); }
-function prodPriceLive(id){ const p=prodById(id); const cfg=productConfig[id]||{}; return cfg.price!=null?cfg.price:(p?p.price:0); }
+function prodPriceLive(id){ const p=prodById(id); return p?(p.price||0):0; }
 function prodNameLive(id){ const p=prodById(id); const cfg=productConfig[id]||{}; return (cfg.name||(p&&p.name))||''; }
 function kitPrice(kit){ return kit.custom ? (kit.price||0) : kit.componentes.reduce((s,id)=>s+prodPriceLive(id),0); }
 function kitHasPrice(kit){ return kit.custom ? (kit.price!=null) : true; }
@@ -904,7 +904,7 @@ function openItemDetail(id, type) {
         const p = allP.find(x=>x.id===id);
         if(!p) return;
         const cfg = productConfig[id] || {};
-        const price = cfg.price != null ? cfg.price : (p.price || 0);
+        const price = p.price || 0;
         const stock = cfg.stock;
         const out = typeof stock === 'number' && stock === 0;
         // imagen
@@ -1141,7 +1141,7 @@ function renderProducts() {
     }
     document.getElementById('products-grid').innerHTML = allProdsToRender.map((p,i)=>{
         const cfg = productConfig[p.id] || {};
-        const price = cfg.price != null ? cfg.price : (p.price || 0);
+        const price = p.price || 0;
         const stock = cfg.stock;
         const out = typeof stock === 'number' && stock === 0;
         const low = typeof stock === 'number' && stock > 0 && stock <= 5;
@@ -1182,7 +1182,7 @@ function addToCart(id, variant) {
     const p = allP.find(x=>x.id===id);
     if(!p) return;
     const cfg = productConfig[p.id] || {};
-    const price = cfg.price != null ? cfg.price : p.price;
+    const price = p.price || 0;
     const stock = cfg.stock;
     if(typeof stock === 'number' && stock === 0) return;
     const selVariant = variant || (p.variantes && p.variantes.length ? (_selectedVariant[id] || p.variantes[0]) : (p.variant || ''));
@@ -1710,21 +1710,19 @@ function renderAdminPanel() {
     const body = document.getElementById('admin-body');
     if (adminTab === 'productos') {
         body.innerHTML = `
-            <div class="admin-hdr admin-hdr-3">
+            <div style="font-size:11px;color:#71717a;line-height:1.5;margin-bottom:10px;">El precio de cada producto se edita desde el panel de administración principal (tienda/admin.html). Acá solo se controla el <strong>stock</strong>.</div>
+            <div class="admin-hdr admin-hdr-2">
                 <span class="admin-col-label">Producto</span>
-                <span class="admin-col-label">Precio</span>
                 <span class="admin-col-label">Stock</span>
             </div>
             ${PRODUCTS.map(p => {
                 const cfg = productConfig[p.id] || {};
-                const price = cfg.price != null ? cfg.price : p.price;
                 const stock = cfg.stock != null ? cfg.stock : '';
-                return `<div class="admin-row admin-row-3">
+                return `<div class="admin-row admin-row-2">
                     <div>
                         <div class="admin-prod-name">${p.name}</div>
                         <div class="admin-prod-variant">${p.variant}</div>
                     </div>
-                    <input class="admin-input" type="number" id="ap-${p.id}" value="${price}" min="0">
                     <input class="admin-input" type="number" id="as-${p.id}" value="${stock}" min="0" placeholder="∞">
                 </div>`;
             }).join('')}
@@ -1761,9 +1759,8 @@ window.saveProductos = async () => {
     btn.textContent = 'Guardando...'; btn.disabled = true;
     try {
         for (const p of PRODUCTS) {
-            const priceVal = parseInt(document.getElementById(`ap-${p.id}`).value);
             const stockRaw = document.getElementById(`as-${p.id}`).value;
-            const data = { price: isNaN(priceVal) ? p.price : priceVal, stock: stockRaw !== '' ? parseInt(stockRaw) : null };
+            const data = { stock: stockRaw !== '' ? parseInt(stockRaw) : null };
             await setDoc(doc(db, 'tienda_productos', p.id), data, { merge: true });
         }
         const envioCostoVal = parseInt(document.getElementById('envio-costo').value) || 0;

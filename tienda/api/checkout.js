@@ -12,14 +12,26 @@ export default async function handler(req, res) {
 
     const baseUrl = process.env.STORE_URL || 'https://tienda.sbbarber.com.ar';
 
-    const preference = {
-        items: items.map(i => ({
-            id: i.id,
-            title: i.name,
-            quantity: Number(i.quantity),
-            unit_price: Number(i.price),
+    const mpItems = items.map(i => ({
+        id: i.id,
+        title: i.name,
+        quantity: Number(i.quantity),
+        unit_price: Number(i.price),
+        currency_id: 'ARS'
+    }));
+    const shippingCost = Number(shipping?.cost || 0);
+    if (shippingCost > 0) {
+        mpItems.push({
+            id: 'envio',
+            title: 'Envío a domicilio',
+            quantity: 1,
+            unit_price: shippingCost,
             currency_id: 'ARS'
-        })),
+        });
+    }
+
+    const preference = {
+        items: mpItems,
         payer: {
             name: buyer.name,
             email: buyer.email,
@@ -39,10 +51,10 @@ export default async function handler(req, res) {
             buyer_email: buyer.email,
             buyer_phone: buyer.phone || '',
             items_summary: items.map(i => `${i.quantity}x ${i.name}`).join(', '),
-            total: String(items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0)),
+            total: String(items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0) + shippingCost),
             shipping_mode: shipping?.mode || 'pickup',
             shipping_address: shipping?.address || '',
-            shipping_cost: String(shipping?.cost || 0)
+            shipping_cost: String(shippingCost)
         }
     };
 
