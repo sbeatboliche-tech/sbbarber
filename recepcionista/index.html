@@ -2528,7 +2528,7 @@ function renderCierreCaja() {
 
     const html = `
         <!-- Resumen superior: tiles grandes -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div class="grid grid-cols-3 gap-3 mb-6">
             <div class="glass-card rounded-2xl p-4 md:p-5 text-center">
                 <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mb-1">Cortes</div>
                 <div class="text-xl md:text-3xl font-extrabold text-white">$${totalCortes.toLocaleString('es-AR')}</div>
@@ -2544,13 +2544,8 @@ function renderCierreCaja() {
                 <div class="text-xl md:text-3xl font-extrabold text-blue-300">$${transferencia.toLocaleString('es-AR')}</div>
                 <div class="text-[10px] md:text-xs mt-1 ${retiroTransferencia>0?'text-rose-400':'text-blue-800'}">${retiroTransferencia>0?`−$${retiroTransferencia.toLocaleString('es-AR')} retiros`:'📲'}</div>
             </div>
-            <div class="glass-card rounded-2xl p-4 md:p-5 text-center col-span-2 md:col-span-1">
-                <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mb-1">Total del día</div>
-                <div class="text-2xl md:text-3xl font-extrabold text-emerald-400">$${totalGeneral.toLocaleString('es-AR')}</div>
-                <div class="text-[10px] md:text-xs text-emerald-700 mt-1">general</div>
-            </div>
             ${totalGastos > 0 ? `
-            <div class="glass-card rounded-2xl p-4 md:p-5 col-span-2 md:col-span-4 border border-rose-500/20 flex items-center justify-between gap-4">
+            <div class="glass-card rounded-2xl p-4 md:p-5 col-span-3 border border-rose-500/20 flex items-center justify-between gap-4">
                 <div class="text-center flex-1">
                     <div class="text-[10px] text-rose-400 uppercase tracking-widest mb-1">Gastos</div>
                     <div class="text-xl font-bold text-rose-400">−$${totalGastos.toLocaleString('es-AR')}</div>
@@ -2883,13 +2878,15 @@ function renderHistoryRec() {
     wrap.classList.remove('hidden');
     list.innerHTML = combined.map(item => {
         const eliminado = item.eliminado === true;
+        const bt = BARBER_THEME[item.barbero];
         const ec = eliminado ? 'text-gray-600' : item.estado === 'confirmado' ? 'text-emerald-400' : 'text-red-400';
         const ei = eliminado ? '🗑' : item.estado === 'confirmado' ? '✓' : '✗';
-        const bdr = eliminado ? 'border-gray-700/30' : item.tipo === 'retiro' ? 'border-violet-500/20' : 'border-yellow-500/20';
+        const bdr = eliminado ? 'border-gray-700/30' : bt ? `${bt.border}/40` : item.tipo === 'retiro' ? 'border-violet-500/20' : 'border-yellow-500/20';
+        const barberCls = eliminado ? 'text-gray-600' : bt ? bt.text : 'text-gray-100';
         const textCls = eliminado ? 'line-through text-gray-600' : 'text-gray-100';
         const montoCls = eliminado ? 'line-through text-gray-600' : 'text-white';
         const desc = item.descripcion ? ` · <span class="font-normal">${item.descripcion}</span>` : '';
-        const lbl = item.tipo === 'retiro' ? `Retiro · ${item.barbero}${desc}` : `Propina · ${item.barbero}${item.descripcion ? ' · '+item.descripcion : ''}`;
+        const lbl = item.tipo === 'retiro' ? `Retiro · <span class="${barberCls}">${item.barbero}</span>${desc}` : `Propina · <span class="${barberCls}">${item.barbero}</span>${item.descripcion ? ' · '+item.descripcion : ''}`;
         const f = item.creadoEn ? item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) : '';
         const notaBtn = (!eliminado && item.tipo === 'retiro') ? `<button onclick="window.openRetiroNotaRec('${item.id}','${(item.descripcion||'').replace(/'/g,"\\'")}',${item.monto},'${item.barbero}')" class="text-gray-600 hover:text-violet-400 transition ml-2"><i class="fas fa-pencil-alt text-xs"></i></button>` : '';
         const delBtn = (!eliminado && item.tipo === 'retiro') ? `<button onclick="window.deleteRetiroRec('${item.id}')" class="text-gray-700 hover:text-red-400 transition ml-1"><i class="fas fa-trash text-xs"></i></button>` : '';
@@ -3539,8 +3536,8 @@ async function listenToBarberos() {
                     const t = BARBER_EXTRA_THEMES[extraThemeIdx++ % BARBER_EXTRA_THEMES.length];
                     BARBER_THEME[name] = { ...t, initial: name.charAt(0).toUpperCase() };
                 }
-                if (email) BARBER_EMAIL_MAP[email] = name;
             }
+            if (email) BARBER_EMAIL_MAP[email] = name;
         });
         renderCuts();
     });
