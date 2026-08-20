@@ -2523,6 +2523,16 @@ window.saveMenuEditor = async () => {
     }
 };
 
+function ccDetalleRows(cortesX, bebidaX, prodX, gastoX, retiroX, row) {
+    const rows = [];
+    if (cortesX > 0) rows.push(row('Cortes', `+$${cortesX.toLocaleString('es-AR')}`, 'text-gray-400', 'text-emerald-300'));
+    if (bebidaX > 0) rows.push(row('Bebida vendida', `+$${bebidaX.toLocaleString('es-AR')}`, 'text-gray-400', 'text-emerald-300'));
+    if (prodX > 0) rows.push(row('Producto vendido', `+$${prodX.toLocaleString('es-AR')}`, 'text-gray-400', 'text-emerald-300'));
+    if (gastoX > 0) rows.push(row('Gastos', `−$${gastoX.toLocaleString('es-AR')}`, 'text-gray-400', 'text-rose-400'));
+    if (retiroX > 0) rows.push(row('Retiros', `−$${retiroX.toLocaleString('es-AR')}`, 'text-gray-400', 'text-rose-400'));
+    return rows.length ? rows.join('') : '<p class="text-[11px] text-gray-600 py-1">Sin movimientos</p>';
+}
+
 function renderCierreCaja() {
     const hoyStr = new Date().toLocaleDateString('en-CA');
     const hoy = cierreCajaFechaSel || hoyStr;
@@ -2541,10 +2551,19 @@ function renderCierreCaja() {
     const ventasProductos = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo);
 
     const totalCortes   = cuts.reduce((s, c) => s + (c.price || 0), 0);
-    const productosEfectivo = ventasProductos.filter(v => v.metodoPago !== 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
-    const productosTransferencia = ventasProductos.filter(v => v.metodoPago === 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
-    const efectivoBruto = cuts.filter(c => c.metodoPago !== 'transferencia').reduce((s, c) => s + (c.price || 0), 0) + productosEfectivo;
-    const transferenciaBruto = cuts.filter(c => c.metodoPago === 'transferencia').reduce((s, c) => s + (c.price || 0), 0) + productosTransferencia;
+    const cortesEfectivo = cuts.filter(c => c.metodoPago !== 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
+    const cortesTransferencia = cuts.filter(c => c.metodoPago === 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
+    // Detalle de qué compone Efectivo/Transferencia: bebidas de cliente aparte de otros productos.
+    const bebidasCliente = ventasProductos.filter(v => v.tipo === 'bebida');
+    const productosNoBebida = ventasProductos.filter(v => v.tipo !== 'bebida');
+    const bebidaEfectivo = bebidasCliente.filter(v => v.metodoPago !== 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
+    const bebidaTransferencia = bebidasCliente.filter(v => v.metodoPago === 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
+    const prodEfectivo = productosNoBebida.filter(v => v.metodoPago !== 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
+    const prodTransferencia = productosNoBebida.filter(v => v.metodoPago === 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
+    const productosEfectivo = bebidaEfectivo + prodEfectivo;
+    const productosTransferencia = bebidaTransferencia + prodTransferencia;
+    const efectivoBruto = cortesEfectivo + productosEfectivo;
+    const transferenciaBruto = cortesTransferencia + productosTransferencia;
     // Retiros de hoy (por cuándo se hicieron), restados según su método.
     // Los retiros de bebida (origen:'bebida') NO restan de la caja: ya se le descontó al
     // barbero/FEME de lo que se le paga, pero la bebida la pagó la barbería con otra plata.
@@ -2624,6 +2643,21 @@ function renderCierreCaja() {
                 <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mb-1">Transferencia</div>
                 <div class="text-xl md:text-3xl font-extrabold text-blue-300">$${transferencia.toLocaleString('es-AR')}</div>
                 <div class="text-[10px] md:text-xs mt-1 ${retiroTransferencia>0?'text-rose-400':'text-blue-800'}">${retiroTransferencia>0?`−$${retiroTransferencia.toLocaleString('es-AR')} retiros`:'📲'}</div>
+            </div>
+        </div>
+
+        <!-- Detalle de qué compone Efectivo y Transferencia -->
+        <div class="glass-card rounded-2xl p-5 mb-4">
+            <div class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Detalle de Efectivo y Transferencia</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                <div>
+                    <div class="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mb-1">💵 Efectivo</div>
+                    ${ccDetalleRows(cortesEfectivo, bebidaEfectivo, prodEfectivo, gastoEfectivo, retiroEfectivo, row)}
+                </div>
+                <div>
+                    <div class="text-[10px] text-blue-400 font-bold uppercase tracking-widest mb-1">📲 Transferencia</div>
+                    ${ccDetalleRows(cortesTransferencia, bebidaTransferencia, prodTransferencia, gastoTransferencia, retiroTransferencia, row)}
+                </div>
             </div>
         </div>
 
