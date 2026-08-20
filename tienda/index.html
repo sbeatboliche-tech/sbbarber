@@ -53,6 +53,11 @@
         .cart-btn svg { width:18px; height:18px; stroke:var(--ink); }
         .cart-count { display:none; position:absolute; top:-5px; right:-5px; width:18px; height:18px; background:var(--ink); color:var(--paper); font-size:9px; font-weight:800; border-radius:50%; align-items:center; justify-content:center; border:2px solid var(--paper); }
 
+        /* ── AVISO PAGO FALLIDO ── */
+        .payment-error-banner { display:flex; align-items:center; justify-content:center; gap:14px; background:#fef2f2; border-bottom:1px solid #fecaca; color:#991b1b; font-size:12.5px; font-weight:600; line-height:1.4; padding:12px 44px 12px 20px; text-align:center; position:relative; }
+        .payment-error-banner button { position:absolute; right:14px; top:50%; transform:translateY(-50%); background:none; border:none; color:#991b1b; font-size:15px; cursor:pointer; padding:4px; opacity:.7; }
+        .payment-error-banner button:hover { opacity:1; }
+
         /* ── HERO ── */
         .hero { max-width:1100px; margin:0 auto; padding:32px 16px 28px; border-bottom:1px solid rgba(0,0,0,.08); }
         @media(min-width:640px) { .hero { padding:52px 20px 44px; } }
@@ -455,6 +460,12 @@
         </button>
     </div>
 </header>
+
+<!-- AVISO DE PAGO NO PROCESADO -->
+<div id="payment-error-banner" class="payment-error-banner" style="display:none;">
+    <span>⚠️ No pudimos procesar tu pago. Tu carrito sigue guardado — probá de nuevo o elegí otro medio de pago.</span>
+    <button type="button" onclick="dismissPaymentError()" aria-label="Cerrar aviso">✕</button>
+</div>
 
 <!-- HERO -->
 <section class="hero">
@@ -905,7 +916,7 @@ function openItemDetail(id, type) {
         if(!p) return;
         const cfg = productConfig[id] || {};
         const price = p.price || 0;
-        const stock = cfg.stock;
+        const stock = p.stock != null ? p.stock : cfg.stock;
         const out = typeof stock === 'number' && stock === 0;
         // imagen
         const imgWrap = document.getElementById('item-detail-imgs');
@@ -1142,7 +1153,7 @@ function renderProducts() {
     document.getElementById('products-grid').innerHTML = allProdsToRender.map((p,i)=>{
         const cfg = productConfig[p.id] || {};
         const price = p.price || 0;
-        const stock = cfg.stock;
+        const stock = p.stock != null ? p.stock : cfg.stock;
         const out = typeof stock === 'number' && stock === 0;
         const low = typeof stock === 'number' && stock > 0 && stock <= 5;
         const imgHtml = p.image
@@ -1183,7 +1194,7 @@ function addToCart(id, variant) {
     if(!p) return;
     const cfg = productConfig[p.id] || {};
     const price = p.price || 0;
-    const stock = cfg.stock;
+    const stock = p.stock != null ? p.stock : cfg.stock;
     if(typeof stock === 'number' && stock === 0) return;
     const selVariant = variant || (p.variantes && p.variantes.length ? (_selectedVariant[id] || p.variantes[0]) : (p.variant || ''));
     const ex = cart.find(x=>x.id===id && x.variant===selVariant);
@@ -1195,6 +1206,13 @@ function addToCart(id, variant) {
 function updateQty(id, delta, variant) {
     const item = cart.find(x=>x.id===id && x.variant===(variant||''));
     if(!item) return;
+    if (delta > 0) {
+        const allP = typeof getAllProducts === 'function' ? getAllProducts() : PRODUCTS;
+        const p = allP.find(x=>x.id===id);
+        const cfg = productConfig[id] || {};
+        const stock = p ? (p.stock != null ? p.stock : cfg.stock) : undefined;
+        if (typeof stock === 'number' && item.qty >= stock) { showToast('No hay más stock disponible'); return; }
+    }
     item.qty = Math.max(0, item.qty+delta);
     if(item.qty===0) cart = cart.filter(x=>x!==item);
     saveCart(); updateCartUI();
@@ -1404,6 +1422,22 @@ updateCartUI();
 
 // ── Toast / feedback al agregar ──
 let _toastT;
+// ── Aviso de pago no procesado (vuelta de MercadoPago con ?error=1) ──
+function dismissPaymentError() {
+    const b = document.getElementById('payment-error-banner');
+    if (b) b.style.display = 'none';
+}
+(function () {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === '1') {
+        const b = document.getElementById('payment-error-banner');
+        if (b) b.style.display = 'flex';
+        params.delete('error');
+        const clean = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        window.history.replaceState({}, '', clean);
+    }
+})();
+
 function showToast(msg) {
     const t = document.getElementById('toast');
     if (!t) return;

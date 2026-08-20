@@ -238,6 +238,10 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                             <option value="capas">Capas</option>
                         </select>
                     </div>
+                    <div class="form-field">
+                        <label class="field-label">Stock (vacío = ilimitado)</label>
+                        <input type="number" id="p-stock" placeholder="Sin límite" min="0">
+                    </div>
                 </div>
                 <div class="form-grid full" style="margin-top:12px;">
                     <div class="form-field">
@@ -770,6 +774,7 @@ function saveProducto() {
                 price: price,
                 tag: document.getElementById('p-tag').value || null,
                 categoria: document.getElementById('p-categoria').value || 'otros',
+                stock: (function(){ var v = document.getElementById('p-stock').value; return v === '' ? null : parseInt(v); })(),
                 description: document.getElementById('p-desc').value.trim(),
                 updatedAt: now
             };
@@ -803,6 +808,7 @@ function cancelEditProducto() {
     });
     document.getElementById('p-tag').value = '';
     document.getElementById('p-categoria').value = 'otros';
+    document.getElementById('p-stock').value = '';
     document.getElementById('p-edit-id').value = '';
     removeFile('p-img-file','p-img-preview','p-img-zone');
     document.getElementById('p-cancel-btn').style.display = 'none';
@@ -821,6 +827,7 @@ function editProducto(id) {
     document.getElementById('p-price').value   = p.price || '';
     document.getElementById('p-tag').value     = p.tag || '';
     document.getElementById('p-categoria').value = p.categoria || 'otros';
+    document.getElementById('p-stock').value   = (p.stock === null || p.stock === undefined) ? '' : p.stock;
     document.getElementById('p-desc').value    = p.description || '';
     document.getElementById('p-video').value   = p.videoUrl || '';
     document.getElementById('p-img-url').value = p.image || '';
@@ -879,7 +886,7 @@ function prodRow(p, isCustom, hidden) {
         (p.image ? '<img class="prod-thumb" src="' + p.image + '" alt="" onerror="this.style.display=\'none\'">' : '<div class="prod-thumb-placeholder">📦</div>') +
         '<div class="prod-info">' +
             '<div class="prod-name">' + p.name + (p.tag ? '<span class="prod-tag-badge">' + p.tag + '</span>' : '') + (!isCustom ? '<span class="prod-tag-badge" style="background:rgba(99,102,241,.15);color:#818cf8;">WEB</span>' : '') + (hidden ? '<span class="prod-tag-badge" style="background:rgba(248,113,113,.15);color:#f87171;">OCULTO</span>' : '') + '</div>' +
-            '<div class="prod-meta">$' + (p.price||0).toLocaleString('es-AR') + (p.variant?' · '+p.variant:'') + (p.variantes&&p.variantes.length?' · '+p.variantes.length+' opciones ('+p.variantes.join('/')+')':'') + (p.videoUrl?' · 🎥':'') + '</div>' +
+            '<div class="prod-meta">$' + (p.price||0).toLocaleString('es-AR') + (p.variant?' · '+p.variant:'') + (p.variantes&&p.variantes.length?' · '+p.variantes.length+' opciones ('+p.variantes.join('/')+')':'') + (p.videoUrl?' · 🎥':'') + (typeof p.stock === 'number' ? (' · ' + (p.stock === 0 ? '<span style="color:#f87171;font-weight:700;">Sin stock</span>' : 'Stock: ' + p.stock)) : '') + '</div>' +
         '</div>' +
         '<div class="prod-actions">' +
             '<button class="btn-edit" onclick="editProducto(\'' + p.id + '\')" title="Editar"><i class="fas fa-pen"></i></button>' +
