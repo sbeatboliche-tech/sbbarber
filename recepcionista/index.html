@@ -1186,6 +1186,7 @@ const PRODUCTOS_BARBER = [
 
 const PATH_TURNOS = 'turnos';
 const PATH_GASTOS = 'gastos';
+const PATH_CONTEOS = 'conteos_caja';
 const GASTOS_CATS = [
     { id:'insumos',   label:'Insumos',   icon:'🧴' },
     { id:'servicios', label:'Servicios', icon:'💡' },
@@ -1195,7 +1196,7 @@ const GASTOS_CATS = [
 ];
 
 let app, auth, db, currentUser;
-let allCuts = [], allStock = [], allVentas = [], allTurnos = [], allGastos = [];
+let allCuts = [], allStock = [], allVentas = [], allTurnos = [], allGastos = [], allConteos = [];
 let productoStock = {};
 let currentMovement = null, currentProductoMovement = null, salidaTipo = 'venta', drinkSalidaTipo = 'venta';
 let newItemPhoto = null, editItemPhoto = null, editItemId = null;
@@ -1233,6 +1234,7 @@ async function init() {
             listenToTurnos();
             listenToBarberos();
             listenToGastos();
+            listenToConteos();
             listenToMenuData();
             listenToPrecios();
             listenToChecklist();
@@ -2579,6 +2581,14 @@ function renderCierreCaja() {
     const totalProductos = ventasProductos.reduce((s, v) => s + (v.total || 0), 0);
     const totalGeneral   = totalCortes + totalProductos;
 
+    // Conteo real de caja (lo que contó la persona a cargo), para comparar contra lo calculado
+    const conteoHoy = allConteos.find(c => c.fecha === hoy);
+    const efectivoContado = conteoHoy?.efectivoContado;
+    const transferenciaContado = conteoHoy?.transferenciaContado;
+    const diffEfectivo = (typeof efectivoContado === 'number') ? efectivoContado - efectivo : null;
+    const diffTransferencia = (typeof transferenciaContado === 'number') ? transferenciaContado - transferencia : null;
+    const diffRow = (diff) => diff === null ? '' : `<div class="text-xs font-bold mt-1.5 ${diff === 0 ? 'text-emerald-400' : 'text-red-400'}">${diff === 0 ? '✓ Coincide' : `${diff > 0 ? '+' : ''}$${diff.toLocaleString('es-AR')} de diferencia`}</div>`;
+
     // Cortes por barbero
     const byBarber = {};
     cuts.forEach(c => {
@@ -2659,6 +2669,24 @@ function renderCierreCaja() {
                     ${ccDetalleRows(cortesTransferencia, bebidaTransferencia, prodTransferencia, gastoTransferencia, retiroTransferencia, row)}
                 </div>
             </div>
+        </div>
+
+        <!-- Verificar caja: conteo real vs. calculado -->
+        <div class="glass-card rounded-2xl p-5 mb-4 border border-amber-500/20">
+            <div class="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-3">🧮 Verificar caja (conteo real)</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
+                <div>
+                    <label class="text-[10px] text-gray-500 uppercase font-bold">Efectivo contado</label>
+                    <input type="number" id="conteo-efectivo-input" value="${efectivoContado ?? ''}" placeholder="$0" class="w-full mt-1 p-3 bg-black/30 border border-gray-700 rounded-xl text-white text-lg font-bold focus:border-amber-500 outline-none">
+                    ${diffRow(diffEfectivo)}
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-500 uppercase font-bold">Transferencia contada</label>
+                    <input type="number" id="conteo-transferencia-input" value="${transferenciaContado ?? ''}" placeholder="$0" class="w-full mt-1 p-3 bg-black/30 border border-gray-700 rounded-xl text-white text-lg font-bold focus:border-amber-500 outline-none">
+                    ${diffRow(diffTransferencia)}
+                </div>
+            </div>
+            <button id="btn-guardar-conteo" onclick="window.guardarConteoCaja()" class="w-full bg-amber-600/20 border border-amber-500 text-amber-300 font-bold text-sm py-2.5 rounded-xl hover:bg-amber-600/30 transition">Guardar conteo</button>
         </div>
 
         <!-- Detalle: 1 col mobile / 3 cols desktop -->
@@ -3180,6 +3208,35 @@ function listenToGastos() {
         }
     );
 }
+
+function listenToConteos() {
+    onSnapshot(
+        query(collection(db, PATH_CONTEOS), orderBy('fecha', 'desc'), limit(120)),
+        snap => {
+            allConteos = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+            if (!document.getElementById('cierre-caja-view').classList.contains('hidden') && cierreCajaTab === 'diario') renderCierreCaja();
+        }
+    );
+}
+
+window.guardarConteoCaja = async () => {
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    const fecha = cierreCajaFechaSel || hoyStr;
+    const efInput = document.getElementById('conteo-efectivo-input');
+    const trInput = document.getElementById('conteo-transferencia-input');
+    const efectivoContado = efInput.value === '' ? null : Number(efInput.value);
+    const transferenciaContado = trInput.value === '' ? null : Number(trInput.value);
+    if (efectivoContado === null && transferenciaContado === null) return;
+    const btn = document.getElementById('btn-guardar-conteo');
+    btn.disabled = true; const prevTxt = btn.textContent; btn.textContent = 'Guardando...';
+    try {
+        const data = { fecha, userEmail: currentUser.email, actualizadoEn: serverTimestamp() };
+        if (efectivoContado !== null) data.efectivoContado = efectivoContado;
+        if (transferenciaContado !== null) data.transferenciaContado = transferenciaContado;
+        await setDoc(doc(db, PATH_CONTEOS, fecha), data, { merge: true });
+    } catch (e) { alert('No se pudo guardar el conteo'); }
+    btn.disabled = false; btn.textContent = prevTxt;
+};
 
 window.openGastosPanel = () => {
     const p = document.getElementById('gastos-panel');
