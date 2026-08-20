@@ -2559,7 +2559,6 @@ function renderCierreCaja() {
     const transferencia = transferenciaBruto - retiroTransferencia - gastoTransferencia;
     const totalProductos = ventasProductos.reduce((s, v) => s + (v.total || 0), 0);
     const totalGeneral   = totalCortes + totalProductos;
-    const netoReal = totalGeneral - totalGastos;
 
     // Cortes por barbero
     const byBarber = {};
@@ -2626,18 +2625,6 @@ function renderCierreCaja() {
                 <div class="text-xl md:text-3xl font-extrabold text-blue-300">$${transferencia.toLocaleString('es-AR')}</div>
                 <div class="text-[10px] md:text-xs mt-1 ${retiroTransferencia>0?'text-rose-400':'text-blue-800'}">${retiroTransferencia>0?`−$${retiroTransferencia.toLocaleString('es-AR')} retiros`:'📲'}</div>
             </div>
-            ${totalGastos > 0 ? `
-            <div class="glass-card rounded-2xl p-4 md:p-5 col-span-3 border border-rose-500/20 flex items-center justify-between gap-4">
-                <div class="text-center flex-1">
-                    <div class="text-[10px] text-rose-400 uppercase tracking-widest mb-1">Gastos</div>
-                    <div class="text-xl font-bold text-rose-400">−$${totalGastos.toLocaleString('es-AR')}</div>
-                </div>
-                <div class="text-gray-600 text-xl">→</div>
-                <div class="text-center flex-1">
-                    <div class="text-[10px] text-emerald-400 uppercase tracking-widest mb-1">Neto real</div>
-                    <div class="text-2xl font-extrabold ${netoReal >= 0 ? 'text-emerald-400' : 'text-red-400'}">$${netoReal.toLocaleString('es-AR')}</div>
-                </div>
-            </div>` : ''}
         </div>
 
         <!-- Detalle: 1 col mobile / 3 cols desktop -->
