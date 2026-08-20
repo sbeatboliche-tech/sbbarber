@@ -473,7 +473,7 @@
     <h1 class="hero-search-title word-reveal" style="animation-delay:.06s">¿Qué estás buscando?</h1>
     <div class="search-bar reveal" style="animation-delay:.16s">
         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="search-input" placeholder="Pomada, cera, peine, capa..." autocomplete="off" oninput="handleSearch(this.value)">
+        <input type="text" id="search-input" placeholder="Pomada, cera, peine, capa..." autocomplete="off" aria-label="Buscar productos" oninput="handleSearch(this.value)">
         <button type="button" class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
     </div>
     <div class="search-results-note" id="search-results-note" style="display:none;"></div>
@@ -1383,7 +1383,7 @@ async function submitCheckout() {
     const buyer={name,email,phone};
     const postalCode = shippingMode==='delivery' ? (document.getElementById('buyer-postal').value.trim()||null) : null;
     const shipping={mode:shippingMode,address,city:shippingMode==='delivery'?city:null,provincia:shippingMode==='delivery'?shippingProvincia:null,zona:shippingMode==='delivery'?shippingZone:null,cost:effectiveShipping(),carrier:shippingMode==='delivery'?carrierId:null,carrierLabel:shippingMode==='delivery'?(qualifiesFreeShip()?'Envío gratis':carrierLabel):null,postalCode};
-    const items=cart.map(i=>({id:i.id,name:`${i.name} ${i.variant}`,price:i.price,quantity:i.qty}));
+    const items=cart.map(i=>({id:i.id,name:i.variant?`${i.name} ${i.variant}`:i.name,price:i.price,quantity:i.qty}));
 
     try {
         if(activeTab==='mp') {

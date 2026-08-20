@@ -22,7 +22,8 @@ export default async function handler(req, res) {
 
         const buyerName = meta.buyer_name || payment.payer?.first_name || 'Cliente';
         const buyerEmail = meta.buyer_email || payment.payer?.email;
-        const itemsSummary = meta.items_summary || pref.items?.map(i => `${i.quantity}x ${i.title}`).join(', ') || '';
+        const lineItems = (pref.items || []).map(i => ({ name: i.title, quantity: i.quantity, price: i.unit_price }));
+        const itemsSummary = meta.items_summary || lineItems.map(i => `${i.quantity}x ${i.name}`).join(', ') || '';
         const total = Number(meta.total || payment.transaction_amount || 0);
         const orderId = payment.external_reference || String(data.id);
         const shipping = { mode: meta.shipping_mode || 'pickup', address: meta.shipping_address || '', cost: Number(meta.shipping_cost || 0) };
@@ -36,7 +37,7 @@ export default async function handler(req, res) {
             from: '"SB Barber Tienda" <sbbaarber@gmail.com>',
             to: 'sbbaarber@gmail.com',
             subject: `🛒 ¡Vendiste un producto! — ${orderLabel(orderId)}`,
-            html: sellerHtml(buyerName, buyerEmail, itemsSummary, total, orderId, shipping)
+            html: sellerHtml(buyerName, buyerEmail, lineItems, total, orderId, shipping)
         });
 
         if (buyerEmail) {
@@ -44,7 +45,7 @@ export default async function handler(req, res) {
                 from: '"SB Barber Tienda" <sbbaarber@gmail.com>',
                 to: buyerEmail,
                 subject: '✅ Tu compra en SB Barber fue confirmada',
-                html: buyerHtml(buyerName, itemsSummary, total, orderId, shipping)
+                html: buyerHtml(buyerName, lineItems, total, orderId, shipping)
             });
         }
     } catch (e) {
@@ -84,6 +85,16 @@ function emailShell(bodyHtml, { eyebrow = 'TIENDA', title, subtitle } = {}) {
 </body></html>`;
 }
 
+function itemRows(items, { withPrices = true } = {}) {
+    return (items || []).map(i => {
+        const lineTotal = (i.price || 0) * (i.quantity || 1);
+        return `<tr style="border-top:1px solid #f0f0f0;">
+            <td style="padding:8px 0;color:#18181b;font-size:13px;">${i.quantity}× ${i.name}</td>
+            ${withPrices ? `<td style="padding:8px 0;color:#18181b;font-size:13px;text-align:right;white-space:nowrap;">$${lineTotal.toLocaleString('es-AR')}</td>` : ''}
+        </tr>`;
+    }).join('');
+}
+
 function sellerHtml(name, email, items, total, orderId, shipping) {
     const shipRow = shipping.mode === 'delivery'
         ? `<tr><td style="padding:9px 0;color:#71717a;font-size:12px;">Entrega</td><td style="padding:9px 0;color:#18181b;text-align:right;">Envío — ${shipping.address}</td></tr>`
@@ -95,7 +106,7 @@ function sellerHtml(name, email, items, total, orderId, shipping) {
     <table style="width:100%;border-collapse:collapse;">
       <tr><td style="padding:9px 0;color:#71717a;font-size:12px;width:38%;">Cliente</td><td style="padding:9px 0;color:#18181b;font-weight:700;text-align:right;">${name}</td></tr>
       <tr style="border-top:1px solid #f0f0f0;"><td style="padding:9px 0;color:#71717a;font-size:12px;">Email</td><td style="padding:9px 0;color:#18181b;text-align:right;">${email || '—'}</td></tr>
-      <tr style="border-top:1px solid #f0f0f0;"><td style="padding:9px 0;color:#71717a;font-size:12px;">Productos</td><td style="padding:9px 0;color:#18181b;text-align:right;">${items}</td></tr>
+      ${itemRows(items)}
       <tr style="border-top:1px solid #f0f0f0;">${shipRow}</tr>
     </table>
     <div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid #18181b;padding-top:16px;margin-top:16px;">
@@ -123,7 +134,7 @@ function buyerHtml(name, items, total, orderId, shipping) {
     </div>
     <div style="background:#f8f8f8;border-radius:12px;padding:18px 20px;margin-bottom:16px;border:1px solid #ececec;">
       <p style="color:#52525b;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px;">Tu pedido</p>
-      <p style="color:#18181b;font-size:14px;margin:0;">${items}</p>
+      <table style="width:100%;border-collapse:collapse;">${itemRows(items)}</table>
     </div>
     ${shipBlock}
     <div style="background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);border-radius:12px;padding:16px 20px;margin-bottom:20px;text-align:center;">

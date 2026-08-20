@@ -88,6 +88,11 @@
         <p class="sub">Tu pago está siendo procesado. Cuando se confirme, te avisamos por email.</p>
     </div>
 
+    <div id="view-empty" style="display:none">
+        <h1>No encontramos<br>tu pedido.</h1>
+        <p class="sub">Si acabás de hacer una compra, revisá tu email — ahí te mandamos la confirmación con los detalles.</p>
+    </div>
+
     <p id="order-id" class="order-id"></p>
     <a href="/" class="back-link">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -97,7 +102,7 @@
 <script>
     const p = new URLSearchParams(location.search);
     const views = { success:'view-success', transfer:'view-transfer', pending:'view-pending' };
-    document.getElementById(views[p.get('status')] || 'view-success').style.display = 'block';
+    document.getElementById(views[p.get('status')] || 'view-empty').style.display = 'block';
     const ord = p.get('order');
     if (ord) document.getElementById('order-id').textContent = 'Pedido ' + (ord.startsWith('SBB-') ? '#' + ord.slice(4) : ord);
 
