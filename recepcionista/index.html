@@ -127,6 +127,12 @@
                     <span class="hidden md:inline">MODIFICAR MENÚ</span>
                     <span class="md:hidden">MENÚ</span>
                 </button>
+                <!-- Botón historial ML -->
+                <button onclick="window.openHistorialMLPanel()" class="flex items-center gap-1.5 bg-white/10 border border-white/20 text-white px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/20 transition">
+                    <i class="fas fa-box text-xs"></i>
+                    <span class="hidden md:inline">HISTORIAL ML</span>
+                    <span class="md:hidden">ML</span>
+                </button>
             </div>
             <div class="flex items-center gap-2">
                 <!-- Botón nuevo corte solo visible en desktop -->
@@ -615,6 +621,67 @@
             </div>
         </div>
     </div><!-- /gastos-panel -->
+
+    <!-- Historial ML (despachos punto Mercado Libre) -->
+    <div id="historial-ml-panel" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+        <header class="px-5 md:px-8 py-4 md:py-5 glass flex items-center justify-between flex-shrink-0 border-b border-white/5">
+            <div class="flex items-center gap-4">
+                <button onclick="window.closeHistorialMLPanel()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
+                    <i class="fas fa-arrow-left text-sm"></i>
+                </button>
+                <div>
+                    <h1 class="text-base md:text-xl font-bold text-white leading-none tracking-wide">Historial ML</h1>
+                    <span class="text-[10px] md:text-xs text-orange-400 font-medium">Despachos punto Mercado Libre</span>
+                </div>
+            </div>
+        </header>
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-8 pb-10 max-w-2xl md:mx-auto w-full space-y-4">
+                <!-- Carga rápida -->
+                <div class="glass-card rounded-2xl p-5">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fas fa-box text-orange-400"></i> Cargar día</h3>
+                    <div class="flex items-end gap-3">
+                        <div class="flex-1">
+                            <label class="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Fecha</label>
+                            <input type="date" id="ml-fecha-input" onchange="window.loadMlFechaInput()" class="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-orange-500 outline-none">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Paquetes</label>
+                            <input type="number" id="ml-cantidad-input" min="0" step="1" placeholder="0" class="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-orange-500 outline-none">
+                        </div>
+                    </div>
+                    <button onclick="window.saveMlDespacho()" id="btn-save-ml" class="w-full mt-4 bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl text-sm transition shadow-lg shadow-orange-900/40">Guardar</button>
+                </div>
+
+                <!-- Período -->
+                <div class="glass-card rounded-2xl p-5">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fas fa-calendar-alt text-orange-400"></i> Ver por período</h3>
+                    <div class="flex items-end gap-3 mb-4">
+                        <div class="flex-1">
+                            <label class="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Desde</label>
+                            <input type="date" id="ml-desde-input" onchange="window.renderMlPeriodo()" class="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-orange-500 outline-none">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Hasta</label>
+                            <input type="date" id="ml-hasta-input" onchange="window.renderMlPeriodo()" class="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-orange-500 outline-none">
+                        </div>
+                    </div>
+                    <div id="ml-periodo-resumen" class="flex items-center justify-between bg-black/20 rounded-xl px-4 py-3">
+                        <span id="ml-periodo-label" class="text-xs text-gray-400">Total del período</span>
+                        <span id="ml-periodo-total" class="text-xl font-extrabold text-orange-400">0</span>
+                    </div>
+                </div>
+
+                <!-- Lista -->
+                <div class="glass-card rounded-2xl p-5">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fas fa-list text-orange-400"></i> Últimos días</h3>
+                    <div id="ml-lista" class="space-y-2">
+                        <p class="text-xs text-gray-600 text-center py-4">Sin registros</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><!-- /historial-ml-panel -->
 
 
     <!-- ===== MODALES ===== -->
@@ -1187,6 +1254,7 @@ const PRODUCTOS_BARBER = [
 const PATH_TURNOS = 'turnos';
 const PATH_GASTOS = 'gastos';
 const PATH_CONTEOS = 'conteos_caja';
+const PATH_ML_DESPACHOS = 'ml_despachos';
 const GASTOS_CATS = [
     { id:'insumos',   label:'Insumos',   icon:'🧴' },
     { id:'servicios', label:'Servicios', icon:'💡' },
@@ -1196,7 +1264,7 @@ const GASTOS_CATS = [
 ];
 
 let app, auth, db, currentUser;
-let allCuts = [], allStock = [], allVentas = [], allTurnos = [], allGastos = [], allConteos = [];
+let allCuts = [], allStock = [], allVentas = [], allTurnos = [], allGastos = [], allConteos = [], allMlDespachos = [];
 let productoStock = {};
 let currentMovement = null, currentProductoMovement = null, salidaTipo = 'venta', drinkSalidaTipo = 'venta';
 let newItemPhoto = null, editItemPhoto = null, editItemId = null;
@@ -1235,6 +1303,7 @@ async function init() {
             listenToBarberos();
             listenToGastos();
             listenToConteos();
+            listenToMlDespachos();
             listenToMenuData();
             listenToPrecios();
             listenToChecklist();
@@ -3380,6 +3449,91 @@ document.getElementById('nuevo-gasto-form').addEventListener('submit', async e =
     } catch { alert('Error al guardar'); }
     btn.disabled = false; btn.textContent = 'Registrar gasto';
 });
+
+// ---- HISTORIAL ML (despachos punto Mercado Libre) ----
+function listenToMlDespachos() {
+    onSnapshot(
+        query(collection(db, PATH_ML_DESPACHOS), orderBy('fecha', 'desc'), limit(400)),
+        snap => {
+            allMlDespachos = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+            if (!document.getElementById('historial-ml-panel').classList.contains('hidden')) renderHistorialMLPanel();
+        }
+    );
+}
+
+window.openHistorialMLPanel = () => {
+    const p = document.getElementById('historial-ml-panel');
+    p.classList.remove('hidden'); p.classList.add('flex', 'flex-col');
+    const hoy = new Date().toLocaleDateString('en-CA');
+    const desde = new Date(); desde.setDate(desde.getDate() - 6);
+    document.getElementById('ml-fecha-input').value = hoy;
+    document.getElementById('ml-desde-input').value = desde.toLocaleDateString('en-CA');
+    document.getElementById('ml-hasta-input').value = hoy;
+    window.loadMlFechaInput();
+    renderHistorialMLPanel();
+};
+window.closeHistorialMLPanel = () => {
+    const p = document.getElementById('historial-ml-panel');
+    p.classList.add('hidden'); p.classList.remove('flex', 'flex-col');
+};
+
+window.loadMlFechaInput = () => {
+    const fecha = document.getElementById('ml-fecha-input').value;
+    const existing = allMlDespachos.find(m => m.fecha === fecha);
+    document.getElementById('ml-cantidad-input').value = existing ? existing.cantidad : '';
+};
+
+window.saveMlDespacho = async () => {
+    const fecha = document.getElementById('ml-fecha-input').value;
+    const cantidad = parseInt(document.getElementById('ml-cantidad-input').value);
+    if (!fecha || isNaN(cantidad) || cantidad < 0) { alert('Completá fecha y cantidad'); return; }
+    const btn = document.getElementById('btn-save-ml');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        await setDoc(doc(db, PATH_ML_DESPACHOS, fecha), { fecha, cantidad, actualizadoEn: serverTimestamp() });
+    } catch { alert('Error al guardar'); }
+    btn.disabled = false; btn.textContent = 'Guardar';
+};
+
+window.deleteMlDespacho = async (id) => {
+    if (!await customConfirm('¿Eliminar este registro?')) return;
+    try { await deleteDoc(doc(db, PATH_ML_DESPACHOS, id)); } catch { alert('Error'); }
+};
+
+function renderHistorialMLPanel() {
+    renderMlPeriodoInternal();
+    const list = document.getElementById('ml-lista');
+    if (allMlDespachos.length === 0) {
+        list.innerHTML = '<p class="text-xs text-gray-600 text-center py-4">Sin registros</p>';
+        return;
+    }
+    list.innerHTML = allMlDespachos.slice(0, 30).map(m => {
+        const d = new Date(m.fecha + 'T12:00:00');
+        const fechaLabel = d.toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short' });
+        return `<div class="flex items-center gap-3 bg-black/20 rounded-xl px-3 py-2.5">
+            <div class="flex-1 min-w-0">
+                <div class="text-sm text-white capitalize">${fechaLabel}</div>
+            </div>
+            <span class="text-sm font-bold text-orange-400 whitespace-nowrap">${m.cantidad} paq.</span>
+            <button onclick="window.deleteMlDespacho('${m.id}')" class="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-600/20 transition flex-shrink-0">
+                <i class="fas fa-trash text-[10px]"></i>
+            </button>
+        </div>`;
+    }).join('');
+}
+
+function renderMlPeriodoInternal() {
+    const desde = document.getElementById('ml-desde-input').value;
+    const hasta = document.getElementById('ml-hasta-input').value;
+    const label = document.getElementById('ml-periodo-label');
+    const total = document.getElementById('ml-periodo-total');
+    if (!desde || !hasta) { label.textContent = 'Total del período'; total.textContent = '0'; return; }
+    const enRango = allMlDespachos.filter(m => m.fecha >= desde && m.fecha <= hasta);
+    const suma = enRango.reduce((s, m) => s + (m.cantidad || 0), 0);
+    label.textContent = `Total del período (${enRango.length} día${enRango.length === 1 ? '' : 's'})`;
+    total.textContent = suma;
+}
+window.renderMlPeriodo = renderMlPeriodoInternal;
 
 // ---- TURNOS ----
 function getTodayStr(daysOffset = 0) {
