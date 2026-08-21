@@ -48,6 +48,9 @@
         .money-hidden #stat-total-billing::after { font-size:1rem; }
         #money-eye-btn { color:#6b7280; transition:color .2s, transform .2s; }
         #money-eye-btn:hover { color:#e5e7eb; }
+        /* Ocultar cantidad de cortes (ojito aparte) */
+        .cortes-hidden #stat-cuts-count { font-size:0 !important; }
+        .cortes-hidden #stat-cuts-count::after { content:"•••"; font-size:1.5rem; color:#93c5fd; letter-spacing:0.05em; }
         /* Mobile tabs */
         .tab-content { display:none; }
         .tab-content.active { display:flex; flex-direction:column; }
@@ -175,6 +178,13 @@
             </nav>
         </div>
 
+        <!-- Navegación por fecha: Hoy / Ayer / buscar fecha -->
+        <div class="bg-[#0f1115] px-4 md:px-6 py-2 border-b border-gray-800/50 flex items-center gap-2 flex-shrink-0">
+            <button onclick="window.setDashboardFechaHoy()" id="dash-fecha-hoy-btn" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-cyan-600/20 border border-cyan-500 text-cyan-300 transition">HOY</button>
+            <button onclick="window.setDashboardFechaAyer()" id="dash-fecha-ayer-btn" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition">AYER</button>
+            <input type="date" id="dash-fecha-input" onchange="window.setDashboardFecha(this.value)" class="flex-1 min-w-0 max-w-[170px] bg-black/30 border border-gray-700 rounded-lg px-2 py-1.5 text-[11px] text-gray-300 focus:border-cyan-500 outline-none">
+        </div>
+
         <!-- Títulos de columna: solo en desktop -->
         <div class="hidden md:grid md:grid-cols-2 flex-shrink-0 border-b border-gray-800/50">
             <div class="px-6 py-2 border-r border-gray-800/50">
@@ -210,7 +220,7 @@
                 <div class="glass-card rounded-2xl p-5 animate-enter">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-gray-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                            <i class="fas fa-calendar-day text-cyan-400"></i> Hoy
+                            <i class="fas fa-calendar-day text-cyan-400"></i> <span id="dash-fecha-label">Hoy</span>
                         </span>
                         <button id="money-eye-btn" type="button" onclick="window.toggleMoneyVisibility()" title="Mostrar/ocultar saldo" aria-label="Mostrar u ocultar saldo" class="w-8 h-8 flex items-center justify-center rounded-lg">
                             <i id="money-eye-icon" class="fas fa-eye text-sm"></i>
@@ -219,7 +229,12 @@
                     <div class="grid grid-cols-3 gap-3">
                         <div class="bg-black/30 rounded-xl p-3 text-center col-span-1">
                             <div id="stat-cuts-count" class="text-2xl font-extrabold text-blue-300">0</div>
-                            <div class="text-[10px] text-gray-500 mt-0.5">cortes</div>
+                            <div class="text-[10px] text-gray-500 mt-0.5 flex items-center justify-center gap-1">
+                                cortes
+                                <button id="cortes-eye-btn" type="button" onclick="window.toggleCortesVisibility()" title="Mostrar/ocultar cortes" aria-label="Mostrar u ocultar cortes" class="w-3.5 h-3.5 flex items-center justify-center text-gray-500 hover:text-blue-300 transition">
+                                    <i id="cortes-eye-icon" class="fas fa-eye text-[9px]"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="bg-black/30 rounded-xl p-3 text-center col-span-2">
                             <div class="flex items-baseline justify-center gap-1">
@@ -387,6 +402,13 @@
                 <button id="cc-tab-semanal" onclick="window.setCierreCajaTab('semanal')" class="px-3 py-1.5 rounded-lg text-gray-500 hover:text-gray-300 transition">Semanal</button>
             </div>
         </header>
+
+        <!-- Navegación por fecha (solo pestaña diario) -->
+        <div id="cc-fecha-nav" class="hidden px-4 md:px-8 pt-3 pb-1 flex items-center gap-2 flex-shrink-0 max-w-4xl md:mx-auto w-full">
+            <button onclick="window.setCierreCajaFechaHoy()" id="cc-fecha-hoy-btn" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-600/20 border border-emerald-500 text-emerald-300 transition">HOY</button>
+            <button onclick="window.setCierreCajaFechaAyer()" id="cc-fecha-ayer-btn" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition">AYER</button>
+            <input type="date" id="cc-fecha-input" onchange="window.setCierreCajaFecha(this.value)" class="flex-1 min-w-0 max-w-[170px] bg-black/30 border border-gray-700 rounded-lg px-2 py-1.5 text-[11px] text-gray-300 focus:border-emerald-500 outline-none">
+        </div>
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-10 max-w-4xl md:mx-auto w-full" id="cierre-caja-content">
             <p class="text-xs text-gray-600 text-center py-6">Cargando...</p>
@@ -695,6 +717,14 @@
                         <button type="button" onclick="window.setDrinkComprador('Stefa', this)" id="mv-comp-Stefa"
                             class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
                             Stefa
+                        </button>
+                        <button type="button" onclick="window.setDrinkComprador('Santi', this)" id="mv-comp-Santi"
+                            class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
+                            Santi
+                        </button>
+                        <button type="button" onclick="window.setDrinkComprador('FEME', this)" id="mv-comp-FEME"
+                            class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
+                            FEME
                         </button>
                     </div>
                     <input type="hidden" id="mv-comprador" value="cliente">
@@ -1114,11 +1144,12 @@ const SERVICES = [
     { name:'Global',          price:60000 }
 ];
 
-let BARBERS = ['Tony', 'Maxi', 'Stefa'];
+let BARBERS = ['Tony', 'Maxi', 'Stefa', 'Santi'];
 let BARBER_THEME = {
     Tony:  { color:'blue',    text:'text-blue-400',    border:'border-blue-500',    bg:'bg-blue-500',    initial:'T' },
     Maxi:  { color:'emerald', text:'text-emerald-400', border:'border-emerald-500', bg:'bg-emerald-500', initial:'M' },
     Stefa: { color:'purple',  text:'text-purple-400',  border:'border-purple-500',  bg:'bg-purple-500',  initial:'S' },
+    Santi: { color:'orange',  text:'text-orange-400',  border:'border-orange-500',  bg:'bg-orange-500',  initial:'Sa' },
     FEME:  { color:'cyan',    text:'text-cyan-400',    border:'border-cyan-500',    bg:'bg-cyan-500',    initial:'F' }
 };
 const BARBER_EXTRA_THEMES = [
@@ -1155,6 +1186,7 @@ const PRODUCTOS_BARBER = [
 
 const PATH_TURNOS = 'turnos';
 const PATH_GASTOS = 'gastos';
+const PATH_CONTEOS = 'conteos_caja';
 const GASTOS_CATS = [
     { id:'insumos',   label:'Insumos',   icon:'🧴' },
     { id:'servicios', label:'Servicios', icon:'💡' },
@@ -1164,7 +1196,7 @@ const GASTOS_CATS = [
 ];
 
 let app, auth, db, currentUser;
-let allCuts = [], allStock = [], allVentas = [], allTurnos = [], allGastos = [];
+let allCuts = [], allStock = [], allVentas = [], allTurnos = [], allGastos = [], allConteos = [];
 let productoStock = {};
 let currentMovement = null, currentProductoMovement = null, salidaTipo = 'venta', drinkSalidaTipo = 'venta';
 let newItemPhoto = null, editItemPhoto = null, editItemId = null;
@@ -1202,6 +1234,7 @@ async function init() {
             listenToTurnos();
             listenToBarberos();
             listenToGastos();
+            listenToConteos();
             listenToMenuData();
             listenToPrecios();
             listenToChecklist();
@@ -1269,10 +1302,44 @@ function listenToCuts() {
     );
 }
 
+// ---- Navegación por fecha del dashboard (Hoy / Ayer / buscar) ----
+let dashboardFechaSel = null; // null = hoy; si no, 'YYYY-MM-DD'
+function getDashFecha() {
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    const hoy = dashboardFechaSel || hoyStr;
+    const today = new Date(hoy + 'T00:00:00');
+    const todayEnd = new Date(today); todayEnd.setDate(todayEnd.getDate() + 1);
+    return { hoy, today, todayEnd };
+}
+const _dashFechaBtnOn = 'px-3 py-1.5 rounded-lg text-[10px] font-bold bg-cyan-600/20 border border-cyan-500 text-cyan-300 transition';
+const _dashFechaBtnOff = 'px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition';
+function updateDashFechaUI() {
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    const ayerStr = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
+    document.getElementById('dash-fecha-hoy-btn').className = !dashboardFechaSel ? _dashFechaBtnOn : _dashFechaBtnOff;
+    document.getElementById('dash-fecha-ayer-btn').className = dashboardFechaSel === ayerStr ? _dashFechaBtnOn : _dashFechaBtnOff;
+    document.getElementById('dash-fecha-input').value = dashboardFechaSel || hoyStr;
+    const label = document.getElementById('dash-fecha-label');
+    if (!dashboardFechaSel) label.textContent = 'Hoy';
+    else if (dashboardFechaSel === ayerStr) label.textContent = 'Ayer';
+    else label.textContent = new Date(dashboardFechaSel + 'T00:00:00').toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+window.setDashboardFechaHoy = () => { dashboardFechaSel = null; updateDashFechaUI(); renderCuts(); renderVentas(); };
+window.setDashboardFechaAyer = () => {
+    dashboardFechaSel = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
+    updateDashFechaUI(); renderCuts(); renderVentas();
+};
+window.setDashboardFecha = (value) => {
+    if (!value) return;
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    dashboardFechaSel = value === hoyStr ? null : value;
+    updateDashFechaUI(); renderCuts(); renderVentas();
+};
+
 function renderCuts() {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todayCuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today);
+    const { today, todayEnd } = getDashFecha();
+    updateDashFechaUI();
+    const todayCuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today && c.createdAt.toDate() < todayEnd);
 
     const totalBilling = todayCuts.reduce((s, c) => s + (c.price || 0), 0);
     document.getElementById('stat-cuts-count').textContent = todayCuts.length;
@@ -1314,7 +1381,7 @@ function renderCuts() {
         barberSummary.classList.add('hidden');
     }
 
-    const allTodayCuts = allCuts.filter(c => c.createdAt && c.createdAt.toDate() >= today);
+    const allTodayCuts = allCuts.filter(c => c.createdAt && c.createdAt.toDate() >= today && c.createdAt.toDate() < todayEnd);
     const list = document.getElementById('cuts-list');
     if (allTodayCuts.length === 0) {
         list.innerHTML = '<p class="text-xs text-gray-600 text-center py-4">Sin cortes registrados hoy</p>';
@@ -1550,8 +1617,8 @@ window.setDrinkSalidaTipo = (tipo) => {
 
 window.setDrinkComprador = (quien, el) => {
     document.getElementById('mv-comprador').value = quien;
-    const esBarber = BARBERS.includes(quien);
-    ['cliente', ...BARBERS].forEach(k => {
+    const esBarber = BARBERS.includes(quien) || quien === 'FEME';
+    ['cliente', ...BARBERS, 'FEME'].forEach(k => {
         const btn = document.getElementById(`mv-comp-${k}`);
         if (!btn) return;
         const t = BARBER_THEME[k];
@@ -1603,19 +1670,21 @@ document.getElementById('movement-form').addEventListener('submit', async e => {
             const precio = item?.price || 0;
             const hoy = new Date().toLocaleDateString('en-CA');
             const comprador = document.getElementById('mv-comprador').value || 'cliente';
-            const metodo = BARBERS.includes(comprador) ? null : (document.getElementById('mv-metodo-pago').value || 'efectivo');
+            const esStaff = BARBERS.includes(comprador) || comprador === 'FEME';
+            const metodo = esStaff ? null : (document.getElementById('mv-metodo-pago').value || 'efectivo');
             await addDoc(collection(db, PATH_VENTAS), {
                 producto: itemName, tipo: 'bebida',
                 precio, cantidad: qty, total: precio * qty,
                 barbero: comprador,
                 ...(metodo ? { metodoPago: metodo } : {}),
+                esConsumoStaff: esStaff,
                 userEmail: currentUser.email,
                 fecha: hoy, creadoEn: serverTimestamp()
             });
-            if (BARBERS.includes(comprador)) {
+            if (esStaff) {
                 await addDoc(collection(db, PATH_RETIROS), {
                     barbero: comprador, monto: Number(precio) * qty, fecha: hoy,
-                    estado: 'confirmado', tipo: 'retiro',
+                    estado: 'confirmado', tipo: 'retiro', origen: 'bebida',
                     descripcion: `Bebida: ${itemName}${qty > 1 ? ' ×' + qty : ''}`,
                     userEmail: currentUser?.email || null, creadoEn: serverTimestamp()
                 });
@@ -1746,7 +1815,7 @@ window.setQsMetodo = (metodo) => {
 window.openQuickSaleModal = () => {
     window.setQsMetodo('efectivo');
     document.getElementById('qs-barbero').value = '';
-    document.getElementById('qs-barber-grid').innerHTML = BARBERS.map(b => {
+    document.getElementById('qs-barber-grid').innerHTML = [...BARBERS, 'FEME'].map(b => {
         const t = BARBER_THEME[b];
         return `
         <label class="cursor-pointer select-none">
@@ -1783,12 +1852,13 @@ window.quickSale = async id => {
             producto: item.name, tipo: 'bebida',
             precio: item.price || 0, cantidad: 1, total: item.price || 0,
             metodoPago: metodo,
+            esConsumoStaff: true,
             barbero, userEmail: currentUser.email,
             fecha: hoy, creadoEn: serverTimestamp()
         });
         await addDoc(collection(db, PATH_RETIROS), {
             barbero, monto: Number(item.price) || 0, fecha: hoy,
-            estado: 'confirmado', tipo: 'retiro',
+            estado: 'confirmado', tipo: 'retiro', origen: 'bebida',
             descripcion: `Bebida: ${item.name}`,
             userEmail: currentUser?.email || null, creadoEn: serverTimestamp()
         });
@@ -1813,7 +1883,7 @@ function listenToVentas() {
 }
 
 function renderVentas() {
-    const hoy = new Date().toLocaleDateString('en-CA');
+    const { hoy, today, todayEnd } = getDashFecha();
     const ventasHoy = allVentas.filter(v => v.fecha === hoy && !v.eliminado).sort((a,b) => (b.creadoEn?.seconds||0) - (a.creadoEn?.seconds||0));
     const list = document.getElementById('ventas-list');
     const totalRow = document.getElementById('ventas-total-row');
@@ -1844,17 +1914,17 @@ function renderVentas() {
             </div>
         </div>`;
     }).join('');
-    const total = ventasHoy.filter(v => v.canal !== 'ml').reduce((s, v) => s + (v.total || 0), 0);
+    const total = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff).reduce((s, v) => s + (v.total || 0), 0);
     document.getElementById('ventas-total').textContent = `$${total.toLocaleString('es-AR')}`;
     totalRow.classList.remove('hidden'); totalRow.classList.add('flex');
-    const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= new Date(new Date().setHours(0,0,0,0)));
+    const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today && c.createdAt.toDate() < todayEnd);
     updateDailyTotalStat(cuts.reduce((s,c) => s+(c.price||0), 0), total);
 }
 
 function updateDailyTotalStat(cutsBilling, ventasTotal = null) {
     if (ventasTotal === null) {
-        const hoy = new Date().toLocaleDateString('en-CA');
-        ventasTotal = allVentas.filter(v => v.fecha === hoy && !v.eliminado && v.canal !== 'ml').reduce((s,v) => s+(v.total||0), 0);
+        const { hoy } = getDashFecha();
+        ventasTotal = allVentas.filter(v => v.fecha === hoy && !v.eliminado && v.canal !== 'ml' && !v.esConsumoStaff).reduce((s,v) => s+(v.total||0), 0);
     }
     const ventasRow = document.getElementById('stat-ventas-row');
     const totalRow = document.getElementById('stat-total-row');
@@ -2185,6 +2255,7 @@ document.getElementById('producto-movement-form').addEventListener('submit', asy
                 cantidad: qty,
                 total: (prod?.precio || 0) * qty,
                 barbero: 'Recepción',
+                metodoPago: 'efectivo',
                 userEmail: currentUser.email,
                 fecha: hoy,
                 creadoEn: serverTimestamp()
@@ -2245,6 +2316,29 @@ window.logout = () => signOut(auth);
 
 // ---- CIERRE DE CAJA ----
 let cierreCajaTab = 'diario';
+let cierreCajaFechaSel = null; // null = hoy; si no, 'YYYY-MM-DD'
+
+const _ccFechaBtnOn = 'px-3 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-600/20 border border-emerald-500 text-emerald-300 transition';
+const _ccFechaBtnOff = 'px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition';
+function updateCierreCajaFechaUI() {
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    const ayerStr = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
+    document.getElementById('cc-fecha-hoy-btn').className = !cierreCajaFechaSel ? _ccFechaBtnOn : _ccFechaBtnOff;
+    document.getElementById('cc-fecha-ayer-btn').className = cierreCajaFechaSel === ayerStr ? _ccFechaBtnOn : _ccFechaBtnOff;
+    document.getElementById('cc-fecha-input').value = cierreCajaFechaSel || hoyStr;
+}
+window.setCierreCajaFechaHoy = () => { cierreCajaFechaSel = null; updateCierreCajaFechaUI(); renderCierreCaja(); };
+window.setCierreCajaFechaAyer = () => {
+    const ayerStr = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
+    cierreCajaFechaSel = ayerStr; updateCierreCajaFechaUI(); renderCierreCaja();
+};
+window.setCierreCajaFecha = (value) => {
+    if (!value) return;
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    cierreCajaFechaSel = value === hoyStr ? null : value;
+    updateCierreCajaFechaUI(); renderCierreCaja();
+};
+
 window.openCierreCaja = () => {
     const modal = document.getElementById('cierre-pass-modal');
     const input = document.getElementById('cierre-pass-input');
@@ -2266,6 +2360,7 @@ window.confirmCierrePass = () => {
     const v = document.getElementById('cierre-caja-view');
     v.classList.remove('hidden'); v.classList.add('flex', 'flex-col');
     cierreCajaTab = 'diario';
+    cierreCajaFechaSel = null;
     setCierreCajaTab('diario');
 };
 window.closeCierreCaja = () => {
@@ -2278,7 +2373,8 @@ window.setCierreCajaTab = (tab) => {
     const inactive = 'px-3 py-1.5 rounded-lg text-gray-500 hover:text-gray-300 transition';
     document.getElementById('cc-tab-diario').className = tab === 'diario' ? active : inactive;
     document.getElementById('cc-tab-semanal').className = tab === 'semanal' ? active : inactive;
-    if (tab === 'diario') renderCierreCaja();
+    document.getElementById('cc-fecha-nav').classList.toggle('hidden', tab !== 'diario');
+    if (tab === 'diario') { updateCierreCajaFechaUI(); renderCierreCaja(); }
     else renderCierreCajaSemanal();
 };
 
@@ -2429,32 +2525,69 @@ window.saveMenuEditor = async () => {
     }
 };
 
+function ccDetalleRows(cortesX, bebidaX, prodX, gastoX, retiroX, row) {
+    const rows = [];
+    if (cortesX > 0) rows.push(row('Cortes', `+$${cortesX.toLocaleString('es-AR')}`, 'text-gray-400', 'text-emerald-300'));
+    if (bebidaX > 0) rows.push(row('Bebida vendida', `+$${bebidaX.toLocaleString('es-AR')}`, 'text-gray-400', 'text-emerald-300'));
+    if (prodX > 0) rows.push(row('Producto vendido', `+$${prodX.toLocaleString('es-AR')}`, 'text-gray-400', 'text-emerald-300'));
+    if (gastoX > 0) rows.push(row('Gastos', `−$${gastoX.toLocaleString('es-AR')}`, 'text-gray-400', 'text-rose-400'));
+    if (retiroX > 0) rows.push(row('Retiros', `−$${retiroX.toLocaleString('es-AR')}`, 'text-gray-400', 'text-rose-400'));
+    return rows.length ? rows.join('') : '<p class="text-[11px] text-gray-600 py-1">Sin movimientos</p>';
+}
+
 function renderCierreCaja() {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const hoy = now.toLocaleDateString('en-CA');
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    const hoy = cierreCajaFechaSel || hoyStr;
+    const today = new Date(hoy + 'T00:00:00');
+    const todayEnd = new Date(today); todayEnd.setDate(todayEnd.getDate() + 1);
 
     document.getElementById('cierre-caja-fecha').textContent =
         today.toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
-    const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today);
+    const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today && c.createdAt.toDate() < todayEnd);
     const ventasHoy = allVentas.filter(v => v.fecha === hoy && !v.eliminado);
-    const ventasProductos = ventasHoy.filter(v => v.tipo !== 'bebida');
+    // Cuenta como venta real (Productos + caja) solo lo vendido en el local a un cliente:
+    // se excluyen las ventas por canal ML (esa plata no pasa por la caja física) y el
+    // consumo interno de barberos/FEME (esConsumoStaff — eso ya se resta de lo que se le
+    // paga al barbero, no de la caja del negocio).
+    const ventasProductos = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo);
 
     const totalCortes   = cuts.reduce((s, c) => s + (c.price || 0), 0);
-    const efectivoBruto = cuts.filter(c => c.metodoPago !== 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
-    const transferenciaBruto = cuts.filter(c => c.metodoPago === 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
-    // Retiros de hoy (por cuándo se hicieron), restados según su método
-    const retirosHoy = allRetiros.filter(r => !r.eliminado && r.estado === 'confirmado' && r.creadoEn && r.creadoEn.toDate() >= today);
+    const cortesEfectivo = cuts.filter(c => c.metodoPago !== 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
+    const cortesTransferencia = cuts.filter(c => c.metodoPago === 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
+    // Detalle de qué compone Efectivo/Transferencia: bebidas de cliente aparte de otros productos.
+    const bebidasCliente = ventasProductos.filter(v => v.tipo === 'bebida');
+    const productosNoBebida = ventasProductos.filter(v => v.tipo !== 'bebida');
+    const bebidaEfectivo = bebidasCliente.filter(v => v.metodoPago !== 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
+    const bebidaTransferencia = bebidasCliente.filter(v => v.metodoPago === 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
+    const prodEfectivo = productosNoBebida.filter(v => v.metodoPago !== 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
+    const prodTransferencia = productosNoBebida.filter(v => v.metodoPago === 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
+    const productosEfectivo = bebidaEfectivo + prodEfectivo;
+    const productosTransferencia = bebidaTransferencia + prodTransferencia;
+    const efectivoBruto = cortesEfectivo + productosEfectivo;
+    const transferenciaBruto = cortesTransferencia + productosTransferencia;
+    // Retiros de hoy (por cuándo se hicieron), restados según su método.
+    // Los retiros de bebida (origen:'bebida') NO restan de la caja: ya se le descontó al
+    // barbero/FEME de lo que se le paga, pero la bebida la pagó la barbería con otra plata.
+    const retirosHoy = allRetiros.filter(r => !r.eliminado && r.estado === 'confirmado' && r.creadoEn && r.creadoEn.toDate() >= today && r.creadoEn.toDate() < todayEnd && r.origen !== 'bebida');
     const retiroEfectivo = retirosHoy.filter(r => r.metodoPago !== 'transferencia').reduce((s, r) => s + (r.monto || 0), 0);
     const retiroTransferencia = retirosHoy.filter(r => r.metodoPago === 'transferencia').reduce((s, r) => s + (r.monto || 0), 0);
-    const efectivo      = efectivoBruto - retiroEfectivo;
-    const transferencia = transferenciaBruto - retiroTransferencia;
-    const totalProductos = ventasProductos.reduce((s, v) => s + (v.total || 0), 0);
-    const totalGeneral   = totalCortes + totalProductos;
     const gastosHoy = allGastos.filter(g => !g.eliminado && g.fecha === hoy);
     const totalGastos = gastosHoy.reduce((s, g) => s + (g.monto || 0), 0);
-    const netoReal = totalGeneral - totalGastos;
+    const gastoEfectivo = gastosHoy.filter(g => g.metodoPago !== 'transferencia').reduce((s, g) => s + (g.monto || 0), 0);
+    const gastoTransferencia = gastosHoy.filter(g => g.metodoPago === 'transferencia').reduce((s, g) => s + (g.monto || 0), 0);
+    const efectivo      = efectivoBruto - retiroEfectivo - gastoEfectivo;
+    const transferencia = transferenciaBruto - retiroTransferencia - gastoTransferencia;
+    const totalProductos = ventasProductos.reduce((s, v) => s + (v.total || 0), 0);
+    const totalGeneral   = totalCortes + totalProductos;
+
+    // Conteo real de caja (lo que contó la persona a cargo), para comparar contra lo calculado
+    const conteoHoy = allConteos.find(c => c.fecha === hoy);
+    const efectivoContado = conteoHoy?.efectivoContado;
+    const transferenciaContado = conteoHoy?.transferenciaContado;
+    const diffEfectivo = (typeof efectivoContado === 'number') ? efectivoContado - efectivo : null;
+    const diffTransferencia = (typeof transferenciaContado === 'number') ? transferenciaContado - transferencia : null;
+    const diffRow = (diff) => diff === null ? '' : `<div class="text-xs font-bold mt-1.5 ${diff === 0 ? 'text-emerald-400' : 'text-red-400'}">${diff === 0 ? '✓ Coincide' : `${diff > 0 ? '+' : ''}$${diff.toLocaleString('es-AR')} de diferencia`}</div>`;
 
     // Cortes por barbero
     const byBarber = {};
@@ -2505,7 +2638,7 @@ function renderCierreCaja() {
 
     const html = `
         <!-- Resumen superior: tiles grandes -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div class="grid grid-cols-3 gap-3 mb-6">
             <div class="glass-card rounded-2xl p-4 md:p-5 text-center">
                 <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mb-1">Cortes</div>
                 <div class="text-xl md:text-3xl font-extrabold text-white">$${totalCortes.toLocaleString('es-AR')}</div>
@@ -2521,23 +2654,39 @@ function renderCierreCaja() {
                 <div class="text-xl md:text-3xl font-extrabold text-blue-300">$${transferencia.toLocaleString('es-AR')}</div>
                 <div class="text-[10px] md:text-xs mt-1 ${retiroTransferencia>0?'text-rose-400':'text-blue-800'}">${retiroTransferencia>0?`−$${retiroTransferencia.toLocaleString('es-AR')} retiros`:'📲'}</div>
             </div>
-            <div class="glass-card rounded-2xl p-4 md:p-5 text-center col-span-2 md:col-span-1">
-                <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest mb-1">Total del día</div>
-                <div class="text-2xl md:text-3xl font-extrabold text-emerald-400">$${totalGeneral.toLocaleString('es-AR')}</div>
-                <div class="text-[10px] md:text-xs text-emerald-700 mt-1">general</div>
+        </div>
+
+        <!-- Detalle de qué compone Efectivo y Transferencia -->
+        <div class="glass-card rounded-2xl p-5 mb-4">
+            <div class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Detalle de Efectivo y Transferencia</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                <div>
+                    <div class="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mb-1">💵 Efectivo</div>
+                    ${ccDetalleRows(cortesEfectivo, bebidaEfectivo, prodEfectivo, gastoEfectivo, retiroEfectivo, row)}
+                </div>
+                <div>
+                    <div class="text-[10px] text-blue-400 font-bold uppercase tracking-widest mb-1">📲 Transferencia</div>
+                    ${ccDetalleRows(cortesTransferencia, bebidaTransferencia, prodTransferencia, gastoTransferencia, retiroTransferencia, row)}
+                </div>
             </div>
-            ${totalGastos > 0 ? `
-            <div class="glass-card rounded-2xl p-4 md:p-5 col-span-2 md:col-span-4 border border-rose-500/20 flex items-center justify-between gap-4">
-                <div class="text-center flex-1">
-                    <div class="text-[10px] text-rose-400 uppercase tracking-widest mb-1">Gastos</div>
-                    <div class="text-xl font-bold text-rose-400">−$${totalGastos.toLocaleString('es-AR')}</div>
+        </div>
+
+        <!-- Verificar caja: conteo real vs. calculado -->
+        <div class="glass-card rounded-2xl p-5 mb-4 border border-amber-500/20">
+            <div class="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-3">🧮 Verificar caja (conteo real)</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
+                <div>
+                    <label class="text-[10px] text-gray-500 uppercase font-bold">Efectivo contado</label>
+                    <input type="number" id="conteo-efectivo-input" value="${efectivoContado ?? ''}" placeholder="$0" class="w-full mt-1 p-3 bg-black/30 border border-gray-700 rounded-xl text-white text-lg font-bold focus:border-amber-500 outline-none">
+                    ${diffRow(diffEfectivo)}
                 </div>
-                <div class="text-gray-600 text-xl">→</div>
-                <div class="text-center flex-1">
-                    <div class="text-[10px] text-emerald-400 uppercase tracking-widest mb-1">Neto real</div>
-                    <div class="text-2xl font-extrabold ${netoReal >= 0 ? 'text-emerald-400' : 'text-red-400'}">$${netoReal.toLocaleString('es-AR')}</div>
+                <div>
+                    <label class="text-[10px] text-gray-500 uppercase font-bold">Transferencia contada</label>
+                    <input type="number" id="conteo-transferencia-input" value="${transferenciaContado ?? ''}" placeholder="$0" class="w-full mt-1 p-3 bg-black/30 border border-gray-700 rounded-xl text-white text-lg font-bold focus:border-amber-500 outline-none">
+                    ${diffRow(diffTransferencia)}
                 </div>
-            </div>` : ''}
+            </div>
+            <button id="btn-guardar-conteo" onclick="window.guardarConteoCaja()" class="w-full bg-amber-600/20 border border-amber-500 text-amber-300 font-bold text-sm py-2.5 rounded-xl hover:bg-amber-600/30 transition">Guardar conteo</button>
         </div>
 
         <!-- Detalle: 1 col mobile / 3 cols desktop -->
@@ -2860,13 +3009,15 @@ function renderHistoryRec() {
     wrap.classList.remove('hidden');
     list.innerHTML = combined.map(item => {
         const eliminado = item.eliminado === true;
+        const bt = BARBER_THEME[item.barbero];
         const ec = eliminado ? 'text-gray-600' : item.estado === 'confirmado' ? 'text-emerald-400' : 'text-red-400';
         const ei = eliminado ? '🗑' : item.estado === 'confirmado' ? '✓' : '✗';
-        const bdr = eliminado ? 'border-gray-700/30' : item.tipo === 'retiro' ? 'border-violet-500/20' : 'border-yellow-500/20';
+        const bdr = eliminado ? 'border-gray-700/30' : bt ? `${bt.border}/40` : item.tipo === 'retiro' ? 'border-violet-500/20' : 'border-yellow-500/20';
+        const barberCls = eliminado ? 'text-gray-600' : bt ? bt.text : 'text-gray-100';
         const textCls = eliminado ? 'line-through text-gray-600' : 'text-gray-100';
         const montoCls = eliminado ? 'line-through text-gray-600' : 'text-white';
         const desc = item.descripcion ? ` · <span class="font-normal">${item.descripcion}</span>` : '';
-        const lbl = item.tipo === 'retiro' ? `Retiro · ${item.barbero}${desc}` : `Propina · ${item.barbero}${item.descripcion ? ' · '+item.descripcion : ''}`;
+        const lbl = item.tipo === 'retiro' ? `Retiro · <span class="${barberCls}">${item.barbero}</span>${desc}` : `Propina · <span class="${barberCls}">${item.barbero}</span>${item.descripcion ? ' · '+item.descripcion : ''}`;
         const f = item.creadoEn ? item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) : '';
         const notaBtn = (!eliminado && item.tipo === 'retiro') ? `<button onclick="window.openRetiroNotaRec('${item.id}','${(item.descripcion||'').replace(/'/g,"\\'")}',${item.monto},'${item.barbero}')" class="text-gray-600 hover:text-violet-400 transition ml-2"><i class="fas fa-pencil-alt text-xs"></i></button>` : '';
         const delBtn = eliminado ? '' : item.tipo === 'retiro' ? `<button onclick="window.deleteRetiroRec('${item.id}')" class="text-gray-700 hover:text-red-400 transition ml-1"><i class="fas fa-trash text-xs"></i></button>` : `<button onclick="window.deletePropinaRec('${item.id}')" class="text-gray-700 hover:text-red-400 transition ml-1"><i class="fas fa-trash text-xs"></i></button>`;
@@ -2974,8 +3125,12 @@ window.setRetMetodo = (m) => {
     document.getElementById('ret-man-transferencia').className = m === 'transferencia' ? onT : off;
 };
 window.openRetiroManualModal = () => {
+    // Poblar barberos dinámicamente (incluye los agregados nuevos) + FEME
+    const sel = document.getElementById('ret-man-barbero');
+    sel.innerHTML = '<option value="" disabled selected>Elegí</option>'
+        + BARBERS.map(b => `<option>${b}</option>`).join('')
+        + '<option value="FEME">FEME (Recepción · mensual)</option>';
     document.getElementById('ret-man-monto').value = '';
-    document.getElementById('ret-man-barbero').value = '';
     setRetMetodo('efectivo');
     showModal('retiro-manual-rec-modal');
 };
@@ -3059,6 +3214,35 @@ function listenToGastos() {
         }
     );
 }
+
+function listenToConteos() {
+    onSnapshot(
+        query(collection(db, PATH_CONTEOS), orderBy('fecha', 'desc'), limit(120)),
+        snap => {
+            allConteos = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+            if (!document.getElementById('cierre-caja-view').classList.contains('hidden') && cierreCajaTab === 'diario') renderCierreCaja();
+        }
+    );
+}
+
+window.guardarConteoCaja = async () => {
+    const hoyStr = new Date().toLocaleDateString('en-CA');
+    const fecha = cierreCajaFechaSel || hoyStr;
+    const efInput = document.getElementById('conteo-efectivo-input');
+    const trInput = document.getElementById('conteo-transferencia-input');
+    const efectivoContado = efInput.value === '' ? null : Number(efInput.value);
+    const transferenciaContado = trInput.value === '' ? null : Number(trInput.value);
+    if (efectivoContado === null && transferenciaContado === null) return;
+    const btn = document.getElementById('btn-guardar-conteo');
+    btn.disabled = true; const prevTxt = btn.textContent; btn.textContent = 'Guardando...';
+    try {
+        const data = { fecha, userEmail: currentUser.email, actualizadoEn: serverTimestamp() };
+        if (efectivoContado !== null) data.efectivoContado = efectivoContado;
+        if (transferenciaContado !== null) data.transferenciaContado = transferenciaContado;
+        await setDoc(doc(db, PATH_CONTEOS, fecha), data, { merge: true });
+    } catch (e) { alert('No se pudo guardar el conteo'); }
+    btn.disabled = false; btn.textContent = prevTxt;
+};
 
 window.openGastosPanel = () => {
     const p = document.getElementById('gastos-panel');
@@ -3518,8 +3702,8 @@ async function listenToBarberos() {
                     const t = BARBER_EXTRA_THEMES[extraThemeIdx++ % BARBER_EXTRA_THEMES.length];
                     BARBER_THEME[name] = { ...t, initial: name.charAt(0).toUpperCase() };
                 }
-                if (email) BARBER_EMAIL_MAP[email] = name;
             }
+            if (email) BARBER_EMAIL_MAP[email] = name;
         });
         renderCuts();
     });
@@ -3759,6 +3943,26 @@ init();
             const apply = function () {
                 const icon = document.getElementById('money-eye-icon');
                 if (icon) icon.className = 'fas text-sm ' + (hidden ? 'fa-eye-slash' : 'fa-eye');
+            };
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', apply);
+            } else { apply(); }
+        })();
+
+        // Mostrar/ocultar cantidad de cortes (ojito aparte, persistente y sincronizado con anotar)
+        window.toggleCortesVisibility = function () {
+            const hidden = document.body.classList.toggle('cortes-hidden');
+            try { localStorage.setItem('sb_cortes_hidden', hidden ? '1' : '0'); } catch (e) {}
+            const icon = document.getElementById('cortes-eye-icon');
+            if (icon) icon.className = 'fas text-[9px] ' + (hidden ? 'fa-eye-slash' : 'fa-eye');
+        };
+        (function () {
+            let hidden = false;
+            try { hidden = localStorage.getItem('sb_cortes_hidden') === '1'; } catch (e) {}
+            if (hidden) document.body.classList.add('cortes-hidden');
+            const apply = function () {
+                const icon = document.getElementById('cortes-eye-icon');
+                if (icon) icon.className = 'fas text-[9px] ' + (hidden ? 'fa-eye-slash' : 'fa-eye');
             };
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', apply);

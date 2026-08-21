@@ -226,6 +226,22 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                             <option value="OFERTA">OFERTA</option>
                         </select>
                     </div>
+                    <div class="form-field">
+                        <label class="field-label">Categoría</label>
+                        <select id="p-categoria">
+                            <option value="otros">Otros</option>
+                            <option value="ceras">Ceras</option>
+                            <option value="peines">Peines</option>
+                            <option value="navajas">Navajas</option>
+                            <option value="alfombras">Alfombras</option>
+                            <option value="aftershave">Aftershave</option>
+                            <option value="capas">Capas</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label class="field-label">Stock (vacío = ilimitado)</label>
+                        <input type="number" id="p-stock" placeholder="Sin límite" min="0">
+                    </div>
                 </div>
                 <div class="form-grid full" style="margin-top:12px;">
                     <div class="form-field">
@@ -369,6 +385,11 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
             <div class="section-title" style="margin-top:28px;">Listos para envío</div>
             <div id="pedido-list" class="prod-list">
                 <div class="empty-state"><i class="fas fa-box"></i><p>Cargando...</p></div>
+            </div>
+
+            <div class="section-title" style="margin-top:28px;">Enviados recientemente</div>
+            <div id="pedido-list-enviados" class="prod-list">
+                <div class="empty-state"><i class="fas fa-check-circle"></i><p>Cargando...</p></div>
             </div>
         </div>
     </div>
@@ -578,7 +599,8 @@ function renderPedidoList() {
     var deliveryPedidos = allPedidos.filter(function(p) { return p.shipping && p.shipping.mode === 'delivery'; });
     // Las transferencias necesitan confirmación manual antes de poder imprimir etiqueta.
     var pendientes = deliveryPedidos.filter(function(p) { return p.metodoPago === 'transferencia' && !p.aprobado; });
-    var listos     = deliveryPedidos.filter(function(p) { return !(p.metodoPago === 'transferencia' && !p.aprobado); });
+    var listos     = deliveryPedidos.filter(function(p) { return !(p.metodoPago === 'transferencia' && !p.aprobado) && !p.enviado; });
+    var enviados   = deliveryPedidos.filter(function(p) { return !(p.metodoPago === 'transferencia' && !p.aprobado) && p.enviado; });
 
     var elPend = document.getElementById('pedido-list-pendientes');
     if (!pendientes.length) {
@@ -604,28 +626,58 @@ function renderPedidoList() {
     var el = document.getElementById('pedido-list');
     if (!listos.length) {
         el.innerHTML = '<div class="empty-state"><i class="fas fa-box"></i><p>Todavía no hay pedidos listos para enviar.</p></div>';
-        return;
+    } else {
+        el.innerHTML = listos.map(function(p) {
+            var b = p.buyer || {};
+            var s = p.shipping || {};
+            var fecha = (p.creadoEn && p.creadoEn.toDate) ? timeAgo(p.creadoEn.toDate()) : '';
+            var direccion = [s.address, s.city, s.provincia].filter(Boolean).join(', ');
+            var esFlex = ZONAS_FLEX.indexOf(s.zona) !== -1;
+            var zonaTag = '<span class="pedido-zona' + (esFlex ? ' flex' : '') + '">' + (ZONA_LABELS[s.zona] || s.zona || '?') + '</span>';
+            var accion = esFlex
+                ? '<button class="btn-print" onclick="printLabel(\'' + p.id + '\')"><i class="fas fa-print"></i> Etiqueta</button>'
+                : '<span class="pedido-no-flex">Correo Argentino</span>';
+            var enviarBtn = '<button class="btn-print" style="background:#16a34a;color:#fff;" onclick="marcarEnviado(\'' + p.id + '\')"><i class="fas fa-check"></i> Enviado</button>';
+            return '<div class="pedido-row">' +
+                '<div class="pedido-meta">' +
+                    '<div class="pedido-id">' + p.id + ' ' + zonaTag + '</div>' +
+                    '<div class="pedido-buyer">' + (b.name || 'Sin nombre') + ' · ' + (b.phone || 'Sin teléfono') + '</div>' +
+                    '<div class="pedido-addr">' + (direccion || 'Sin dirección') + (s.postalCode ? ' (CP ' + s.postalCode + ')' : '') + '</div>' +
+                    '<div class="pedido-time">' + fecha + '</div>' +
+                '</div>' +
+                '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:stretch;">' + accion + enviarBtn + '</div>' +
+            '</div>';
+        }).join('');
     }
-    el.innerHTML = listos.map(function(p) {
-        var b = p.buyer || {};
-        var s = p.shipping || {};
-        var fecha = (p.creadoEn && p.creadoEn.toDate) ? timeAgo(p.creadoEn.toDate()) : '';
-        var direccion = [s.address, s.city, s.provincia].filter(Boolean).join(', ');
-        var esFlex = ZONAS_FLEX.indexOf(s.zona) !== -1;
-        var zonaTag = '<span class="pedido-zona' + (esFlex ? ' flex' : '') + '">' + (ZONA_LABELS[s.zona] || s.zona || '?') + '</span>';
-        var accion = esFlex
-            ? '<button class="btn-print" onclick="printLabel(\'' + p.id + '\')"><i class="fas fa-print"></i> Etiqueta</button>'
-            : '<span class="pedido-no-flex">Correo Argentino</span>';
-        return '<div class="pedido-row">' +
-            '<div class="pedido-meta">' +
-                '<div class="pedido-id">' + p.id + ' ' + zonaTag + '</div>' +
-                '<div class="pedido-buyer">' + (b.name || 'Sin nombre') + ' · ' + (b.phone || 'Sin teléfono') + '</div>' +
-                '<div class="pedido-addr">' + (direccion || 'Sin dirección') + (s.postalCode ? ' (CP ' + s.postalCode + ')' : '') + '</div>' +
-                '<div class="pedido-time">' + fecha + '</div>' +
-            '</div>' +
-            accion +
-        '</div>';
-    }).join('');
+
+    var elEnv = document.getElementById('pedido-list-enviados');
+    if (elEnv) {
+        elEnv.innerHTML = !enviados.length
+            ? '<div class="empty-state"><i class="fas fa-check-circle"></i><p>Todavía no marcaste ningún envío como despachado.</p></div>'
+            : enviados.slice(0, 30).map(function(p) {
+                var b = p.buyer || {};
+                var s = p.shipping || {};
+                var direccion = [s.address, s.city, s.provincia].filter(Boolean).join(', ');
+                var fechaEnv = (p.enviadoEn && p.enviadoEn.toDate) ? timeAgo(p.enviadoEn.toDate()) : '';
+                return '<div class="pedido-row" style="opacity:.6;">' +
+                    '<div class="pedido-meta">' +
+                        '<div class="pedido-id">' + p.id + '</div>' +
+                        '<div class="pedido-buyer">' + (b.name || 'Sin nombre') + '</div>' +
+                        '<div class="pedido-addr">' + (direccion || 'Sin dirección') + '</div>' +
+                        '<div class="pedido-time">Enviado ' + fechaEnv + '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+    }
+}
+
+function marcarEnviado(pedidoId) {
+    db.collection('tienda_pedidos').doc(pedidoId).update({
+        enviado: true,
+        enviadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    })
+        .then(function() { showToast('Pedido marcado como enviado ✓', true); })
+        .catch(function(e) { console.error('marcarEnviado error:', e); showToast('Error al marcar como enviado (' + (e.code||e.message) + ')', false, 4000); });
 }
 
 function aprobarPedido(pedidoId) {
@@ -757,6 +809,8 @@ function saveProducto() {
                 variantes: variantes,
                 price: price,
                 tag: document.getElementById('p-tag').value || null,
+                categoria: document.getElementById('p-categoria').value || 'otros',
+                stock: (function(){ var v = document.getElementById('p-stock').value; return v === '' ? null : parseInt(v); })(),
                 description: document.getElementById('p-desc').value.trim(),
                 updatedAt: now
             };
@@ -789,6 +843,8 @@ function cancelEditProducto() {
         document.getElementById(id).value = '';
     });
     document.getElementById('p-tag').value = '';
+    document.getElementById('p-categoria').value = 'otros';
+    document.getElementById('p-stock').value = '';
     document.getElementById('p-edit-id').value = '';
     removeFile('p-img-file','p-img-preview','p-img-zone');
     document.getElementById('p-cancel-btn').style.display = 'none';
@@ -806,6 +862,8 @@ function editProducto(id) {
     document.getElementById('p-variantes').value = (p.variantes || []).join(', ');
     document.getElementById('p-price').value   = p.price || '';
     document.getElementById('p-tag').value     = p.tag || '';
+    document.getElementById('p-categoria').value = p.categoria || 'otros';
+    document.getElementById('p-stock').value   = (p.stock === null || p.stock === undefined) ? '' : p.stock;
     document.getElementById('p-desc').value    = p.description || '';
     document.getElementById('p-video').value   = p.videoUrl || '';
     document.getElementById('p-img-url').value = p.image || '';
@@ -864,7 +922,7 @@ function prodRow(p, isCustom, hidden) {
         (p.image ? '<img class="prod-thumb" src="' + p.image + '" alt="" onerror="this.style.display=\'none\'">' : '<div class="prod-thumb-placeholder">📦</div>') +
         '<div class="prod-info">' +
             '<div class="prod-name">' + p.name + (p.tag ? '<span class="prod-tag-badge">' + p.tag + '</span>' : '') + (!isCustom ? '<span class="prod-tag-badge" style="background:rgba(99,102,241,.15);color:#818cf8;">WEB</span>' : '') + (hidden ? '<span class="prod-tag-badge" style="background:rgba(248,113,113,.15);color:#f87171;">OCULTO</span>' : '') + '</div>' +
-            '<div class="prod-meta">$' + (p.price||0).toLocaleString('es-AR') + (p.variant?' · '+p.variant:'') + (p.variantes&&p.variantes.length?' · '+p.variantes.length+' opciones ('+p.variantes.join('/')+')':'') + (p.videoUrl?' · 🎥':'') + '</div>' +
+            '<div class="prod-meta">$' + (p.price||0).toLocaleString('es-AR') + (p.variant?' · '+p.variant:'') + (p.variantes&&p.variantes.length?' · '+p.variantes.length+' opciones ('+p.variantes.join('/')+')':'') + (p.videoUrl?' · 🎥':'') + (typeof p.stock === 'number' ? (' · ' + (p.stock === 0 ? '<span style="color:#f87171;font-weight:700;">Sin stock</span>' : 'Stock: ' + p.stock)) : '') + '</div>' +
         '</div>' +
         '<div class="prod-actions">' +
             '<button class="btn-edit" onclick="editProducto(\'' + p.id + '\')" title="Editar"><i class="fas fa-pen"></i></button>' +

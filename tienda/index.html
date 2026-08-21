@@ -53,6 +53,11 @@
         .cart-btn svg { width:18px; height:18px; stroke:var(--ink); }
         .cart-count { display:none; position:absolute; top:-5px; right:-5px; width:18px; height:18px; background:var(--ink); color:var(--paper); font-size:9px; font-weight:800; border-radius:50%; align-items:center; justify-content:center; border:2px solid var(--paper); }
 
+        /* ── AVISO PAGO FALLIDO ── */
+        .payment-error-banner { display:flex; align-items:center; justify-content:center; gap:14px; background:#fef2f2; border-bottom:1px solid #fecaca; color:#991b1b; font-size:12.5px; font-weight:600; line-height:1.4; padding:12px 44px 12px 20px; text-align:center; position:relative; }
+        .payment-error-banner button { position:absolute; right:14px; top:50%; transform:translateY(-50%); background:none; border:none; color:#991b1b; font-size:15px; cursor:pointer; padding:4px; opacity:.7; }
+        .payment-error-banner button:hover { opacity:1; }
+
         /* ── HERO ── */
         .hero { max-width:1100px; margin:0 auto; padding:32px 16px 28px; border-bottom:1px solid rgba(0,0,0,.08); }
         @media(min-width:640px) { .hero { padding:52px 20px 44px; } }
@@ -62,6 +67,26 @@
         h1 em { font-style:normal; color:var(--g600); }
         .hero-desc { font-size:14px; color:var(--g600); line-height:1.6; max-width:420px; }
         @media(min-width:640px) { .hero-desc { font-size:15px; } }
+        .hero-search-title { font-size:clamp(24px,6vw,42px); font-weight:900; line-height:1.05; letter-spacing:-.03em; margin-bottom:18px; }
+
+        /* ── BUSCADOR ── */
+        .search-bar { position:relative; display:flex; align-items:center; max-width:480px; border:1.5px solid rgba(0,0,0,.14); background:var(--paper); transition:border-color .2s; }
+        .search-bar:focus-within { border-color:var(--ink); }
+        .search-icon { width:17px; height:17px; stroke:var(--g600); margin-left:16px; flex-shrink:0; }
+        .search-bar input { flex:1; min-width:0; border:none; outline:none; background:none; font-family:'Inter',sans-serif; font-size:15px; font-weight:600; padding:15px 10px; color:var(--ink); }
+        .search-bar input::placeholder { color:var(--g700); font-weight:500; }
+        @media(min-width:640px) { .search-bar input { font-size:16px; padding:17px 12px; } .search-icon { margin-left:18px; } }
+        .search-clear { display:none; width:30px; height:30px; margin-right:8px; border:none; background:var(--g950); color:var(--g500); font-size:16px; line-height:1; cursor:pointer; flex-shrink:0; font-family:'Inter',sans-serif; -webkit-appearance:none; }
+        .search-clear:hover { color:var(--ink); }
+        .search-results-note { margin-top:10px; font-size:11px; color:var(--g600); letter-spacing:.02em; }
+
+        /* ── CATEGORÍAS ── */
+        .category-filters { display:flex; gap:8px; overflow-x:auto; padding:2px 0 6px; margin-bottom:16px; scrollbar-width:none; -ms-overflow-style:none; }
+        .category-filters::-webkit-scrollbar { display:none; }
+        .cat-pill { flex-shrink:0; border:1px solid rgba(0,0,0,.14); background:none; padding:8px 15px; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--g500); cursor:pointer; transition:all .15s; font-family:'Inter',sans-serif; -webkit-appearance:none; white-space:nowrap; }
+        .cat-pill:hover { border-color:var(--ink); color:var(--ink); }
+        .cat-pill.active { background:var(--ink); border-color:var(--ink); color:#fff; }
+        .no-results { grid-column:1/-1; padding:40px 16px; text-align:center; color:var(--g600); font-size:13px; }
 
         /* ── PRODUCTS ── */
         .products-section { max-width:1100px; margin:0 auto; padding:24px 12px 100px; }
@@ -73,8 +98,11 @@
 
         .products-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:rgba(0,0,0,.08); border:1px solid rgba(0,0,0,.08); }
         @media(min-width:900px) { .products-grid { grid-template-columns:repeat(3,1fr); } }
-        .kits-grid-wrap { grid-template-columns:1fr; }
-        @media(min-width:640px) { .kits-grid-wrap { grid-template-columns:repeat(2,1fr); } }
+        .kits-grid-wrap { grid-template-columns:repeat(2,1fr); }
+        @media(min-width:900px) { .kits-grid-wrap { grid-template-columns:repeat(3,1fr); } }
+        .kits-grid-wrap .kit-includes li { padding:4px 0 4px 18px; font-size:11px; }
+        .kits-grid-wrap .product-info { padding:10px; }
+        @media(min-width:580px) { .kits-grid-wrap .product-info { padding:14px; } }
 
         .product-card { background:#111; display:flex; flex-direction:column; transition:transform .4s cubic-bezier(.16,1,.3,1); }
         .product-card:hover { transform:translateY(-4px); }
@@ -117,7 +145,11 @@
         .overlay.show { opacity:1; pointer-events:all; }
 
         /* ── CART DRAWER ── */
-        .cart-drawer { position:fixed; top:0; right:0; width:100%; max-width:420px; height:100%; height:100dvh; background:#fff; border-left:1px solid rgba(0,0,0,.1); z-index:300; transform:translateX(100%); transition:transform .38s cubic-bezier(.16,1,.3,1); display:flex; flex-direction:column; }
+        .cart-drawer { position:fixed; top:0; right:0; width:100%; max-width:420px; height:100%; height:100dvh; background:#111; color:#e8e8e8; border-left:1px solid rgba(255,255,255,.08); z-index:300; transform:translateX(100%); transition:transform .38s cubic-bezier(.16,1,.3,1); display:flex; flex-direction:column; }
+        #cart-drawer .close-btn svg { stroke:#a3a3a3; }
+        #cart-drawer .qty-btn { color:#e8e8e8; }
+        #cart-drawer .cart-item-name { color:#f0f0f0; }
+        #cart-drawer .cart-item-price, #cart-drawer .cart-total-value { color:#fff; }
         .cart-drawer.open { transform:translateX(0); }
         .drawer-header { padding:16px 20px; border-bottom:1px solid rgba(255,255,255,.07); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
         .drawer-title { font-size:11px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--g600); }
@@ -125,7 +157,7 @@
         .close-btn svg { width:14px; height:14px; stroke:var(--g400); }
         .cart-items { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
         .cart-item { display:flex; gap:14px; padding:18px 20px; border-bottom:1px solid rgba(255,255,255,.05); align-items:flex-start; }
-        .cart-item-img { width:52px; height:52px; background:#f0f0f0; border:1px solid rgba(0,0,0,.08); flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+        .cart-item-img { width:52px; height:52px; background:#1a1a1a; border:1px solid rgba(255,255,255,.1); flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden; }
         .cart-item-img svg { width:22px; height:22px; stroke:rgba(255,255,255,.18); }
         .cart-item-info { flex:1; min-width:0; }
         .cart-item-name { font-size:14px; font-weight:700; margin-bottom:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -143,8 +175,8 @@
         .cart-total-row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px; }
         .cart-total-label { font-size:10px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--g700); }
         .cart-total-value { font-size:26px; font-weight:900; letter-spacing:-.03em; }
-        .btn-checkout { width:100%; height:54px; background:var(--ink); color:var(--paper); border:none; font-size:12px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; cursor:pointer; font-family:'Inter',sans-serif; -webkit-appearance:none; transition:background .15s; }
-        .btn-checkout:active { background:var(--g200); }
+        .btn-checkout { width:100%; height:54px; background:#fff; color:#111; border:none; font-size:12px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; cursor:pointer; font-family:'Inter',sans-serif; -webkit-appearance:none; transition:background .15s; }
+        .btn-checkout:active { background:var(--g900); }
 
         /* ── MOBILE CART BAR ── */
         .mobile-cart-bar { display:none; position:fixed; bottom:0; left:0; right:0; z-index:90; background:var(--ink); padding:12px 20px; padding-bottom:max(12px,env(safe-area-inset-bottom)); border-top:1px solid var(--g200); }
@@ -197,14 +229,25 @@
         @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
         /* ── CHECKOUT: rediseño completo, a juego con el resto del sitio ── */
-        #checkout-modal .modal-box { background:#111; border-color:rgba(255,255,255,.08); color:#e8e8e8; max-width:480px; }
+        #checkout-modal .modal-box { background:#111; border-color:rgba(255,255,255,.08); color:#e8e8e8; max-width:480px; padding-bottom:0; }
         #checkout-modal .modal-header { border-bottom-color:rgba(255,255,255,.08); }
         #checkout-modal .modal-title { color:#888; }
         #checkout-modal .close-btn { border-color:rgba(255,255,255,.12); }
         #checkout-modal .close-btn svg { stroke:#a3a3a3; }
 
-        #checkout-modal .co-section { margin-bottom:26px; }
+        #checkout-modal .co-section { margin-bottom:18px; }
         #checkout-modal .co-section:last-of-type { margin-bottom:0; }
+        /* Barra de pago fija abajo (siempre visible, con total) */
+        #checkout-modal .co-pay-bar { position:sticky; bottom:0; z-index:2; margin:16px -20px 0; padding:12px 20px calc(12px + env(safe-area-inset-bottom)); background:#111; border-top:1px solid rgba(255,255,255,.1); box-shadow:0 -8px 24px rgba(0,0,0,.4); }
+        #checkout-modal .co-pay-total { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+        #checkout-modal .co-pay-total .lbl { font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#888; }
+        #checkout-modal .co-pay-total .val { font-size:22px; font-weight:900; color:#fff; letter-spacing:-.02em; }
+        @media(min-width:640px){ #checkout-modal .co-pay-bar { margin:16px -28px 0; padding:18px 28px; } }
+        /* Mobile: checkout a pantalla completa (header fijo arriba, pago fijo abajo) */
+        @media(max-width:639px){
+            #checkout-modal .modal-box { height:100dvh; max-height:100dvh; padding-top:0; }
+            #checkout-modal .modal-header { position:sticky; top:0; z-index:3; background:#111; margin:0 -20px 22px; padding:20px 20px 16px; }
+        }
         #checkout-modal .co-section-label { display:flex; align-items:center; gap:8px; font-size:10px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:#e8e8e8; margin-bottom:14px; }
         #checkout-modal .co-num { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; font-size:9px; font-weight:800; color:#4ade80; border:1px solid rgba(74,222,128,.4); flex-shrink:0; }
 
@@ -431,17 +474,22 @@
     </div>
 </header>
 
+<!-- AVISO DE PAGO NO PROCESADO -->
+<div id="payment-error-banner" class="payment-error-banner" style="display:none;">
+    <span>⚠️ No pudimos procesar tu pago. Tu carrito sigue guardado — probá de nuevo o elegí otro medio de pago.</span>
+    <button type="button" onclick="dismissPaymentError()" aria-label="Cerrar aviso">✕</button>
+</div>
+
 <!-- HERO -->
 <section class="hero">
     <div class="hero-eyebrow reveal">Productos Profesionales</div>
-    <h1 style="font-size:clamp(30px,9vw,80px);font-weight:900;line-height:1.0;letter-spacing:-.03em;margin-bottom:12px;">
-        <span class="word-reveal" style="animation-delay:.06s">El</span>
-        <span class="word-reveal" style="animation-delay:.14s">estilo</span><br>
-        <span class="word-reveal" style="animation-delay:.22s">que</span>
-        <span class="word-reveal" style="animation-delay:.30s">buscás,</span><br>
-        <em class="word-reveal" style="animation-delay:.38s;font-style:normal;color:var(--g600)">en casa.</em>
-    </h1>
-    <p class="hero-desc reveal" style="animation-delay:.16s">Los mismos productos que usan nuestros barberos, disponibles para vos.</p>
+    <h1 class="hero-search-title word-reveal" style="animation-delay:.06s">¿Qué estás buscando?</h1>
+    <div class="search-bar reveal" style="animation-delay:.16s">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="search-input" placeholder="Pomada, cera, peine, capa..." autocomplete="off" aria-label="Buscar productos" oninput="handleSearch(this.value)">
+        <button type="button" class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+    </div>
+    <div class="search-results-note" id="search-results-note" style="display:none;"></div>
 </section>
 
 <!-- BENEFICIOS / CONFIANZA -->
@@ -468,6 +516,16 @@
     <div class="section-header">
         <span class="section-title">Productos individuales</span>
         <span class="product-count" id="prod-count">— productos</span>
+    </div>
+    <div class="category-filters" id="category-filters">
+        <button type="button" class="cat-pill active" data-cat="todos" onclick="setCategory('todos')">Todos</button>
+        <button type="button" class="cat-pill" data-cat="ceras" onclick="setCategory('ceras')">Ceras</button>
+        <button type="button" class="cat-pill" data-cat="peines" onclick="setCategory('peines')">Peines</button>
+        <button type="button" class="cat-pill" data-cat="navajas" onclick="setCategory('navajas')">Navajas</button>
+        <button type="button" class="cat-pill" data-cat="alfombras" onclick="setCategory('alfombras')">Alfombras</button>
+        <button type="button" class="cat-pill" data-cat="aftershave" onclick="setCategory('aftershave')">Aftershave</button>
+        <button type="button" class="cat-pill" data-cat="capas" onclick="setCategory('capas')">Capas</button>
+        <button type="button" class="cat-pill" data-cat="otros" onclick="setCategory('otros')">Otros</button>
     </div>
     <div class="products-grid" id="products-grid">
         <div id="products-skeleton" style="grid-column:1/-1;display:flex;gap:12px;flex-wrap:wrap;">
@@ -579,19 +637,8 @@
             </div>
 
             <div id="panel-transfer" class="info-block" style="display:none;">
-                <div style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.2);padding:10px 14px;margin-bottom:16px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;color:#4ade80;">10% OFF pagando con transferencia</div>
-                <div class="info-block-label">Datos para transferir</div>
-                <div class="info-row">
-                    <div><span class="info-key">Alias</span><br><span class="info-val">tienda.sbbarber</span></div>
-                    <button class="copy-btn" onclick="copyText('tienda.sbbarber',this)">Copiar</button>
-                </div>
-                <div class="info-row">
-                    <div><span class="info-key">CVU</span><br><span class="info-val" style="font-size:11px;font-family:monospace;letter-spacing:.03em">0000003100061376563207</span></div>
-                    <button class="copy-btn" onclick="copyText('0000003100061376563207',this)">Copiar</button>
-                </div>
-                <div class="info-row">
-                    <div><span class="info-key">Titular</span><br><span class="info-val">Agustín Abalo</span></div>
-                </div>
+                <div style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.2);padding:10px 14px;margin-bottom:12px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;color:#4ade80;">10% OFF pagando con transferencia</div>
+                <p style="font-size:12.5px;color:#a3a3a3;line-height:1.6;margin:0;">Al tocar <b style="color:#e8e8e8;">Confirmar pedido</b> te mostramos el alias para transferir y te lo enviamos por mail. Hacés la transferencia y nos pasás el comprobante por WhatsApp. 🖤</p>
             </div>
         </div>
 
@@ -600,8 +647,11 @@
             <div class="order-summary" id="order-summary"></div>
         </div>
 
-        <button id="btn-pay" class="btn-pay" onclick="submitCheckout()">Pagar con MercadoPago</button>
-        <p id="checkout-error" class="error-msg"></p>
+        <div class="co-pay-bar">
+            <div class="co-pay-total"><span class="lbl">Total</span><span class="val" id="pay-total">$0</span></div>
+            <button id="btn-pay" class="btn-pay" onclick="submitCheckout()">Pagar con MercadoPago</button>
+            <p id="checkout-error" class="error-msg"></p>
+        </div>
     </div>
 </div>
 
@@ -610,7 +660,7 @@ const PRODUCTS = [
     {
         id:'polvo-texturizador', name:'Polvo Texturizador', variant:'15gr', price:12000,
         description:'Volumen y textura al instante. Fijación media con acabado mate natural.',
-        tag:'FAVORITO',
+        tag:'FAVORITO', categoria:'ceras',
         image:'https://i.imgur.com/Fx1ZtDm.jpeg',
         beforeAfter:{ before:'', after:'' },
         icon:`<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c0 0-4 4-4 8s4 8 4 8 4-4 4-8-4-8-4-8z"/><path d="M2 12h20M12 2v20"/></svg>`
@@ -618,7 +668,7 @@ const PRODUCTS = [
     {
         id:'pomada-mate', name:'Pomada Mate', variant:'Opcion 90gr', price:12000,
         description:'Control total sin brillo. Fijación fuerte, ideal para looks modernos.',
-        tag:'MÁS VENDIDO',
+        tag:'MÁS VENDIDO', categoria:'ceras',
         image:'https://i.imgur.com/lX2zxQJ.jpeg',
         beforeAfter:{ before:'', after:'' },
         icon:`<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="1"/><path d="M8 8V6a4 4 0 018 0v2"/></svg>`
@@ -626,56 +676,56 @@ const PRODUCTS = [
     {
         id:'pomada-brillante', name:'Pomada Brillante', variant:'Opcion 50gr', price:12000,
         description:'Brillo intenso y fijación duradera. El look retro que marca la diferencia.',
-        tag:null,
+        tag:null, categoria:'ceras',
         image:'https://i.imgur.com/DvuCRX3.jpeg',
         icon:`<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
     },
     {
         id:'polvo-texturizador-black', name:'Polvo Texturizador Original Black', variant:'5gr', price:10000,
         description:'Versión original en black. Volumen y textura extrema con acabado mate oscuro intenso.',
-        tag:'NUEVO',
+        tag:'NUEVO', categoria:'ceras',
         image:'https://i.imgur.com/Pl38xr5.jpeg',
         icon:`<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c0 0-4 4-4 8s4 8 4 8 4-4 4-8-4-8-4-8z"/><path d="M2 12h20M12 2v20"/></svg>`
     },
     {
         id:'aftershave-celeste-black', name:'Aftershave Celeste Original Black', variant:'400ml', price:10900,
         description:'Aftershave profesional Original Black. Efecto calmante, fragancia fresca y duradera.',
-        tag:null,
+        tag:null, categoria:'aftershave',
         image:'https://i.imgur.com/AwQhG9i.jpeg',
         icon:`<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6v4H9z"/><path d="M8 6c0 0-3 2-3 8s3 8 3 8h8s3-2 3-8-3-8-3-8"/></svg>`
     },
     {
         id:'aftershave-violeta-black', name:'Aftershave Violeta Original Black', variant:'400ml', price:10200,
         description:'Aftershave profesional Original Black fragancia violeta. Efecto calmante y duradera.',
-        tag:null,
+        tag:null, categoria:'aftershave',
         image:'https://i.imgur.com/w9uoX7U.jpeg',
         icon:`<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6v4H9z"/><path d="M8 6c0 0-3 2-3 8s3 8 3 8h8s3-2 3-8-3-8-3-8"/></svg>`
     },
     {
         id:'quita-pelo-lujo', name:'Quita Pelo Lujo', variant:'Profesional', price:6900,
         description:'Quita pelo profesional de lujo. Limpieza rápida y eficiente del área de corte.',
-        tag:null,
+        tag:null, categoria:'otros',
         image:'https://i.imgur.com/LUO3Biq.jpeg',
         icon:`<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M9 3h6l2 4H7L9 3z"/><path d="M7 7v14h10V7"/></svg>`
     },
     {
         id:'peine-toniguy', name:'Peine Carbon Toniguy', variant:'Profesional', price:3900,
         description:'Peine profesional de barbería. Resistente, liviano y de uso diario.',
-        tag:null,
+        tag:null, categoria:'peines',
         image:'https://i.imgur.com/ZJLQVrJ.jpeg',
         icon:`<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>`
     },
     {
         id:'capa-everest', name:'Capa de Corte Everest', variant:'Blanco y Negro', price:17000,
         description:'Capa profesional estilo pinstripe. Material impermeable, liviano y fácil de limpiar. Ideal para uso diario en barbería.',
-        tag:'NUEVO',
+        tag:'NUEVO', categoria:'capas',
         image:'https://i.imgur.com/Axw82rM.jpeg',
         icon:`<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L8 6H4v14h16V6h-4L12 2z"/><path d="M8 6v14M16 6v14"/></svg>`
     },
     {
         id:'desinfectante-everest', name:'Desinfectante Aerosol', variant:'Everest 5 en 1', price:10200,
         description:'Desinfectante profesional de uso múltiple. Elimina bacterias, virus y hongos en instrumental.',
-        tag:null,
+        tag:null, categoria:'otros',
         image:'https://i.imgur.com/c7oqrOb.jpeg',
         icon:`<svg viewBox="0 0 24 24" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6v4H9z"/><path d="M8 6c0 0-3 2-3 8s3 8 3 8h8s3-2 3-8-3-8-3-8"/><line x1="12" y1="10" x2="12" y2="16"/><line x1="9" y1="13" x2="15" y2="13"/></svg>`
     }
@@ -683,8 +733,9 @@ const PRODUCTS = [
 
 const TRANSFER_DISCOUNT = 0.10;
 // Bloque de precio compartido por card de producto, card de kit y modal de detalle.
-// El precio grande es el real (el que cobra MercadoPago); el ahorro por transferencia
-// se muestra como nota aparte, no como tachado, para no parecer una oferta falsa.
+// El precio grande y en verde es el de transferencia (el más barato) — es el que
+// queremos que el cliente vea primero. El precio de Mercado Pago sigue visible,
+// como nota debajo, sin tachar, para que quede claro que no es una oferta trucha.
 const PRICE_BLOCK_SIZES = {
     sm: { main:18, note:9,  badge:8 },
     md: { main:20, note:10, badge:9 },
@@ -695,11 +746,11 @@ function priceBlockHTML(price, size) {
     const discounted = Math.round(price*(1-TRANSFER_DISCOUNT));
     return `
         <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
-            <span style="font-size:${s.main}px;font-weight:900;letter-spacing:-.02em;color:#e8e8e8;">$${price.toLocaleString('es-AR')}</span>
+            <span style="font-size:${s.main}px;font-weight:900;letter-spacing:-.02em;color:#4ade80;">$${discounted.toLocaleString('es-AR')}</span>
+            <span style="font-size:${s.badge}px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#4ade80;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);padding:2px 6px;">Transfiriendo</span>
         </div>
         <div style="display:inline-flex;align-items:center;gap:6px;">
-            <span style="font-size:${s.badge}px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#4ade80;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);padding:2px 6px;">-10%</span>
-            <span style="font-size:${s.note}px;color:var(--g500);font-weight:600;">$${discounted.toLocaleString('es-AR')} transfiriendo</span>
+            <span style="font-size:${s.note}px;color:var(--g500);font-weight:600;">$${price.toLocaleString('es-AR')} con Mercado Pago</span>
         </div>`;
 }
 let correoLabel = '';
@@ -755,7 +806,7 @@ function getAllProducts(){
 function getAllKits(){ return [...KITS, ..._extraKits.filter(k=>!k.hidden)]; }
 function render(){ renderProducts(); renderKits(); }
 function prodById(id){ return getAllProducts().find(p=>p.id===id); }
-function prodPriceLive(id){ const p=prodById(id); const cfg=productConfig[id]||{}; return cfg.price!=null?cfg.price:(p?p.price:0); }
+function prodPriceLive(id){ const p=prodById(id); return p?(p.price||0):0; }
 function prodNameLive(id){ const p=prodById(id); const cfg=productConfig[id]||{}; return (cfg.name||(p&&p.name))||''; }
 function kitPrice(kit){ return kit.custom ? (kit.price||0) : kit.componentes.reduce((s,id)=>s+prodPriceLive(id),0); }
 function kitHasPrice(kit){ return kit.custom ? (kit.price!=null) : true; }
@@ -765,7 +816,10 @@ function kitCount(kit){ return kit.custom ? (kit.items ? kit.items.length : 0) :
 function renderKits() {
     const grid = document.getElementById('kits-grid');
     if(!grid) return;
-    const allKitsToRender = (typeof getAllKits === 'function' ? getAllKits() : KITS).filter(k => kitHasPrice(k));
+    const allKitsToRender = (typeof getAllKits === 'function' ? getAllKits() : KITS).filter(k => {
+        if (!kitHasPrice(k)) return false;
+        return matchesQuery(k.name, k.subtitle, k.desc);
+    });
     const sec = document.getElementById('kits-section');
     if(sec) sec.style.display = allKitsToRender.length ? '' : 'none';
     grid.innerHTML = allKitsToRender.map((k,i)=>{
@@ -878,8 +932,8 @@ function openItemDetail(id, type) {
         const p = allP.find(x=>x.id===id);
         if(!p) return;
         const cfg = productConfig[id] || {};
-        const price = cfg.price != null ? cfg.price : (p.price || 0);
-        const stock = cfg.stock;
+        const price = p.price || 0;
+        const stock = p.stock != null ? p.stock : cfg.stock;
         const out = typeof stock === 'number' && stock === 0;
         // imagen
         const imgWrap = document.getElementById('item-detail-imgs');
@@ -1114,16 +1168,62 @@ function setShipping(mode) {
 
 
 
+// ── Buscador y categorías ──
+let searchQuery = '';
+let activeCategory = 'todos';
+function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function matchesQuery(...fields) {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return fields.some(f => (f || '').toLowerCase().includes(q));
+}
+window.handleSearch = function(value) {
+    searchQuery = (value || '').trim();
+    const clearBtn = document.getElementById('search-clear');
+    if (clearBtn) clearBtn.style.display = searchQuery ? 'flex' : 'none';
+    renderProducts();
+};
+window.clearSearch = function() {
+    searchQuery = '';
+    const input = document.getElementById('search-input');
+    if (input) input.value = '';
+    const clearBtn = document.getElementById('search-clear');
+    if (clearBtn) clearBtn.style.display = 'none';
+    renderProducts();
+};
+window.setCategory = function(cat) {
+    activeCategory = cat;
+    document.querySelectorAll('.cat-pill').forEach(btn => btn.classList.toggle('active', btn.dataset.cat === cat));
+    renderProducts();
+};
+
 function renderProducts() {
     _productsRendered = true;
-    const allProdsToRender = typeof getAllProducts === 'function' ? getAllProducts() : PRODUCTS;
+    const allProds = typeof getAllProducts === 'function' ? getAllProducts() : PRODUCTS;
+    const allProdsToRender = allProds.filter(p => {
+        if (activeCategory !== 'todos' && (p.categoria || 'otros') !== activeCategory) return false;
+        return matchesQuery(p.name, p.description);
+    });
     const rc = _prodFirst ? 'card-in' : '';
     const el = document.getElementById('prod-count');
     if(el) el.textContent = allProdsToRender.length + ' producto' + (allProdsToRender.length !== 1 ? 's' : '');
+    const note = document.getElementById('search-results-note');
+    if (note) {
+        if (searchQuery) { note.style.display = 'block'; note.textContent = `${allProdsToRender.length} resultado${allProdsToRender.length !== 1 ? 's' : ''} para "${searchQuery}"`; }
+        else note.style.display = 'none';
+    }
+    if (!allProdsToRender.length) {
+        document.getElementById('products-grid').innerHTML = `<div class="no-results">No encontramos productos${searchQuery ? ` para "${escapeHtml(searchQuery)}"` : ' en esta categoría todavía'}.</div>`;
+        _prodFirst = false;
+        renderKits();
+        return;
+    }
     document.getElementById('products-grid').innerHTML = allProdsToRender.map((p,i)=>{
         const cfg = productConfig[p.id] || {};
-        const price = cfg.price != null ? cfg.price : (p.price || 0);
-        const stock = cfg.stock;
+        const price = p.price || 0;
+        const stock = p.stock != null ? p.stock : cfg.stock;
         const out = typeof stock === 'number' && stock === 0;
         const low = typeof stock === 'number' && stock > 0 && stock <= 5;
         const imgHtml = p.image
@@ -1163,8 +1263,8 @@ function addToCart(id, variant) {
     const p = allP.find(x=>x.id===id);
     if(!p) return;
     const cfg = productConfig[p.id] || {};
-    const price = cfg.price != null ? cfg.price : p.price;
-    const stock = cfg.stock;
+    const price = p.price || 0;
+    const stock = p.stock != null ? p.stock : cfg.stock;
     if(typeof stock === 'number' && stock === 0) return;
     const selVariant = variant || (p.variantes && p.variantes.length ? (_selectedVariant[id] || p.variantes[0]) : (p.variant || ''));
     const ex = cart.find(x=>x.id===id && x.variant===selVariant);
@@ -1176,6 +1276,13 @@ function addToCart(id, variant) {
 function updateQty(id, delta, variant) {
     const item = cart.find(x=>x.id===id && x.variant===(variant||''));
     if(!item) return;
+    if (delta > 0) {
+        const allP = typeof getAllProducts === 'function' ? getAllProducts() : PRODUCTS;
+        const p = allP.find(x=>x.id===id);
+        const cfg = productConfig[id] || {};
+        const stock = p ? (p.stock != null ? p.stock : cfg.stock) : undefined;
+        if (typeof stock === 'number' && item.qty >= stock) { showToast('No hay más stock disponible'); return; }
+    }
     item.qty = Math.max(0, item.qty+delta);
     if(item.qty===0) cart = cart.filter(x=>x!==item);
     saveCart(); updateCartUI();
@@ -1298,6 +1405,8 @@ function renderSummary() {
         cart.map(i=>`<div class="summary-item"><span class="summary-key"><span class="qty-tag">${i.qty}×</span> ${i.name} <span style="opacity:.4">${i.variant}</span></span><span style="font-weight:700;flex-shrink:0">$${(i.price*i.qty).toLocaleString('es-AR')}</span></div>`).join('')+
         discRow + shipRow +
         `<div class="summary-item summary-total"><span class="summary-key" style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#888">Total</span><span class="summary-val">$${final.toLocaleString('es-AR')}</span></div>`;
+    const payTotalEl = document.getElementById('pay-total');
+    if (payTotalEl) payTotalEl.textContent = '$' + final.toLocaleString('es-AR');
 }
 
 function setTab(tab) {
@@ -1344,7 +1453,7 @@ async function submitCheckout() {
     const buyer={name,email,phone};
     const postalCode = shippingMode==='delivery' ? (document.getElementById('buyer-postal').value.trim()||null) : null;
     const shipping={mode:shippingMode,address,city:shippingMode==='delivery'?city:null,provincia:shippingMode==='delivery'?shippingProvincia:null,zona:shippingMode==='delivery'?shippingZone:null,cost:effectiveShipping(),carrier:shippingMode==='delivery'?carrierId:null,carrierLabel:shippingMode==='delivery'?(qualifiesFreeShip()?'Envío gratis':carrierLabel):null,postalCode};
-    const items=cart.map(i=>({id:i.id,name:`${i.name} ${i.variant}`,price:i.price,quantity:i.qty}));
+    const items=cart.map(i=>({id:i.id,name:i.variant?`${i.name} ${i.variant}`:i.name,price:i.price,quantity:i.qty}));
 
     try {
         if(activeTab==='mp') {
@@ -1362,7 +1471,7 @@ async function submitCheckout() {
             if (typeof window.saveOrder === 'function') await window.saveOrder(orderId,{buyer,shipping,items,total:getFinalTotal(),discount:discountAmt,status:'pendiente_transferencia',metodoPago:'transferencia'});
             if (typeof window._markCompletedOrder === 'function') window._markCompletedOrder();
             cart=[];saveCart();updateCartUI();
-            window.location.href=`/gracias.html?order=${orderId}&status=transfer&shipping=${shippingMode}`;
+            window.location.href=`/gracias.html?order=${orderId}&status=transfer&shipping=${shippingMode}&total=${getFinalTotal()}`;
         }
     } catch(err) {
         errEl.textContent=err.message||'Hubo un error. Intentá de nuevo.';
@@ -1383,6 +1492,22 @@ updateCartUI();
 
 // ── Toast / feedback al agregar ──
 let _toastT;
+// ── Aviso de pago no procesado (vuelta de MercadoPago con ?error=1) ──
+function dismissPaymentError() {
+    const b = document.getElementById('payment-error-banner');
+    if (b) b.style.display = 'none';
+}
+(function () {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === '1') {
+        const b = document.getElementById('payment-error-banner');
+        if (b) b.style.display = 'flex';
+        params.delete('error');
+        const clean = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        window.history.replaceState({}, '', clean);
+    }
+})();
+
 function showToast(msg) {
     const t = document.getElementById('toast');
     if (!t) return;
@@ -1453,7 +1578,7 @@ function scrollTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
     <div class="footer-stars">★★★★★</div>
     <a class="footer-review" href="https://g.page/r/CYjlyyErmrYQEBM/review" target="_blank" rel="noopener">Dejanos tu reseña en Google</a>
     <div class="footer-meta">
-        SB Barber · Dávila 951, CABA · <a href="https://wa.me/541170583352" target="_blank" rel="noopener">WhatsApp</a>
+        SB Barber · Dávila 951, CABA · <a href="https://wa.me/541170583352" target="_blank" rel="noopener">WhatsApp</a> · <a href="/terminos.html">Términos y condiciones</a>
     </div>
     <button class="admin-trigger" onclick="openLoginModal()">·</button>
 </div>
@@ -1689,21 +1814,19 @@ function renderAdminPanel() {
     const body = document.getElementById('admin-body');
     if (adminTab === 'productos') {
         body.innerHTML = `
-            <div class="admin-hdr admin-hdr-3">
+            <div style="font-size:11px;color:#71717a;line-height:1.5;margin-bottom:10px;">El precio de cada producto se edita desde el panel de administración principal (tienda/admin.html). Acá solo se controla el <strong>stock</strong>.</div>
+            <div class="admin-hdr admin-hdr-2">
                 <span class="admin-col-label">Producto</span>
-                <span class="admin-col-label">Precio</span>
                 <span class="admin-col-label">Stock</span>
             </div>
             ${PRODUCTS.map(p => {
                 const cfg = productConfig[p.id] || {};
-                const price = cfg.price != null ? cfg.price : p.price;
                 const stock = cfg.stock != null ? cfg.stock : '';
-                return `<div class="admin-row admin-row-3">
+                return `<div class="admin-row admin-row-2">
                     <div>
                         <div class="admin-prod-name">${p.name}</div>
                         <div class="admin-prod-variant">${p.variant}</div>
                     </div>
-                    <input class="admin-input" type="number" id="ap-${p.id}" value="${price}" min="0">
                     <input class="admin-input" type="number" id="as-${p.id}" value="${stock}" min="0" placeholder="∞">
                 </div>`;
             }).join('')}
@@ -1740,9 +1863,8 @@ window.saveProductos = async () => {
     btn.textContent = 'Guardando...'; btn.disabled = true;
     try {
         for (const p of PRODUCTS) {
-            const priceVal = parseInt(document.getElementById(`ap-${p.id}`).value);
             const stockRaw = document.getElementById(`as-${p.id}`).value;
-            const data = { price: isNaN(priceVal) ? p.price : priceVal, stock: stockRaw !== '' ? parseInt(stockRaw) : null };
+            const data = { stock: stockRaw !== '' ? parseInt(stockRaw) : null };
             await setDoc(doc(db, 'tienda_productos', p.id), data, { merge: true });
         }
         const envioCostoVal = parseInt(document.getElementById('envio-costo').value) || 0;

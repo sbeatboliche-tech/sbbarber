@@ -5,7 +5,6 @@ export default async function handler(req, res) {
 
     const { items, buyer, orderId, total, discount, shipping } = req.body;
     const ship = shipping || { mode: 'pickup', address: '', cost: 0 };
-    const itemsSummary = items.map(i => `${i.quantity}x ${i.name}`).join(', ');
 
     try {
         const transporter = nodemailer.createTransport({
@@ -17,7 +16,7 @@ export default async function handler(req, res) {
             from: '"SB Barber Tienda" <sbbaarber@gmail.com>',
             to: 'sbbaarber@gmail.com',
             subject: `💸 Nueva orden por transferencia — ${orderLabel(orderId)}`,
-            html: sellerHtml(buyer.name, buyer.email, itemsSummary, total, discount || 0, orderId, ship)
+            html: sellerHtml(buyer.name, buyer.email, items, total, discount || 0, orderId, ship)
         });
 
         if (buyer.email) {
@@ -25,7 +24,7 @@ export default async function handler(req, res) {
                 from: '"SB Barber Tienda" <sbbaarber@gmail.com>',
                 to: buyer.email,
                 subject: '🖤 ¡Gracias por tu compra en SB Barber! — Datos para pagar',
-                html: buyerHtml(buyer.name, itemsSummary, total, discount || 0, orderId, ship)
+                html: buyerHtml(buyer.name, items, total, discount || 0, orderId, ship)
             });
         }
 
@@ -68,6 +67,16 @@ function emailShell(bodyHtml, { eyebrow = 'TIENDA', title, subtitle } = {}) {
 </body></html>`;
 }
 
+function itemRows(items) {
+    return (items || []).map(i => {
+        const lineTotal = (i.price || 0) * (i.quantity || 1);
+        return `<tr style="border-top:1px solid #f0f0f0;">
+            <td style="padding:8px 0;color:#18181b;font-size:13px;">${i.quantity}× ${i.name}</td>
+            <td style="padding:8px 0;color:#18181b;font-size:13px;text-align:right;white-space:nowrap;">$${lineTotal.toLocaleString('es-AR')}</td>
+        </tr>`;
+    }).join('');
+}
+
 function sellerHtml(name, email, items, total, discount, orderId, ship) {
     const discountRow = discount > 0
         ? `<tr style="border-top:1px solid #f0f0f0;"><td style="padding:9px 0;color:#71717a;font-size:12px;">Descuento 10%</td><td style="padding:9px 0;color:#18181b;text-align:right;">− $${Number(discount).toLocaleString('es-AR')}</td></tr>`
@@ -100,7 +109,7 @@ function sellerHtml(name, email, items, total, discount, orderId, ship) {
     <table style="width:100%;border-collapse:collapse;">
       <tr><td style="padding:9px 0;color:#71717a;font-size:12px;width:38%;">Cliente</td><td style="padding:9px 0;color:#18181b;font-weight:700;text-align:right;">${name}</td></tr>
       <tr style="border-top:1px solid #f0f0f0;"><td style="padding:9px 0;color:#71717a;font-size:12px;">Email</td><td style="padding:9px 0;color:#18181b;text-align:right;">${email || '—'}</td></tr>
-      <tr style="border-top:1px solid #f0f0f0;"><td style="padding:9px 0;color:#71717a;font-size:12px;">Productos</td><td style="padding:9px 0;color:#18181b;text-align:right;">${items}</td></tr>
+      ${itemRows(items)}
       ${shipRows}
       ${discountRow}
     </table>
@@ -139,7 +148,7 @@ function buyerHtml(name, items, total, discount, orderId, ship) {
     <p style="color:#18181b;margin:0 0 20px;font-size:15px;text-align:center;">Hola ${name}, ya reservamos tu pedido.</p>
     <div style="background:#f8f8f8;border-radius:12px;padding:18px 20px;margin-bottom:18px;border:1px solid #ececec;">
       <p style="color:#52525b;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px;">Tu pedido</p>
-      <p style="color:#18181b;font-size:14px;margin:0 0 8px;">${items}</p>
+      <table style="width:100%;border-collapse:collapse;">${itemRows(items)}</table>
       ${discountLine}
       <p style="color:#18181b;font-size:18px;font-weight:800;margin:8px 0 0;">Total: $${Number(total).toLocaleString('es-AR')}</p>
     </div>
@@ -158,6 +167,6 @@ function buyerHtml(name, items, total, discount, orderId, ship) {
       <p style="color:#15803d;font-size:13px;margin:0 0 14px;line-height:1.5;">Hacé la transferencia y mandanos la <b>captura del pago</b> por WhatsApp para confirmar tu pedido.</p>
       <a href="${waLink}" style="display:inline-block;background:#25D366;color:#fff;font-size:14px;font-weight:800;text-decoration:none;padding:13px 26px;border-radius:999px;">Enviar captura por WhatsApp</a>
     </div>
-    <p style="text-align:center;color:#a1a1aa;font-size:11px;margin:0;">SB Barber · Dávila 951, CABA · Pedido ${orderLabel(orderId)}</p>`;
+    <p style="text-align:center;color:#a1a1aa;font-size:11px;margin:0;">Pedido ${orderLabel(orderId)}</p>`;
     return emailShell(body, { title: '¡Gracias por tu compra! 🖤' });
 }
