@@ -36,6 +36,8 @@
         .svc-appear { animation:fadeInScale 0.2s cubic-bezier(0.16,1,0.3,1) both; }
         .stock-low { animation:pulse-red 2s infinite; }
         @keyframes pulse-red { 0%,100%{border-color:rgba(239,68,68,0.4)} 50%{border-color:rgba(239,68,68,0.9)} }
+        .ml-pending { animation:pulse-ml 1.3s ease-in-out infinite; }
+        @keyframes pulse-ml { 0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(249,115,22,0.55)} 50%{transform:scale(1.07);box-shadow:0 0 0 7px rgba(249,115,22,0)} }
         body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
         button:disabled { opacity:0.7; cursor:not-allowed; }
         /* Ocultar saldo de facturación con asteriscos */
@@ -129,7 +131,7 @@
                     <span class="md:hidden">MENÚ</span>
                 </button>
                 <!-- Botón historial ML -->
-                <button onclick="window.openHistorialMLPanel()" class="flex items-center gap-1.5 bg-white/10 border border-white/20 text-white px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/20 transition">
+                <button id="btn-historial-ml" onclick="window.openHistorialMLPanel()" class="flex items-center gap-1.5 bg-white/10 border border-white/20 text-white px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/20 transition">
                     <i class="fas fa-box text-xs"></i>
                     <span class="hidden md:inline">HISTORIAL ML</span>
                     <span class="md:hidden">ML</span>
@@ -3583,9 +3585,23 @@ function listenToMlDespachos() {
         snap => {
             allMlDespachos = snap.docs.map(d => ({ ...d.data(), id: d.id }));
             if (!document.getElementById('historial-ml-panel').classList.contains('hidden')) renderHistorialMLPanel();
+            updateHistorialMLBadge();
         }
     );
 }
+
+// Después de las 17:00, el botón "Historial ML" resalta si todavía no se cargó el despacho del día.
+// Se apaga solo al guardar el registro de hoy (o si todavía no son las 17:00).
+function updateHistorialMLBadge() {
+    const btn = document.getElementById('btn-historial-ml');
+    if (!btn) return;
+    const now = new Date();
+    const hoy = now.toLocaleDateString('en-CA');
+    const yaCargadoHoy = allMlDespachos.some(m => m.fecha === hoy);
+    const despuesDe17 = now.getHours() >= 17;
+    btn.classList.toggle('ml-pending', despuesDe17 && !yaCargadoHoy);
+}
+setInterval(updateHistorialMLBadge, 60000);
 
 window.openHistorialMLPanel = () => {
     const p = document.getElementById('historial-ml-panel');
@@ -3617,6 +3633,9 @@ window.saveMlDespacho = async () => {
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
         await setDoc(doc(db, PATH_ML_DESPACHOS, fecha), { fecha, cantidad, actualizadoEn: serverTimestamp() });
+        const existing = allMlDespachos.find(m => m.fecha === fecha);
+        if (existing) existing.cantidad = cantidad; else allMlDespachos.unshift({ fecha, cantidad, id: fecha });
+        updateHistorialMLBadge();
     } catch { alert('Error al guardar'); }
     btn.disabled = false; btn.textContent = 'Guardar';
 };
