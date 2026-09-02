@@ -87,6 +87,7 @@
                 class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none transition text-white placeholder-gray-500 text-center text-lg tracking-widest mb-3">
             <button onclick="window.checkGate()" class="w-full bg-gradient-to-r from-cyan-600 to-teal-600 p-4 rounded-xl font-bold text-white uppercase tracking-widest hover:scale-[1.02] transition">Entrar</button>
             <p id="gate-error" class="hidden text-red-400 text-sm text-center mt-3">Contraseña incorrecta</p>
+            <p id="gate-revoked" class="hidden text-red-400 text-sm text-center mt-3">Este dispositivo fue desconectado por un administrador.</p>
         </div>
     </div>
 
@@ -156,6 +157,10 @@
                     <i class="fas fa-cash-register text-xs"></i>
                     <span class="hidden sm:inline">CIERRE DE CAJA</span>
                     <span class="sm:hidden">CIERRE</span>
+                </button>
+                <button id="btn-dispositivos" onclick="window.openDispositivosPanel()" class="hidden items-center gap-1.5 bg-white/5 border border-white/10 text-gray-300 px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/10 transition">
+                    <i class="fas fa-mobile-screen-button text-xs"></i>
+                    <span class="hidden md:inline">DISPOSITIVOS</span>
                 </button>
                 <button onclick="window.logout()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-red-400 transition">
                     <i class="fas fa-power-off text-xs"></i>
@@ -943,6 +948,25 @@
         </div>
     </div>
 
+    <!-- Dispositivos conectados -->
+    <div id="dispositivos-modal" class="absolute inset-0 bg-black/75 backdrop-blur-md z-50 hidden flex-col justify-end md:justify-center">
+        <div class="glass-modal md:rounded-3xl md:max-w-lg md:mx-auto w-full border-t md:border border-white/10 pt-3 pb-8 px-5 shadow-2xl rounded-t-3xl max-h-[85vh] flex flex-col">
+            <div class="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5 md:hidden flex-shrink-0"></div>
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <div>
+                    <h2 class="text-xl font-extrabold text-white tracking-tight">Dispositivos</h2>
+                    <p class="text-[11px] text-gray-500 mt-0.5">Tocá la X para desconectar un dispositivo</p>
+                </div>
+                <button onclick="window.closeModals()" class="w-9 h-9 rounded-full bg-white/8 flex items-center justify-center text-gray-400 hover:bg-white/15 transition active:scale-90">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+            <div id="dispositivos-list" class="space-y-2.5 overflow-y-auto flex-1">
+                <p class="text-xs text-gray-600 text-center py-4">Cargando...</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Nuevo Gasto -->
     <div id="nuevo-gasto-modal" class="absolute inset-0 bg-black/75 backdrop-blur-md z-50 hidden flex-col justify-end md:justify-center">
         <div class="glass-modal md:rounded-3xl md:max-w-md md:mx-auto w-full border-t md:border border-white/10 pt-3 pb-8 px-5 shadow-2xl rounded-t-3xl max-h-[90vh] overflow-y-auto" style="animation:slideUp 0.32s cubic-bezier(0.16,1,0.3,1)">
@@ -1187,6 +1211,7 @@ const PRODUCTOS_BARBER = [
 const PATH_TURNOS = 'turnos';
 const PATH_GASTOS = 'gastos';
 const PATH_CONTEOS = 'conteos_caja';
+const PATH_SESSIONS = 'sessions';
 const GASTOS_CATS = [
     { id:'insumos',   label:'Insumos',   icon:'🧴' },
     { id:'servicios', label:'Servicios', icon:'💡' },
@@ -1201,8 +1226,64 @@ let productoStock = {};
 let currentMovement = null, currentProductoMovement = null, salidaTipo = 'venta', drinkSalidaTipo = 'venta';
 let newItemPhoto = null, editItemPhoto = null, editItemId = null;
 let isAdmin = false;
+let isOwner = false;
 let activeTab = 'cortes';
 let selectedProducto = null, cantVenta = 1;
+let allSessions = [];
+let unsubDeviceListener = null;
+
+// ---- DISPOSITIVOS (sesiones por gate) ----
+function getDeviceId() {
+    let id = localStorage.getItem('rec-device-id');
+    if (!id) {
+        id = (crypto.randomUUID ? crypto.randomUUID() : `dev-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+        localStorage.setItem('rec-device-id', id);
+    }
+    return id;
+}
+function detectDeviceLabel() {
+    const ua = navigator.userAgent || '';
+    if (/iPhone/i.test(ua)) return 'iPhone';
+    if (/iPad/i.test(ua)) return 'iPad';
+    if (/Android/i.test(ua)) return 'Android';
+    if (/Macintosh/i.test(ua)) return 'Mac';
+    if (/Windows/i.test(ua)) return 'PC';
+    return 'Dispositivo';
+}
+async function registerOrCheckDevice() {
+    const deviceId = getDeviceId();
+    const ref = doc(db, PATH_SESSIONS, deviceId);
+    let snap;
+    try { snap = await getDoc(ref); } catch { return true; } // si falla la lectura, no bloquear el acceso
+    if (snap.exists() && snap.data().revoked) {
+        await signOut(auth);
+        document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
+        document.getElementById('dashboard-view').classList.add('hidden');
+        document.getElementById('gate-view').classList.remove('hidden');
+        document.getElementById('gate-revoked').classList.remove('hidden');
+        return false;
+    }
+    const existing = snap.exists() ? snap.data() : null;
+    await setDoc(ref, {
+        deviceId,
+        label: existing?.label || detectDeviceLabel(),
+        userAgent: navigator.userAgent,
+        lastSeen: serverTimestamp(),
+        revoked: false,
+        createdAt: existing?.createdAt || serverTimestamp()
+    }, { merge: true });
+    if (unsubDeviceListener) unsubDeviceListener();
+    unsubDeviceListener = onSnapshot(ref, s => {
+        if (s.exists() && s.data().revoked) {
+            signOut(auth).then(() => {
+                document.getElementById('dashboard-view').classList.add('hidden');
+                document.getElementById('gate-view').classList.remove('hidden');
+                document.getElementById('gate-revoked').classList.remove('hidden');
+            });
+        }
+    });
+    return true;
+}
 
 let turnosSelectedDay = 0, turnoModalSelectedDay = 0, turnoModalSelectedBarber = '', turnosBarberFilter = 'todos';
 let turnosCustomDate = null, turnoModalCustomDate = null;
@@ -1215,16 +1296,22 @@ async function init() {
     db = getFirestore(app);
     await setPersistence(auth, browserLocalPersistence);
 
-    onAuthStateChanged(auth, user => {
+    onAuthStateChanged(auth, async user => {
         if (user) {
             currentUser = user;
+            isOwner = ADMINS.includes(user.email);
             // Anónimos con gate válido tienen acceso admin completo
-            isAdmin = ADMINS.includes(user.email) || (user.isAnonymous && localStorage.getItem('rec-gate') === '1');
+            isAdmin = isOwner || (user.isAnonymous && localStorage.getItem('rec-gate') === '1');
+            if (user.isAnonymous) {
+                const ok = await registerOrCheckDevice();
+                if (!ok) return;
+            }
             document.getElementById('gate-view').classList.add('hidden');
             document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
             document.getElementById('dashboard-view').classList.remove('hidden');
             document.getElementById('login-view').classList.add('hidden');
             if (isAdmin) document.getElementById('btn-add-stock-item').classList.remove('hidden');
+            if (isOwner) { document.getElementById('btn-dispositivos').classList.remove('hidden'); document.getElementById('btn-dispositivos').classList.add('flex'); listenToSessions(); }
             listenToCuts();
             listenToProfiles();
             listenToStock();
@@ -3215,6 +3302,45 @@ function listenToGastos() {
     );
 }
 
+function listenToSessions() {
+    onSnapshot(query(collection(db, PATH_SESSIONS), orderBy('lastSeen', 'desc')), snap => {
+        allSessions = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        if (!document.getElementById('dispositivos-modal').classList.contains('hidden')) renderDispositivos();
+    });
+}
+function renderDispositivos() {
+    const list = document.getElementById('dispositivos-list');
+    const myId = getDeviceId();
+    if (!allSessions.length) { list.innerHTML = '<p class="text-xs text-gray-600 text-center py-4">Sin dispositivos registrados aún</p>'; return; }
+    list.innerHTML = allSessions.map(s => {
+        const when = s.lastSeen?.toDate ? s.lastSeen.toDate().toLocaleString('es-AR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '—';
+        const isMe = s.id === myId;
+        return `<div class="flex items-center justify-between gap-3 bg-black/30 p-3.5 rounded-xl border ${s.revoked ? 'border-red-500/30' : 'border-white/5'}">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl ${s.revoked ? 'bg-red-900/30' : 'bg-cyan-900/30'} flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-mobile-screen-button ${s.revoked ? 'text-red-500' : 'text-cyan-400'} text-sm"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="text-sm font-bold text-white truncate">${s.label || 'Dispositivo'}${isMe ? ' <span class=\"text-[9px] text-cyan-500 font-bold\">· ESTE DISPOSITIVO</span>' : ''}</div>
+                    <div class="text-[10px] text-gray-500">${s.revoked ? 'Desconectado' : `Activo · última vez ${when}`}</div>
+                </div>
+            </div>
+            ${s.revoked
+                ? `<button onclick="window.unrevokeSession('${s.id}')" class="text-[10px] font-bold text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg hover:bg-emerald-600/10 transition flex-shrink-0">Reactivar</button>`
+                : `<button onclick="window.revokeSession('${s.id}')" class="w-8 h-8 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 flex items-center justify-center hover:bg-red-500/20 transition flex-shrink-0"><i class="fas fa-times text-xs"></i></button>`
+            }
+        </div>`;
+    }).join('');
+}
+window.openDispositivosPanel = () => { showModal('dispositivos-modal'); renderDispositivos(); };
+window.revokeSession = async (id) => {
+    if (!await customConfirm('¿Desconectar este dispositivo? Va a perder el acceso al instante.')) return;
+    await updateDoc(doc(db, PATH_SESSIONS, id), { revoked: true });
+};
+window.unrevokeSession = async (id) => {
+    await updateDoc(doc(db, PATH_SESSIONS, id), { revoked: false });
+};
+
 function listenToConteos() {
     onSnapshot(
         query(collection(db, PATH_CONTEOS), orderBy('fecha', 'desc'), limit(120)),
@@ -3913,7 +4039,7 @@ window.saveChecklistItems = async () => {
     }
 };
 
-const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal', 'nuevo-gasto-modal', 'precios-modal', 'checklist-editor-modal'];
+const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal', 'nuevo-gasto-modal', 'precios-modal', 'checklist-editor-modal', 'dispositivos-modal'];
 function showModal(id) {
     document.getElementById(id).classList.remove('hidden');
     document.getElementById(id).classList.add('flex', 'flex-col');
