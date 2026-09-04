@@ -1334,7 +1334,8 @@ const PRODUCTOS_BARBER_BASE = [
     { id:'ml-clipper-spray',          name:'Clipper spray desinfectante',  precio:0, isML:true },
     { id:'ml-polvo-black-80g',        name:'Polvo texturizador Black 80g', precio:0, isML:true },
 ];
-let PRODUCTOS_BARBER = [...PRODUCTOS_BARBER_BASE];
+let PRODUCTOS_BARBER = [];
+let productosCargados = false;
 
 const PATH_TURNOS = 'turnos';
 const PATH_GASTOS = 'gastos';
@@ -1393,14 +1394,15 @@ async function registerOrCheckDevice() {
         return false;
     }
     const existing = snap.exists() ? snap.data() : null;
-    await setDoc(ref, {
+    // No bloquear el acceso por esto — es solo registro/actualización, corre en segundo plano
+    setDoc(ref, {
         deviceId,
         label: existing?.label || detectDeviceLabel(),
         userAgent: navigator.userAgent,
         lastSeen: serverTimestamp(),
         revoked: false,
         createdAt: existing?.createdAt || serverTimestamp()
-    }, { merge: true });
+    }, { merge: true }).catch(() => {});
     if (unsubDeviceListener) unsubDeviceListener();
     unsubDeviceListener = onSnapshot(ref, s => {
         if (s.exists() && s.data().revoked) {
@@ -2239,6 +2241,10 @@ window.deleteVenta = async (id) => {
 };
 
 function renderProductosGrid() {
+    if (!productosCargados) {
+        document.getElementById('productos-grid').innerHTML = '<div class="col-span-full text-xs text-gray-600 text-center py-8"><i class="fas fa-spinner fa-spin mr-1.5"></i>Cargando productos...</div>';
+        return;
+    }
     const localProds = PRODUCTOS_BARBER.filter(p => !p.isML);
     const mlProds    = PRODUCTOS_BARBER.filter(p =>  p.isML);
 
@@ -2460,6 +2466,7 @@ async function listenToProductos() {
             }
         });
         PRODUCTOS_BARBER = [...PRODUCTOS_BARBER_BASE.filter(p => !ocultos.has(p.id)), ...customProds];
+        productosCargados = true;
         renderProductoStock();
         if (!document.getElementById('ventas-modal').classList.contains('hidden')) renderProductosGrid();
     });
