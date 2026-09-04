@@ -996,6 +996,9 @@
             </div>
             <p class="text-[11px] text-gray-500 mb-4">Se aplican al registrar cortes y en la página de turnos.</p>
             <div id="precios-list" class="space-y-2 overflow-y-auto flex-1 pr-1 -mr-1"></div>
+            <button type="button" onclick="window.addPrecioServicioRow()" class="w-full border border-dashed border-gray-700 text-gray-400 hover:text-white hover:border-amber-500 rounded-xl py-2.5 text-sm font-bold transition flex-shrink-0 mt-2">
+                <i class="fas fa-plus text-xs mr-1"></i> Agregar servicio
+            </button>
             <button onclick="window.savePrecios()" id="btn-save-precios" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white p-4 rounded-xl font-bold text-base shadow-lg uppercase tracking-widest mt-4 flex-shrink-0">Guardar precios</button>
         </div>
     </div>
@@ -4209,6 +4212,11 @@ function customConfirm(message, confirmLabel = 'Eliminar') {
 // ---- PRECIOS DE SERVICIOS (editables, en vivo) ----
 const PATH_PRECIOS_SERV = 'config_precios';
 function applyServicePrices(overrides) {
+    (overrides.__customServices || []).forEach(cs => {
+        if (cs?.name && !SERVICES.find(s => s.name === cs.name)) {
+            SERVICES.push({ name: cs.name, price: Number(overrides[cs.name]) || 0, custom: true });
+        }
+    });
     SERVICES.forEach(s => { if (overrides[s.name] != null) s.price = Number(overrides[s.name]); });
     const acm = document.getElementById('add-cut-modal');
     if (acm && !acm.classList.contains('hidden')) {
@@ -4235,6 +4243,21 @@ window.openPreciosModal = () => {
         </div>`).join('');
     showModal('precios-modal');
 };
+window.addPrecioServicioRow = () => {
+    const cont = document.getElementById('precios-list');
+    cont.insertAdjacentHTML('beforeend', `
+        <div class="flex items-center gap-2 bg-amber-500/5 border border-amber-500/30 rounded-xl p-2.5 precio-nuevo-row">
+            <input type="text" placeholder="Nombre del servicio" class="precio-nuevo-nombre flex-1 min-w-0 bg-transparent text-sm font-semibold text-gray-100 outline-none placeholder-gray-600 border-b border-white/10 focus:border-amber-500 py-1">
+            <div class="flex items-center bg-black/40 border border-gray-700 rounded-lg px-2 focus-within:border-amber-500 flex-shrink-0">
+                <span class="text-gray-500 text-sm">$</span>
+                <input type="number" inputmode="numeric" placeholder="0" min="0" class="precio-nuevo-precio w-20 bg-transparent py-2.5 text-sm text-white outline-none text-right">
+            </div>
+            <button type="button" onclick="this.closest('.precio-nuevo-row').remove()" class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-500 hover:text-red-400 flex-shrink-0"><i class="fas fa-times text-xs"></i></button>
+        </div>`);
+    const rows = cont.querySelectorAll('.precio-nuevo-nombre');
+    rows[rows.length - 1].focus();
+};
+
 window.savePrecios = async () => {
     const btn = document.getElementById('btn-save-precios');
     btn.disabled = true; const prev = btn.textContent; btn.textContent = 'Guardando...';
@@ -4244,6 +4267,16 @@ window.savePrecios = async () => {
             const v = parseInt(document.getElementById('precio-serv-' + i).value);
             data[s.name] = isNaN(v) ? s.price : v;
         });
+        [...document.querySelectorAll('.precio-nuevo-row')].forEach(row => {
+            const name = row.querySelector('.precio-nuevo-nombre').value.trim();
+            const price = parseInt(row.querySelector('.precio-nuevo-precio').value) || 0;
+            if (name && !SERVICES.find(s => s.name === name)) {
+                SERVICES.push({ name, price, custom: true });
+                data[name] = price;
+            }
+        });
+        const customList = SERVICES.filter(s => s.custom).map(s => ({ name: s.name }));
+        if (customList.length) data.__customServices = customList;
         await setDoc(doc(db, PATH_PRECIOS_SERV, 'servicios'), data, { merge: true });
         applyServicePrices(data);
         btn.textContent = '✓ Guardado';
