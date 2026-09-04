@@ -2266,6 +2266,10 @@ function renderProductosGrid() {
                 class="absolute top-1.5 right-1.5 w-5 h-5 rounded-md bg-emerald-600/30 border border-emerald-500/40 flex items-center justify-center text-emerald-400 hover:bg-emerald-600/60 transition active:scale-90" title="Agregar stock">
                 <i class="fas fa-plus" style="font-size:8px"></i>
             </button>
+            <button onclick="event.stopPropagation();window.eliminarProductoCatalogo('${safeId}','${safeName}')"
+                class="absolute top-1.5 right-7 w-5 h-5 rounded-md bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 hover:bg-red-600/50 transition active:scale-90" title="Eliminar producto">
+                <i class="fas fa-trash" style="font-size:7px"></i>
+            </button>
         </div>`;
     };
 
