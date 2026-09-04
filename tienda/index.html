@@ -794,7 +794,11 @@ function _maybeRenderProducts() {
 }
 function getAllProducts(){
     const customIds = new Set(_extraProductos.map(p=>p.id));
-    return [...PRODUCTS.filter(p=>!customIds.has(p.id)), ..._extraProductos.filter(p=>!p.hidden)];
+    const merged = [...PRODUCTS.filter(p=>!customIds.has(p.id)), ..._extraProductos.filter(p=>!p.hidden)];
+    return merged
+        .map((p, i) => ({ p, key: p.orden != null ? p.orden : 1000 + i }))
+        .sort((a, b) => a.key - b.key)
+        .map(x => x.p);
 }
 function getAllKits(){ return [...KITS, ..._extraKits.filter(k=>!k.hidden)]; }
 function render(){ renderProducts(); renderKits(); }
