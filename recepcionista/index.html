@@ -2443,18 +2443,26 @@ async function listenToProductos() {
     onSnapshot(collection(db, PATH_PRODUCTOS), snap => {
         productoStock = {};
         const customProds = [];
+        const ocultos = new Set();
         snap.docs.forEach(d => {
             const data = d.data();
             productoStock[d.id] = data;
+            if (data.oculto) { ocultos.add(d.id); return; }
             if (!baseIds.has(d.id) && data.custom) {
                 customProds.push({ id: d.id, name: data.name, precio: data.precio || 0, isML: !!data.isML, custom: true });
             }
         });
-        PRODUCTOS_BARBER = [...PRODUCTOS_BARBER_BASE, ...customProds];
+        PRODUCTOS_BARBER = [...PRODUCTOS_BARBER_BASE.filter(p => !ocultos.has(p.id)), ...customProds];
         renderProductoStock();
         if (!document.getElementById('ventas-modal').classList.contains('hidden')) renderProductosGrid();
     });
 }
+
+window.eliminarProductoCatalogo = async (id, name) => {
+    if (!await customConfirm(`¿Eliminar "${name}" del catálogo? Ya no vas a poder venderlo ni verlo en stock.`)) return;
+    try { await updateDoc(doc(db, PATH_PRODUCTOS, id), { oculto: true }); }
+    catch (e) { alert('Error al eliminar'); }
+};
 
 function initProductosSortable() {
     if (productosSortable) { try { productosSortable.destroy(); } catch(e) {} }
@@ -2511,6 +2519,9 @@ function renderProductoStock() {
                 </button>
                 <button onclick="window.openMovimientoProducto('${p.id}','${p.name.replace(/'/g,"\\'")}','salida')" class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 hover:bg-red-600/40 transition" ${qty===0?'disabled':''}>
                     <i class="fas fa-minus text-xs"></i>
+                </button>
+                <button onclick="window.eliminarProductoCatalogo('${p.id}','${p.name.replace(/'/g,"\\'")}')" class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-500 hover:text-red-400 hover:border-red-500/30 transition">
+                    <i class="fas fa-trash text-xs"></i>
                 </button>
             </div>
         </div>`;
