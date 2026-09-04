@@ -1164,7 +1164,12 @@
         <div class="glass-modal md:rounded-3xl md:max-w-3xl md:mx-auto w-full border-t md:border border-white/10 shadow-2xl rounded-t-3xl max-h-[92vh] md:max-h-[85vh] flex flex-col overflow-hidden">
             <div class="flex justify-between items-center p-5 pb-3 md:pb-4 flex-shrink-0 md:border-b md:border-white/5">
                 <h2 class="text-xl font-bold text-white"><i class="fas fa-shopping-bag text-indigo-400 mr-2"></i>Venta de producto</h2>
-                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:bg-white/20 transition"><i class="fas fa-times"></i></button>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.openNuevoProductoModal()" class="flex items-center gap-1.5 bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-xs font-bold px-3 py-2 rounded-xl hover:bg-indigo-600/30 transition">
+                        <i class="fas fa-plus text-[10px]"></i> Nuevo producto
+                    </button>
+                    <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:bg-white/20 transition"><i class="fas fa-times"></i></button>
+                </div>
             </div>
             <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
                 <div class="overflow-y-auto flex-1 px-5 pb-1 md:pb-5 md:pt-1">
@@ -1200,6 +1205,54 @@
                     <button onclick="window.submitVenta()" id="btn-submit-venta" disabled class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white p-3.5 rounded-xl font-bold text-base shadow-lg uppercase tracking-widest hover:shadow-indigo-500/30 hover:scale-[1.01] transition opacity-50 disabled:cursor-not-allowed">Registrar venta</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Nuevo producto (alta libre, sin depender de un catálogo fijo) -->
+    <div id="nuevo-producto-modal" class="absolute inset-0 bg-black/75 backdrop-blur-md z-[70] hidden flex-col justify-end md:justify-center">
+        <div class="glass-modal md:rounded-3xl md:max-w-md md:mx-auto w-full border-t md:border border-white/10 pt-3 pb-8 px-5 shadow-2xl rounded-t-3xl max-h-[92vh] overflow-y-auto" style="animation:slideUp 0.32s cubic-bezier(0.16,1,0.3,1)">
+            <div class="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5 md:hidden"></div>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-extrabold text-white tracking-tight">Nuevo producto</h2>
+                <button onclick="window.closeNuevoProductoModal()" class="w-9 h-9 rounded-full bg-white/8 flex items-center justify-center text-gray-400 hover:bg-white/15 transition active:scale-90">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+            <form id="nuevo-producto-form" class="space-y-5">
+                <input type="text" id="np-nombre" placeholder="Nombre del producto" required
+                    class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-indigo-500/60 focus:bg-indigo-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-2">Precio de venta</p>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                        <input type="number" id="np-precio" placeholder="0" min="0" required
+                            class="w-full pl-8 pr-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-indigo-500/60 focus:bg-indigo-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
+                    </div>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-2">Stock inicial</p>
+                    <input type="number" id="np-stock" placeholder="0" min="0" value="1" required
+                        class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-indigo-500/60 focus:bg-indigo-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">Canal</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" id="np-canal-local" onclick="window.setNpCanal('local')"
+                            class="py-3.5 rounded-2xl font-bold text-sm transition-all bg-indigo-500/15 border border-indigo-500/60 text-indigo-300 active:scale-95">
+                            🏪 Local
+                        </button>
+                        <button type="button" id="np-canal-ml" onclick="window.setNpCanal('ml')"
+                            class="py-3.5 rounded-2xl font-bold text-sm transition-all bg-white/5 border border-white/10 text-gray-500 hover:border-white/20 active:scale-95">
+                            🛒 MercadoLibre
+                        </button>
+                    </div>
+                    <input type="hidden" id="np-canal" value="local">
+                </div>
+                <button type="submit" id="btn-submit-np"
+                    class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white py-4 rounded-2xl font-extrabold text-base shadow-lg shadow-indigo-900/40 uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all">
+                    Agregar producto
+                </button>
+            </form>
         </div>
     </div>
 
@@ -1256,7 +1309,7 @@ const BARBER_EXTRA_THEMES = [
 ];
 let extraThemeIdx = 0;
 
-const PRODUCTOS_BARBER = [
+const PRODUCTOS_BARBER_BASE = [
     { id:'pomada-mate',               name:'Pomada Mate',                  precio:11000 },
     { id:'pomada-brillosa',           name:'Pomada Brillosa',              precio:11000 },
     { id:'polvo-texturizador',        name:'Polvo Texturizador',           precio:11000 },
@@ -1278,6 +1331,7 @@ const PRODUCTOS_BARBER = [
     { id:'ml-clipper-spray',          name:'Clipper spray desinfectante',  precio:0, isML:true },
     { id:'ml-polvo-black-80g',        name:'Polvo texturizador Black 80g', precio:0, isML:true },
 ];
+let PRODUCTOS_BARBER = [...PRODUCTOS_BARBER_BASE];
 
 const PATH_TURNOS = 'turnos';
 const PATH_GASTOS = 'gastos';
@@ -2292,6 +2346,47 @@ function renderCarrito() {
     totalRow.classList.remove('hidden');
 }
 
+window.setNpCanal = (canal) => {
+    document.getElementById('np-canal').value = canal;
+    const esML = canal === 'ml';
+    document.getElementById('np-canal-local').className = `py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95 ${!esML ? 'bg-indigo-500/15 border border-indigo-500/60 text-indigo-300' : 'bg-white/5 border border-white/10 text-gray-500 hover:border-white/20'}`;
+    document.getElementById('np-canal-ml').className = `py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95 ${esML ? 'bg-yellow-500/15 border border-yellow-500/60 text-yellow-300' : 'bg-white/5 border border-white/10 text-gray-500 hover:border-white/20'}`;
+};
+
+window.openNuevoProductoModal = () => {
+    document.getElementById('nuevo-producto-form').reset();
+    document.getElementById('np-stock').value = 1;
+    window.setNpCanal('local');
+    showModal('nuevo-producto-modal');
+};
+
+window.closeNuevoProductoModal = () => {
+    const m = document.getElementById('nuevo-producto-modal');
+    m.classList.add('hidden'); m.classList.remove('flex', 'flex-col');
+};
+
+document.getElementById('nuevo-producto-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nombre = document.getElementById('np-nombre').value.trim();
+    const precio = Math.max(0, Number(document.getElementById('np-precio').value) || 0);
+    const stock = Math.max(0, Number(document.getElementById('np-stock').value) || 0);
+    const isML = document.getElementById('np-canal').value === 'ml';
+    if (!nombre) return;
+    const slug = nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const id = `custom-${slug || 'producto'}-${Date.now().toString(36)}`;
+    const btn = document.getElementById('btn-submit-np');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        await setDoc(doc(db, PATH_PRODUCTOS, id), { name: nombre, precio, stock, isML, custom: true });
+        window.closeNuevoProductoModal();
+        if (!PRODUCTOS_BARBER.find(p => p.id === id)) PRODUCTOS_BARBER.push({ id, name: nombre, precio, isML, custom: true });
+        productoStock[id] = { name: nombre, precio, stock, isML, custom: true };
+        renderProductosGrid();
+        window.selectProductoVenta(PRODUCTOS_BARBER.findIndex(p => p.id === id));
+    } catch (err) { alert('Error al crear el producto'); }
+    btn.disabled = false; btn.innerHTML = 'Agregar producto';
+});
+
 window.submitVenta = async () => {
     if (ventaCart.length === 0) return alert('Agregá al menos un producto');
     for (const it of ventaCart) {
@@ -2330,7 +2425,7 @@ window.submitVenta = async () => {
 let productosSortable = null;
 
 async function listenToProductos() {
-    await Promise.all(PRODUCTOS_BARBER.map(async p => {
+    await Promise.all(PRODUCTOS_BARBER_BASE.map(async p => {
         const ref = doc(db, PATH_PRODUCTOS, p.id);
         const snap = await getDoc(ref);
         if (!snap.exists()) {
@@ -2344,10 +2439,20 @@ async function listenToProductos() {
             await setDoc(ref, { name: p.name, precio: p.precio, stock: initialStock });
         }
     }));
+    const baseIds = new Set(PRODUCTOS_BARBER_BASE.map(p => p.id));
     onSnapshot(collection(db, PATH_PRODUCTOS), snap => {
         productoStock = {};
-        snap.docs.forEach(d => { productoStock[d.id] = d.data(); });
+        const customProds = [];
+        snap.docs.forEach(d => {
+            const data = d.data();
+            productoStock[d.id] = data;
+            if (!baseIds.has(d.id) && data.custom) {
+                customProds.push({ id: d.id, name: data.name, precio: data.precio || 0, isML: !!data.isML, custom: true });
+            }
+        });
+        PRODUCTOS_BARBER = [...PRODUCTOS_BARBER_BASE, ...customProds];
         renderProductoStock();
+        if (!document.getElementById('ventas-modal').classList.contains('hidden')) renderProductosGrid();
     });
 }
 
@@ -4270,7 +4375,7 @@ window.saveChecklistItems = async () => {
     }
 };
 
-const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal', 'nuevo-gasto-modal', 'precios-modal', 'checklist-editor-modal', 'dispositivos-modal'];
+const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal', 'nuevo-gasto-modal', 'precios-modal', 'checklist-editor-modal', 'dispositivos-modal', 'nuevo-producto-modal'];
 function showModal(id) {
     document.getElementById(id).classList.remove('hidden');
     document.getElementById(id).classList.add('flex', 'flex-col');
