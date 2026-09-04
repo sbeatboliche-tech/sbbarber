@@ -519,13 +519,6 @@
     </div>
     <div class="category-filters" id="category-filters">
         <button type="button" class="cat-pill active" data-cat="todos" onclick="setCategory('todos')">Todos</button>
-        <button type="button" class="cat-pill" data-cat="ceras" onclick="setCategory('ceras')">Ceras</button>
-        <button type="button" class="cat-pill" data-cat="peines" onclick="setCategory('peines')">Peines</button>
-        <button type="button" class="cat-pill" data-cat="navajas" onclick="setCategory('navajas')">Navajas</button>
-        <button type="button" class="cat-pill" data-cat="alfombras" onclick="setCategory('alfombras')">Alfombras</button>
-        <button type="button" class="cat-pill" data-cat="aftershave" onclick="setCategory('aftershave')">Aftershave</button>
-        <button type="button" class="cat-pill" data-cat="capas" onclick="setCategory('capas')">Capas</button>
-        <button type="button" class="cat-pill" data-cat="otros" onclick="setCategory('otros')">Otros</button>
     </div>
     <div class="products-grid" id="products-grid">
         <div id="products-skeleton" style="grid-column:1/-1;display:flex;gap:12px;flex-wrap:wrap;">
@@ -1193,6 +1186,25 @@ window.clearSearch = function() {
     if (clearBtn) clearBtn.style.display = 'none';
     renderProducts();
 };
+const CATEGORIAS_BASE = [
+    { id:'ceras', label:'Ceras' },
+    { id:'peines', label:'Peines' },
+    { id:'navajas', label:'Navajas' },
+    { id:'alfombras', label:'Alfombras' },
+    { id:'aftershave', label:'Aftershave' },
+    { id:'capas', label:'Capas' },
+    { id:'insumos', label:'Insumos' },
+    { id:'otros', label:'Otros' }
+];
+function renderCategoryPills(customList) {
+    const cont = document.getElementById('category-filters');
+    if (!cont) return;
+    const custom = (customList || []).filter(c => c && c.id && !CATEGORIAS_BASE.some(b => b.id === c.id));
+    const all = CATEGORIAS_BASE.concat(custom);
+    cont.innerHTML = '<button type="button" class="cat-pill' + (activeCategory === 'todos' ? ' active' : '') + '" data-cat="todos" onclick="setCategory(\'todos\')">Todos</button>' +
+        all.map(c => '<button type="button" class="cat-pill' + (activeCategory === c.id ? ' active' : '') + '" data-cat="' + c.id + '" onclick="setCategory(\'' + c.id + '\')">' + escapeHtml(c.label) + '</button>').join('');
+}
+renderCategoryPills([]);
 window.setCategory = function(cat) {
     activeCategory = cat;
     document.querySelectorAll('.cat-pill').forEach(btn => btn.classList.toggle('active', btn.dataset.cat === cat));
@@ -1747,6 +1759,10 @@ onSnapshot(doc(db, 'tienda_config', 'general'), d => {
         shippingCost = d.data().envioCosto || 0;
         if (shippingMode === 'delivery') setShipping('delivery');
     }
+});
+
+onSnapshot(doc(db, 'tienda_config', 'categorias'), d => {
+    renderCategoryPills(d.exists() ? d.data().list : []);
 });
 
 setPersistence(auth, browserLocalPersistence).catch(()=>{}).finally(()=>{
