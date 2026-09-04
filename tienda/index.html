@@ -1077,7 +1077,7 @@ const FREE_SHIP_THRESHOLD = 40000; // envío gratis desde este monto (ajustable)
 // Tarifas de envío por zona (ajustables). Gratis si supera el umbral.
 // CABA/GBA1/GBA2/GBA3 = zonas cubiertas por Mercado Flex (se puede imprimir etiqueta en el admin).
 // Interior = se coordina por Correo Argentino aparte (no tiene etiqueta imprimible acá).
-const ZONE_RATES = { CABA: 3500, GBA1: 4300, GBA2: 6000, GBA3: 8300, Interior: 9700 };
+let ZONE_RATES = { CABA: 3500, GBA1: 4300, GBA2: 6000, GBA3: 8300, Interior: 9700 };
 const ZONE_LABELS = { CABA: 'CABA', GBA1: 'Zona 1', GBA2: 'Zona 2', GBA3: 'Zona 3', Interior: 'Envío' };
 // Partidos de GBA agrupados por cordón/distancia (zonificación tipo Mercado Flex, orientativa).
 const PARTIDOS_GBA = {
@@ -1767,6 +1767,13 @@ onSnapshot(doc(db, 'tienda_config', 'general'), d => {
 
 onSnapshot(doc(db, 'tienda_config', 'categorias'), d => {
     renderCategoryPills(d.exists() ? d.data().list : []);
+});
+
+onSnapshot(doc(db, 'tienda_config', 'envios'), d => {
+    if (d.exists()) {
+        ZONE_RATES = Object.assign({}, ZONE_RATES, d.data());
+        if (shippingMode === 'delivery' && shippingZone) calcularEnvio();
+    }
 });
 
 setPersistence(auth, browserLocalPersistence).catch(()=>{}).finally(()=>{

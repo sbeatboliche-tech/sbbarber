@@ -205,6 +205,33 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
 
         <!-- TAB PRODUCTOS -->
         <div id="panel-productos">
+            <div class="section-title">Precios de envío</div>
+            <div class="card">
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="field-label">Flex · CABA</label>
+                        <input type="number" id="env-caba" placeholder="0" min="0">
+                    </div>
+                    <div class="form-field">
+                        <label class="field-label">Flex · Zona 1 (GBA1)</label>
+                        <input type="number" id="env-gba1" placeholder="0" min="0">
+                    </div>
+                    <div class="form-field">
+                        <label class="field-label">Flex · Zona 2 (GBA2)</label>
+                        <input type="number" id="env-gba2" placeholder="0" min="0">
+                    </div>
+                    <div class="form-field">
+                        <label class="field-label">Flex · Zona 3 (GBA3)</label>
+                        <input type="number" id="env-gba3" placeholder="0" min="0">
+                    </div>
+                    <div class="form-field">
+                        <label class="field-label">Correo Argentino · Interior</label>
+                        <input type="number" id="env-interior" placeholder="0" min="0">
+                    </div>
+                </div>
+                <button class="btn-save" style="margin-top:12px;" onclick="saveEnvios()">Guardar precios de envío</button>
+            </div>
+
             <div class="section-title">Agregar / Editar Producto</div>
             <div class="card">
                 <div class="form-grid">
@@ -485,6 +512,30 @@ function toggleCategoriaNueva() {
     if (show) document.getElementById('p-categoria-new-input').focus();
 }
 
+var ENVIOS_DEFAULT = { CABA: 3500, GBA1: 4300, GBA2: 6000, GBA3: 8300, Interior: 9700 };
+var ENVIOS_INPUT_MAP = { CABA:'env-caba', GBA1:'env-gba1', GBA2:'env-gba2', GBA3:'env-gba3', Interior:'env-interior' };
+
+function listenEnvios() {
+    db.collection('tienda_config').doc('envios').onSnapshot(function(snap) {
+        var data = Object.assign({}, ENVIOS_DEFAULT, (snap.exists && snap.data()) || {});
+        Object.keys(ENVIOS_INPUT_MAP).forEach(function(key) {
+            var input = document.getElementById(ENVIOS_INPUT_MAP[key]);
+            if (input && document.activeElement !== input) input.value = data[key];
+        });
+    });
+}
+
+function saveEnvios() {
+    var data = {};
+    Object.keys(ENVIOS_INPUT_MAP).forEach(function(key) {
+        var v = parseInt(document.getElementById(ENVIOS_INPUT_MAP[key]).value);
+        data[key] = isNaN(v) ? ENVIOS_DEFAULT[key] : v;
+    });
+    db.collection('tienda_config').doc('envios').set(data, { merge: true })
+        .then(function() { showToast('Precios de envío guardados ✓', true); })
+        .catch(function(e) { showToast('Error al guardar (' + (e.code || e.message) + ')', false, 5000); });
+}
+
 function confirmarCategoriaNueva() {
     var label = document.getElementById('p-categoria-new-input').value.trim();
     if (!label) return;
@@ -537,6 +588,7 @@ auth.onAuthStateChanged(function(user) {
         listenVisitas();
         listenPedidos();
         listenCategorias();
+        listenEnvios();
     } else {
         document.getElementById('login-view').style.display = 'flex';
         document.getElementById('dashboard-view').style.display = 'none';
