@@ -1170,14 +1170,16 @@
                 <div class="overflow-y-auto flex-1 px-5 pb-1 md:pb-5 md:pt-1">
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-1.5 md:gap-2.5 mb-4" id="productos-grid"></div>
                 </div><!-- /scroll -->
-                <div class="px-5 pb-5 pt-3 md:pt-5 flex-shrink-0 border-t md:border-t-0 md:border-l border-white/5 space-y-3 md:w-72 md:overflow-y-auto">
-                    <div class="flex items-center justify-between bg-black/30 rounded-xl px-4 py-2.5">
-                        <span class="text-sm text-gray-300 font-medium">Cantidad</span>
-                        <div class="flex items-center gap-3">
-                            <button onclick="window.cambiarCantVenta(-1)" class="w-8 h-8 rounded-full bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 transition">−</button>
-                            <span id="venta-cantidad-display" class="text-lg font-bold text-white w-6 text-center">1</span>
-                            <button onclick="window.cambiarCantVenta(1)" class="w-8 h-8 rounded-full bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 transition">+</button>
+                <div class="px-5 pb-5 pt-3 md:pt-5 flex-shrink-0 border-t md:border-t-0 md:border-l border-white/5 space-y-3 md:w-72 flex flex-col md:overflow-hidden">
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-1.5">Carrito</p>
+                        <div id="venta-carrito-list" class="space-y-1.5 max-h-36 md:max-h-64 overflow-y-auto pr-0.5">
+                            <p class="text-xs text-gray-600 text-center py-3">Tocá un producto para agregarlo</p>
                         </div>
+                    </div>
+                    <div id="venta-carrito-total-row" class="hidden justify-between items-center bg-black/30 rounded-xl px-4 py-2.5">
+                        <span class="text-sm text-gray-300 font-medium">Total</span>
+                        <span id="venta-carrito-total" class="text-lg font-bold text-indigo-300">$0</span>
                     </div>
                     <div>
                         <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-1.5">Canal de venta</p>
@@ -1195,7 +1197,7 @@
                         </div>
                         <input type="hidden" id="venta-metodo-pago" value="efectivo">
                     </div>
-                    <button onclick="window.submitVenta()" id="btn-submit-venta" class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white p-3.5 rounded-xl font-bold text-base shadow-lg uppercase tracking-widest hover:shadow-indigo-500/30 hover:scale-[1.01] transition">Registrar venta</button>
+                    <button onclick="window.submitVenta()" id="btn-submit-venta" disabled class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white p-3.5 rounded-xl font-bold text-base shadow-lg uppercase tracking-widest hover:shadow-indigo-500/30 hover:scale-[1.01] transition opacity-50 disabled:cursor-not-allowed">Registrar venta</button>
                 </div>
             </div>
         </div>
@@ -1298,7 +1300,7 @@ let newItemPhoto = null, editItemPhoto = null, editItemId = null;
 let isAdmin = false;
 let isOwner = false;
 let activeTab = 'cortes';
-let selectedProducto = null, cantVenta = 1;
+let ventaCart = [];
 let allSessions = [];
 let unsubDeviceListener = null;
 
@@ -2189,14 +2191,18 @@ function renderProductosGrid() {
         const stockColor = sinStock ? 'text-red-400' : stock <= 3 ? 'text-yellow-400' : 'text-gray-500';
         const safeId = p.id.replace(/'/g, "\\'");
         const safeName = p.name.replace(/'/g, "\\'");
-        const isSelected = !sinStock && selectedProducto?.id === p.id;
+        const enCarrito = ventaCart.find(it => it.id === p.id);
+        const cantEnCarrito = enCarrito ? enCarrito.cantidad : 0;
+        const alTope = !sinStock && cantEnCarrito >= Math.min(20, stock);
+        const isInCart = cantEnCarrito > 0;
         const stateClasses = sinStock
             ? 'bg-gray-900/40 opacity-50 cursor-not-allowed border-gray-700/60'
-            : isSelected
+            : isInCart
                 ? 'bg-indigo-600/20 cursor-pointer border-indigo-500 scale-[1.01] shadow-lg'
                 : 'bg-gray-800/50 cursor-pointer hover:bg-gray-700/60 md:hover:border-indigo-500/40 active:scale-95 border-gray-700/60';
-        return `<div onclick="${sinStock ? '' : `window.selectProductoVenta(${i})`}"
+        return `<div onclick="${sinStock || alTope ? '' : `window.selectProductoVenta(${i})`}"
             class="prod-btn p-2.5 md:p-3 ${stateClasses} border rounded-xl flex flex-col gap-1 transition relative">
+            ${isInCart ? `<span class="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-bold flex items-center justify-center shadow z-10">${cantEnCarrito}</span>` : ''}
             <span class="text-xs md:text-sm font-semibold text-gray-200 leading-tight pr-5">${p.name}</span>
             <div class="flex justify-between items-center">
                 <span class="${stockColor} text-[10px] font-bold">${sinStock ? 'Sin stock' : stock + ' u.'}</span>
@@ -2220,49 +2226,101 @@ function renderProductosGrid() {
 }
 
 window.openVentaModal = () => {
-    selectedProducto = null; cantVenta = 1;
-    document.getElementById('venta-cantidad-display').textContent = '1';
+    ventaCart = [];
     window.setVentaCanal('local');
     window.setVentaMetodo('efectivo');
     renderProductosGrid();
+    renderCarrito();
     showModal('ventas-modal');
 };
 
 window.selectProductoVenta = (i) => {
-    selectedProducto = PRODUCTOS_BARBER[i];
+    const p = PRODUCTOS_BARBER[i];
+    const stock = (productoStock[p.id]?.stock) || 0;
+    const item = ventaCart.find(it => it.id === p.id);
+    const cantidadActual = item ? item.cantidad : 0;
+    if (cantidadActual >= Math.min(20, stock)) return;
+    if (item) item.cantidad++;
+    else ventaCart.push({ id: p.id, name: p.name, precio: p.precio, cantidad: 1 });
     renderProductosGrid();
+    renderCarrito();
 };
 
-window.cambiarCantVenta = d => {
-    const stockActual = selectedProducto ? ((productoStock[selectedProducto.id]?.stock) || 0) : 0;
-    const maxVendible = Math.max(1, Math.min(20, stockActual));
-    cantVenta = Math.max(1, Math.min(maxVendible, cantVenta + d));
-    document.getElementById('venta-cantidad-display').textContent = cantVenta;
+window.cambiarCantCarrito = (id, d) => {
+    const item = ventaCart.find(it => it.id === id);
+    if (!item) return;
+    const stock = (productoStock[id]?.stock) || 0;
+    const max = Math.max(1, Math.min(20, stock));
+    item.cantidad = Math.max(1, Math.min(max, item.cantidad + d));
+    renderProductosGrid();
+    renderCarrito();
 };
+
+window.removeFromCarrito = (id) => {
+    ventaCart = ventaCart.filter(it => it.id !== id);
+    renderProductosGrid();
+    renderCarrito();
+};
+
+function renderCarrito() {
+    const list = document.getElementById('venta-carrito-list');
+    const totalRow = document.getElementById('venta-carrito-total-row');
+    const btn = document.getElementById('btn-submit-venta');
+    if (ventaCart.length === 0) {
+        list.innerHTML = '<p class="text-xs text-gray-600 text-center py-3">Tocá un producto para agregarlo</p>';
+        totalRow.classList.add('hidden');
+        btn.disabled = true; btn.classList.add('opacity-50');
+        return;
+    }
+    btn.disabled = false; btn.classList.remove('opacity-50');
+    list.innerHTML = ventaCart.map(it => `
+        <div class="flex items-center justify-between bg-black/30 rounded-xl px-3 py-2 gap-2">
+            <div class="min-w-0 flex-1">
+                <p class="text-xs font-semibold text-gray-200 truncate">${it.name}</p>
+                <p class="text-[10px] text-gray-500">$${it.precio.toLocaleString('es-AR')} c/u</p>
+            </div>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+                <button onclick="window.cambiarCantCarrito('${it.id}',-1)" class="w-6 h-6 rounded-full bg-white/10 text-white text-xs font-bold flex items-center justify-center hover:bg-white/20 transition">−</button>
+                <span class="text-sm font-bold text-white w-4 text-center">${it.cantidad}</span>
+                <button onclick="window.cambiarCantCarrito('${it.id}',1)" class="w-6 h-6 rounded-full bg-white/10 text-white text-xs font-bold flex items-center justify-center hover:bg-white/20 transition">+</button>
+                <button onclick="window.removeFromCarrito('${it.id}')" class="w-6 h-6 rounded-full bg-red-600/20 text-red-400 text-xs flex items-center justify-center hover:bg-red-600/40 transition ml-1"><i class="fas fa-trash" style="font-size:9px"></i></button>
+            </div>
+        </div>
+    `).join('');
+    const total = ventaCart.reduce((s, it) => s + it.precio * it.cantidad, 0);
+    document.getElementById('venta-carrito-total').textContent = `$${total.toLocaleString('es-AR')}`;
+    totalRow.classList.remove('hidden');
+}
 
 window.submitVenta = async () => {
-    if (!selectedProducto) return alert('Seleccioná un producto');
-    const stockActual = (productoStock[selectedProducto.id]?.stock) || 0;
-    if (cantVenta > stockActual) return alert(`No podés vender esa cantidad. Disponible: ${stockActual}`);
+    if (ventaCart.length === 0) return alert('Agregá al menos un producto');
+    for (const it of ventaCart) {
+        const stockActual = (productoStock[it.id]?.stock) || 0;
+        if (it.cantidad > stockActual) return alert(`No podés vender esa cantidad de ${it.name}. Disponible: ${stockActual}`);
+    }
     const btn = document.getElementById('btn-submit-venta');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
         const hoy = new Date().toLocaleDateString('en-CA');
         const canal = document.getElementById('venta-canal').value || 'local';
-        await addDoc(collection(db, PATH_VENTAS), {
-            producto: selectedProducto.name,
-            precio: selectedProducto.precio,
-            cantidad: cantVenta,
-            total: selectedProducto.precio * cantVenta,
-            tipo: 'producto',
-            canal,
-            ...(canal !== 'ml' ? { metodoPago: document.getElementById('venta-metodo-pago').value } : {}),
-            barbero: 'Recepción',
-            userEmail: currentUser?.email || null,
-            fecha: hoy,
-            creadoEn: serverTimestamp()
-        });
-        await updateDoc(doc(db, PATH_PRODUCTOS, selectedProducto.id), { stock: increment(-cantVenta) });
+        const grupoVenta = `${Date.now()}`;
+        for (const it of ventaCart) {
+            await addDoc(collection(db, PATH_VENTAS), {
+                producto: it.name,
+                precio: it.precio,
+                cantidad: it.cantidad,
+                total: it.precio * it.cantidad,
+                tipo: 'producto',
+                canal,
+                ...(canal !== 'ml' ? { metodoPago: document.getElementById('venta-metodo-pago').value } : {}),
+                barbero: 'Recepción',
+                userEmail: currentUser?.email || null,
+                fecha: hoy,
+                grupoVenta,
+                creadoEn: serverTimestamp()
+            });
+            await updateDoc(doc(db, PATH_PRODUCTOS, it.id), { stock: increment(-it.cantidad) });
+        }
         closeModals();
     } catch(e) { alert('Error al guardar'); }
     btn.disabled = false; btn.innerHTML = 'Registrar venta';
