@@ -536,6 +536,27 @@
                     <input type="number" id="cut-propina" placeholder="Propina (opcional)" min="0"
                         class="flex-1 bg-transparent outline-none text-white placeholder-yellow-700/60 text-sm no-select">
                 </div>
+                <!-- Método de pago -->
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">Método de pago</p>
+                    <div class="grid grid-cols-3 gap-2 no-select">
+                        <button type="button" id="cut-pago-efectivo" onclick="window.setCutPago('efectivo')" class="p-3 rounded-xl border font-bold text-xs transition">💵 Efectivo</button>
+                        <button type="button" id="cut-pago-transferencia" onclick="window.setCutPago('transferencia')" class="p-3 rounded-xl border font-bold text-xs transition">🏦 Transferencia</button>
+                        <button type="button" id="cut-pago-mixto" onclick="window.setCutPago('mixto')" class="p-3 rounded-xl border font-bold text-xs transition">🔀 Mixto</button>
+                    </div>
+                    <div id="cut-pago-mixto-panel" class="hidden mt-3 grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[10px] text-gray-500 uppercase ml-1">Efectivo</label>
+                            <input type="number" id="cut-monto-efectivo" min="0" placeholder="$0"
+                                class="w-full mt-1 p-3 bg-black/30 border border-gray-700 rounded-xl text-white text-sm outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-500 uppercase ml-1">Transferencia</label>
+                            <input type="number" id="cut-monto-transferencia" min="0" placeholder="$0"
+                                class="w-full mt-1 p-3 bg-black/30 border border-gray-700 rounded-xl text-white text-sm outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
                 <!-- Submit -->
                 <button type="submit" id="btn-submit-cut"
                     class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-4 rounded-2xl font-extrabold text-base shadow-lg shadow-blue-900/40 uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all no-select">
@@ -1800,6 +1821,14 @@ function updatePagoButtons() {
     document.getElementById('pago-efectivo').className = ventaMetodoPago === 'efectivo' ? _btnOn : _btnOff;
     document.getElementById('pago-transferencia').className = ventaMetodoPago === 'transferencia' ? _btnOn : _btnOff;
 }
+let cutMetodoPago = 'efectivo';
+window.setCutPago = (m) => {
+    cutMetodoPago = m;
+    document.getElementById('cut-pago-efectivo').className = m === 'efectivo' ? _btnOn : _btnOff;
+    document.getElementById('cut-pago-transferencia').className = m === 'transferencia' ? _btnOn : _btnOff;
+    document.getElementById('cut-pago-mixto').className = m === 'mixto' ? _btnOn : _btnOff;
+    document.getElementById('cut-pago-mixto-panel').classList.toggle('hidden', m !== 'mixto');
+};
 window.setComprador = (t) => {
     ventaComprador = t;
     document.getElementById('comp-cliente').className = t === 'cliente' ? _btnOn : _btnOff;
@@ -2097,6 +2126,9 @@ window.openAddModal = () => {
     document.getElementById('svc-price').value = '';
     document.getElementById('client-name').value = '';
     document.getElementById('cut-propina').value = '';
+    document.getElementById('cut-monto-efectivo').value = '';
+    document.getElementById('cut-monto-transferencia').value = '';
+    window.setCutPago('efectivo');
     showModal('add-modal');
     renderBarberSelection();
 };
@@ -2152,16 +2184,25 @@ document.getElementById('add-form').addEventListener('submit', async e=>{
     const clientName=document.getElementById('client-name').value.trim();
     const propinaMonto=Number(document.getElementById('cut-propina').value)||0;
     if(!barber||!serviceName) return alert('Selecciona barbero y servicio');
+    let montoEfectivo=null, montoTransferencia=null;
+    if(cutMetodoPago==='mixto'){
+        montoEfectivo=Number(document.getElementById('cut-monto-efectivo').value)||0;
+        montoTransferencia=Number(document.getElementById('cut-monto-transferencia').value)||0;
+        if(montoEfectivo+montoTransferencia!==servicePrice) return alert(`Efectivo + Transferencia debe sumar $${servicePrice.toLocaleString('es-AR')}`);
+    }
     btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
     try{
         const hoy=new Date().toLocaleDateString('en-CA');
-        await addDoc(collection(db,PATH_MAIN),{barber,service:serviceName,price:servicePrice,clientName,userEmail:currentUser.email,createdAt:serverTimestamp()});
+        const cutData={barber,service:serviceName,price:servicePrice,clientName,userEmail:currentUser.email,metodoPago:cutMetodoPago,createdAt:serverTimestamp()};
+        if(cutMetodoPago==='mixto'){ cutData.montoEfectivo=montoEfectivo; cutData.montoTransferencia=montoTransferencia; }
+        await addDoc(collection(db,PATH_MAIN),cutData);
         if(propinaMonto>0){
             await addDoc(collection(db,PATH_PROPINAS),{barbero:barber,userEmail:currentUser.email,monto:propinaMonto,descripcion:`Propina corte${clientName?' — '+clientName:''}`,fecha:hoy,estado:'confirmado',creadoEn:serverTimestamp()});
         }
         window.closeModals();
         document.getElementById('add-form').reset();
-        ['svc-name','svc-price','client-name','cut-propina'].forEach(id=>document.getElementById(id).value='');
+        ['svc-name','svc-price','client-name','cut-propina','cut-monto-efectivo','cut-monto-transferencia'].forEach(id=>document.getElementById(id).value='');
+        window.setCutPago('efectivo');
         document.querySelectorAll('.svc-card').forEach(c=>c.className='svc-card text-left p-4 bg-white/5 border-2 border-transparent rounded-2xl cursor-pointer transition-all duration-150 hover:bg-white/8 active:scale-[0.97] no-select');
     } catch{ alert('Error al guardar'); }
     btn.disabled=false; btn.innerHTML='CONFIRMAR';
@@ -2460,6 +2501,15 @@ function ccDetalleRows(cortesX, bebidaX, prodX, gastoX, row) {
     return rows.length ? rows.join('') : '<p class="text-[11px] text-gray-600 py-1">Sin movimientos</p>';
 }
 
+function cutCashAmount(c) {
+    if (c.metodoPago === 'mixto') return c.montoEfectivo || 0;
+    return c.metodoPago === 'transferencia' ? 0 : (c.price || 0);
+}
+function cutTransferAmount(c) {
+    if (c.metodoPago === 'mixto') return c.montoTransferencia || 0;
+    return c.metodoPago === 'transferencia' ? (c.price || 0) : 0;
+}
+
 function renderCierreDia() {
     const hoyStr = new Date().toLocaleDateString('en-CA');
     const hoy = cierreFechaSel || hoyStr;
@@ -2476,8 +2526,8 @@ function renderCierreDia() {
     const ventasProductos = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo);
 
     const totalCortes    = cuts.reduce((s, c) => s + (c.price || 0), 0);
-    const cortesEfectivo = cuts.filter(c => c.metodoPago !== 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
-    const cortesTransferencia = cuts.filter(c => c.metodoPago === 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
+    const cortesEfectivo = cuts.reduce((s, c) => s + cutCashAmount(c), 0);
+    const cortesTransferencia = cuts.reduce((s, c) => s + cutTransferAmount(c), 0);
     // Detalle de qué compone Efectivo/Transferencia: bebidas de cliente aparte de otros productos.
     const bebidasCliente = ventasProductos.filter(v => v.tipo === 'bebida');
     const productosNoBebida = ventasProductos.filter(v => v.tipo !== 'bebida');
@@ -2515,8 +2565,10 @@ function renderCierreDia() {
         let rows = myCuts.map(c => {
             const t = BARBER_THEME[c.barber]||{border:'border-gray-600'};
             const time = c.createdAt ? c.createdAt.toDate().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
+            const pagoTag = c.metodoPago === 'mixto' ? `🔀 Ef. $${(c.montoEfectivo||0).toLocaleString('es-AR')} · Transf. $${(c.montoTransferencia||0).toLocaleString('es-AR')}`
+                : c.metodoPago === 'transferencia' ? '🏦 Transferencia' : '';
             return `<div class="flex justify-between items-center bg-black/30 p-3 rounded-xl border-l-2 ${t.border}">
-                <div><div class="text-xs font-bold text-white">${c.service}${c.clientName?` <span class="text-blue-300">(${c.clientName})</span>`:''}</div><div class="text-[10px] text-gray-500">${time}</div></div>
+                <div><div class="text-xs font-bold text-white">${c.service}${c.clientName?` <span class="text-blue-300">(${c.clientName})</span>`:''}</div><div class="text-[10px] text-gray-500">${time}${pagoTag?' · '+pagoTag:''}</div></div>
                 <span class="text-sm font-bold text-white">$${c.price.toLocaleString('es-AR')}</span>
             </div>`;
         }).join('') || '<p class="text-xs text-gray-600 text-center py-4">Sin cortes hoy</p>';
@@ -2540,8 +2592,8 @@ function renderCierreDia() {
         byBarber[c.barber].count++;
         byBarber[c.barber].total += c.price || 0;
         byBarber[c.barber].earnings += (c.price || 0) * (barberCommissions[c.barber] || 0.5);
-        if (c.metodoPago === 'transferencia') byBarber[c.barber].transferencia += c.price || 0;
-        else byBarber[c.barber].efectivo += c.price || 0;
+        byBarber[c.barber].transferencia += cutTransferAmount(c);
+        byBarber[c.barber].efectivo += cutCashAmount(c);
     });
 
     const retirosHoy   = allRetiros.filter(r => r.estado === 'confirmado' && r.fecha === hoy);
@@ -2739,8 +2791,8 @@ function renderCierreSemana() {
         barberData[c.barber].cuts++;
         barberData[c.barber].billing += c.price || 0;
         barberData[c.barber].earnings += (c.price || 0) * (barberCommissions[c.barber] || 0.5);
-        if (c.metodoPago === 'transferencia') barberData[c.barber].transferencia += c.price || 0;
-        else barberData[c.barber].efectivo += c.price || 0;
+        barberData[c.barber].transferencia += cutTransferAmount(c);
+        barberData[c.barber].efectivo += cutCashAmount(c);
     });
 
     const retirosWeek  = allRetiros.filter(r => r.estado === 'confirmado' && r.fecha >= weekStartStr && r.fecha <= todayStr);
