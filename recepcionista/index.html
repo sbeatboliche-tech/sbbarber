@@ -1683,6 +1683,17 @@ window.setMetodoPago = (tipo) => {
     document.getElementById('mp-mixto-panel').classList.toggle('hidden', tipo !== 'mixto');
 };
 
+document.getElementById('mp-monto-efectivo').addEventListener('input', function () {
+    const price = Number(document.getElementById('svc-price').value) || 0;
+    const ef = Number(this.value) || 0;
+    document.getElementById('mp-monto-transferencia').value = Math.max(0, price - ef);
+});
+document.getElementById('mp-monto-transferencia').addEventListener('input', function () {
+    const price = Number(document.getElementById('svc-price').value) || 0;
+    const tr = Number(this.value) || 0;
+    document.getElementById('mp-monto-efectivo').value = Math.max(0, price - tr);
+});
+
 function renderBarberGrid() {
     const prevSelected = document.querySelector('input[name="barber"]:checked')?.value;
     document.getElementById('barber-grid').innerHTML = BARBERS.map(b => {

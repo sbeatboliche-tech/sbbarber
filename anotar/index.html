@@ -1829,6 +1829,16 @@ window.setCutPago = (m) => {
     document.getElementById('cut-pago-mixto').className = m === 'mixto' ? _btnOn : _btnOff;
     document.getElementById('cut-pago-mixto-panel').classList.toggle('hidden', m !== 'mixto');
 };
+document.getElementById('cut-monto-efectivo').addEventListener('input', function () {
+    const price = Number(document.getElementById('svc-price').value) || 0;
+    const ef = Number(this.value) || 0;
+    document.getElementById('cut-monto-transferencia').value = Math.max(0, price - ef);
+});
+document.getElementById('cut-monto-transferencia').addEventListener('input', function () {
+    const price = Number(document.getElementById('svc-price').value) || 0;
+    const tr = Number(this.value) || 0;
+    document.getElementById('cut-monto-efectivo').value = Math.max(0, price - tr);
+});
 window.setComprador = (t) => {
     ventaComprador = t;
     document.getElementById('comp-cliente').className = t === 'cliente' ? _btnOn : _btnOff;
