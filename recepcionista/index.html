@@ -2161,7 +2161,7 @@ function renderVentas() {
             </div>
         </div>`;
     }).join('');
-    const total = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff).reduce((s, v) => s + (v.total || 0), 0);
+    const total = ventasHoy.filter(v => v.canal !== 'ml').reduce((s, v) => s + (v.total || 0), 0);
     document.getElementById('ventas-total').textContent = `$${total.toLocaleString('es-AR')}`;
     totalRow.classList.remove('hidden'); totalRow.classList.add('flex');
     const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today && c.createdAt.toDate() < todayEnd);
@@ -2171,7 +2171,7 @@ function renderVentas() {
 function updateDailyTotalStat(cutsBilling, ventasTotal = null) {
     if (ventasTotal === null) {
         const { hoy } = getDashFecha();
-        ventasTotal = allVentas.filter(v => v.fecha === hoy && !v.eliminado && v.canal !== 'ml' && !v.esConsumoStaff).reduce((s,v) => s+(v.total||0), 0);
+        ventasTotal = allVentas.filter(v => v.fecha === hoy && !v.eliminado && v.canal !== 'ml').reduce((s,v) => s+(v.total||0), 0);
     }
     const ventasRow = document.getElementById('stat-ventas-row');
     const totalRow = document.getElementById('stat-total-row');
