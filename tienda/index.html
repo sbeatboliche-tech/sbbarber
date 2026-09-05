@@ -30,6 +30,7 @@
     <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
     <link rel="preconnect" href="https://i.imgur.com">
     <link rel="dns-prefetch" href="https://i.imgur.com">
+    <script type="application/ld+json" id="product-schema">{}</script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         /* --paper: fondo claro del "shell" (header/hero). --ink: gris casi negro (texto claro / botones oscuros). */
@@ -387,6 +388,10 @@
         @keyframes cartBounce { 0%,100%{transform:scale(1);} 30%{transform:scale(1.55);} 60%{transform:scale(.85);} }
         .cart-count.bounce { animation:cartBounce .5s ease; }
 
+        /* ── Vuelo del producto hacia el carrito al agregar ── */
+        .fly-thumb { position:fixed; z-index:500; border-radius:50%; object-fit:cover; pointer-events:none; box-shadow:0 6px 20px rgba(0,0,0,.35); transition:transform .55s cubic-bezier(.34,.02,.4,1), opacity .55s ease; }
+        @media (prefers-reduced-motion: reduce) { .fly-thumb { display:none; } }
+
         /* ── Volver arriba ── */
         .to-top { position:fixed; right:16px; bottom:16px; z-index:140; width:46px; height:46px; border-radius:50%; background:var(--g900); border:1px solid var(--g700); display:flex; align-items:center; justify-content:center; cursor:pointer; opacity:0; pointer-events:none; transform:translateY(10px); transition:opacity .3s, transform .3s, background .2s; }
         .to-top.show { opacity:1; pointer-events:auto; transform:translateY(0); }
@@ -474,6 +479,7 @@
     </div>
 </header>
 
+<main>
 <!-- AVISO DE PAGO NO PROCESADO -->
 <div id="payment-error-banner" class="payment-error-banner" style="display:none;">
     <span>⚠️ No pudimos procesar tu pago. Tu carrito sigue guardado — probá de nuevo o elegí otro medio de pago.</span>
@@ -871,9 +877,12 @@ function renderKits() {
     if (allKitsToRender.length) _kitFirst = false;
 }
 let _detailId = null, _detailType = null;
+let _deepLinkHandled = false;
+const DEFAULT_TIENDA_TITLE = document.title;
 
-function openItemDetail(id, type) {
+function openItemDetail(id, type, silent) {
     _detailId = id; _detailType = type;
+    let _dlgTitleName = '';
     const modal = document.getElementById('item-detail-modal');
 
     if (type === 'combo') {
@@ -884,12 +893,12 @@ function openItemDetail(id, type) {
         // imagen / collage
         const imgWrap = document.getElementById('item-detail-imgs');
         if(k.image) {
-            imgWrap.innerHTML = `<img src="${k.image}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+            imgWrap.innerHTML = `<img src="${imgOpt(k.image,700)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">`;
         } else if(k.componentes && !k.items) {
             const comps = k.componentes.map(prodById).filter(Boolean);
             const imgs = comps.filter(p=>p.image).slice(0,4);
             imgWrap.innerHTML = imgs.length
-                ? `<div style="position:absolute;inset:0;display:flex;gap:2px;">${imgs.map(p=>`<img src="${p.image}" alt="" style="flex:1;min-width:0;height:100%;object-fit:cover;display:block;">`).join('')}</div>`
+                ? `<div style="position:absolute;inset:0;display:flex;gap:2px;">${imgs.map(p=>`<img src="${imgOpt(p.image,350)}" alt="" style="flex:1;min-width:0;height:100%;object-fit:cover;display:block;">`).join('')}</div>`
                 : KIT_ICON;
         } else { imgWrap.innerHTML = KIT_ICON; }
         // badges
@@ -900,6 +909,7 @@ function openItemDetail(id, type) {
         // nombre
         document.getElementById('item-detail-name').textContent = k.name;
         document.getElementById('item-detail-sub').textContent = [kitCount(k) ? kitCount(k)+' productos' : '', k.subtitle].filter(Boolean).join(' · ');
+        _dlgTitleName = k.name || '';
         // descripción
         const descEl = document.getElementById('item-detail-desc');
         if(k.desc) { descEl.textContent = k.desc; descEl.style.display = 'block'; }
@@ -944,7 +954,7 @@ function openItemDetail(id, type) {
         // imagen
         const imgWrap = document.getElementById('item-detail-imgs');
         if(p.image) {
-            imgWrap.innerHTML = `<img src="${p.image}" alt="${p.name||''}" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+            imgWrap.innerHTML = `<img src="${imgOpt(p.image,700)}" alt="${p.name||''}" style="width:100%;height:100%;object-fit:cover;display:block;">`;
         } else {
             imgWrap.innerHTML = p.icon || `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#333;font-size:48px;">📦</div>`;
         }
@@ -955,6 +965,7 @@ function openItemDetail(id, type) {
         // nombre
         document.getElementById('item-detail-name').textContent = cfg.name || p.name || '';
         document.getElementById('item-detail-sub').textContent = p.variant || '';
+        _dlgTitleName = cfg.name || p.name || '';
         // opciones (variantes)
         const varWrap = document.getElementById('item-detail-variants');
         if (p.variantes && p.variantes.length) {
@@ -997,6 +1008,13 @@ function openItemDetail(id, type) {
     }
     modal.classList.add('show');
     document.body.style.overflow = 'hidden';
+
+    // URL compartible: permite mandar el link directo de un producto por WhatsApp/redes
+    // (/p/<id> lo resuelve api/producto.js con las meta tags para la vista previa).
+    if (type === 'product' && !silent) {
+        history.pushState({ p: id }, '', `/p/${encodeURIComponent(id)}`);
+    }
+    document.title = _dlgTitleName ? `${_dlgTitleName} · SB Barber Tienda` : DEFAULT_TIENDA_TITLE;
 }
 
 function _renderDetailPrice(price) {
@@ -1054,16 +1072,47 @@ function initBeforeAfterSlider() {
     _baSetPct(50);
 }
 
-function closeItemDetail(e) {
+// Lee el id de producto de la URL actual, ya sea /p/<id> (formato actual) o ?p=<id> (links viejos).
+function _deepLinkIdFromLocation() {
+    const m = location.pathname.match(/^\/p\/([^/]+)/);
+    if (m) return decodeURIComponent(m[1]);
+    return new URLSearchParams(location.search).get('p');
+}
+
+function closeItemDetail(e, silent) {
     if(e && e.target !== document.getElementById('item-detail-modal')) return;
     document.getElementById('item-detail-modal').classList.remove('show');
     document.body.style.overflow = '';
+    const wasProduct = _detailType === 'product';
     _detailId = null; _detailType = null;
+    document.title = DEFAULT_TIENDA_TITLE;
+    if (wasProduct && !silent && _deepLinkIdFromLocation()) {
+        history.pushState(null, '', '/');
+    }
 }
 window.closeItemDetail = closeItemDetail;
 
+// Deep link /p/<id>: si alguien entra con un link directo a un producto, lo abrimos apenas cargan los productos.
+function _handleDeepLinkOnce() {
+    if (_deepLinkHandled) return;
+    _deepLinkHandled = true;
+    const id = _deepLinkIdFromLocation();
+    if (!id) return;
+    const exists = getAllProducts().some(p => p.id === id);
+    if (exists) openItemDetail(id, 'product', true);
+}
+window.addEventListener('popstate', () => {
+    const id = _deepLinkIdFromLocation();
+    if (id) {
+        if (id !== _detailId) openItemDetail(id, 'product', true);
+    } else if (_detailId) {
+        closeItemDetail(null, true);
+    }
+});
+
 function addToCartFromDetail() {
     if(!_detailId) return;
+    flyToCart(document.getElementById('item-detail-imgs'));
     if(_detailType === 'combo') addKitToCart(_detailId);
     else addToCart(_detailId);
     document.getElementById('item-detail-modal').classList.remove('show');
@@ -1180,6 +1229,12 @@ let activeCategory = 'todos';
 function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+// Redimensiona/convierte a WebP las imágenes servidas desde Imgur vía wsrv.nl (proxy gratuito, sin cuenta)
+// para bajar el peso de descarga sin tener que migrar el hosting de imágenes.
+function imgOpt(url, w) {
+    if (!url) return url;
+    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${w}&output=webp&q=80`;
+}
 function matchesQuery(...fields) {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -1214,13 +1269,17 @@ function renderCategoryPills(customList) {
     if (!cont) return;
     const custom = (customList || []).filter(c => c && c.id && !CATEGORIAS_BASE.some(b => b.id === c.id));
     const all = CATEGORIAS_BASE.concat(custom);
-    cont.innerHTML = '<button type="button" class="cat-pill' + (activeCategory === 'todos' ? ' active' : '') + '" data-cat="todos" onclick="setCategory(\'todos\')">Todos</button>' +
-        all.map(c => '<button type="button" class="cat-pill' + (activeCategory === c.id ? ' active' : '') + '" data-cat="' + c.id + '" onclick="setCategory(\'' + c.id + '\')">' + escapeHtml(c.label) + '</button>').join('');
+    cont.innerHTML = '<button type="button" class="cat-pill' + (activeCategory === 'todos' ? ' active' : '') + '" data-cat="todos" aria-pressed="' + (activeCategory === 'todos') + '" onclick="setCategory(\'todos\')">Todos</button>' +
+        all.map(c => '<button type="button" class="cat-pill' + (activeCategory === c.id ? ' active' : '') + '" data-cat="' + c.id + '" aria-pressed="' + (activeCategory === c.id) + '" onclick="setCategory(\'' + c.id + '\')">' + escapeHtml(c.label) + '</button>').join('');
 }
 renderCategoryPills([]);
 window.setCategory = function(cat) {
     activeCategory = cat;
-    document.querySelectorAll('.cat-pill').forEach(btn => btn.classList.toggle('active', btn.dataset.cat === cat));
+    document.querySelectorAll('.cat-pill').forEach(btn => {
+        const on = btn.dataset.cat === cat;
+        btn.classList.toggle('active', on);
+        btn.setAttribute('aria-pressed', on);
+    });
     renderProducts();
 };
 
@@ -1253,7 +1312,7 @@ function renderProducts() {
         const out = typeof stock === 'number' && stock === 0;
         const low = typeof stock === 'number' && stock > 0 && stock <= 5;
         const imgHtml = p.image
-            ? `<img src="${p.image}" alt="${p.name || ''}" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`
+            ? `<img src="${imgOpt(p.image,400)}" alt="${p.name || ''}" width="400" height="400" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`
             : (p.icon || '');
         return `
         <div class="product-card ${rc}" style="${_prodFirst ? `animation-delay:${i*.1}s;` : ''}cursor:pointer;" onclick="openItemDetail('${p.id}','product')">
@@ -1273,7 +1332,7 @@ function renderProducts() {
                 </div>` : ''}
                 <div style="margin-bottom:10px;margin-top:auto;padding-top:10px;">${priceBlockHTML(price,'sm')}</div>
                 <div class="product-footer">
-                    <button class="btn-add${out?' btn-soldout':''}" onclick="event.stopPropagation();addToCart('${p.id}')" ${out?'disabled':''}>
+                    <button class="btn-add${out?' btn-soldout':''}" onclick="event.stopPropagation();flyToCart(this.closest('.product-card').querySelector('.product-image-wrap'));addToCart('${p.id}')" ${out?'disabled':''}>
                         ${out ? 'Sin stock' : '+ Agregar'}
                     </button>
                 </div>
@@ -1282,6 +1341,39 @@ function renderProducts() {
     }).join('');
     _prodFirst = false;
     renderKits();
+    injectProductSchema(allProdsToRender);
+    _handleDeepLinkOnce();
+}
+
+// JSON-LD (schema.org) para que Google pueda mostrar precio/stock de los productos en resultados de búsqueda.
+function injectProductSchema(products) {
+    const el = document.getElementById('product-schema');
+    if (!el) return;
+    const items = products.slice(0, 40).map((p, i) => {
+        const cfg = productConfig[p.id] || {};
+        const price = p.price || 0;
+        const stock = p.stock != null ? p.stock : cfg.stock;
+        const out = typeof stock === 'number' && stock === 0;
+        return {
+            '@type': 'ListItem',
+            position: i + 1,
+            item: {
+                '@type': 'Product',
+                name: cfg.name || p.name || '',
+                image: p.image || undefined,
+                description: p.description || cfg.description || undefined,
+                url: `https://tienda.sbbarber.com.ar/p/${encodeURIComponent(p.id)}`,
+                offers: {
+                    '@type': 'Offer',
+                    priceCurrency: 'ARS',
+                    price: price,
+                    availability: out ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
+                    url: `https://tienda.sbbarber.com.ar/p/${encodeURIComponent(p.id)}`
+                }
+            }
+        };
+    });
+    el.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', itemListElement: items });
 }
 
 const RECENTLY_VIEWED_KEY = 'sb_recently_viewed';
@@ -1301,7 +1393,7 @@ function recentViewedCardHTML(p) {
     const stock = p.stock != null ? p.stock : cfg.stock;
     const out = typeof stock === 'number' && stock === 0;
     const imgHtml = p.image
-        ? `<img src="${p.image}" alt="${p.name || ''}" loading="lazy" decoding="async">`
+        ? `<img src="${imgOpt(p.image,300)}" alt="${p.name || ''}" width="300" height="300" loading="lazy" decoding="async">`
         : (p.icon || '');
     return `
     <div class="product-card" style="cursor:pointer;" onclick="openItemDetail('${p.id}','product')">
@@ -1420,14 +1512,14 @@ function updateCartUI() {
 
     itemsEl.innerHTML = cart.map(item=>`
         <div class="cart-item">
-            <div class="cart-item-img">${item.image ? `<img src="${item.image}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;">` : (item.icon||'<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8l-1 4h10l-1-4z"/></svg>')}</div>
+            <div class="cart-item-img">${item.image ? `<img src="${imgOpt(item.image,120)}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;">` : (item.icon||'<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8l-1 4h10l-1-4z"/></svg>')}</div>
             <div class="cart-item-info">
                 <div class="cart-item-name">${item.name}</div>
                 <div class="cart-item-variant">${item.variant}</div>
                 <div class="qty-controls">
-                    <button class="qty-btn" onclick="updateQty('${item.id}',-1,'${(item.variant||'').replace(/'/g,"\\'")}')">−</button>
+                    <button class="qty-btn" aria-label="Restar cantidad" onclick="updateQty('${item.id}',-1,'${(item.variant||'').replace(/'/g,"\\'")}')">−</button>
                     <span class="qty-num">${item.qty}</span>
-                    <button class="qty-btn" onclick="updateQty('${item.id}',1,'${(item.variant||'').replace(/'/g,"\\'")}')">+</button>
+                    <button class="qty-btn" aria-label="Sumar cantidad" onclick="updateQty('${item.id}',1,'${(item.variant||'').replace(/'/g,"\\'")}')">+</button>
                     <button class="remove-btn" onclick="removeFromCart('${item.id}','${(item.variant||'').replace(/'/g,"\\'")}')">Eliminar</button>
                 </div>
             </div>
@@ -1598,6 +1690,31 @@ function bounceCart() {
     if (c) { c.classList.remove('bounce'); void c.offsetWidth; c.classList.add('bounce'); }
 }
 
+// Anima una miniatura del producto "volando" desde donde se tocó Agregar hasta el ícono del carrito.
+function flyToCart(originEl) {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const cartBtn = document.querySelector('.cart-btn');
+    if (!originEl || !cartBtn) return;
+    const imgSrc = originEl.querySelector('img')?.src;
+    if (!imgSrc) return;
+    const from = originEl.getBoundingClientRect();
+    const to = cartBtn.getBoundingClientRect();
+    const size = 44;
+    const clone = document.createElement('img');
+    clone.src = imgSrc;
+    clone.className = 'fly-thumb';
+    clone.style.cssText = `width:${size}px;height:${size}px;left:${from.left + from.width/2 - size/2}px;top:${from.top + from.height/2 - size/2}px;opacity:1;transform:scale(1);`;
+    document.body.appendChild(clone);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        const dx = (to.left + to.width/2) - (from.left + from.width/2);
+        const dy = (to.top + to.height/2) - (from.top + from.height/2);
+        clone.style.transform = `translate(${dx}px,${dy}px) scale(.15)`;
+        clone.style.opacity = '.3';
+    }));
+    clone.addEventListener('transitionend', () => { clone.remove(); bounceCart(); }, { once: true });
+    setTimeout(() => clone.remove(), 900);
+}
+
 // ── Volver arriba ──
 function scrollTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 (function () {
@@ -1650,15 +1767,17 @@ function scrollTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
     <svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
 </button>
 
+</main>
+
 <!-- TIENDA FOOTER -->
-<div class="tienda-footer">
+<footer class="tienda-footer">
     <div class="footer-stars">★★★★★</div>
     <a class="footer-review" href="https://g.page/r/CYjlyyErmrYQEBM/review" target="_blank" rel="noopener">Dejanos tu reseña en Google</a>
     <div class="footer-meta">
         SB Barber · Dávila 951, CABA · <a href="https://wa.me/541170583352" target="_blank" rel="noopener">WhatsApp</a> · <a href="/terminos.html">Términos y condiciones</a>
     </div>
     <button class="admin-trigger" onclick="openLoginModal()">·</button>
-</div>
+</footer>
 
 <!-- ADMIN FAB -->
 <button id="admin-fab" class="admin-fab" onclick="openAdminModal()" title="Panel Admin">
@@ -2032,6 +2151,7 @@ document.addEventListener('keydown', e => {
         document.getElementById('video-modal-content').innerHTML='';
         document.getElementById('video-modal').classList.remove('open');
         document.getElementById('item-detail-modal').classList.remove('show');
+        closeCart();
         document.body.style.overflow='';
         _detailId=null; _detailType=null;
     }

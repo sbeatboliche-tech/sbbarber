@@ -23,7 +23,7 @@ export default async function handler(req, res) {
             await transporter.sendMail({
                 from: '"SB Barber Tienda" <sbbaarber@gmail.com>',
                 to: buyer.email,
-                subject: '🖤 ¡Gracias por tu compra en SB Barber! — Datos para pagar',
+                subject: `🖤 Datos para transferir — ${orderLabel(orderId)}`,
                 html: buyerHtml(buyer.name, items, total, discount || 0, orderId, ship)
             });
         }
@@ -47,7 +47,7 @@ function emailShell(bodyHtml, { eyebrow = 'TIENDA', title, subtitle } = {}) {
   <div style="background:#0a0a0a;background-image:linear-gradient(180deg,#141414,#0a0a0a);padding:34px 32px 28px;text-align:center;">
     <img src="https://i.imgur.com/xyjMT6X.png" alt="SB BARBER" width="128" style="width:128px;max-width:60%;height:auto;margin:0 auto 18px;display:block;">
     <p style="color:#4ade80;font-size:10px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;margin:0 0 8px;">${eyebrow}</p>
-    <h1 style="color:#ffffff;font-size:22px;line-height:1.2;margin:0;font-weight:800;letter-spacing:-.01em;">${title}</h1>
+    <h1 style="color:#ffffff;font-size:24px;line-height:1.2;margin:0;font-weight:800;letter-spacing:-.01em;">${title}</h1>
     ${subtitle ? `<p style="color:#a3a3a3;margin:8px 0 0;font-size:14px;">${subtitle}</p>` : ''}
   </div>
   <!-- Cuerpo -->
@@ -98,13 +98,13 @@ function sellerHtml(name, email, items, total, discount, orderId, ship) {
 
     const shippingAlert = ship.mode === 'delivery' ? `
         <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px 16px;margin-top:16px;">
-            <p style="color:#1d4ed8;font-size:12px;font-weight:800;margin:0 0 6px;text-transform:uppercase;letter-spacing:.06em;">📦 Acción requerida — Envío</p>
-            <p style="color:#1e40af;font-size:13px;margin:0;">Confirmada la transferencia, generá la etiqueta en <strong>${ship.carrierLabel || 'la transportista'}</strong> y mandale el seguimiento al comprador.</p>
+            <p style="color:#1d4ed8;font-size:12px;font-weight:800;margin:0 0 6px;text-transform:uppercase;letter-spacing:.06em;">📦 Acción requerida</p>
+            <p style="color:#1e40af;font-size:13px;margin:0;">Al confirmar, generá la etiqueta en <strong>${ship.carrierLabel || 'la transportista'}</strong> y mandá el seguimiento.</p>
         </div>` : '';
 
     const body = `
     <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:12px;padding:14px 16px;margin-bottom:20px;text-align:center;">
-      <p style="color:#c2410c;font-size:13px;font-weight:800;margin:0;">⏳ Pendiente de confirmar la transferencia</p>
+      <p style="color:#c2410c;font-size:13px;font-weight:800;margin:0;">⏳ Falta confirmar la transferencia</p>
     </div>
     <table style="width:100%;border-collapse:collapse;">
       <tr><td style="padding:9px 0;color:#71717a;font-size:12px;width:38%;">Cliente</td><td style="padding:9px 0;color:#18181b;font-weight:700;text-align:right;">${name}</td></tr>
@@ -115,10 +115,10 @@ function sellerHtml(name, email, items, total, discount, orderId, ship) {
     </table>
     <div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid #18181b;padding-top:16px;margin-top:16px;">
       <span style="color:#18181b;font-weight:800;">Total a recibir</span>
-      <span style="color:#d97706;font-size:20px;font-weight:900;">$${Number(total).toLocaleString('es-AR')}</span>
+      <span style="color:#d97706;font-size:24px;font-weight:900;">$${Number(total).toLocaleString('es-AR')}</span>
     </div>
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:12px 16px;margin-top:16px;">
-      <p style="color:#92400e;font-size:12px;margin:0;">Esperá la transferencia al alias <strong>tienda.sbbarber</strong> antes de ${ship.mode === 'delivery' ? 'enviar' : 'entregar'} el producto.</p>
+      <p style="color:#92400e;font-size:12px;margin:0;">Esperá el pago antes de ${ship.mode === 'delivery' ? 'enviar' : 'entregar'}.</p>
     </div>
     ${shippingAlert}
     <p style="text-align:center;color:#a1a1aa;font-size:11px;margin:20px 0 0;">Pedido ${orderLabel(orderId)}</p>`;
@@ -145,12 +145,12 @@ function buyerHtml(name, items, total, discount, orderId, ship) {
     const waLink = `https://wa.me/541170583352?text=${waMsg}`;
 
     const body = `
-    <p style="color:#18181b;margin:0 0 20px;font-size:15px;text-align:center;">Hola ${name}, ya reservamos tu pedido.</p>
+    <p style="color:#18181b;margin:0 0 20px;font-size:16px;font-weight:700;text-align:center;">¡Pedido reservado, ${name}!</p>
     <div style="background:#f8f8f8;border-radius:12px;padding:18px 20px;margin-bottom:18px;border:1px solid #ececec;">
       <p style="color:#52525b;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px;">Tu pedido</p>
       <table style="width:100%;border-collapse:collapse;">${itemRows(items)}</table>
       ${discountLine}
-      <p style="color:#18181b;font-size:18px;font-weight:800;margin:8px 0 0;">Total: $${Number(total).toLocaleString('es-AR')}</p>
+      <p style="color:#18181b;font-size:20px;font-weight:900;margin:8px 0 0;">Total: $${Number(total).toLocaleString('es-AR')}</p>
     </div>
     ${shipBlock}
     <div style="background:#0a0a0a;border-radius:12px;padding:20px;margin-bottom:18px;">
@@ -164,8 +164,8 @@ function buyerHtml(name, items, total, discount, orderId, ship) {
     </div>
     <div style="background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.3);border-radius:12px;padding:18px 20px;margin-bottom:20px;text-align:center;">
       <p style="color:#16a34a;font-size:14px;font-weight:800;margin:0 0 4px;">📸 Último paso</p>
-      <p style="color:#15803d;font-size:13px;margin:0 0 14px;line-height:1.5;">Hacé la transferencia y mandanos la <b>captura del pago</b> por WhatsApp para confirmar tu pedido.</p>
-      <a href="${waLink}" style="display:inline-block;background:#25D366;color:#fff;font-size:14px;font-weight:800;text-decoration:none;padding:13px 26px;border-radius:999px;">Enviar captura por WhatsApp</a>
+      <p style="color:#15803d;font-size:13px;margin:0 0 14px;line-height:1.5;">Mandanos la captura del pago por WhatsApp.</p>
+      <a href="${waLink}" style="display:inline-block;background:#25D366;color:#fff;font-size:14px;font-weight:800;text-decoration:none;padding:13px 26px;border-radius:999px;">Enviar captura</a>
     </div>
     <p style="text-align:center;color:#a1a1aa;font-size:11px;margin:0;">Pedido ${orderLabel(orderId)}</p>`;
     return emailShell(body, { title: '¡Gracias por tu compra! 🖤' });

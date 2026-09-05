@@ -711,9 +711,10 @@ function renderVisitList() {
 var ZONAS_FLEX = ['CABA', 'GBA1', 'GBA2', 'GBA3'];
 var ZONA_LABELS = { CABA: 'CABA', GBA1: 'Zona 1', GBA2: 'Zona 2', GBA3: 'Zona 3', Interior: 'Interior' };
 function renderPedidoList() {
+    // Las transferencias necesitan confirmación manual antes de aprobarse, sea con envío o retiro en el local.
+    var pendientes = allPedidos.filter(function(p) { return p.metodoPago === 'transferencia' && !p.aprobado; });
+
     var deliveryPedidos = allPedidos.filter(function(p) { return p.shipping && p.shipping.mode === 'delivery'; });
-    // Las transferencias necesitan confirmación manual antes de poder imprimir etiqueta.
-    var pendientes = deliveryPedidos.filter(function(p) { return p.metodoPago === 'transferencia' && !p.aprobado; });
     var listos     = deliveryPedidos.filter(function(p) { return !(p.metodoPago === 'transferencia' && !p.aprobado) && !p.enviado; });
     var enviados   = deliveryPedidos.filter(function(p) { return !(p.metodoPago === 'transferencia' && !p.aprobado) && p.enviado; });
 
@@ -724,13 +725,14 @@ function renderPedidoList() {
         elPend.innerHTML = pendientes.map(function(p) {
             var b = p.buyer || {};
             var s = p.shipping || {};
+            var esRetiro = !s.mode || s.mode === 'pickup';
             var fecha = (p.creadoEn && p.creadoEn.toDate) ? timeAgo(p.creadoEn.toDate()) : '';
-            var direccion = [s.address, s.city, s.provincia].filter(Boolean).join(', ');
+            var direccion = esRetiro ? 'Retiro en el local' : ([s.address, s.city, s.provincia].filter(Boolean).join(', ') || 'Sin dirección');
             return '<div class="pedido-row">' +
                 '<div class="pedido-meta">' +
                     '<div class="pedido-id">' + p.id + '</div>' +
                     '<div class="pedido-buyer">' + (b.name || 'Sin nombre') + ' · ' + (b.phone || 'Sin teléfono') + '</div>' +
-                    '<div class="pedido-addr">' + (direccion || 'Sin dirección') + (s.postalCode ? ' (CP ' + s.postalCode + ')' : '') + '</div>' +
+                    '<div class="pedido-addr">' + direccion + (!esRetiro && s.postalCode ? ' (CP ' + s.postalCode + ')' : '') + '</div>' +
                     '<div class="pedido-time">' + fecha + '</div>' +
                 '</div>' +
                 '<button class="btn-print" style="background:#16a34a;color:#fff;" onclick="aprobarPedido(\'' + p.id + '\')"><i class="fas fa-check"></i> Aprobar pago</button>' +

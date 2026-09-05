@@ -1,5 +1,8 @@
 {
   "version": 2,
   "framework": null,
-  "cleanUrls": true
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/p/:id", "destination": "/api/producto?id=:id" }
+  ]
 }
