@@ -1008,7 +1008,8 @@
                 <h2 class="text-xl font-bold text-white flex items-center gap-2"><i class="fas fa-tags text-amber-400"></i> Precios de servicios</h2>
                 <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
             </div>
-            <p class="text-[11px] text-gray-500 mb-4">Se aplican al registrar cortes y en la página de turnos.</p>
+            <p class="text-[11px] text-gray-500 mb-1">Se aplican al registrar cortes y en la página de turnos.</p>
+            <p class="text-[10px] font-bold text-gray-600 uppercase tracking-wide mb-3">Arrastrá <i class="fas fa-grip-vertical"></i> para elegir el orden</p>
             <div id="precios-list" class="space-y-2 overflow-y-auto flex-1 pr-1 -mr-1"></div>
             <button type="button" onclick="window.addPrecioServicioRow()" class="w-full border border-dashed border-gray-700 text-gray-400 hover:text-white hover:border-amber-500 rounded-xl py-2.5 text-sm font-bold transition flex-shrink-0 mt-2">
                 <i class="fas fa-plus text-xs mr-1"></i> Agregar servicio
@@ -4273,6 +4274,10 @@ function applyServicePrices(overrides) {
         }
     });
     SERVICES.forEach(s => { if (overrides[s.name] != null) s.price = Number(overrides[s.name]); });
+    if (Array.isArray(overrides.__order) && overrides.__order.length) {
+        const orderIndex = new Map(overrides.__order.map((n, i) => [n, i]));
+        SERVICES.sort((a, b) => (orderIndex.has(a.name) ? orderIndex.get(a.name) : Infinity) - (orderIndex.has(b.name) ? orderIndex.get(b.name) : Infinity));
+    }
     const acm = document.getElementById('add-cut-modal');
     if (acm && !acm.classList.contains('hidden')) {
         const sel = document.querySelector('input[name="barber"]:checked');
@@ -4285,23 +4290,37 @@ function listenToPrecios() {
         if (d.exists()) applyServicePrices(d.data() || {});
     });
 }
+let preciosSortable = null;
+function initPreciosSortable() {
+    if (preciosSortable) { try { preciosSortable.destroy(); } catch(e) {} }
+    const el = document.getElementById('precios-list');
+    preciosSortable = Sortable.create(el, {
+        handle: '.precio-drag-handle',
+        draggable: '.precio-row',
+        animation: 180,
+        ghostClass: 'sortable-ghost'
+    });
+}
 window.openPreciosModal = () => {
     const cont = document.getElementById('precios-list');
     cont.innerHTML = SERVICES.map((s, i) => `
-        <div class="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl p-2.5">
+        <div class="precio-row flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl p-2.5" data-name="${s.name.replace(/"/g,'&quot;')}">
+            <span class="precio-drag-handle cursor-grab text-gray-600 hover:text-gray-400 select-none text-base flex-shrink-0 px-1">⠿</span>
             <span class="flex-1 text-sm font-semibold text-gray-100 min-w-0 truncate">${s.name}</span>
-            <div class="flex items-center bg-black/40 border border-gray-700 rounded-lg px-2 focus-within:border-amber-500">
+            <div class="flex items-center bg-black/40 border border-gray-700 rounded-lg px-2 focus-within:border-amber-500 flex-shrink-0">
                 <span class="text-gray-500 text-sm">$</span>
                 <input type="number" inputmode="numeric" id="precio-serv-${i}" value="${s.price}" min="0"
                     class="w-24 bg-transparent py-2.5 text-sm text-white outline-none text-right">
             </div>
         </div>`).join('');
+    initPreciosSortable();
     showModal('precios-modal');
 };
 window.addPrecioServicioRow = () => {
     const cont = document.getElementById('precios-list');
     cont.insertAdjacentHTML('beforeend', `
-        <div class="flex items-center gap-2 bg-amber-500/5 border border-amber-500/30 rounded-xl p-2.5 precio-nuevo-row">
+        <div class="precio-row flex items-center gap-2 bg-amber-500/5 border border-amber-500/30 rounded-xl p-2.5 precio-nuevo-row">
+            <span class="precio-drag-handle cursor-grab text-gray-600 hover:text-gray-400 select-none text-base flex-shrink-0 px-1">⠿</span>
             <input type="text" placeholder="Nombre del servicio" class="precio-nuevo-nombre flex-1 min-w-0 bg-transparent text-sm font-semibold text-gray-100 outline-none placeholder-gray-600 border-b border-white/10 focus:border-amber-500 py-1">
             <div class="flex items-center bg-black/40 border border-gray-700 rounded-lg px-2 focus-within:border-amber-500 flex-shrink-0">
                 <span class="text-gray-500 text-sm">$</span>
@@ -4332,6 +4351,10 @@ window.savePrecios = async () => {
         });
         const customList = SERVICES.filter(s => s.custom).map(s => ({ name: s.name }));
         if (customList.length) data.__customServices = customList;
+        const order = [...document.querySelectorAll('#precios-list .precio-row')]
+            .map(row => row.dataset.name || row.querySelector('.precio-nuevo-nombre')?.value.trim())
+            .filter(Boolean);
+        if (order.length) data.__order = order;
         await setDoc(doc(db, PATH_PRECIOS_SERV, 'servicios'), data, { merge: true });
         applyServicePrices(data);
         btn.textContent = '✓ Guardado';
