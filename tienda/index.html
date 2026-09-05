@@ -499,6 +499,14 @@
     <div class="benefit"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Productos originales</span></div>
 </div>
 
+<!-- VISTOS RECIENTEMENTE -->
+<section class="products-section" id="recently-viewed-section" style="display:none;padding-bottom:20px;">
+    <div class="section-header">
+        <span class="section-title">Vistos recientemente</span>
+    </div>
+    <div class="products-grid" id="recently-viewed-grid"></div>
+</section>
+
 <!-- KITS -->
 <section class="products-section" id="kits-section" style="padding-bottom:20px;">
     <div class="section-header">
@@ -801,7 +809,7 @@ function getAllProducts(){
         .map(x => x.p);
 }
 function getAllKits(){ return [...KITS, ..._extraKits.filter(k=>!k.hidden)]; }
-function render(){ renderProducts(); renderKits(); }
+function render(){ renderProducts(); renderKits(); renderRecentlyViewed(); }
 function prodById(id){ return getAllProducts().find(p=>p.id===id); }
 function prodPriceLive(id){ const p=prodById(id); return p?(p.price||0):0; }
 function prodNameLive(id){ const p=prodById(id); const cfg=productConfig[id]||{}; return (cfg.name||(p&&p.name))||''; }
@@ -928,6 +936,7 @@ function openItemDetail(id, type) {
         const allP = getAllProducts();
         const p = allP.find(x=>x.id===id);
         if(!p) return;
+        recordRecentlyViewed(id);
         const cfg = productConfig[id] || {};
         const price = p.price || 0;
         const stock = p.stock != null ? p.stock : cfg.stock;
@@ -1217,6 +1226,7 @@ window.setCategory = function(cat) {
 
 function renderProducts() {
     _productsRendered = true;
+    renderRecentlyViewed();
     const allProds = typeof getAllProducts === 'function' ? getAllProducts() : PRODUCTS;
     const allProdsToRender = allProds.filter(p => {
         if (activeCategory !== 'todos' && (p.categoria || 'otros') !== activeCategory) return false;
@@ -1272,6 +1282,57 @@ function renderProducts() {
     }).join('');
     _prodFirst = false;
     renderKits();
+}
+
+const RECENTLY_VIEWED_KEY = 'sb_recently_viewed';
+function recordRecentlyViewed(id) {
+    try {
+        let arr = JSON.parse(localStorage.getItem(RECENTLY_VIEWED_KEY) || '[]');
+        arr = arr.filter(x => x !== id);
+        arr.unshift(id);
+        localStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(arr.slice(0, 10)));
+    } catch (e) {}
+    renderRecentlyViewed();
+}
+
+function recentViewedCardHTML(p) {
+    const cfg = productConfig[p.id] || {};
+    const price = p.price || 0;
+    const stock = p.stock != null ? p.stock : cfg.stock;
+    const out = typeof stock === 'number' && stock === 0;
+    const imgHtml = p.image
+        ? `<img src="${p.image}" alt="${p.name || ''}" loading="lazy" decoding="async">`
+        : (p.icon || '');
+    return `
+    <div class="product-card" style="cursor:pointer;" onclick="openItemDetail('${p.id}','product')">
+        <div class="product-image-wrap">
+            ${imgHtml}
+            ${out ? `<div class="stock-badge stock-out-badge">Sin stock</div>` : ''}
+        </div>
+        <div class="product-info">
+            <div class="product-name">${cfg.name || p.name || ''}</div>
+            <div style="margin-bottom:10px;margin-top:auto;padding-top:10px;">${priceBlockHTML(price,'sm')}</div>
+            <div class="product-footer">
+                <button class="btn-add${out?' btn-soldout':''}" onclick="event.stopPropagation();addToCart('${p.id}')" ${out?'disabled':''}>
+                    ${out ? 'Sin stock' : '+ Agregar'}
+                </button>
+            </div>
+        </div>
+    </div>`;
+}
+
+function renderRecentlyViewed() {
+    const section = document.getElementById('recently-viewed-section');
+    const grid = document.getElementById('recently-viewed-grid');
+    if (!section || !grid) return;
+    let ids = [];
+    try { ids = JSON.parse(localStorage.getItem(RECENTLY_VIEWED_KEY) || '[]'); } catch (e) {}
+    if (!ids.length) { section.style.display = 'none'; return; }
+    const allP = typeof getAllProducts === 'function' ? getAllProducts() : PRODUCTS;
+    const items = ids.map(id => allP.find(p => p.id === id)).filter(Boolean).slice(0, 6);
+    if (!items.length) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    grid.innerHTML = items.map(recentViewedCardHTML).join('');
 }
 
 function addToCart(id, variant) {
