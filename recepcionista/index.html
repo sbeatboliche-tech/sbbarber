@@ -723,11 +723,25 @@
                 <!-- Pago -->
                 <div>
                     <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">Método de pago</p>
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-3 gap-2">
                         <button type="button" id="mp-efectivo" onclick="window.setMetodoPago('efectivo',this)"
-                            class="py-3.5 rounded-2xl font-bold text-sm transition-all bg-emerald-500/15 border border-emerald-500/60 text-emerald-300 active:scale-95">💵 Efectivo</button>
+                            class="py-3.5 rounded-2xl font-bold text-xs transition-all bg-emerald-500/15 border border-emerald-500/60 text-emerald-300 active:scale-95">💵 Efectivo</button>
                         <button type="button" id="mp-transferencia" onclick="window.setMetodoPago('transferencia',this)"
-                            class="py-3.5 rounded-2xl font-bold text-sm transition-all bg-white/5 border border-white/10 text-gray-500 hover:border-white/20 active:scale-95">📲 Transferencia</button>
+                            class="py-3.5 rounded-2xl font-bold text-xs transition-all bg-white/5 border border-white/10 text-gray-500 hover:border-white/20 active:scale-95">📲 Transferencia</button>
+                        <button type="button" id="mp-mixto" onclick="window.setMetodoPago('mixto',this)"
+                            class="py-3.5 rounded-2xl font-bold text-xs transition-all bg-white/5 border border-white/10 text-gray-500 hover:border-white/20 active:scale-95">🔀 Mixto</button>
+                    </div>
+                    <div id="mp-mixto-panel" class="hidden mt-3 grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[10px] text-gray-500 uppercase ml-1">Efectivo</label>
+                            <input type="number" id="mp-monto-efectivo" min="0" placeholder="$0"
+                                class="w-full mt-1 p-3 bg-black/30 border border-gray-700 rounded-xl text-white text-sm outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-500 uppercase ml-1">Transferencia</label>
+                            <input type="number" id="mp-monto-transferencia" min="0" placeholder="$0"
+                                class="w-full mt-1 p-3 bg-black/30 border border-gray-700 rounded-xl text-white text-sm outline-none focus:border-blue-500">
+                        </div>
                     </div>
                 </div>
                 <input type="hidden" id="metodo-pago" value="efectivo">
@@ -1630,7 +1644,7 @@ function renderCuts() {
                 <div class="w-9 h-9 rounded-full overflow-hidden flex-shrink-0">${barberAvatar(c.barber, 9)}</div>
                 <div>
                     <div class="text-sm font-bold text-white">${c.service || ''}${clientText}</div>
-                    <div class="text-[10px] text-gray-400">${c.barber} · ${time} · ${c.metodoPago === 'transferencia' ? '📲' : '💵'}</div>
+                    <div class="text-[10px] text-gray-400">${c.barber} · ${time} · ${c.metodoPago === 'mixto' ? '🔀' : c.metodoPago === 'transferencia' ? '📲' : '💵'}</div>
                 </div>
             </div>
             <div class="flex items-center">
@@ -1649,18 +1663,22 @@ window.openAddCutModal = () => {
     document.getElementById('svc-price').value = '';
     document.getElementById('client-name').value = '';
     document.getElementById('metodo-pago').value = 'efectivo';
+    document.getElementById('mp-monto-efectivo').value = '';
+    document.getElementById('mp-monto-transferencia').value = '';
     const sec = document.getElementById('services-section');
     sec.style.maxHeight = '0'; sec.style.opacity = '0';
-    document.getElementById('mp-efectivo').className = 'py-3.5 rounded-2xl font-bold text-sm transition-all bg-emerald-500/15 border border-emerald-500/60 text-emerald-300 active:scale-95';
-    document.getElementById('mp-transferencia').className = 'py-3.5 rounded-2xl font-bold text-sm transition-all bg-white/5 border border-white/10 text-gray-500 hover:border-white/20 active:scale-95';
+    window.setMetodoPago('efectivo');
     showModal('add-cut-modal');
 };
 
-window.setMetodoPago = (tipo, el) => {
+window.setMetodoPago = (tipo) => {
     document.getElementById('metodo-pago').value = tipo;
-    const esEfectivo = tipo === 'efectivo';
-    document.getElementById('mp-efectivo').className = `py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95 ${esEfectivo ? 'bg-emerald-500/15 border border-emerald-500/60 text-emerald-300' : 'bg-white/5 border border-white/10 text-gray-500 hover:border-white/20'}`;
-    document.getElementById('mp-transferencia').className = `py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95 ${!esEfectivo ? 'bg-blue-500/15 border border-blue-500/60 text-blue-300' : 'bg-white/5 border border-white/10 text-gray-500 hover:border-white/20'}`;
+    const onCls = (color) => `py-3.5 rounded-2xl font-bold text-xs transition-all active:scale-95 bg-${color}-500/15 border border-${color}-500/60 text-${color}-300`;
+    const offCls = 'py-3.5 rounded-2xl font-bold text-xs transition-all active:scale-95 bg-white/5 border border-white/10 text-gray-500 hover:border-white/20';
+    document.getElementById('mp-efectivo').className = tipo === 'efectivo' ? onCls('emerald') : offCls;
+    document.getElementById('mp-transferencia').className = tipo === 'transferencia' ? onCls('blue') : offCls;
+    document.getElementById('mp-mixto').className = tipo === 'mixto' ? onCls('violet') : offCls;
+    document.getElementById('mp-mixto-panel').classList.toggle('hidden', tipo !== 'mixto');
 };
 
 function renderBarberGrid() {
@@ -1715,15 +1733,23 @@ document.getElementById('add-cut-form').addEventListener('submit', async e => {
     const clientName = document.getElementById('client-name').value.trim();
     const propinaAmt = Number(document.getElementById('propina-monto').value) || 0;
     if (!barber || !serviceName) return alert('Seleccioná barbero y servicio');
+    const metodoPago = document.getElementById('metodo-pago').value || 'efectivo';
+    let montoEfectivo = null, montoTransferencia = null;
+    if (metodoPago === 'mixto') {
+        montoEfectivo = Number(document.getElementById('mp-monto-efectivo').value) || 0;
+        montoTransferencia = Number(document.getElementById('mp-monto-transferencia').value) || 0;
+        if (montoEfectivo + montoTransferencia !== servicePrice) return alert(`Efectivo + Transferencia debe sumar $${servicePrice.toLocaleString('es-AR')}`);
+    }
     const btn = document.getElementById('btn-submit-cut');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
-        const metodoPago = document.getElementById('metodo-pago').value || 'efectivo';
         const hoy = new Date().toLocaleDateString('en-CA');
-        await addDoc(collection(db, PATH_CUTS), {
+        const cutData = {
             barber, service: serviceName, price: servicePrice,
             clientName, metodoPago, userEmail: currentUser.email, createdAt: serverTimestamp()
-        });
+        };
+        if (metodoPago === 'mixto') { cutData.montoEfectivo = montoEfectivo; cutData.montoTransferencia = montoTransferencia; }
+        await addDoc(collection(db, PATH_CUTS), cutData);
         if (propinaAmt > 0) {
             await addDoc(collection(db, 'propinas'), {
                 barbero: barber, monto: propinaAmt, fecha: hoy,
@@ -2881,6 +2907,15 @@ function ccDetalleRows(cortesX, bebidaX, prodX, gastoX, retiroX, row) {
     return rows.length ? rows.join('') : '<p class="text-[11px] text-gray-600 py-1">Sin movimientos</p>';
 }
 
+function cutCashAmount(c) {
+    if (c.metodoPago === 'mixto') return c.montoEfectivo || 0;
+    return c.metodoPago === 'transferencia' ? 0 : (c.price || 0);
+}
+function cutTransferAmount(c) {
+    if (c.metodoPago === 'mixto') return c.montoTransferencia || 0;
+    return c.metodoPago === 'transferencia' ? (c.price || 0) : 0;
+}
+
 function renderCierreCaja() {
     const hoyStr = new Date().toLocaleDateString('en-CA');
     const hoy = cierreCajaFechaSel || hoyStr;
@@ -2899,8 +2934,8 @@ function renderCierreCaja() {
     const ventasProductos = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo);
 
     const totalCortes   = cuts.reduce((s, c) => s + (c.price || 0), 0);
-    const cortesEfectivo = cuts.filter(c => c.metodoPago !== 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
-    const cortesTransferencia = cuts.filter(c => c.metodoPago === 'transferencia').reduce((s, c) => s + (c.price || 0), 0);
+    const cortesEfectivo = cuts.reduce((s, c) => s + cutCashAmount(c), 0);
+    const cortesTransferencia = cuts.reduce((s, c) => s + cutTransferAmount(c), 0);
     // Detalle de qué compone Efectivo/Transferencia: bebidas de cliente aparte de otros productos.
     const bebidasCliente = ventasProductos.filter(v => v.tipo === 'bebida');
     const productosNoBebida = ventasProductos.filter(v => v.tipo !== 'bebida');
@@ -2941,8 +2976,8 @@ function renderCierreCaja() {
         if (!byBarber[c.barber]) byBarber[c.barber] = { count:0, total:0, efectivo:0, transferencia:0 };
         byBarber[c.barber].count++;
         byBarber[c.barber].total += c.price || 0;
-        if (c.metodoPago === 'transferencia') byBarber[c.barber].transferencia += c.price || 0;
-        else byBarber[c.barber].efectivo += c.price || 0;
+        byBarber[c.barber].transferencia += cutTransferAmount(c);
+        byBarber[c.barber].efectivo += cutCashAmount(c);
     });
 
     const row = (label, value, labelCls='text-gray-400', valCls='text-white') =>
