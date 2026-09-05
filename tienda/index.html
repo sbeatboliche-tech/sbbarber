@@ -1821,7 +1821,7 @@ function scrollTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, onSnapshot, getDoc, runTransaction, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, setDoc, runTransaction, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -1843,17 +1843,6 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 let adminUser = null;
 let adminTab = 'productos';
-
-function _fsListenError(label) {
-    return err => {
-        console.error(`[tienda] Error escuchando ${label}:`, err.code || err.message || err);
-        // Si una lectura falla (permiso/red), NO bloqueamos la tienda: mostramos
-        // lo que haya (productos estáticos / caché) en vez de dejar skeletons para siempre.
-        _fsConfigReady = true; _fsCustomReady = true;
-        _maybeRenderProducts();
-        if (typeof renderKits === 'function') renderKits();
-    };
-}
 
 // ── Numeración de pedidos secuencial (arranca en 2342) ──
 async function getNextOrderNumber() {
@@ -1913,48 +1902,56 @@ window._markCompletedOrder = function () {
     setDoc(doc(db, 'tienda_visitas', _visitId), { completedOrder: true }, { merge: true }).catch(() => {});
 };
 
-onSnapshot(collection(db, 'tienda_productos'), snap => {
-    productConfig = {};
-    snap.forEach(d => { productConfig[d.id] = d.data(); });
-    _cacheSet('productConfig', productConfig);
-    _fsConfigReady = true;
-    _maybeRenderProducts();
-}, _fsListenError('tienda_productos'));
+// Catálogo público (stock/precio, productos y kits del admin, cursos, categorías, envíos): se pide
+// a /api/catalogo en vez de escuchar Firestore en tiempo real desde cada visitante. Ese endpoint
+// cachea la respuesta ~60s en el borde de Vercel, así que muchas visitas comparten las mismas
+// lecturas a Firestore en vez de gastar cuota una vez por visitante (esto fue lo que agotó la
+// cuota gratis de Firebase apenas subió el tráfico con las campañas de Instagram).
+async function loadCatalogo() {
+    try {
+        const res = await fetch('/api/catalogo');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
 
-onSnapshot(collection(db, 'tienda_productos_custom'), snap => {
-    _extraProductos = snap.docs.map(d => ({ ...d.data(), id:d.id }));
-    _cacheSet('extraProductos', _extraProductos);
-    _fsCustomReady = true;
-    _maybeRenderProducts();
-}, _fsListenError('tienda_productos_custom'));
-onSnapshot(collection(db, 'tienda_kits_custom'), snap => {
-    _extraKits = snap.docs.map(d => ({ ...d.data(), id:d.id, custom:true }));
-    _cacheSet('extraKits', _extraKits);
-    renderKits();
-}, _fsListenError('tienda_kits_custom'));
+        productConfig = data.productConfig || {};
+        _cacheSet('productConfig', productConfig);
+        _fsConfigReady = true;
 
-onSnapshot(collection(db, 'tienda_cursos'), snap => {
-    courseConfig = {};
-    snap.forEach(d => { courseConfig[d.id] = d.data(); });
-}, _fsListenError('tienda_cursos'));
+        _extraProductos = data.extraProductos || [];
+        _cacheSet('extraProductos', _extraProductos);
+        _fsCustomReady = true;
 
-onSnapshot(doc(db, 'tienda_config', 'general'), d => {
-    if (d.exists()) {
-        shippingCost = d.data().envioCosto || 0;
-        if (shippingMode === 'delivery') setShipping('delivery');
+        _extraKits = data.extraKits || [];
+        _cacheSet('extraKits', _extraKits);
+
+        courseConfig = data.courseConfig || {};
+
+        if (data.general && data.general.envioCosto != null) {
+            shippingCost = data.general.envioCosto || 0;
+            if (shippingMode === 'delivery') setShipping('delivery');
+        }
+
+        renderCategoryPills((data.categorias && data.categorias.list) || []);
+
+        if (data.envios && Object.keys(data.envios).length) {
+            ZONE_RATES = Object.assign({}, ZONE_RATES, data.envios);
+            if (shippingMode === 'delivery' && shippingZone) calcularEnvio();
+        }
+
+        _maybeRenderProducts();
+        renderKits();
+    } catch (e) {
+        console.error('[tienda] Error cargando catálogo:', e);
+        // Si falla la red, no dejamos los skeletons para siempre: mostramos lo que haya (caché/estático).
+        _fsConfigReady = true; _fsCustomReady = true;
+        _maybeRenderProducts();
+        if (typeof renderKits === 'function') renderKits();
     }
-});
-
-onSnapshot(doc(db, 'tienda_config', 'categorias'), d => {
-    renderCategoryPills(d.exists() ? d.data().list : []);
-});
-
-onSnapshot(doc(db, 'tienda_config', 'envios'), d => {
-    if (d.exists()) {
-        ZONE_RATES = Object.assign({}, ZONE_RATES, d.data());
-        if (shippingMode === 'delivery' && shippingZone) calcularEnvio();
-    }
-});
+}
+loadCatalogo();
+// Refresco liviano: como /api/catalogo está cacheado en el servidor, repetir este fetch cada
+// pocos minutos no genera lecturas nuevas en Firestore la mayoría de las veces.
+setInterval(loadCatalogo, 3 * 60 * 1000);
 
 setPersistence(auth, browserLocalPersistence).catch(()=>{}).finally(()=>{
     onAuthStateChanged(auth, user => {
@@ -2071,11 +2068,17 @@ window.saveProductos = async () => {
     try {
         for (const p of PRODUCTS) {
             const stockRaw = document.getElementById(`as-${p.id}`).value;
-            const data = { stock: stockRaw !== '' ? parseInt(stockRaw) : null };
-            await setDoc(doc(db, 'tienda_productos', p.id), data, { merge: true });
+            const stock = stockRaw !== '' ? parseInt(stockRaw) : null;
+            await setDoc(doc(db, 'tienda_productos', p.id), { stock }, { merge: true });
+            // Como el catálogo ahora se sirve cacheado desde /api/catalogo (no en vivo), actualizamos
+            // acá mismo para que esta sesión vea el cambio al toque sin esperar el refresco del caché.
+            productConfig[p.id] = { ...(productConfig[p.id] || {}), stock };
         }
         const envioCostoVal = parseInt(document.getElementById('envio-costo').value) || 0;
         await setDoc(doc(db, 'tienda_config', 'general'), { envioCosto: envioCostoVal }, { merge: true });
+        shippingCost = envioCostoVal;
+        _cacheSet('productConfig', productConfig);
+        renderProducts();
         btn.textContent = '✓ Guardado';
         setTimeout(() => { btn.textContent = 'Guardar'; btn.disabled = false; }, 1500);
     } catch(e) { btn.textContent = 'Error — intentá de nuevo'; btn.disabled = false; }
@@ -2087,7 +2090,10 @@ window.saveCursos = async () => {
     try {
         for (const c of COURSES) {
             const priceVal = parseInt(document.getElementById(`ac-${c.id}`).value);
-            if (!isNaN(priceVal)) await setDoc(doc(db, 'tienda_cursos', c.id), { price: priceVal });
+            if (!isNaN(priceVal)) {
+                await setDoc(doc(db, 'tienda_cursos', c.id), { price: priceVal });
+                courseConfig[c.id] = { ...(courseConfig[c.id] || {}), price: priceVal };
+            }
         }
         btn.textContent = '✓ Guardado';
         setTimeout(() => { btn.textContent = 'Guardar'; btn.disabled = false; }, 1500);

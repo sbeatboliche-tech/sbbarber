@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import { fetchFirestoreDoc } from '../lib/firestore.js';
 
-const FIREBASE_PROJECT_ID = 'sb-barber-6dc16';
 const SITE_URL = 'https://tienda.sbbarber.com.ar';
 const FALLBACK_IMAGE = 'https://i.imgur.com/PzcD4W2.jpeg';
 
@@ -51,35 +51,6 @@ async function getProduct(id) {
         price: p.price || 0,
         image: p.image || ''
     };
-}
-
-async function fetchFirestoreDoc(docPath) {
-    try {
-        const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${docPath}`;
-        const r = await fetch(url);
-        if (!r.ok) return null;
-        const data = await r.json();
-        return decodeFirestoreFields(data.fields);
-    } catch (e) {
-        return null;
-    }
-}
-
-function decodeFirestoreFields(fields) {
-    if (!fields) return {};
-    const out = {};
-    for (const [k, v] of Object.entries(fields)) out[k] = decodeFirestoreValue(v);
-    return out;
-}
-function decodeFirestoreValue(v) {
-    if (v.stringValue !== undefined) return v.stringValue;
-    if (v.integerValue !== undefined) return Number(v.integerValue);
-    if (v.doubleValue !== undefined) return v.doubleValue;
-    if (v.booleanValue !== undefined) return v.booleanValue;
-    if (v.nullValue !== undefined) return null;
-    if (v.mapValue) return decodeFirestoreFields(v.mapValue.fields);
-    if (v.arrayValue) return (v.arrayValue.values || []).map(decodeFirestoreValue);
-    return null;
 }
 
 function esc(s = '') {
