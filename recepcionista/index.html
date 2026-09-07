@@ -1434,6 +1434,11 @@ async function registerOrCheckDevice() {
 let turnosSelectedDay = 0, turnoModalSelectedDay = 0, turnoModalSelectedBarber = '', turnosBarberFilter = 'todos';
 let turnosCustomDate = null, turnoModalCustomDate = null;
 let gastosCatSelected = 'otro';
+// onAuthStateChanged puede re-disparar para el MISMO usuario (reconexión de red, celu que
+// bloquea/desbloquea pantalla, refresh de token) — sin esta guarda, cada re-disparo apilaba
+// 13+ listeners de Firestore nuevos sobre los anteriores (nunca se desenganchaban), inflando
+// las lecturas del día muy por encima de lo que el uso real justificaba.
+let _listenersAttached = false;
 
 // ---- INIT ----
 async function init() {
@@ -1459,22 +1464,27 @@ async function init() {
             document.getElementById('dashboard-view').classList.remove('hidden');
             document.getElementById('login-view').classList.add('hidden');
             if (isAdmin) document.getElementById('btn-add-stock-item').classList.remove('hidden');
-            if (isOwner) { document.getElementById('btn-dispositivos').classList.remove('hidden'); document.getElementById('btn-dispositivos').classList.add('flex'); listenToSessions(); }
-            listenToCuts();
-            listenToProfiles();
-            listenToStock();
-            listenToVentas();
-            listenToProductos();
-            listenToRetiros();
-            listenToTurnos();
-            listenToBarberos();
-            listenToGastos();
-            listenToConteos();
-            listenToMlDespachos();
-            listenToMenuData();
-            listenToPrecios();
-            listenToChecklist();
+            if (isOwner) { document.getElementById('btn-dispositivos').classList.remove('hidden'); document.getElementById('btn-dispositivos').classList.add('flex'); }
+            if (!_listenersAttached) {
+                _listenersAttached = true;
+                if (isOwner) listenToSessions();
+                listenToCuts();
+                listenToProfiles();
+                listenToStock();
+                listenToVentas();
+                listenToProductos();
+                listenToRetiros();
+                listenToTurnos();
+                listenToBarberos();
+                listenToGastos();
+                listenToConteos();
+                listenToMlDespachos();
+                listenToMenuData();
+                listenToPrecios();
+                listenToChecklist();
+            }
         } else {
+            _listenersAttached = false;
             if (localStorage.getItem('rec-gate') === '1') {
                 // Gate ya pasado — entrar anónimamente sin pedir contraseña
                 signInAnonymously(auth).catch(() => {
