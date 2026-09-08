@@ -72,6 +72,15 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
 .upload-progress{height:3px;background:#1a1a1a;border-radius:2px;margin-top:8px;overflow:hidden;}
 .upload-progress-bar{height:100%;background:#4ade80;transition:width .3s;width:0%;}
 
+/* GALERÍA DE FOTOS DE PRODUCTO */
+.img-gallery-list{display:flex;flex-wrap:wrap;gap:10px;}
+.img-gallery-item{position:relative;width:84px;height:84px;border-radius:8px;overflow:hidden;background:#0f0f0f;border:1px solid rgba(255,255,255,.1);cursor:grab;}
+.img-gallery-item img{width:100%;height:100%;object-fit:cover;display:block;}
+.img-gallery-item.sortable-ghost{opacity:.3;}
+.img-gallery-cover-tag{position:absolute;left:0;bottom:0;right:0;background:rgba(0,0,0,.7);color:#4ade80;font-size:8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;text-align:center;padding:2px 0;}
+.img-gallery-remove{position:absolute;top:3px;right:3px;width:20px;height:20px;background:rgba(0,0,0,.75);border:none;color:#fff;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;}
+.img-gallery-empty{font-size:12px;color:#404040;}
+
 /* COMBO ITEMS */
 .kit-items-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
 .kit-item-row{display:flex;gap:8px;align-items:flex-start;}
@@ -295,22 +304,23 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                         <div style="font-size:11px;color:#404040;margin-top:6px;">Separadas por coma. Poné lo que necesites: colores, mililitros, tamaños, etc. El cliente elige una antes de agregar al carrito. Dejar vacío si el producto no tiene opciones.</div>
                     </div>
                 </div>
-                <div class="form-grid" style="margin-top:12px;">
+                <div class="form-grid full" style="margin-top:12px;">
                     <div class="form-field">
-                        <label class="field-label">URL de imagen (Imgur, Google Drive, etc.)</label>
-                        <input type="url" id="p-img-url" placeholder="https://i.imgur.com/...">
-                        <label class="field-label" style="margin-top:10px;">O subir foto</label>
+                        <label class="field-label">Fotos del producto (hasta 6 — la primera es la portada)</label>
+                        <div id="p-img-list" class="img-gallery-list"></div>
+                        <div style="display:flex;gap:8px;margin-top:8px;">
+                            <input type="url" id="p-img-url" placeholder="https://i.imgur.com/..." style="flex:1;">
+                            <button type="button" class="btn-cancel" style="height:auto;padding:0 16px;" onclick="addPImageUrl()">+ Agregar link</button>
+                        </div>
+                        <label class="field-label" style="margin-top:10px;">O subir fotos</label>
                         <div class="upload-zone" id="p-img-zone">
-                            <input type="file" id="p-img-file" accept="image/*" onchange="previewFile(this,'p-img-preview','p-img-remove')">
+                            <input type="file" id="p-img-file" accept="image/*" multiple onchange="addPImageFiles(this)">
                             <div class="upload-zone-icon"><i class="fas fa-image"></i></div>
-                            <div class="upload-zone-label">Arrastrá o <span>elegí una foto</span></div>
+                            <div class="upload-zone-label">Arrastrá o <span>elegí una o más fotos</span></div>
                         </div>
-                        <div class="upload-preview" id="p-img-preview" style="display:none;">
-                            <img id="p-img-preview-img" src="" alt="">
-                            <button class="upload-remove" id="p-img-remove" onclick="removeFile('p-img-file','p-img-preview','p-img-zone')"><i class="fas fa-times"></i></button>
-                        </div>
-                        <div class="upload-progress"><div class="upload-progress-bar" id="p-img-progress"></div></div>
                     </div>
+                </div>
+                <div class="form-grid" style="margin-top:12px;">
                     <div class="form-field">
                         <label class="field-label">Video (URL YouTube o Vimeo)</label>
                         <input type="url" id="p-video" placeholder="https://youtube.com/watch?v=...">
@@ -1003,7 +1013,9 @@ function printLabel(pedidoId) {
 }
 
 // ---- IMAGEN: comprime/redimensiona a base64 para entrar SIEMPRE bajo el límite de Firestore (1MB/doc) ----
-function compressToBase64(file) {
+// targetBytes es más chico cuando el producto puede tener varias fotos en el mismo documento
+// (ver p-img-list): con el target de una sola imagen (700KB), 2 fotos ya superarían el 1MB.
+function compressToBase64(file, targetBytes) {
     return new Promise(function(resolve, reject) {
         if (file && file.size != null && file.size === 0) { reject(new Error('El archivo está vacío')); return; }
         var reader = new FileReader();
@@ -1012,7 +1024,7 @@ function compressToBase64(file) {
             var img = new Image();
             img.onerror = function() { reject(new Error('Imagen inválida o formato no soportado')); };
             img.onload = function() {
-                var TARGET = 700000;            // bytes objetivo (deja margen bajo 1MB para el resto del doc)
+                var TARGET = targetBytes || 700000;   // bytes objetivo (deja margen bajo 1MB para el resto del doc)
                 var dims  = [1000, 850, 700, 550, 450, 360];
                 var quals = [0.82, 0.7, 0.6, 0.5, 0.4];
                 function render(dim, q) {
@@ -1060,6 +1072,70 @@ function removeFile(inputId, previewId, zoneId) {
     document.getElementById(zoneId).style.display = 'block';
 }
 
+// ---- GALERÍA DE FOTOS DE PRODUCTO (varias fotos por producto, la 1ra es la portada) ----
+var pImages = [];
+var pImagesSortable = null;
+var P_IMG_MAX = 6;
+// Con varias fotos en el mismo documento hay que repartir el presupuesto de 1MB de Firestore
+// entre todas: 6 fotos de ~150KB c/u dejan margen para el resto de los campos del producto.
+var P_IMG_TARGET_BYTES = 150000;
+
+function renderPImagesList() {
+    var el = document.getElementById('p-img-list');
+    if (!el) return;
+    el.innerHTML = pImages.length
+        ? pImages.map(function(src, i) {
+            return '<div class="img-gallery-item" data-idx="' + i + '">' +
+                '<img src="' + src + '" alt="">' +
+                (i === 0 ? '<div class="img-gallery-cover-tag">Portada</div>' : '') +
+                '<button type="button" class="img-gallery-remove" onclick="removePImage(' + i + ')" title="Quitar"><i class="fas fa-times"></i></button>' +
+            '</div>';
+        }).join('')
+        : '<div class="img-gallery-empty">Sin fotos todavía.</div>';
+    if (pImagesSortable) { try { pImagesSortable.destroy(); } catch(e) {} }
+    pImagesSortable = Sortable.create(el, {
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        onEnd: function() {
+            var rows = document.querySelectorAll('#p-img-list .img-gallery-item');
+            var reordered = Array.prototype.map.call(rows, function(row) { return pImages[Number(row.dataset.idx)]; });
+            pImages = reordered;
+            renderPImagesList();
+        }
+    });
+}
+function removePImage(i) {
+    pImages.splice(i, 1);
+    renderPImagesList();
+}
+function addPImageUrl() {
+    var input = document.getElementById('p-img-url');
+    var url = input.value.trim();
+    if (!url) return;
+    if (pImages.length >= P_IMG_MAX) { showToast('Máximo ' + P_IMG_MAX + ' fotos por producto', false); return; }
+    pImages.push(url);
+    input.value = '';
+    renderPImagesList();
+}
+function addPImageFiles(input) {
+    var files = Array.prototype.slice.call(input.files || []);
+    if (!files.length) return;
+    var room = P_IMG_MAX - pImages.length;
+    if (room <= 0) { showToast('Máximo ' + P_IMG_MAX + ' fotos por producto', false); input.value = ''; return; }
+    if (files.length > room) { showToast('Se subieron ' + room + ' de ' + files.length + ' (máximo ' + P_IMG_MAX + ')', false); files = files.slice(0, room); }
+    Promise.all(files.map(function(f) { return compressToBase64(f, P_IMG_TARGET_BYTES); }))
+        .then(function(results) {
+            pImages = pImages.concat(results);
+            renderPImagesList();
+        })
+        .catch(function(e) {
+            console.error('addPImageFiles error:', e);
+            showToast('No se pudo procesar la foto (' + e.message + ')', false, 4000);
+        })
+        .finally(function() { input.value = ''; });
+}
+renderPImagesList();
+
 // ---- PRODUCTO ----
 function saveProducto() {
     var name  = document.getElementById('p-name').value.trim();
@@ -1074,36 +1150,31 @@ function saveProducto() {
 
     try {
         var id      = editingProductoId || (name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now());
-        var imgFile = document.getElementById('p-img-file').files[0];
-        var imgUrl  = document.getElementById('p-img-url').value.trim();
         var vidUrl  = document.getElementById('p-video').value.trim();
-
-        var imgPromise = imgFile ? compressToBase64(imgFile) : Promise.resolve(imgUrl || null);
 
         var variantes = document.getElementById('p-variantes').value.split(',')
             .map(function(v) { return v.trim(); }).filter(function(v) { return v; });
 
-        imgPromise.then(function(imgResult) {
-            var now  = new Date();
-            var data = {
-                name: name,
-                variant: document.getElementById('p-variant').value.trim(),
-                variantes: variantes,
-                price: price,
-                tag: document.getElementById('p-tag').value || null,
-                categoria: document.getElementById('p-categoria').value || 'otros',
-                stock: (function(){ var v = document.getElementById('p-stock').value; return v === '' ? null : parseInt(v); })(),
-                description: document.getElementById('p-desc').value.trim(),
-                updatedAt: now
-            };
-            if (!editingProductoId) data.createdAt = now;
-            if (imgResult) data.image = imgResult;
-            if (vidUrl)    data.videoUrl = vidUrl;
+        var now  = new Date();
+        var data = {
+            name: name,
+            variant: document.getElementById('p-variant').value.trim(),
+            variantes: variantes,
+            price: price,
+            tag: document.getElementById('p-tag').value || null,
+            categoria: document.getElementById('p-categoria').value || 'otros',
+            stock: (function(){ var v = document.getElementById('p-stock').value; return v === '' ? null : parseInt(v); })(),
+            description: document.getElementById('p-desc').value.trim(),
+            images: pImages.slice(),
+            image: pImages[0] || null,
+            updatedAt: now
+        };
+        if (!editingProductoId) data.createdAt = now;
+        if (vidUrl) data.videoUrl = vidUrl;
 
-            var writeP   = db.collection(PATH_PRODUCTOS).doc(id).set(data, { merge: true });
-            var timeoutP = new Promise(function(_, rej) { setTimeout(function() { rej(new Error('Sin respuesta (15s).\n\nAndá a Firebase Console → Firestore → Rules y cambiá las reglas a:\n\nrules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}')); }, 15000); });
-            return Promise.race([writeP, timeoutP]);
-        }).then(function() {
+        var writeP   = db.collection(PATH_PRODUCTOS).doc(id).set(data, { merge: true });
+        var timeoutP = new Promise(function(_, rej) { setTimeout(function() { rej(new Error('Sin respuesta (15s).\n\nAndá a Firebase Console → Firestore → Rules y cambiá las reglas a:\n\nrules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}')); }, 15000); });
+        Promise.race([writeP, timeoutP]).then(function() {
             showToast('Producto guardado ✓', true);
             cancelEditProducto();
             resetBtn();
@@ -1121,6 +1192,8 @@ function saveProducto() {
 
 function cancelEditProducto() {
     editingProductoId = null;
+    pImages = [];
+    renderPImagesList();
     ['p-name','p-variant','p-variantes','p-price','p-desc','p-video','p-img-url'].forEach(function(id) {
         document.getElementById(id).value = '';
     });
@@ -1128,7 +1201,7 @@ function cancelEditProducto() {
     document.getElementById('p-categoria').value = 'otros';
     document.getElementById('p-stock').value = '';
     document.getElementById('p-edit-id').value = '';
-    removeFile('p-img-file','p-img-preview','p-img-zone');
+    document.getElementById('p-img-file').value = '';
     document.getElementById('p-cancel-btn').style.display = 'none';
     document.getElementById('p-save-btn').textContent = 'Guardar producto';
 }
@@ -1148,12 +1221,9 @@ function editProducto(id) {
     document.getElementById('p-stock').value   = (p.stock === null || p.stock === undefined) ? '' : p.stock;
     document.getElementById('p-desc').value    = p.description || '';
     document.getElementById('p-video').value   = p.videoUrl || '';
-    document.getElementById('p-img-url').value = p.image || '';
-    if (p.image) {
-        document.getElementById('p-img-preview').style.display = 'block';
-        document.getElementById('p-img-preview-img').src = p.image;
-        document.getElementById('p-img-zone').style.display = 'none';
-    }
+    document.getElementById('p-img-url').value = '';
+    pImages = (p.images && p.images.length) ? p.images.slice() : (p.image ? [p.image] : []);
+    renderPImagesList();
     document.getElementById('p-edit-id').value = id;
     document.getElementById('p-cancel-btn').style.display = 'inline-flex';
     document.getElementById('p-save-btn').textContent = 'Actualizar producto';
