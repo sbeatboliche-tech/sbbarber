@@ -1264,11 +1264,12 @@ const CATEGORIAS_BASE = [
     { id:'insumos', label:'Insumos' },
     { id:'otros', label:'Otros' }
 ];
-function renderCategoryPills(customList) {
+function renderCategoryPills(customList, eliminadas) {
     const cont = document.getElementById('category-filters');
     if (!cont) return;
     const custom = (customList || []).filter(c => c && c.id && !CATEGORIAS_BASE.some(b => b.id === c.id));
-    const all = CATEGORIAS_BASE.concat(custom);
+    const baseActivas = CATEGORIAS_BASE.filter(b => !(eliminadas || []).includes(b.id));
+    const all = baseActivas.concat(custom);
     cont.innerHTML = '<button type="button" class="cat-pill' + (activeCategory === 'todos' ? ' active' : '') + '" data-cat="todos" aria-pressed="' + (activeCategory === 'todos') + '" onclick="setCategory(\'todos\')">Todos</button>' +
         all.map(c => '<button type="button" class="cat-pill' + (activeCategory === c.id ? ' active' : '') + '" data-cat="' + c.id + '" aria-pressed="' + (activeCategory === c.id) + '" onclick="setCategory(\'' + c.id + '\')">' + escapeHtml(c.label) + '</button>').join('');
 }
@@ -1931,7 +1932,7 @@ async function loadCatalogo() {
             if (shippingMode === 'delivery') setShipping('delivery');
         }
 
-        renderCategoryPills((data.categorias && data.categorias.list) || []);
+        renderCategoryPills((data.categorias && data.categorias.list) || [], (data.categorias && data.categorias.eliminadas) || []);
 
         if (data.envios && Object.keys(data.envios).length) {
             ZONE_RATES = Object.assign({}, ZONE_RATES, data.envios);

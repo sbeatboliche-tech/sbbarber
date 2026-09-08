@@ -259,12 +259,13 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
                     </div>
                     <div class="form-field">
                         <label class="field-label">Categoría</label>
-                        <select id="p-categoria"></select>
+                        <select id="p-categoria" onchange="updateCategoriaDelLabel()"></select>
                         <div id="p-categoria-new" style="display:none;gap:6px;margin-top:6px;">
                             <input type="text" id="p-categoria-new-input" placeholder="Nombre de la categoría nueva" style="flex:1;">
                             <button type="button" class="btn-add-item" style="width:auto;padding:0 14px;" onclick="confirmarCategoriaNueva()">Crear</button>
                         </div>
                         <button type="button" class="btn-add-item" onclick="toggleCategoriaNueva()" style="margin-top:6px;">+ Categoría nueva</button>
+                        <button type="button" class="btn-add-item" onclick="eliminarCategoriaActual()" style="margin-top:6px;">🗑 Eliminar categoría "<span id="p-categoria-del-label"></span>"</button>
                     </div>
                     <div class="form-field">
                         <label class="field-label">Stock (vacío = ilimitado)</label>
@@ -482,6 +483,7 @@ var CATEGORIAS_BASE = [
     { id:'insumos',    label:'Insumos' },
     { id:'otros',      label:'Otros' }
 ];
+var CATEGORIAS_ELIMINADAS = [];
 var CATEGORIAS = CATEGORIAS_BASE.slice();
 
 function renderCategoriaOptions(selectedId) {
@@ -491,17 +493,55 @@ function renderCategoriaOptions(selectedId) {
         return '<option value="' + c.id + '">' + c.label + '</option>';
     }).join('');
     sel.value = CATEGORIAS.some(function(c) { return c.id === current; }) ? current : 'otros';
+    updateCategoriaDelLabel();
 }
 renderCategoriaOptions();
 
+function updateCategoriaDelLabel() {
+    var sel = document.getElementById('p-categoria');
+    var c = CATEGORIAS.filter(function(c) { return c.id === sel.value; })[0];
+    document.getElementById('p-categoria-del-label').textContent = c ? c.label : '';
+}
+
 function listenCategorias() {
     db.collection('tienda_config').doc('categorias').onSnapshot(function(snap) {
-        var custom = (snap.exists && snap.data().list) || [];
+        var data = (snap.exists && snap.data()) || {};
+        var custom = data.list || [];
+        CATEGORIAS_ELIMINADAS = data.eliminadas || [];
         var customValidas = custom.filter(function(c) {
             return c && c.id && !CATEGORIAS_BASE.some(function(b) { return b.id === c.id; });
         });
-        CATEGORIAS = CATEGORIAS_BASE.concat(customValidas);
+        var baseActivas = CATEGORIAS_BASE.filter(function(b) {
+            return CATEGORIAS_ELIMINADAS.indexOf(b.id) === -1;
+        });
+        CATEGORIAS = baseActivas.concat(customValidas);
         renderCategoriaOptions(document.getElementById('p-categoria').value);
+    });
+}
+
+function eliminarCategoriaActual() {
+    var sel = document.getElementById('p-categoria');
+    var id = sel.value;
+    if (!id || id === 'otros') {
+        showToast('No se puede eliminar la categoría "Otros"', false);
+        return;
+    }
+    var c = CATEGORIAS.filter(function(c) { return c.id === id; })[0];
+    if (!c) return;
+    if (!confirm('¿Eliminar la categoría "' + c.label + '"? Los productos que la tenían asignada van a quedar sin esa categoría (se muestran igual en "Todos").')) return;
+
+    var esBase = CATEGORIAS_BASE.some(function(b) { return b.id === id; });
+    var nuevasEliminadas = CATEGORIAS_ELIMINADAS.slice();
+    if (esBase && nuevasEliminadas.indexOf(id) === -1) nuevasEliminadas.push(id);
+    var nuevoCustomList = CATEGORIAS.filter(function(c) {
+        return !CATEGORIAS_BASE.some(function(b) { return b.id === c.id; }) && c.id !== id;
+    });
+
+    db.collection('tienda_config').doc('categorias').set({ list: nuevoCustomList, eliminadas: nuevasEliminadas }, { merge: true }).then(function() {
+        renderCategoriaOptions('otros');
+        showToast('Categoría "' + c.label + '" eliminada');
+    }).catch(function() {
+        showToast('Error al eliminar la categoría', false);
     });
 }
 
