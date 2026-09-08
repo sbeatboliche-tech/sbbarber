@@ -1596,7 +1596,7 @@ async function submitCheckout() {
             const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,buyer,orderId,shipping})});
             const data=await res.json();
             if(!res.ok||!data.init_point) throw new Error(data.error||'Error al procesar el pago');
-            if (typeof window.saveOrder === 'function') window.saveOrder(orderId,{buyer,shipping,items,total:getFinalTotal(),status:'pendiente_pago',metodoPago:'mercadopago'});
+            if (typeof window.saveOrder === 'function') await window.saveOrder(orderId,{buyer,shipping,items,total:getFinalTotal(),status:'pendiente_pago',metodoPago:'mercadopago'});
             if (typeof window._markCompletedOrder === 'function') window._markCompletedOrder();
             window.location.href=data.init_point;
         } else {

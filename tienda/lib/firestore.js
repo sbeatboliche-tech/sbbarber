@@ -1,7 +1,44 @@
-// Helpers livianos para leer Firestore por REST desde funciones serverless, sin el SDK de Admin
-// (no hace falta cuenta de servicio: son las mismas colecciones que ya se leen en público desde el cliente).
+// Helpers livianos para leer/escribir Firestore por REST desde funciones serverless, sin el SDK de Admin
+// (no hace falta cuenta de servicio: son las mismas colecciones que ya se leen/escriben en público desde el cliente).
 const FIREBASE_PROJECT_ID = 'sb-barber-6dc16';
+const FIREBASE_API_KEY = 'AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w';
 const BASE_URL = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+
+// Escribe (crea o pisa) un documento. Se usa como respaldo server-side de un pedido: si el
+// guardado que hace el navegador del comprador falla (red, bloqueador de contenido, o la
+// redirección a MercadoPago corta el fetch de setDoc antes de que termine), el pedido igual
+// queda registrado porque este write corre en el servidor antes de responder al cliente.
+export async function writeFirestoreDoc(docPath, data) {
+    try {
+        const url = `${BASE_URL}/${docPath}?key=${FIREBASE_API_KEY}`;
+        const r = await fetch(url, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fields: encodeFirestoreFields(data) })
+        });
+        return r.ok;
+    } catch (e) {
+        return false;
+    }
+}
+
+function encodeFirestoreValue(v) {
+    if (v === null || v === undefined) return { nullValue: null };
+    if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+    if (typeof v === 'boolean') return { booleanValue: v };
+    if (v instanceof Date) return { timestampValue: v.toISOString() };
+    if (Array.isArray(v)) return { arrayValue: { values: v.map(encodeFirestoreValue) } };
+    if (typeof v === 'object') return { mapValue: { fields: encodeFirestoreFields(v) } };
+    return { stringValue: String(v) };
+}
+
+function encodeFirestoreFields(obj) {
+    const out = {};
+    for (const [k, val] of Object.entries(obj || {})) {
+        if (val !== undefined) out[k] = encodeFirestoreValue(val);
+    }
+    return out;
+}
 
 export async function fetchFirestoreDoc(docPath) {
     try {

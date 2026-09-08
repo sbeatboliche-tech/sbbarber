@@ -1,10 +1,25 @@
 import nodemailer from 'nodemailer';
+import { writeFirestoreDoc } from '../lib/firestore.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     const { items, buyer, orderId, total, discount, shipping } = req.body;
     const ship = shipping || { mode: 'pickup', address: '', cost: 0 };
+
+    // Registrar el pedido acá (servidor) además de en el navegador del comprador: si el
+    // guardado del cliente falla (red, bloqueador de contenido), el pedido igual queda
+    // registrado porque este write no depende de que el comprador siga en la página.
+    await writeFirestoreDoc(`tienda_pedidos/${orderId}`, {
+        buyer,
+        shipping: ship,
+        items: (items || []).map(i => ({ id: i.id, name: i.name, price: i.price, quantity: Number(i.quantity) })),
+        total,
+        discount: discount || 0,
+        status: 'pendiente_transferencia',
+        metodoPago: 'transferencia',
+        creadoEn: new Date()
+    });
 
     try {
         const transporter = nodemailer.createTransport({

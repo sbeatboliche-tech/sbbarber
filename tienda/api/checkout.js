@@ -1,3 +1,5 @@
+import { writeFirestoreDoc } from '../lib/firestore.js';
+
 const FIRESTORE_PROJECT_ID = 'sb-barber-6dc16';
 const FIRESTORE_API_KEY = 'AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w';
 
@@ -119,6 +121,20 @@ export default async function handler(req, res) {
             shipping_cost: String(shippingCost)
         }
     };
+
+    // Registrar el pedido acá (servidor), antes de mandar al comprador a MercadoPago: si se
+    // guardara solo desde el navegador, la redirección a MercadoPago puede cortar ese fetch
+    // a mitad de camino y el pedido queda sin registrar (ver saveOrder en index.html).
+    const total = mpItems.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+    await writeFirestoreDoc(`tienda_pedidos/${orderId}`, {
+        buyer,
+        shipping: shipping || null,
+        items: items.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: Number(i.quantity) })),
+        total,
+        status: 'pendiente_pago',
+        metodoPago: 'mercadopago',
+        creadoEn: new Date()
+    });
 
     try {
         const mpRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
