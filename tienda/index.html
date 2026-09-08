@@ -1273,12 +1273,21 @@ const CATEGORIAS_BASE = [
     { id:'insumos', label:'Insumos' },
     { id:'otros', label:'Otros' }
 ];
-function renderCategoryPills(customList, eliminadas) {
+function renderCategoryPills(customList, eliminadas, orden) {
     const cont = document.getElementById('category-filters');
     if (!cont) return;
     const custom = (customList || []).filter(c => c && c.id && !CATEGORIAS_BASE.some(b => b.id === c.id));
     const baseActivas = CATEGORIAS_BASE.filter(b => !(eliminadas || []).includes(b.id));
-    const all = baseActivas.concat(custom);
+    let all = baseActivas.concat(custom);
+    if (orden && orden.length) {
+        const pos = {};
+        orden.forEach((id, i) => { pos[id] = i; });
+        all = all.map((c, i) => ({ c, i })).sort((a, b) => {
+            const pa = pos.hasOwnProperty(a.c.id) ? pos[a.c.id] : 1000 + a.i;
+            const pb = pos.hasOwnProperty(b.c.id) ? pos[b.c.id] : 1000 + b.i;
+            return pa - pb;
+        }).map(x => x.c);
+    }
     cont.innerHTML = '<button type="button" class="cat-pill' + (activeCategory === 'todos' ? ' active' : '') + '" data-cat="todos" aria-pressed="' + (activeCategory === 'todos') + '" onclick="setCategory(\'todos\')">Todos</button>' +
         all.map(c => '<button type="button" class="cat-pill' + (activeCategory === c.id ? ' active' : '') + '" data-cat="' + c.id + '" aria-pressed="' + (activeCategory === c.id) + '" onclick="setCategory(\'' + c.id + '\')">' + escapeHtml(c.label) + '</button>').join('');
 }
@@ -1889,7 +1898,7 @@ async function loadCatalogo() {
             if (shippingMode === 'delivery') setShipping('delivery');
         }
 
-        renderCategoryPills((data.categorias && data.categorias.list) || [], (data.categorias && data.categorias.eliminadas) || []);
+        renderCategoryPills((data.categorias && data.categorias.list) || [], (data.categorias && data.categorias.eliminadas) || [], (data.categorias && data.categorias.orden) || []);
 
         if (data.envios && Object.keys(data.envios).length) {
             ZONE_RATES = Object.assign({}, ZONE_RATES, data.envios);
