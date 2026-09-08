@@ -420,6 +420,16 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
             <div id="pedido-list-enviados" class="prod-list">
                 <div class="empty-state"><i class="fas fa-check-circle"></i><p>Cargando...</p></div>
             </div>
+
+            <div class="section-title" style="margin-top:28px;">Para retirar en el local</div>
+            <div id="pedido-list-retiro" class="prod-list">
+                <div class="empty-state"><i class="fas fa-store"></i><p>Cargando...</p></div>
+            </div>
+
+            <div class="section-title" style="margin-top:28px;">Retirados recientemente</div>
+            <div id="pedido-list-retirados" class="prod-list">
+                <div class="empty-state"><i class="fas fa-check-circle"></i><p>Cargando...</p></div>
+            </div>
         </div>
     </div>
 </div>
@@ -754,9 +764,13 @@ function renderPedidoList() {
     // Las transferencias necesitan confirmación manual antes de aprobarse, sea con envío o retiro en el local.
     var pendientes = allPedidos.filter(function(p) { return p.metodoPago === 'transferencia' && !p.aprobado; });
 
+    var noPendiente = function(p) { return !(p.metodoPago === 'transferencia' && !p.aprobado); };
     var deliveryPedidos = allPedidos.filter(function(p) { return p.shipping && p.shipping.mode === 'delivery'; });
-    var listos     = deliveryPedidos.filter(function(p) { return !(p.metodoPago === 'transferencia' && !p.aprobado) && !p.enviado; });
-    var enviados   = deliveryPedidos.filter(function(p) { return !(p.metodoPago === 'transferencia' && !p.aprobado) && p.enviado; });
+    var pickupPedidos   = allPedidos.filter(function(p) { return !p.shipping || !p.shipping.mode || p.shipping.mode === 'pickup'; });
+    var listos     = deliveryPedidos.filter(function(p) { return noPendiente(p) && !p.enviado; });
+    var enviados   = deliveryPedidos.filter(function(p) { return noPendiente(p) && p.enviado; });
+    var paraRetirar = pickupPedidos.filter(function(p) { return noPendiente(p) && !p.retirado; });
+    var retirados   = pickupPedidos.filter(function(p) { return noPendiente(p) && p.retirado; });
 
     var elPend = document.getElementById('pedido-list-pendientes');
     if (!pendientes.length) {
@@ -826,6 +840,52 @@ function renderPedidoList() {
                 '</div>';
             }).join('');
     }
+
+    var elRet = document.getElementById('pedido-list-retiro');
+    if (!paraRetirar.length) {
+        elRet.innerHTML = '<div class="empty-state"><i class="fas fa-store"></i><p>No hay pedidos esperando ser retirados.</p></div>';
+    } else {
+        elRet.innerHTML = paraRetirar.map(function(p) {
+            var b = p.buyer || {};
+            var fecha = (p.creadoEn && p.creadoEn.toDate) ? timeAgo(p.creadoEn.toDate()) : '';
+            return '<div class="pedido-row">' +
+                '<div class="pedido-meta">' +
+                    '<div class="pedido-id">' + p.id + '</div>' +
+                    '<div class="pedido-buyer">' + (b.name || 'Sin nombre') + ' · ' + (b.phone || 'Sin teléfono') + '</div>' +
+                    '<div class="pedido-addr">Retiro en el local</div>' +
+                    '<div class="pedido-time">' + fecha + '</div>' +
+                '</div>' +
+                '<button class="btn-print" style="background:#16a34a;color:#fff;" onclick="marcarRetirado(\'' + p.id + '\')"><i class="fas fa-check"></i> Retirado</button>' +
+            '</div>';
+        }).join('');
+    }
+
+    var elRetDone = document.getElementById('pedido-list-retirados');
+    if (elRetDone) {
+        elRetDone.innerHTML = !retirados.length
+            ? '<div class="empty-state"><i class="fas fa-check-circle"></i><p>Todavía no marcaste ningún retiro.</p></div>'
+            : retirados.slice(0, 30).map(function(p) {
+                var b = p.buyer || {};
+                var fechaRet = (p.retiradoEn && p.retiradoEn.toDate) ? timeAgo(p.retiradoEn.toDate()) : '';
+                return '<div class="pedido-row" style="opacity:.6;">' +
+                    '<div class="pedido-meta">' +
+                        '<div class="pedido-id">' + p.id + '</div>' +
+                        '<div class="pedido-buyer">' + (b.name || 'Sin nombre') + '</div>' +
+                        '<div class="pedido-addr">Retiro en el local</div>' +
+                        '<div class="pedido-time">Retirado ' + fechaRet + '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+    }
+}
+
+function marcarRetirado(pedidoId) {
+    db.collection('tienda_pedidos').doc(pedidoId).update({
+        retirado: true,
+        retiradoEn: firebase.firestore.FieldValue.serverTimestamp()
+    })
+        .then(function() { showToast('Pedido marcado como retirado ✓', true); })
+        .catch(function(e) { console.error('marcarRetirado error:', e); showToast('Error al marcar como retirado (' + (e.code||e.message) + ')', false, 4000); });
 }
 
 function marcarEnviado(pedidoId) {
