@@ -896,6 +896,11 @@ const BARBER_EXTRA_THEMES = [
     { color:'yellow', text:'text-yellow-400', border:'border-yellow-500', bg:'bg-yellow-500' },
 ];
 let extraThemeIdx = 0;
+// onAuthStateChanged puede re-disparar para el MISMO usuario (reconexión de red, celu que
+// bloquea/desbloquea pantalla, refresh de token) — sin esta guarda, cada re-disparo apilaba
+// listeners de Firestore nuevos sobre los anteriores (nunca se desenganchaban), inflando
+// las lecturas del día muy por encima de lo que el uso real justificaba.
+let _listenersAttached = false;
 
 const PATH_MAIN     = `artifacts/${firebaseConfig.projectId}/public/data/all_cuts`;
 const PATH_LEGACY   = `barbershop`;
@@ -968,25 +973,15 @@ function init() {
             document.getElementById('login-view').classList.add('hidden');
             const bName=BARBER_EMAIL_MAP[user.email];
             if(bName){ document.getElementById('settings-btn').classList.remove('hidden'); document.getElementById('settings-user-name').textContent=bName; }
-            listenToBarberProfiles();
-            listenToSettings();
-            listenToPrecios();
             checkUpdatesBadge();
-            listenToBarberos();
             if(ADMINS.includes(user.email)){
                 document.getElementById('admin-settings-btn').classList.remove('hidden');
                 document.getElementById('stock-fab').classList.remove('hidden');
                 document.getElementById('stock-fab').classList.add('flex');
-                listenToStockProductos();
-                listenToGastos();
-                listenToConteos();
                 document.getElementById('add-cut-fab').classList.remove('hidden');
                 document.getElementById('add-cut-fab').classList.add('flex');
                 document.getElementById('gastos-fab').classList.remove('hidden');
                 document.getElementById('gastos-fab').classList.add('flex');
-                listenToExpenses();
-                listenToFixedExpenses();
-                listenToStock();
             }
             document.getElementById('retiros-fab').classList.remove('hidden');
             document.getElementById('retiros-fab').classList.add('flex');
@@ -994,12 +989,28 @@ function init() {
                 document.getElementById('cierre-fab').classList.remove('hidden');
                 document.getElementById('cierre-fab').classList.add('flex');
             }
-            listenToRetiros();
-            listenToPropinas();
-            listenToVentas();
-            listenToAnotarTurnos();
-            startDualSync();
+            if (!_listenersAttached) {
+                _listenersAttached = true;
+                listenToBarberProfiles();
+                listenToSettings();
+                listenToPrecios();
+                listenToBarberos();
+                if(ADMINS.includes(user.email)){
+                    listenToStockProductos();
+                    listenToGastos();
+                    listenToConteos();
+                    listenToExpenses();
+                    listenToFixedExpenses();
+                    listenToStock();
+                }
+                listenToRetiros();
+                listenToPropinas();
+                listenToVentas();
+                listenToAnotarTurnos();
+                startDualSync();
+            }
         } else {
+            _listenersAttached = false;
             document.getElementById('loading-view').classList.add('hidden');
             document.getElementById('dashboard-view').classList.add('hidden');
             document.getElementById('login-view').classList.remove('hidden');

@@ -505,14 +505,6 @@
     <div class="benefit"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Productos originales</span></div>
 </div>
 
-<!-- VISTOS RECIENTEMENTE -->
-<section class="products-section" id="recently-viewed-section" style="display:none;padding-bottom:20px;">
-    <div class="section-header">
-        <span class="section-title">Vistos recientemente</span>
-    </div>
-    <div class="products-grid" id="recently-viewed-grid"></div>
-</section>
-
 <!-- KITS -->
 <section class="products-section" id="kits-section" style="padding-bottom:20px;">
     <div class="section-header">
@@ -815,7 +807,7 @@ function getAllProducts(){
         .map(x => x.p);
 }
 function getAllKits(){ return [...KITS, ..._extraKits.filter(k=>!k.hidden)]; }
-function render(){ renderProducts(); renderKits(); renderRecentlyViewed(); }
+function render(){ renderProducts(); renderKits(); }
 function prodById(id){ return getAllProducts().find(p=>p.id===id); }
 function prodPriceLive(id){ const p=prodById(id); return p?(p.price||0):0; }
 function prodNameLive(id){ const p=prodById(id); const cfg=productConfig[id]||{}; return (cfg.name||(p&&p.name))||''; }
@@ -893,12 +885,12 @@ function openItemDetail(id, type, silent) {
         // imagen / collage
         const imgWrap = document.getElementById('item-detail-imgs');
         if(k.image) {
-            imgWrap.innerHTML = `<img src="${imgOpt(k.image,700)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+            imgWrap.innerHTML = `<img src="${imgOpt(k.image,700)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="${imgOnError(k.image)}">`;
         } else if(k.componentes && !k.items) {
             const comps = k.componentes.map(prodById).filter(Boolean);
             const imgs = comps.filter(p=>p.image).slice(0,4);
             imgWrap.innerHTML = imgs.length
-                ? `<div style="position:absolute;inset:0;display:flex;gap:2px;">${imgs.map(p=>`<img src="${imgOpt(p.image,350)}" alt="" style="flex:1;min-width:0;height:100%;object-fit:cover;display:block;">`).join('')}</div>`
+                ? `<div style="position:absolute;inset:0;display:flex;gap:2px;">${imgs.map(p=>`<img src="${imgOpt(p.image,350)}" alt="" style="flex:1;min-width:0;height:100%;object-fit:cover;display:block;" onerror="${imgOnError(p.image)}">`).join('')}</div>`
                 : KIT_ICON;
         } else { imgWrap.innerHTML = KIT_ICON; }
         // badges
@@ -946,7 +938,6 @@ function openItemDetail(id, type, silent) {
         const allP = getAllProducts();
         const p = allP.find(x=>x.id===id);
         if(!p) return;
-        recordRecentlyViewed(id);
         const cfg = productConfig[id] || {};
         const price = p.price || 0;
         const stock = p.stock != null ? p.stock : cfg.stock;
@@ -954,7 +945,7 @@ function openItemDetail(id, type, silent) {
         // imagen
         const imgWrap = document.getElementById('item-detail-imgs');
         if(p.image) {
-            imgWrap.innerHTML = `<img src="${imgOpt(p.image,700)}" alt="${p.name||''}" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+            imgWrap.innerHTML = `<img src="${imgOpt(p.image,700)}" alt="${p.name||''}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="${imgOnError(p.image)}">`;
         } else {
             imgWrap.innerHTML = p.icon || `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#333;font-size:48px;">📦</div>`;
         }
@@ -1230,10 +1221,28 @@ function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 // Redimensiona/convierte a WebP las imágenes servidas desde Imgur vía wsrv.nl (proxy gratuito, sin cuenta)
-// para bajar el peso de descarga sin tener que migrar el hosting de imágenes.
+// para bajar el peso de descarga sin tener que migrar el hosting de imágenes. Las imágenes propias
+// (subidas desde admin.html) ya vienen en base64 (data:) y wsrv.nl no puede ir a buscarlas -> se sirven
+// directo, sin pasar por el proxy.
 function imgOpt(url, w) {
     if (!url) return url;
+    if (url.startsWith('data:')) return url;
     return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${w}&output=webp&q=80`;
+}
+// Si wsrv.nl falla (por ejemplo Imgur rate-limitea al proxy) volvemos a la imagen original sin
+// redimensionar; si esa también falla, recién ahí mostramos el ícono de respaldo (si hay uno al lado).
+window._imgFallback = function (img, originalUrl) {
+    if (img.dataset.imgFallback) {
+        img.style.display = 'none';
+        if (img.nextElementSibling) img.nextElementSibling.style.display = 'flex';
+        return;
+    }
+    img.dataset.imgFallback = '1';
+    img.src = originalUrl;
+};
+function imgOnError(originalUrl) {
+    const jsSafe = String(originalUrl || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    return escapeHtml(`window._imgFallback(this,'${jsSafe}')`);
 }
 function matchesQuery(...fields) {
     if (!searchQuery) return true;
@@ -1286,7 +1295,6 @@ window.setCategory = function(cat) {
 
 function renderProducts() {
     _productsRendered = true;
-    renderRecentlyViewed();
     const allProds = typeof getAllProducts === 'function' ? getAllProducts() : PRODUCTS;
     const allProdsToRender = allProds.filter(p => {
         if (activeCategory !== 'todos' && (p.categoria || 'otros') !== activeCategory) return false;
@@ -1313,7 +1321,7 @@ function renderProducts() {
         const out = typeof stock === 'number' && stock === 0;
         const low = typeof stock === 'number' && stock > 0 && stock <= 5;
         const imgHtml = p.image
-            ? `<img src="${imgOpt(p.image,400)}" alt="${p.name || ''}" width="400" height="400" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`
+            ? `<img src="${imgOpt(p.image,400)}" alt="${p.name || ''}" width="400" height="400" loading="lazy" decoding="async" onerror="${imgOnError(p.image)}">`
             : (p.icon || '');
         return `
         <div class="product-card ${rc}" style="${_prodFirst ? `animation-delay:${i*.1}s;` : ''}cursor:pointer;" onclick="openItemDetail('${p.id}','product')">
@@ -1375,57 +1383,6 @@ function injectProductSchema(products) {
         };
     });
     el.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', itemListElement: items });
-}
-
-const RECENTLY_VIEWED_KEY = 'sb_recently_viewed';
-function recordRecentlyViewed(id) {
-    try {
-        let arr = JSON.parse(localStorage.getItem(RECENTLY_VIEWED_KEY) || '[]');
-        arr = arr.filter(x => x !== id);
-        arr.unshift(id);
-        localStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(arr.slice(0, 10)));
-    } catch (e) {}
-    renderRecentlyViewed();
-}
-
-function recentViewedCardHTML(p) {
-    const cfg = productConfig[p.id] || {};
-    const price = p.price || 0;
-    const stock = p.stock != null ? p.stock : cfg.stock;
-    const out = typeof stock === 'number' && stock === 0;
-    const imgHtml = p.image
-        ? `<img src="${imgOpt(p.image,300)}" alt="${p.name || ''}" width="300" height="300" loading="lazy" decoding="async">`
-        : (p.icon || '');
-    return `
-    <div class="product-card" style="cursor:pointer;" onclick="openItemDetail('${p.id}','product')">
-        <div class="product-image-wrap">
-            ${imgHtml}
-            ${out ? `<div class="stock-badge stock-out-badge">Sin stock</div>` : ''}
-        </div>
-        <div class="product-info">
-            <div class="product-name">${cfg.name || p.name || ''}</div>
-            <div style="margin-bottom:10px;margin-top:auto;padding-top:10px;">${priceBlockHTML(price,'sm')}</div>
-            <div class="product-footer">
-                <button class="btn-add${out?' btn-soldout':''}" onclick="event.stopPropagation();addToCart('${p.id}')" ${out?'disabled':''}>
-                    ${out ? 'Sin stock' : '+ Agregar'}
-                </button>
-            </div>
-        </div>
-    </div>`;
-}
-
-function renderRecentlyViewed() {
-    const section = document.getElementById('recently-viewed-section');
-    const grid = document.getElementById('recently-viewed-grid');
-    if (!section || !grid) return;
-    let ids = [];
-    try { ids = JSON.parse(localStorage.getItem(RECENTLY_VIEWED_KEY) || '[]'); } catch (e) {}
-    if (!ids.length) { section.style.display = 'none'; return; }
-    const allP = typeof getAllProducts === 'function' ? getAllProducts() : PRODUCTS;
-    const items = ids.map(id => allP.find(p => p.id === id)).filter(Boolean).slice(0, 6);
-    if (!items.length) { section.style.display = 'none'; return; }
-    section.style.display = '';
-    grid.innerHTML = items.map(recentViewedCardHTML).join('');
 }
 
 function addToCart(id, variant) {
@@ -1513,7 +1470,7 @@ function updateCartUI() {
 
     itemsEl.innerHTML = cart.map(item=>`
         <div class="cart-item">
-            <div class="cart-item-img">${item.image ? `<img src="${imgOpt(item.image,120)}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;">` : (item.icon||'<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8l-1 4h10l-1-4z"/></svg>')}</div>
+            <div class="cart-item-img">${item.image ? `<img src="${imgOpt(item.image,120)}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="${imgOnError(item.image)}">` : (item.icon||'<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8l-1 4h10l-1-4z"/></svg>')}</div>
             <div class="cart-item-info">
                 <div class="cart-item-name">${item.name}</div>
                 <div class="cart-item-variant">${item.variant}</div>
