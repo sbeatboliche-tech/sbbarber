@@ -887,7 +887,10 @@ function renderPedidoList() {
                     '<div class="pedido-items">' + pedidoItemsResumen(p) + '</div>' +
                     '<div class="pedido-time">' + fecha + '</div>' +
                 '</div>' +
-                '<button class="btn-print" style="background:#16a34a;color:#fff;" onclick="aprobarPedido(\'' + p.id + '\')"><i class="fas fa-check"></i> Aprobar pago</button>' +
+                '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:stretch;">' +
+                    '<button class="btn-print" style="background:#16a34a;color:#fff;" onclick="aprobarPedido(\'' + p.id + '\')"><i class="fas fa-check"></i> Aprobar pago</button>' +
+                    '<button class="btn-del" style="width:auto;height:auto;padding:8px;" onclick="eliminarPedido(\'' + p.id + '\')" title="Eliminar pedido"><i class="fas fa-trash"></i></button>' +
+                '</div>' +
             '</div>';
         }).join('');
     }
@@ -907,6 +910,7 @@ function renderPedidoList() {
                 ? '<button class="btn-print" onclick="printLabel(\'' + p.id + '\')"><i class="fas fa-print"></i> Etiqueta</button>'
                 : '<span class="pedido-no-flex">Correo Argentino</span>';
             var enviarBtn = '<button class="btn-print" style="background:#16a34a;color:#fff;" onclick="marcarEnviado(\'' + p.id + '\')"><i class="fas fa-check"></i> Enviado</button>';
+            var delBtn = '<button class="btn-del" style="width:auto;height:auto;padding:8px;" onclick="eliminarPedido(\'' + p.id + '\')" title="Eliminar pedido"><i class="fas fa-trash"></i></button>';
             return '<div class="pedido-row">' +
                 '<div class="pedido-meta">' +
                     '<div class="pedido-id">' + p.id + ' ' + zonaTag + '</div>' +
@@ -915,7 +919,7 @@ function renderPedidoList() {
                     '<div class="pedido-items">' + pedidoItemsResumen(p) + '</div>' +
                     '<div class="pedido-time">' + fecha + '</div>' +
                 '</div>' +
-                '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:stretch;">' + accion + enviarBtn + '</div>' +
+                '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:stretch;">' + accion + enviarBtn + delBtn + '</div>' +
             '</div>';
         }).join('');
     }
@@ -937,6 +941,7 @@ function renderPedidoList() {
                         '<div class="pedido-items">' + pedidoItemsResumen(p) + '</div>' +
                         '<div class="pedido-time">Enviado ' + fechaEnv + '</div>' +
                     '</div>' +
+                    '<button class="btn-del" style="width:auto;height:auto;padding:8px;" onclick="eliminarPedido(\'' + p.id + '\')" title="Eliminar pedido"><i class="fas fa-trash"></i></button>' +
                 '</div>';
             }).join('');
     }
@@ -956,7 +961,10 @@ function renderPedidoList() {
                     '<div class="pedido-items">' + pedidoItemsResumen(p) + '</div>' +
                     '<div class="pedido-time">' + fecha + '</div>' +
                 '</div>' +
-                '<button class="btn-print" style="background:#16a34a;color:#fff;" onclick="marcarRetirado(\'' + p.id + '\')"><i class="fas fa-check"></i> Retirado</button>' +
+                '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:stretch;">' +
+                    '<button class="btn-print" style="background:#16a34a;color:#fff;" onclick="marcarRetirado(\'' + p.id + '\')"><i class="fas fa-check"></i> Retirado</button>' +
+                    '<button class="btn-del" style="width:auto;height:auto;padding:8px;" onclick="eliminarPedido(\'' + p.id + '\')" title="Eliminar pedido"><i class="fas fa-trash"></i></button>' +
+                '</div>' +
             '</div>';
         }).join('');
     }
@@ -976,9 +984,18 @@ function renderPedidoList() {
                         '<div class="pedido-items">' + pedidoItemsResumen(p) + '</div>' +
                         '<div class="pedido-time">Retirado ' + fechaRet + '</div>' +
                     '</div>' +
+                    '<button class="btn-del" style="width:auto;height:auto;padding:8px;" onclick="eliminarPedido(\'' + p.id + '\')" title="Eliminar pedido"><i class="fas fa-trash"></i></button>' +
                 '</div>';
             }).join('');
     }
+}
+
+function eliminarPedido(pedidoId) {
+    showConfirm('¿Eliminar el pedido ' + pedidoId + '? Esta acción no se puede deshacer.', function() {
+        db.collection('tienda_pedidos').doc(pedidoId).delete()
+            .then(function() { showToast('Pedido eliminado', true); return listenPedidos(); })
+            .catch(function(e) { console.error('eliminarPedido error:', e); showToast('Error al eliminar (' + (e.code||e.message) + ')', false, 4000); });
+    });
 }
 
 function marcarRetirado(pedidoId) {
