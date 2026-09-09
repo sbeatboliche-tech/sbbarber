@@ -554,7 +554,7 @@ function persistCategoriaOrder() {
     var rows = document.querySelectorAll('#categoria-manage-list .prod-row[data-cat-id]');
     var orden = Array.prototype.map.call(rows, function(row) { return row.dataset.catId; });
     db.collection('tienda_config').doc('categorias').set({ orden: orden }, { merge: true })
-        .then(function() { showToast('Orden guardado', true); })
+        .then(function() { showToast('Orden guardado', true); return listenCategorias(); })
         .catch(function(e) { console.error('persistCategoriaOrder error:', e); showToast('Error al guardar el orden (' + (e.code||e.message) + ')', false, 4000); });
 }
 
@@ -568,8 +568,11 @@ function ordenarCategorias(list) {
     });
 }
 
+// Carga una sola vez (no en vivo): se refresca al entrar/recargar la página, o justo
+// después de guardar algo desde acá mismo — así se evita tener listeners de Firestore
+// abiertos todo el día en el admin, que no hace falta que sea tiempo real.
 function listenCategorias() {
-    db.collection('tienda_config').doc('categorias').onSnapshot(function(snap) {
+    return db.collection('tienda_config').doc('categorias').get().then(function(snap) {
         var data = (snap.exists && snap.data()) || {};
         var custom = data.list || [];
         CATEGORIAS_ELIMINADAS = data.eliminadas || [];
@@ -583,6 +586,9 @@ function listenCategorias() {
         CATEGORIAS = ordenarCategorias(baseActivas.concat(customValidas));
         renderCategoriaOptions(document.getElementById('p-categoria').value);
         renderCategoriaManageList();
+    }, function(err) {
+        console.error('listenCategorias error:', err);
+        showToast('No se pudieron cargar las categorías (' + (err.code||err.message) + ')', false, 4000);
     });
 }
 
@@ -602,6 +608,7 @@ function crearCategoriaManage() {
     db.collection('tienda_config').doc('categorias').set({ list: nuevoCustomList }, { merge: true }).then(function() {
         input.value = '';
         showToast('Categoría "' + label + '" agregada', true);
+        return listenCategorias();
     }).catch(function() {
         showToast('Error al crear la categoría', false);
     });
@@ -625,6 +632,7 @@ function eliminarCategoria(id) {
 
         db.collection('tienda_config').doc('categorias').set({ list: nuevoCustomList, eliminadas: nuevasEliminadas, orden: nuevoOrden }, { merge: true }).then(function() {
             showToast('Categoría "' + c.label + '" eliminada', true);
+            return listenCategorias();
         }).catch(function() {
             showToast('Error al eliminar la categoría', false);
         });
@@ -642,12 +650,15 @@ var ENVIOS_DEFAULT = { CABA: 3500, GBA1: 4300, GBA2: 6000, GBA3: 8300, Interior:
 var ENVIOS_INPUT_MAP = { CABA:'env-caba', GBA1:'env-gba1', GBA2:'env-gba2', GBA3:'env-gba3', Interior:'env-interior' };
 
 function listenEnvios() {
-    db.collection('tienda_config').doc('envios').onSnapshot(function(snap) {
+    return db.collection('tienda_config').doc('envios').get().then(function(snap) {
         var data = Object.assign({}, ENVIOS_DEFAULT, (snap.exists && snap.data()) || {});
         Object.keys(ENVIOS_INPUT_MAP).forEach(function(key) {
             var input = document.getElementById(ENVIOS_INPUT_MAP[key]);
             if (input && document.activeElement !== input) input.value = data[key];
         });
+    }, function(err) {
+        console.error('listenEnvios error:', err);
+        showToast('No se pudieron cargar los precios de envío (' + (err.code||err.message) + ')', false, 4000);
     });
 }
 
@@ -658,7 +669,7 @@ function saveEnvios() {
         data[key] = isNaN(v) ? ENVIOS_DEFAULT[key] : v;
     });
     db.collection('tienda_config').doc('envios').set(data, { merge: true })
-        .then(function() { showToast('Precios de envío guardados ✓', true); })
+        .then(function() { showToast('Precios de envío guardados ✓', true); return listenEnvios(); })
         .catch(function(e) { showToast('Error al guardar (' + (e.code || e.message) + ')', false, 5000); });
 }
 
@@ -678,6 +689,7 @@ function confirmarCategoriaNueva() {
         document.getElementById('p-categoria-new-input').value = '';
         document.getElementById('p-categoria-new').style.display = 'none';
         showToast('Categoría "' + label + '" agregada');
+        return listenCategorias();
     }).catch(function() {
         showToast('Error al crear la categoría', false);
     });
@@ -754,9 +766,12 @@ function switchTab(tab) {
     document.getElementById('tab-pedidos').classList.toggle('active', tab === 'pedidos');
 }
 
-// ---- LISTENERS ----
+// ---- CARGA DE DATOS ----
+// Antes eran listeners en vivo (onSnapshot); ahora es una carga puntual al entrar/recargar
+// la página (o justo después de guardar algo), para no dejar conexiones de Firestore
+// abiertas todo el día sin necesidad — el admin no necesita verse actualizado en tiempo real.
 function listenProductos() {
-    db.collection(PATH_PRODUCTOS).onSnapshot(function(snap) {
+    return db.collection(PATH_PRODUCTOS).get().then(function(snap) {
         // Incluye ocultos: el admin necesita verlos para poder volver a mostrarlos.
         allProductos = snap.docs.map(function(d) { return Object.assign({}, d.data(), { id: d.id }); });
         renderProdList();
@@ -766,7 +781,7 @@ function listenProductos() {
     });
 }
 function listenCombos() {
-    db.collection(PATH_COMBOS).onSnapshot(function(snap) {
+    return db.collection(PATH_COMBOS).get().then(function(snap) {
         allCombos = snap.docs.map(function(d) { return Object.assign({}, d.data(), { id: d.id }); });
         renderComboList();
     }, function(err) {
@@ -775,7 +790,7 @@ function listenCombos() {
     });
 }
 function listenVisitas() {
-    db.collection('tienda_visitas').orderBy('lastVisit', 'desc').limit(300).onSnapshot(function(snap) {
+    return db.collection('tienda_visitas').orderBy('lastVisit', 'desc').limit(300).get().then(function(snap) {
         allVisitas = snap.docs.map(function(d) { return Object.assign({}, d.data(), { id: d.id }); });
         renderVisitList();
     }, function(err) {
@@ -784,7 +799,7 @@ function listenVisitas() {
     });
 }
 function listenPedidos() {
-    db.collection('tienda_pedidos').orderBy('creadoEn', 'desc').limit(300).onSnapshot(function(snap) {
+    return db.collection('tienda_pedidos').orderBy('creadoEn', 'desc').limit(300).get().then(function(snap) {
         allPedidos = snap.docs.map(function(d) { return Object.assign({}, d.data(), { id: d.id }); });
         renderPedidoList();
     }, function(err) {
@@ -971,7 +986,7 @@ function marcarRetirado(pedidoId) {
         retirado: true,
         retiradoEn: firebase.firestore.FieldValue.serverTimestamp()
     })
-        .then(function() { showToast('Pedido marcado como retirado ✓', true); })
+        .then(function() { showToast('Pedido marcado como retirado ✓', true); return listenPedidos(); })
         .catch(function(e) { console.error('marcarRetirado error:', e); showToast('Error al marcar como retirado (' + (e.code||e.message) + ')', false, 4000); });
 }
 
@@ -980,7 +995,7 @@ function marcarEnviado(pedidoId) {
         enviado: true,
         enviadoEn: firebase.firestore.FieldValue.serverTimestamp()
     })
-        .then(function() { showToast('Pedido marcado como enviado ✓', true); })
+        .then(function() { showToast('Pedido marcado como enviado ✓', true); return listenPedidos(); })
         .catch(function(e) { console.error('marcarEnviado error:', e); showToast('Error al marcar como enviado (' + (e.code||e.message) + ')', false, 4000); });
 }
 
@@ -990,6 +1005,7 @@ function aprobarPedido(pedidoId) {
         aprobadoEn: firebase.firestore.FieldValue.serverTimestamp()
     }).then(function() {
         showToast('Pago aprobado ✓', true);
+        return listenPedidos();
     }).catch(function(e) {
         console.error('aprobarPedido error:', e);
         showToast('No se pudo aprobar (' + (e.code || e.message) + ')', false, 4000);
@@ -1191,6 +1207,7 @@ function saveProducto() {
             showToast('Producto guardado ✓', true);
             cancelEditProducto();
             resetBtn();
+            return listenProductos();
         }).catch(function(e) {
             console.error('saveProducto error:', e);
             showToast('NO SE PUDO GUARDAR (' + (e.code || e.message) + ')', false, 6000);
@@ -1253,14 +1270,14 @@ function deleteProducto(id) {
             var override = allProductos.find(function(p) { return p.id === id; });
             var data = Object.assign({}, base, override || {}, { hidden: true, updatedAt: new Date() });
             db.collection(PATH_PRODUCTOS).doc(id).set(data, { merge: true })
-                .then(function() { showToast('Eliminado', true); })
+                .then(function() { showToast('Eliminado', true); return listenProductos(); })
                 .catch(function(e) { console.error('deleteProducto(web) error:', e); showToast('Error al eliminar (' + (e.code||e.message) + ')', false, 4000); });
         });
         return;
     }
     showConfirm('¿Eliminar este producto?', function() {
         db.collection(PATH_PRODUCTOS).doc(id).delete()
-            .then(function() { showToast('Eliminado', true); })
+            .then(function() { showToast('Eliminado', true); return listenProductos(); })
             .catch(function(e) { console.error('deleteProducto error:', e); showToast('Error al eliminar (' + (e.code||e.message) + ')', false, 4000); });
     });
 }
@@ -1278,7 +1295,7 @@ function toggleHideProducto(id) {
         return;
     }
     db.collection(PATH_PRODUCTOS).doc(id).set(data, { merge: true })
-        .then(function() { showToast(willHide ? 'Producto ocultado' : 'Producto visible', true); })
+        .then(function() { showToast(willHide ? 'Producto ocultado' : 'Producto visible', true); return listenProductos(); })
         .catch(function(e) { console.error('toggleHideProducto error:', e); showToast('Error al cambiar visibilidad (' + (e.code||e.message) + ')', false, 4000); });
 }
 
@@ -1356,6 +1373,7 @@ function persistProductOrder() {
     });
     batch.commit().then(function() {
         showToast('Orden guardado', true);
+        return listenProductos();
     }).catch(function(e) {
         console.error('persistProductOrder error:', e);
         showToast('Error al guardar el orden (' + (e.code || e.message) + ')', false, 4000);
@@ -1441,6 +1459,7 @@ function saveCombo() {
             showToast('Combo guardado ✓', true);
             cancelEditCombo();
             resetBtn();
+            return listenCombos();
         }).catch(function(e) {
             console.error('saveCombo error:', e);
             showToast('NO SE PUDO GUARDAR (' + (e.code || e.message) + ')', false, 6000);
@@ -1498,7 +1517,7 @@ function editCombo(id) {
 function deleteCombo(id) {
     showConfirm('¿Eliminar este combo?', function() {
         db.collection(PATH_COMBOS).doc(id).delete()
-            .then(function() { showToast('Eliminado', true); })
+            .then(function() { showToast('Eliminado', true); return listenCombos(); })
             .catch(function(e) { console.error('deleteCombo error:', e); showToast('Error al eliminar (' + (e.code||e.message) + ')', false, 4000); });
     });
 }
@@ -1506,7 +1525,7 @@ function toggleHideCombo(id) {
     var k = allCombos.find(function(x) { return x.id === id; }); if (!k) return;
     var willHide = !k.hidden;
     db.collection(PATH_COMBOS).doc(id).set({ hidden: willHide }, { merge: true })
-        .then(function() { showToast(willHide ? 'Combo ocultado' : 'Combo visible', true); })
+        .then(function() { showToast(willHide ? 'Combo ocultado' : 'Combo visible', true); return listenCombos(); })
         .catch(function(e) { console.error('toggleHideCombo error:', e); showToast('Error al cambiar visibilidad (' + (e.code||e.message) + ')', false, 4000); });
 }
 
