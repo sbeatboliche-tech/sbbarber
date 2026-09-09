@@ -142,23 +142,23 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
 .pedido-zona.flex{background:rgba(74,222,128,.15);color:#4ade80;}
 .pedido-no-flex{flex-shrink:0;font-size:10px;color:#525252;font-weight:700;white-space:nowrap;}
 
-/* ETIQUETA IMPRIMIBLE */
+/* ETIQUETA IMPRIMIBLE — pensada para hoja autoadhesiva de 10x15cm (una etiqueta por hoja) */
 #label-print-area{display:none;}
-@page{margin:0;}
+@page{size:100mm 150mm;margin:0;}
 @media print {
     body *{visibility:hidden;}
     #label-print-area,#label-print-area *{visibility:visible;}
-    #label-print-area{display:block;position:fixed;inset:0;width:100%;height:100%;}
-    .label-box{width:100%;height:100%;box-sizing:border-box;padding:16mm;color:#000;background:#fff;font-family:'Inter',sans-serif;display:flex;flex-direction:column;}
-    .label-brand{display:flex;align-items:center;gap:16px;border-bottom:4px solid #000;padding-bottom:18px;margin-bottom:32px;}
-    .label-store{font-size:38px;font-weight:900;letter-spacing:.06em;line-height:1.1;}
-    .label-store small{display:block;font-size:13px;font-weight:700;letter-spacing:.18em;color:#525252;margin-top:4px;}
-    .label-body{flex:1;display:flex;flex-direction:column;gap:22px;}
-    .label-row{font-size:22px;line-height:1.4;}
-    .label-key{display:block;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#525252;margin-bottom:3px;}
-    .label-items{font-size:16px;line-height:1.5;}
-    .label-order{margin-top:auto;padding-top:22px;border-top:3px solid #000;display:flex;justify-content:space-between;align-items:flex-end;font-weight:800;font-size:18px;}
-    .label-date{font-size:12px;font-weight:600;color:#525252;}
+    #label-print-area{display:block;position:fixed;inset:0;width:100mm;height:150mm;}
+    .label-box{width:100mm;height:150mm;box-sizing:border-box;padding:7mm;color:#000;background:#fff;font-family:'Inter',sans-serif;display:flex;flex-direction:column;}
+    .label-brand{border-bottom:2.5px solid #000;padding-bottom:6mm;margin-bottom:8mm;}
+    .label-store{font-size:20px;font-weight:900;letter-spacing:.05em;line-height:1.1;}
+    .label-store small{display:block;font-size:9px;font-weight:700;letter-spacing:.14em;color:#525252;margin-top:3px;}
+    .label-body{flex:1;display:flex;flex-direction:column;gap:6mm;}
+    .label-row{font-size:12.5px;line-height:1.35;}
+    .label-key{display:block;font-weight:800;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#525252;margin-bottom:2px;}
+    .label-items{font-size:11px;line-height:1.4;}
+    .label-order{margin-top:auto;padding-top:5mm;border-top:2px solid #000;display:flex;justify-content:space-between;align-items:flex-end;font-weight:800;font-size:11px;}
+    .label-date{font-size:8px;font-weight:600;color:#525252;}
 }
 
 /* STATUS */
