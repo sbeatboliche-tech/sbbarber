@@ -839,7 +839,10 @@ function renderPedidoList() {
     // Las transferencias necesitan confirmación manual antes de aprobarse, sea con envío o retiro en el local.
     var pendientes = allPedidos.filter(function(p) { return p.metodoPago === 'transferencia' && !p.aprobado; });
 
-    var noPendiente = function(p) { return !(p.metodoPago === 'transferencia' && !p.aprobado); };
+    // Un pedido de MercadoPago recién es real cuando el webhook confirma el pago (aprobado=true);
+    // hasta entonces no debe aparecer como listo para enviar/retirar, aunque ya haya sido
+    // redirigido a MP (eso no significa que pagó).
+    var noPendiente = function(p) { return !((p.metodoPago === 'transferencia' || p.metodoPago === 'mercadopago') && !p.aprobado); };
     var deliveryPedidos = allPedidos.filter(function(p) { return p.shipping && p.shipping.mode === 'delivery'; });
     var pickupPedidos   = allPedidos.filter(function(p) { return !p.shipping || !p.shipping.mode || p.shipping.mode === 'pickup'; });
     var listos     = deliveryPedidos.filter(function(p) { return noPendiente(p) && !p.enviado; });

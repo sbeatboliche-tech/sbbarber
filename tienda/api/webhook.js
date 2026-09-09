@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { getAdminDb } from '../lib/firebaseAdmin.js';
 
 export default async function handler(req, res) {
     // Respond immediately — MP requires fast response
@@ -27,6 +28,17 @@ export default async function handler(req, res) {
         const total = Number(meta.total || payment.transaction_amount || 0);
         const orderId = payment.external_reference || String(data.id);
         const shipping = { mode: meta.shipping_mode || 'pickup', address: meta.shipping_address || '', cost: Number(meta.shipping_cost || 0) };
+
+        // Recién acá se confirma el pago: hasta este momento el pedido queda como
+        // 'pendiente_pago' (creado en checkout.js) y el admin NO debe mostrarlo como
+        // listo para enviar/retirar — solo la redirección a MP no significa que se pagó.
+        // Las reglas de Firestore no dejan marcar "aprobado" sin auth (a propósito, para que
+        // nadie se auto-apruebe un pedido) — por eso esto usa la cuenta de servicio.
+        try {
+            await getAdminDb().doc(`tienda_pedidos/${orderId}`).set({ aprobado: true, status: 'pagado' }, { merge: true });
+        } catch (e) {
+            console.error('No se pudo marcar el pedido como pagado en Firestore:', e);
+        }
 
         const transporter = nodemailer.createTransport({
             service: 'gmail',
