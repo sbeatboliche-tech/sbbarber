@@ -134,6 +134,7 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
 .pedido-id{font-family:monospace;font-size:12px;color:#e5e5e5;font-weight:700;}
 .pedido-buyer{font-size:12px;color:#e5e5e5;margin-top:2px;}
 .pedido-addr{font-size:11px;color:#737373;margin-top:2px;}
+.pedido-items{font-size:11px;color:#a3a3a3;margin-top:2px;}
 .pedido-time{font-size:10px;color:#404040;margin-top:4px;}
 .btn-print{flex-shrink:0;background:#fff;color:#000;border:none;font-size:11px;font-weight:800;letter-spacing:.05em;padding:10px 14px;border-radius:8px;cursor:pointer;white-space:nowrap;}
 .btn-print:hover{background:#e5e5e5;}
@@ -150,12 +151,12 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
     #label-print-area{display:block;position:fixed;inset:0;width:100%;height:100%;}
     .label-box{width:100%;height:100%;box-sizing:border-box;padding:16mm;color:#000;background:#fff;font-family:'Inter',sans-serif;display:flex;flex-direction:column;}
     .label-brand{display:flex;align-items:center;gap:16px;border-bottom:4px solid #000;padding-bottom:18px;margin-bottom:32px;}
-    .label-brand-mark{width:64px;height:64px;border-radius:50%;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;letter-spacing:-.02em;flex-shrink:0;}
     .label-store{font-size:38px;font-weight:900;letter-spacing:.06em;line-height:1.1;}
     .label-store small{display:block;font-size:13px;font-weight:700;letter-spacing:.18em;color:#525252;margin-top:4px;}
     .label-body{flex:1;display:flex;flex-direction:column;gap:22px;}
     .label-row{font-size:22px;line-height:1.4;}
     .label-key{display:block;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#525252;margin-bottom:3px;}
+    .label-items{font-size:16px;line-height:1.5;}
     .label-order{margin-top:auto;padding-top:22px;border-top:3px solid #000;display:flex;justify-content:space-between;align-items:flex-end;font-weight:800;font-size:18px;}
     .label-date{font-size:12px;font-weight:600;color:#525252;}
 }
@@ -835,6 +836,9 @@ function renderVisitList() {
 // Zonas cubiertas por Mercado Flex: se puede imprimir etiqueta acá. El resto (Interior) se coordina por Correo Argentino aparte.
 var ZONAS_FLEX = ['CABA', 'GBA1', 'GBA2', 'GBA3'];
 var ZONA_LABELS = { CABA: 'CABA', GBA1: 'Zona 1', GBA2: 'Zona 2', GBA3: 'Zona 3', Interior: 'Interior' };
+function pedidoItemsResumen(p) {
+    return (p.items || []).map(function(i) { return (i.quantity || 1) + 'x ' + i.name; }).join(', ') || 'Sin detalle';
+}
 function renderPedidoList() {
     // Las transferencias necesitan confirmación manual antes de aprobarse, sea con envío o retiro en el local.
     var pendientes = allPedidos.filter(function(p) { return p.metodoPago === 'transferencia' && !p.aprobado; });
@@ -865,6 +869,7 @@ function renderPedidoList() {
                     '<div class="pedido-id">' + p.id + '</div>' +
                     '<div class="pedido-buyer">' + (b.name || 'Sin nombre') + ' · ' + (b.phone || 'Sin teléfono') + '</div>' +
                     '<div class="pedido-addr">' + direccion + (!esRetiro && s.postalCode ? ' (CP ' + s.postalCode + ')' : '') + '</div>' +
+                    '<div class="pedido-items">' + pedidoItemsResumen(p) + '</div>' +
                     '<div class="pedido-time">' + fecha + '</div>' +
                 '</div>' +
                 '<button class="btn-print" style="background:#16a34a;color:#fff;" onclick="aprobarPedido(\'' + p.id + '\')"><i class="fas fa-check"></i> Aprobar pago</button>' +
@@ -892,6 +897,7 @@ function renderPedidoList() {
                     '<div class="pedido-id">' + p.id + ' ' + zonaTag + '</div>' +
                     '<div class="pedido-buyer">' + (b.name || 'Sin nombre') + ' · ' + (b.phone || 'Sin teléfono') + '</div>' +
                     '<div class="pedido-addr">' + (direccion || 'Sin dirección') + (s.postalCode ? ' (CP ' + s.postalCode + ')' : '') + '</div>' +
+                    '<div class="pedido-items">' + pedidoItemsResumen(p) + '</div>' +
                     '<div class="pedido-time">' + fecha + '</div>' +
                 '</div>' +
                 '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:stretch;">' + accion + enviarBtn + '</div>' +
@@ -913,6 +919,7 @@ function renderPedidoList() {
                         '<div class="pedido-id">' + p.id + '</div>' +
                         '<div class="pedido-buyer">' + (b.name || 'Sin nombre') + '</div>' +
                         '<div class="pedido-addr">' + (direccion || 'Sin dirección') + '</div>' +
+                        '<div class="pedido-items">' + pedidoItemsResumen(p) + '</div>' +
                         '<div class="pedido-time">Enviado ' + fechaEnv + '</div>' +
                     '</div>' +
                 '</div>';
@@ -931,6 +938,7 @@ function renderPedidoList() {
                     '<div class="pedido-id">' + p.id + '</div>' +
                     '<div class="pedido-buyer">' + (b.name || 'Sin nombre') + ' · ' + (b.phone || 'Sin teléfono') + '</div>' +
                     '<div class="pedido-addr">Retiro en el local</div>' +
+                    '<div class="pedido-items">' + pedidoItemsResumen(p) + '</div>' +
                     '<div class="pedido-time">' + fecha + '</div>' +
                 '</div>' +
                 '<button class="btn-print" style="background:#16a34a;color:#fff;" onclick="marcarRetirado(\'' + p.id + '\')"><i class="fas fa-check"></i> Retirado</button>' +
@@ -950,6 +958,7 @@ function renderPedidoList() {
                         '<div class="pedido-id">' + p.id + '</div>' +
                         '<div class="pedido-buyer">' + (b.name || 'Sin nombre') + '</div>' +
                         '<div class="pedido-addr">Retiro en el local</div>' +
+                        '<div class="pedido-items">' + pedidoItemsResumen(p) + '</div>' +
                         '<div class="pedido-time">Retirado ' + fechaRet + '</div>' +
                     '</div>' +
                 '</div>';
@@ -994,10 +1003,10 @@ function printLabel(pedidoId) {
     var s = p.shipping || {};
     if (ZONAS_FLEX.indexOf(s.zona) === -1) { showToast('Este pedido no está en zona de Mercado Flex.', false, 3000); return; }
     var fechaImpresion = new Date().toLocaleDateString('es-AR');
+    var itemsTexto = (p.items || []).map(function(i) { return (i.quantity || 1) + 'x ' + i.name; }).join(', ') || 'Sin detalle';
     var html =
         '<div class="label-box">' +
             '<div class="label-brand">' +
-                '<div class="label-brand-mark">SB</div>' +
                 '<div class="label-store">SB BARBER<small>ENVÍO A DOMICILIO</small></div>' +
             '</div>' +
             '<div class="label-body">' +
@@ -1005,6 +1014,7 @@ function printLabel(pedidoId) {
                 '<div class="label-row"><span class="label-key">Dirección</span>' + (s.address || '-') + '</div>' +
                 '<div class="label-row"><span class="label-key">Localidad</span>' + [s.city, s.provincia].filter(Boolean).join(', ') + (s.postalCode ? ' (CP ' + s.postalCode + ')' : '') + '</div>' +
                 '<div class="label-row"><span class="label-key">Teléfono</span>' + (b.phone || '-') + '</div>' +
+                '<div class="label-row"><span class="label-key">Contenido</span><span class="label-items">' + itemsTexto + '</span></div>' +
             '</div>' +
             '<div class="label-order">' +
                 '<span>Pedido ' + p.id + '</span>' +
