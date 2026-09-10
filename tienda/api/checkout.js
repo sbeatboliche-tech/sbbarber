@@ -94,6 +94,8 @@ export default async function handler(req, res) {
         });
     }
 
+    const orderTotal = mpItems.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+
     const preference = {
         items: mpItems,
         payer: {
@@ -102,7 +104,7 @@ export default async function handler(req, res) {
             ...(buyer.phone && { phone: { area_code: '54', number: buyer.phone.replace(/\D/g, '') } })
         },
         back_urls: {
-            success: `${baseUrl}/gracias.html?order=${orderId}&status=success&shipping=${shipping?.mode||'pickup'}`,
+            success: `${baseUrl}/gracias.html?order=${orderId}&status=success&shipping=${shipping?.mode||'pickup'}&total=${orderTotal}`,
             failure: `${baseUrl}/?error=1`,
             pending: `${baseUrl}/gracias.html?order=${orderId}&status=pending&shipping=${shipping?.mode||'pickup'}`
         },
