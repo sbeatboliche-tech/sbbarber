@@ -1406,6 +1406,7 @@ async function registerOrCheckDevice() {
         document.getElementById('dashboard-view').classList.add('hidden');
         document.getElementById('gate-view').classList.remove('hidden');
         document.getElementById('gate-revoked').classList.remove('hidden');
+        window.dispatchEvent(new Event('sb-dashboard-ready')); // no llegó al dashboard, pero apaga el watchdog del gate
         return false;
     }
     const existing = snap.exists() ? snap.data() : null;
@@ -1463,6 +1464,7 @@ async function init() {
             document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
             document.getElementById('dashboard-view').classList.remove('hidden');
             document.getElementById('login-view').classList.add('hidden');
+            window.dispatchEvent(new Event('sb-dashboard-ready'));
             if (isAdmin) document.getElementById('btn-add-stock-item').classList.remove('hidden');
             if (isOwner) { document.getElementById('btn-dispositivos').classList.remove('hidden'); document.getElementById('btn-dispositivos').classList.add('flex'); }
             if (!_listenersAttached) {
@@ -2673,11 +2675,28 @@ document.getElementById('producto-movement-form').addEventListener('submit', asy
 // ---- PASSWORD GATE ----
 function afterGatePassed() {
     document.getElementById('gate-view').classList.add('hidden');
-    document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
+    // El spinner de loading-view se queda visible hasta que el dashboard esté listo (lo esconde
+    // onAuthStateChanged más abajo) — si lo escondíamos acá, un dispositivo nuevo con conexión
+    // lenta se quedaba con la pantalla en blanco mientras esperaba la lectura de Firestore.
+    // Watchdog: si a los 12s seguimos sin dashboard, algo se colgó (red lenta, anon auth
+    // deshabilitado) — mostramos un error en vez de dejar la pantalla en blanco para siempre.
+    const gateTimeout = setTimeout(() => {
+        if (document.getElementById('dashboard-view').classList.contains('hidden')) {
+            document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
+            document.getElementById('gate-view').classList.remove('hidden');
+            document.getElementById('gate-error').classList.remove('hidden');
+            document.getElementById('gate-error').textContent = 'No se pudo conectar. Revisá tu internet e intentá de nuevo.';
+        }
+    }, 12000);
+    window.addEventListener('sb-dashboard-ready', () => clearTimeout(gateTimeout), { once: true });
     // Si auth ya está listo y no hay usuario, entrar anónimamente
     if (typeof auth !== 'undefined' && auth && !auth.currentUser) {
         signInAnonymously(auth).catch(() => {
+            clearTimeout(gateTimeout);
+            document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
             document.getElementById('gate-view').classList.remove('hidden');
+            document.getElementById('gate-error').classList.remove('hidden');
+            document.getElementById('gate-error').textContent = 'No se pudo iniciar sesión. Intentá de nuevo.';
         });
     }
 }
@@ -2687,6 +2706,7 @@ window.checkGate = () => {
         localStorage.setItem('rec-gate', '1');
         afterGatePassed();
     } else {
+        document.getElementById('gate-error').textContent = 'Contraseña incorrecta';
         document.getElementById('gate-error').classList.remove('hidden');
         document.getElementById('gate-input').value = '';
         document.getElementById('gate-input').focus();
