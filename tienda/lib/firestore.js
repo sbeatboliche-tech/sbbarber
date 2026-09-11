@@ -1,7 +1,7 @@
 // Helpers livianos para leer/escribir Firestore por REST desde funciones serverless, sin el SDK de Admin
 // (no hace falta cuenta de servicio: son las mismas colecciones que ya se leen/escriben en público desde el cliente).
-const FIREBASE_PROJECT_ID = 'sb-barber-6dc16';
-const FIREBASE_API_KEY = 'AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w';
+const FIREBASE_PROJECT_ID = 'sbbarbertienda';
+const FIREBASE_API_KEY = 'AIzaSyDUtDcLaDXddPWxA0OGqb1TDES-QbvTXCE';
 const BASE_URL = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`;
 
 // Escribe (crea o pisa) un documento. Se usa como respaldo server-side de un pedido: si el
