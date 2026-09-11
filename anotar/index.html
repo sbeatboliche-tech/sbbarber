@@ -2032,7 +2032,8 @@ function render() {
         const clientText=c.clientName?`<span class="text-blue-300 ml-1 font-normal">(${c.clientName})</span>`:'';
         const div=document.createElement('div');
         div.className=`glass-card p-4 rounded-xl flex justify-between items-center border-l-[3px] ${theme.border} animate-enter no-select`;
-        div.innerHTML=`<div class="flex items-center gap-3">${avatar}<div><div class="font-bold text-white text-sm">${c.service}${clientText}</div><div class="text-[10px] text-gray-400">${c.barber} - ${c.createdAt.toDate().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div></div></div><div class="flex items-center"><span class="font-bold text-white mr-2">$${c.price.toLocaleString('es-AR')}</span>${(isAdmin||c.userEmail===currentUser.email)?`<button class="btn-delete-action text-gray-500 hover:text-red-400" data-path="${c._ref}"><i class="fas fa-trash"></i></button>`:''}</div>`;
+        const metodoIcon=c.metodoPago==='mixto'?'🔀':c.metodoPago==='transferencia'?'📲':'💵';
+        div.innerHTML=`<div class="flex items-center gap-3">${avatar}<div><div class="font-bold text-white text-sm">${c.service}${clientText}</div><div class="text-[10px] text-gray-400">${c.barber} - ${c.createdAt.toDate().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${metodoIcon}</div></div></div><div class="flex items-center"><span class="font-bold text-white mr-2">$${c.price.toLocaleString('es-AR')}</span>${(isAdmin||c.userEmail===currentUser.email)?`<button class="btn-delete-action text-gray-500 hover:text-red-400" data-path="${c._ref}"><i class="fas fa-trash"></i></button>`:''}</div>`;
         list.appendChild(div);
     });
     renderServiceStats(personal);
