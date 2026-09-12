@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "sbbarbertienda"
+    "default": "sb-barber-6dc16",
+    "tienda": "sbbarbertienda"
   }
 }

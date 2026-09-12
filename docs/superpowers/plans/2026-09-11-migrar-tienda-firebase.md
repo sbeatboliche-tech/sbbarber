@@ -1,3 +1,5 @@
+> **Actualización 2026-09-11 (misma noche):** en la otra compu ya se hizo la migración de código (commits `9cbc60b`, `cc698b5`): `tienda/index.html`, `tienda/admin.html` y `tienda/lib/firestore.js` ya apuntan a `sbbarbertienda`, y las reglas/Auth del proyecto nuevo ya se configuraron directamente desde Firebase Console (no vía este repo — por eso no existe `tienda/firestore.rules`, a diferencia de lo que proponía la Task 2 original). `.firebaserc` tenía el `"default"` mal apuntado a `sbbarbertienda` (rompía el deploy de las reglas del proyecto viejo, usadas por recepcionista/anotar) — corregido a `"default": "sb-barber-6dc16"` + alias `"tienda": "sbbarbertienda"`. **Pendiente real:** cargar `FIREBASE_SERVICE_ACCOUNT` en Vercel (Task 4 Paso 2) y migrar los datos (Task 5) — las Tasks 1-4 de abajo quedan como referencia histórica de lo ya resuelto, no repetirlas.
+
 # Migrar la tienda a un proyecto de Firebase separado — Plan de implementación
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
