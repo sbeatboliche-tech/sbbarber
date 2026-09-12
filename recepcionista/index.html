@@ -1191,7 +1191,12 @@
             </div>
             <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
                 <div class="overflow-y-auto flex-1 px-5 pb-1 md:pb-5 md:pt-1">
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-3 mb-4" id="productos-grid"></div>
+                <div class="relative mb-3">
+                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+                    <input type="text" id="venta-producto-search" oninput="window.filterProductosGrid(this.value)" placeholder="Buscar producto..."
+                        class="w-full pl-9 pr-3 py-2.5 bg-black/30 rounded-xl border border-white/10 focus:border-indigo-500/60 outline-none transition text-white placeholder-gray-600 text-sm">
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3 mb-4" id="productos-grid"></div>
                 </div><!-- /scroll -->
                 <div class="px-5 pb-5 pt-3 md:pt-5 flex-shrink-0 border-t md:border-t-0 md:border-l border-white/5 space-y-3 md:w-72 flex flex-col md:overflow-hidden">
                     <div>
@@ -1385,6 +1390,7 @@ let isAdmin = false;
 let isOwner = false;
 let activeTab = 'cortes';
 let ventaCart = [];
+let ventaSearchQuery = '';
 let allSessions = [];
 let unsubDeviceListener = null;
 
@@ -2322,8 +2328,10 @@ function renderProductosGrid() {
         document.getElementById('productos-grid').innerHTML = '<div class="col-span-full text-xs text-gray-600 text-center py-8"><i class="fas fa-spinner fa-spin mr-1.5"></i>Cargando productos...</div>';
         return;
     }
-    const localProds = PRODUCTOS_BARBER.filter(p => !p.isML);
-    const mlProds    = PRODUCTOS_BARBER.filter(p =>  p.isML);
+    const q = normalizarTexto(ventaSearchQuery.trim());
+    const matches = q ? PRODUCTOS_BARBER.filter(p => normalizarTexto(p.name).includes(q)) : PRODUCTOS_BARBER;
+    const localProds = matches.filter(p => !p.isML);
+    const mlProds    = matches.filter(p =>  p.isML);
 
     const itemHtml = (p, i) => {
         const stock = (productoStock[p.id]?.stock) || 0;
@@ -2369,21 +2377,35 @@ function renderProductosGrid() {
     const header = (label) =>
         `<div class="col-span-full text-[10px] font-bold text-gray-600 uppercase tracking-wider pt-1">${label}</div>`;
 
+    if (matches.length === 0) {
+        document.getElementById('productos-grid').innerHTML = '<div class="col-span-full text-xs text-gray-600 text-center py-8"><i class="fas fa-search mr-1.5"></i>No hay productos que coincidan con la búsqueda</div>';
+        return;
+    }
+
     document.getElementById('productos-grid').innerHTML =
-        header('🏪 Local') +
-        localProds.map((p) => itemHtml(p, PRODUCTOS_BARBER.indexOf(p))).join('') +
-        header('🛒 MercadoLibre') +
-        mlProds.map((p) => itemHtml(p, PRODUCTOS_BARBER.indexOf(p))).join('');
+        (localProds.length ? header('🏪 Local') + localProds.map((p) => itemHtml(p, PRODUCTOS_BARBER.indexOf(p))).join('') : '') +
+        (mlProds.length ? header('🛒 MercadoLibre') + mlProds.map((p) => itemHtml(p, PRODUCTOS_BARBER.indexOf(p))).join('') : '');
 }
 
 window.openVentaModal = () => {
     ventaCart = [];
+    ventaSearchQuery = '';
+    document.getElementById('venta-producto-search').value = '';
     window.setVentaCanal('local');
     window.setVentaMetodo('efectivo');
     renderProductosGrid();
     renderCarrito();
     showModal('ventas-modal');
 };
+
+window.filterProductosGrid = (value) => {
+    ventaSearchQuery = value;
+    renderProductosGrid();
+};
+
+function normalizarTexto(s) {
+    return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
 
 window.selectProductoVenta = (i) => {
     const p = PRODUCTOS_BARBER[i];
