@@ -795,6 +795,28 @@ function listenCombos() {
         showToast('No se pudieron cargar los combos (' + (err.code||err.message) + ')', false, 4000);
     });
 }
+// Actualiza allProductos/allCombos en memoria en vez de releer toda la colección de Firestore
+// después de cada guardar/eliminar/ocultar — el dato ya lo tenemos porque lo acabamos de escribir.
+function upsertLocalProducto(id, data) {
+    var idx = allProductos.findIndex(function(p) { return p.id === id; });
+    var merged = Object.assign({}, idx >= 0 ? allProductos[idx] : {}, data, { id: id });
+    if (idx >= 0) allProductos[idx] = merged; else allProductos.push(merged);
+    renderProdList();
+}
+function removeLocalProducto(id) {
+    allProductos = allProductos.filter(function(p) { return p.id !== id; });
+    renderProdList();
+}
+function upsertLocalCombo(id, data) {
+    var idx = allCombos.findIndex(function(k) { return k.id === id; });
+    var merged = Object.assign({}, idx >= 0 ? allCombos[idx] : {}, data, { id: id });
+    if (idx >= 0) allCombos[idx] = merged; else allCombos.push(merged);
+    renderComboList();
+}
+function removeLocalCombo(id) {
+    allCombos = allCombos.filter(function(k) { return k.id !== id; });
+    renderComboList();
+}
 function listenVisitas() {
     var inicioHoy = new Date();
     inicioHoy.setHours(0, 0, 0, 0);
@@ -998,10 +1020,25 @@ function renderPedidoList() {
     }
 }
 
+// Igual que con productos/combos: actualizamos allPedidos en memoria en vez de releer la
+// colección entera. serverTimestamp() es un sentinel sin .toDate() hasta que el server lo
+// resuelve — para el render local usamos la hora del cliente como aproximación.
+function _localTimestamp() { var d = new Date(); return { toDate: function() { return d; } }; }
+function upsertLocalPedido(id, data) {
+    var idx = allPedidos.findIndex(function(p) { return p.id === id; });
+    if (idx < 0) return;
+    allPedidos[idx] = Object.assign({}, allPedidos[idx], data, { id: id });
+    renderPedidoList();
+}
+function removeLocalPedido(id) {
+    allPedidos = allPedidos.filter(function(p) { return p.id !== id; });
+    renderPedidoList();
+}
+
 function eliminarPedido(pedidoId) {
     showConfirm('¿Eliminar el pedido ' + pedidoId + '? Esta acción no se puede deshacer.', function() {
         db.collection('tienda_pedidos').doc(pedidoId).delete()
-            .then(function() { showToast('Pedido eliminado', true); return listenPedidos(); })
+            .then(function() { showToast('Pedido eliminado', true); removeLocalPedido(pedidoId); })
             .catch(function(e) { console.error('eliminarPedido error:', e); showToast('Error al eliminar (' + (e.code||e.message) + ')', false, 4000); });
     });
 }
@@ -1011,7 +1048,7 @@ function marcarRetirado(pedidoId) {
         retirado: true,
         retiradoEn: firebase.firestore.FieldValue.serverTimestamp()
     })
-        .then(function() { showToast('Pedido marcado como retirado ✓', true); return listenPedidos(); })
+        .then(function() { showToast('Pedido marcado como retirado ✓', true); upsertLocalPedido(pedidoId, { retirado: true, retiradoEn: _localTimestamp() }); })
         .catch(function(e) { console.error('marcarRetirado error:', e); showToast('Error al marcar como retirado (' + (e.code||e.message) + ')', false, 4000); });
 }
 
@@ -1020,7 +1057,7 @@ function marcarEnviado(pedidoId) {
         enviado: true,
         enviadoEn: firebase.firestore.FieldValue.serverTimestamp()
     })
-        .then(function() { showToast('Pedido marcado como enviado ✓', true); return listenPedidos(); })
+        .then(function() { showToast('Pedido marcado como enviado ✓', true); upsertLocalPedido(pedidoId, { enviado: true, enviadoEn: _localTimestamp() }); })
         .catch(function(e) { console.error('marcarEnviado error:', e); showToast('Error al marcar como enviado (' + (e.code||e.message) + ')', false, 4000); });
 }
 
@@ -1030,7 +1067,7 @@ function aprobarPedido(pedidoId) {
         aprobadoEn: firebase.firestore.FieldValue.serverTimestamp()
     }).then(function() {
         showToast('Pago aprobado ✓', true);
-        return listenPedidos();
+        upsertLocalPedido(pedidoId, { aprobado: true, aprobadoEn: _localTimestamp() });
     }).catch(function(e) {
         console.error('aprobarPedido error:', e);
         showToast('No se pudo aprobar (' + (e.code || e.message) + ')', false, 4000);
@@ -1233,7 +1270,7 @@ function saveProducto() {
             showToast('Producto guardado ✓', true);
             cancelEditProducto();
             resetBtn();
-            return listenProductos();
+            upsertLocalProducto(id, data);
         }).catch(function(e) {
             console.error('saveProducto error:', e);
             showToast('NO SE PUDO GUARDAR (' + (e.code || e.message) + ')', false, 6000);
@@ -1300,14 +1337,14 @@ function deleteProducto(id) {
             var override = allProductos.find(function(p) { return p.id === id; });
             var data = Object.assign({}, base, override || {}, { hidden: true, updatedAt: new Date() });
             db.collection(PATH_PRODUCTOS).doc(id).set(data, { merge: true })
-                .then(function() { showToast('Eliminado', true); return listenProductos(); })
+                .then(function() { showToast('Eliminado', true); upsertLocalProducto(id, data); })
                 .catch(function(e) { console.error('deleteProducto(web) error:', e); showToast('Error al eliminar (' + (e.code||e.message) + ')', false, 4000); });
         });
         return;
     }
     showConfirm('¿Eliminar este producto?', function() {
         db.collection(PATH_PRODUCTOS).doc(id).delete()
-            .then(function() { showToast('Eliminado', true); return listenProductos(); })
+            .then(function() { showToast('Eliminado', true); removeLocalProducto(id); })
             .catch(function(e) { console.error('deleteProducto error:', e); showToast('Error al eliminar (' + (e.code||e.message) + ')', false, 4000); });
     });
 }
@@ -1325,7 +1362,7 @@ function toggleHideProducto(id) {
         return;
     }
     db.collection(PATH_PRODUCTOS).doc(id).set(data, { merge: true })
-        .then(function() { showToast(willHide ? 'Producto ocultado' : 'Producto visible', true); return listenProductos(); })
+        .then(function() { showToast(willHide ? 'Producto ocultado' : 'Producto visible', true); upsertLocalProducto(id, data); })
         .catch(function(e) { console.error('toggleHideProducto error:', e); showToast('Error al cambiar visibilidad (' + (e.code||e.message) + ')', false, 4000); });
 }
 
@@ -1387,6 +1424,7 @@ function initProdSortable() {
 function persistProductOrder() {
     var rows = document.querySelectorAll('#prod-list .prod-row[data-prod-id]');
     var batch = db.batch();
+    var writes = [];
     rows.forEach(function(row, i) {
         var id = row.dataset.prodId;
         var override = allProductos.find(function(p) { return p.id === id; });
@@ -1400,10 +1438,16 @@ function persistProductOrder() {
             return;
         }
         batch.set(db.collection(PATH_PRODUCTOS).doc(id), data, { merge: true });
+        writes.push({ id: id, data: data });
     });
     batch.commit().then(function() {
         showToast('Orden guardado', true);
-        return listenProductos();
+        writes.forEach(function(w) {
+            var idx = allProductos.findIndex(function(p) { return p.id === w.id; });
+            var merged = Object.assign({}, idx >= 0 ? allProductos[idx] : {}, w.data, { id: w.id });
+            if (idx >= 0) allProductos[idx] = merged; else allProductos.push(merged);
+        });
+        renderProdList();
     }).catch(function(e) {
         console.error('persistProductOrder error:', e);
         showToast('Error al guardar el orden (' + (e.code || e.message) + ')', false, 4000);
@@ -1469,10 +1513,11 @@ function saveCombo() {
         var vidUrl  = document.getElementById('k-video').value.trim();
 
         var imgPromise = imgFile ? compressToBase64(imgFile) : Promise.resolve(imgUrl || null);
+        var data;
 
         imgPromise.then(function(imgResult) {
             var now  = new Date();
-            var data = {
+            data = {
                 name: name,
                 tag: 'COMBO',
                 subtitle: document.getElementById('k-subtitle').value.trim(),
@@ -1493,7 +1538,7 @@ function saveCombo() {
             showToast('Combo guardado ✓', true);
             cancelEditCombo();
             resetBtn();
-            return listenCombos();
+            upsertLocalCombo(id, data);
         }).catch(function(e) {
             console.error('saveCombo error:', e);
             showToast('NO SE PUDO GUARDAR (' + (e.code || e.message) + ')', false, 6000);
@@ -1551,7 +1596,7 @@ function editCombo(id) {
 function deleteCombo(id) {
     showConfirm('¿Eliminar este combo?', function() {
         db.collection(PATH_COMBOS).doc(id).delete()
-            .then(function() { showToast('Eliminado', true); return listenCombos(); })
+            .then(function() { showToast('Eliminado', true); removeLocalCombo(id); })
             .catch(function(e) { console.error('deleteCombo error:', e); showToast('Error al eliminar (' + (e.code||e.message) + ')', false, 4000); });
     });
 }
@@ -1559,7 +1604,7 @@ function toggleHideCombo(id) {
     var k = allCombos.find(function(x) { return x.id === id; }); if (!k) return;
     var willHide = !k.hidden;
     db.collection(PATH_COMBOS).doc(id).set({ hidden: willHide }, { merge: true })
-        .then(function() { showToast(willHide ? 'Combo ocultado' : 'Combo visible', true); return listenCombos(); })
+        .then(function() { showToast(willHide ? 'Combo ocultado' : 'Combo visible', true); upsertLocalCombo(id, { hidden: willHide }); })
         .catch(function(e) { console.error('toggleHideCombo error:', e); showToast('Error al cambiar visibilidad (' + (e.code||e.message) + ')', false, 4000); });
 }
 
