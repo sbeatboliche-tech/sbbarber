@@ -946,6 +946,7 @@ function openItemDetail(id, type, silent) {
         // badges
         let badges = `<span style="font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;background:rgba(255,255,255,.1);color:#888;padding:3px 8px;">PRODUCTO</span>`;
         if(p.tag && !out) badges += `<span style="font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;background:#e8e8e8;color:#111;padding:3px 8px;">${p.tag}</span>`;
+        if(p.freeShipping) badges += `<span style="font-size:8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;background:#16a34a;color:#fff;padding:3px 8px;">ENVÍO GRATIS</span>`;
         document.getElementById('item-detail-badges').innerHTML = badges;
         // nombre
         document.getElementById('item-detail-name').textContent = cfg.name || p.name || '';
@@ -1386,6 +1387,7 @@ function renderProducts() {
                 ${p.tag && !out ? `<div class="product-tag">${p.tag}</div>` : ''}
                 ${out ? `<div class="stock-badge stock-out-badge">Sin stock</div>` : ''}
                 ${low ? `<div class="stock-badge stock-low-badge">Últimas ${stock}</div>` : ''}
+                ${p.freeShipping ? `<div style="position:absolute;bottom:8px;left:8px;background:#16a34a;color:#fff;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;">ENVÍO GRATIS</div>` : ''}
                 ${p.videoUrl ? `<button class="video-play-btn" onclick="event.stopPropagation();openVideoModal('${p.videoUrl.replace(/'/g,"\\'")}')" title="Ver video"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>` : ''}
             </div>
             <div class="product-info">
