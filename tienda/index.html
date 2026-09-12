@@ -396,11 +396,12 @@
         .freeship-bar { height:4px; background:rgba(255,255,255,.1); margin-top:7px; overflow:hidden; border-radius:2px; }
         .freeship-bar > span { display:block; height:100%; background:#4ade80; transition:width .4s ease; }
 
-        /* Botón flotante WhatsApp */
-        .wa-fab { position:fixed; left:16px; bottom:16px; z-index:150; width:54px; height:54px; border-radius:50%; background:#25D366; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(0,0,0,.45); transition:transform .2s, box-shadow .2s; }
+        /* Botón flotante WhatsApp — arrastrable, se puede reacomodar en la pantalla */
+        .wa-fab { position:fixed; left:16px; bottom:16px; z-index:150; width:54px; height:54px; border-radius:50%; background:#25D366; border:2px solid rgba(255,255,255,.25); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(0,0,0,.45); transition:transform .2s, box-shadow .2s; touch-action:none; cursor:grab; }
         .wa-fab:hover { transform:translateY(-3px); box-shadow:0 12px 30px rgba(37,211,102,.4); }
-        .wa-fab svg { width:30px; height:30px; fill:#fff; }
-        @media(max-width:640px){ .wa-fab { bottom:86px; width:50px; height:50px; } .wa-fab svg { width:27px; height:27px; } }
+        .wa-fab.dragging { cursor:grabbing; transition:none; }
+        .wa-fab svg { width:29px; height:29px; fill:#fff; display:block; pointer-events:none; }
+        @media(max-width:640px){ .wa-fab { bottom:86px; width:50px; height:50px; } .wa-fab svg { width:26px; height:26px; } }
 
         /* Footer con prueba social */
         .footer-stars { color:#d4af37; letter-spacing:3px; font-size:15px; margin-bottom:6px; }
@@ -1934,6 +1935,73 @@ function scrollTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
 <!-- TOAST -->
 <div id="toast" class="toast"></div>
+
+<script>
+// Botón de WhatsApp arrastrable: el visitante lo puede reacomodar si le tapa algo.
+// La posición elegida se guarda en localStorage (por navegador) para que no vuelva
+// siempre al mismo lugar cada vez que entra.
+(function() {
+    var fab = document.querySelector('.wa-fab');
+    if (!fab) return;
+    var DRAG_THRESHOLD = 6;
+    var dragging = false, moved = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+    function applyPos(left, top) {
+        var maxLeft = window.innerWidth - fab.offsetWidth - 4;
+        var maxTop  = window.innerHeight - fab.offsetHeight - 4;
+        left = Math.max(4, Math.min(left, maxLeft));
+        top  = Math.max(4, Math.min(top, maxTop));
+        fab.style.left = left + 'px';
+        fab.style.top = top + 'px';
+        fab.style.bottom = 'auto';
+        return { left: left, top: top };
+    }
+
+    try {
+        var saved = JSON.parse(localStorage.getItem('waFabPos') || 'null');
+        if (saved && typeof saved.left === 'number' && typeof saved.top === 'number') {
+            applyPos(saved.left, saved.top);
+        }
+    } catch(e) {}
+
+    fab.addEventListener('pointerdown', function(e) {
+        if (e.button !== undefined && e.button !== 0) return;
+        dragging = true; moved = false;
+        var rect = fab.getBoundingClientRect();
+        startX = e.clientX; startY = e.clientY;
+        startLeft = rect.left; startTop = rect.top;
+        fab.setPointerCapture(e.pointerId);
+    });
+    fab.addEventListener('pointermove', function(e) {
+        if (!dragging) return;
+        var dx = e.clientX - startX, dy = e.clientY - startY;
+        if (!moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+            moved = true;
+            fab.classList.add('dragging');
+        }
+        if (moved) applyPos(startLeft + dx, startTop + dy);
+    });
+    function endDrag(e) {
+        if (!dragging) return;
+        dragging = false;
+        fab.classList.remove('dragging');
+        if (moved) {
+            var rect = fab.getBoundingClientRect();
+            var pos = applyPos(rect.left, rect.top);
+            try { localStorage.setItem('waFabPos', JSON.stringify(pos)); } catch(err) {}
+        }
+    }
+    fab.addEventListener('pointerup', endDrag);
+    fab.addEventListener('pointercancel', endDrag);
+    fab.addEventListener('click', function(e) {
+        if (moved) { e.preventDefault(); moved = false; }
+    });
+    window.addEventListener('resize', function() {
+        var rect = fab.getBoundingClientRect();
+        if (fab.style.left) applyPos(rect.left, rect.top);
+    });
+})();
+</script>
 
 <!-- VOLVER ARRIBA -->
 <button id="to-top" class="to-top" onclick="scrollTop()" aria-label="Volver arriba" title="Volver arriba">
