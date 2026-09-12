@@ -1237,6 +1237,16 @@
                 </button>
             </div>
             <form id="nuevo-producto-form" class="space-y-5">
+                <div class="flex items-center gap-4">
+                    <div id="np-photo-preview" onclick="document.getElementById('np-photo-input').click()" class="w-16 h-16 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center cursor-pointer hover:border-indigo-500 transition overflow-hidden flex-shrink-0">
+                        <i class="fas fa-camera text-gray-500 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-500 uppercase">Foto (opcional)</p>
+                        <p class="text-xs text-gray-600 mt-0.5">Tocá para agregar una imagen</p>
+                    </div>
+                    <input type="file" id="np-photo-input" accept="image/*" class="hidden">
+                </div>
                 <input type="text" id="np-nombre" placeholder="Nombre del producto" required
                     class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-indigo-500/60 focus:bg-indigo-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
                 <div>
@@ -1369,7 +1379,8 @@ let app, auth, db, currentUser;
 let allCuts = [], allStock = [], allVentas = [], allTurnos = [], allGastos = [], allConteos = [], allMlDespachos = [];
 let productoStock = {};
 let currentMovement = null, currentProductoMovement = null, salidaTipo = 'venta', drinkSalidaTipo = 'venta';
-let newItemPhoto = null, editItemPhoto = null, editItemId = null;
+let newItemPhoto = null, editItemPhoto = null, editItemId = null, editPhotoCollection = null;
+let newProductoPhoto = null;
 let isAdmin = false;
 let isOwner = false;
 let activeTab = 'cortes';
@@ -2016,12 +2027,26 @@ document.getElementById('new-item-photo-input').addEventListener('change', e => 
 });
 
 window.openEditPhoto = (itemId, itemName) => {
-    editItemId = itemId; editItemPhoto = null;
+    editItemId = itemId; editItemPhoto = null; editPhotoCollection = PATH_STOCK;
     document.getElementById('edit-photo-title').textContent = itemName;
     const item = allStock.find(i => i.id === itemId);
     const prev = document.getElementById('edit-photo-preview');
     if (item?.photoURL) {
         prev.innerHTML = `<img src="${item.photoURL}" class="w-full h-full object-cover">`;
+    } else {
+        prev.innerHTML = '<i class="fas fa-camera text-gray-500 text-3xl"></i>';
+    }
+    document.getElementById('edit-photo-input').value = '';
+    showModal('edit-photo-modal');
+};
+
+window.openEditProductoPhoto = (itemId, itemName) => {
+    editItemId = itemId; editItemPhoto = null; editPhotoCollection = PATH_PRODUCTOS;
+    document.getElementById('edit-photo-title').textContent = itemName;
+    const prev = document.getElementById('edit-photo-preview');
+    const photoURL = productoStock[itemId]?.photoURL;
+    if (photoURL) {
+        prev.innerHTML = `<img src="${photoURL}" class="w-full h-full object-cover">`;
     } else {
         prev.innerHTML = '<i class="fas fa-camera text-gray-500 text-3xl"></i>';
     }
@@ -2042,7 +2067,7 @@ window.saveItemPhoto = async () => {
     const btn = document.getElementById('btn-save-photo');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
-        await updateDoc(doc(db, PATH_STOCK, editItemId), { photoURL: editItemPhoto });
+        await updateDoc(doc(db, editPhotoCollection, editItemId), { photoURL: editItemPhoto });
         closeModals();
     } catch { alert('Error al guardar'); }
     btn.disabled = false; btn.textContent = 'Guardar foto';
@@ -2315,10 +2340,15 @@ function renderProductosGrid() {
             : isInCart
                 ? 'bg-indigo-600/20 cursor-pointer border-indigo-500 scale-[1.01] shadow-lg'
                 : 'bg-gray-800/50 cursor-pointer hover:bg-gray-700/60 md:hover:border-indigo-500/40 active:scale-95 border-gray-700/60';
+        const photoURL = productoStock[p.id]?.photoURL;
+        const photoThumb = photoURL ? `<img src="${photoURL}" class="w-5 h-5 rounded object-cover flex-shrink-0">` : '';
         return `<div onclick="${sinStock || alTope ? '' : `window.selectProductoVenta(${i})`}"
             class="prod-btn p-2.5 md:p-3 ${stateClasses} border rounded-xl flex flex-col gap-1 transition relative">
             ${isInCart ? `<span class="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-bold flex items-center justify-center shadow z-10">${cantEnCarrito}</span>` : ''}
-            <span class="text-xs md:text-sm font-semibold text-gray-200 leading-tight pr-5">${p.name}</span>
+            <div class="flex items-center gap-1.5 pr-5">
+                ${photoThumb}
+                <span class="text-xs md:text-sm font-semibold text-gray-200 leading-tight">${p.name}</span>
+            </div>
             <div class="flex justify-between items-center">
                 <span class="${stockColor} text-[10px] font-bold">${sinStock ? 'Sin stock' : stock + ' u.'}</span>
                 ${p.precio > 0 ? `<span class="text-[10px] font-bold text-white/60">$${(p.precio/1000).toFixed(0)}k</span>` : ''}
@@ -2422,8 +2452,18 @@ window.openNuevoProductoModal = () => {
     document.getElementById('nuevo-producto-form').reset();
     document.getElementById('np-stock').value = 1;
     window.setNpCanal('local');
+    newProductoPhoto = null;
+    document.getElementById('np-photo-preview').innerHTML = '<i class="fas fa-camera text-gray-500 text-xl"></i>';
     showModal('nuevo-producto-modal');
 };
+
+document.getElementById('np-photo-input').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    resizeImageToBase64(file, b64 => {
+        newProductoPhoto = b64;
+        document.getElementById('np-photo-preview').innerHTML = `<img src="${b64}" class="w-full h-full object-cover">`;
+    });
+});
 
 window.closeNuevoProductoModal = () => {
     const m = document.getElementById('nuevo-producto-modal');
@@ -2442,10 +2482,12 @@ document.getElementById('nuevo-producto-form').addEventListener('submit', async 
     const btn = document.getElementById('btn-submit-np');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
-        await setDoc(doc(db, PATH_PRODUCTOS, id), { name: nombre, precio, stock, isML, custom: true });
+        const data = { name: nombre, precio, stock, isML, custom: true };
+        if (newProductoPhoto) data.photoURL = newProductoPhoto;
+        await setDoc(doc(db, PATH_PRODUCTOS, id), data);
         window.closeNuevoProductoModal();
         if (!PRODUCTOS_BARBER.find(p => p.id === id)) PRODUCTOS_BARBER.push({ id, name: nombre, precio, isML, custom: true });
-        productoStock[id] = { name: nombre, precio, stock, isML, custom: true };
+        productoStock[id] = data;
         renderProductosGrid();
         window.selectProductoVenta(PRODUCTOS_BARBER.findIndex(p => p.id === id));
     } catch (err) { alert('Error al crear el producto'); }
@@ -2568,8 +2610,13 @@ function renderProductoStock() {
             ? '<div class="text-[10px] text-red-500 font-bold">Sin stock</div>'
             : isLow ? '<div class="text-[10px] text-yellow-500 font-bold">Stock bajo</div>' : '';
         const precioLabel = p.precio > 0 ? `$${p.precio.toLocaleString('es-AR')} c/u` : (p.isML ? '🛒 ML' : '');
+        const safeName = p.name.replace(/'/g,"\\'");
+        const thumb = data.photoURL
+            ? `<img src="${data.photoURL}" onclick="window.openEditProductoPhoto('${p.id}','${safeName}')" class="w-11 h-11 rounded-lg object-cover flex-shrink-0 cursor-pointer">`
+            : `<div onclick="window.openEditProductoPhoto('${p.id}','${safeName}')" class="w-11 h-11 rounded-lg bg-indigo-900/30 flex items-center justify-center flex-shrink-0 cursor-pointer hover:bg-indigo-900/60 transition"><i class="fas fa-camera text-indigo-600 text-sm"></i></div>`;
         return `<div class="flex items-center gap-2 bg-black/30 p-3 rounded-xl border ${border}" data-prod-id="${p.id}">
             <span class="prod-drag-handle cursor-grab text-gray-600 hover:text-gray-400 select-none text-base flex-shrink-0">⠿</span>
+            ${thumb}
             <div class="flex-1 min-w-0">
                 <div class="text-sm font-bold text-white truncate">${p.name}</div>
                 <div class="text-[10px] text-gray-500">${precioLabel}</div>
@@ -2580,13 +2627,13 @@ function renderProductoStock() {
                     <div class="${qtyColor} font-bold text-xl leading-none">${qty}</div>
                     <div class="text-[9px] text-gray-600">unid.</div>
                 </div>
-                <button onclick="window.openMovimientoProducto('${p.id}','${p.name.replace(/'/g,"\\'")}','entrada')" class="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 hover:bg-emerald-600/40 transition">
+                <button onclick="window.openMovimientoProducto('${p.id}','${safeName}','entrada')" class="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 hover:bg-emerald-600/40 transition">
                     <i class="fas fa-plus text-xs"></i>
                 </button>
-                <button onclick="window.openMovimientoProducto('${p.id}','${p.name.replace(/'/g,"\\'")}','salida')" class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 hover:bg-red-600/40 transition" ${qty===0?'disabled':''}>
+                <button onclick="window.openMovimientoProducto('${p.id}','${safeName}','salida')" class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 hover:bg-red-600/40 transition" ${qty===0?'disabled':''}>
                     <i class="fas fa-minus text-xs"></i>
                 </button>
-                <button onclick="window.eliminarProductoCatalogo('${p.id}','${p.name.replace(/'/g,"\\'")}')" class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-500 hover:text-red-400 hover:border-red-500/30 transition">
+                <button onclick="window.eliminarProductoCatalogo('${p.id}','${safeName}')" class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-500 hover:text-red-400 hover:border-red-500/30 transition">
                     <i class="fas fa-trash text-xs"></i>
                 </button>
             </div>
