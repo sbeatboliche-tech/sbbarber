@@ -3262,10 +3262,11 @@ function renderCierreCajaSemanal() {
     const gastosW = allGastos.filter(g => !g.eliminado && g.fecha >= weekStartStr);
     const totalGastosW = gastosW.reduce((s, g) => s + (g.monto || 0), 0);
 
+    const _ajusteSemana = (weekStartStr === '2026-09-07') ? { Tony: 7000, Stefa: 7000 } : {};
     const barberCards = BARBERS.map(b => {
         const d = byBarber[b], t = BARBER_THEME[b];
         const suParte = Math.round(d.cortes * 0.5);
-        const neto = suParte - d.retiros + d.propinas;
+        const neto = suParte - d.retiros + d.propinas - (_ajusteSemana[b] || 0);
         const netoColor = neto >= 0 ? 'text-emerald-400' : 'text-red-400';
         return `
         <div class="glass-card rounded-2xl p-5 md:p-6">
