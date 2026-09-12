@@ -413,9 +413,9 @@ input,select,textarea,button{font-family:'Inter',sans-serif;}
 
         <!-- TAB VISITAS -->
         <div id="panel-visitas" style="display:none;">
-            <div class="section-title">Visitas a la tienda</div>
+            <div class="section-title">Visitas a la tienda — hoy</div>
             <div class="visit-stats">
-                <div class="visit-stat"><div class="visit-stat-num" id="vstat-total">—</div><div class="visit-stat-label">IPs únicas</div></div>
+                <div class="visit-stat"><div class="visit-stat-num" id="vstat-total">—</div><div class="visit-stat-label">IPs únicas hoy</div></div>
                 <div class="visit-stat"><div class="visit-stat-num" id="vstat-checkout">—</div><div class="visit-stat-label">Llegaron al checkout</div></div>
                 <div class="visit-stat"><div class="visit-stat-num" id="vstat-completed">—</div><div class="visit-stat-label">Completaron pedido</div></div>
             </div>
@@ -785,7 +785,9 @@ function listenCombos() {
     });
 }
 function listenVisitas() {
-    return db.collection('tienda_visitas').orderBy('lastVisit', 'desc').limit(300).get().then(function(snap) {
+    var inicioHoy = new Date();
+    inicioHoy.setHours(0, 0, 0, 0);
+    return db.collection('tienda_visitas').where('lastVisit', '>=', inicioHoy).orderBy('lastVisit', 'desc').get().then(function(snap) {
         allVisitas = snap.docs.map(function(d) { return Object.assign({}, d.data(), { id: d.id }); });
         renderVisitList();
     }, function(err) {
@@ -822,7 +824,7 @@ function renderVisitList() {
     document.getElementById('vstat-completed').textContent = completedCount;
 
     if (!total) {
-        el.innerHTML = '<div class="empty-state"><i class="fas fa-globe"></i><p>Todavía no hay visitas registradas.</p></div>';
+        el.innerHTML = '<div class="empty-state"><i class="fas fa-globe"></i><p>Todavía no hay visitas hoy.</p></div>';
         return;
     }
     el.innerHTML = allVisitas.map(function(v) {
