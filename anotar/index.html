@@ -1131,10 +1131,10 @@ function renderHistoryBarber(barberName) {
         const bdr=item.tipo==='retiro'?'border-violet-500/20':'border-yellow-500/20';
         const lbl=item.tipo==='retiro'?'Retiro':`Propina${item.descripcion?' · '+item.descripcion:''}`;
         const f=item.creadoEn?item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
-        const delPath=`${item.tipo==='retiro'?PATH_RETIROS:PATH_PROPINAS}/${item.id}`;
+        const delBtn=item.tipo==='retiro' ? '' : `<button class="btn-delete-action text-gray-600 hover:text-red-400 transition" data-path="${PATH_PROPINAS}/${item.id}" title="Eliminar"><i class="fas fa-trash-alt text-[10px]"></i></button>`;
         return `<div class="flex items-center justify-between gap-3 bg-black/30 p-3 rounded-xl border ${bdr}">
             <div class="min-w-0 flex-1"><div class="text-xs font-bold text-gray-200 break-words">${lbl}</div><div class="text-[10px] text-gray-500 mt-0.5">${f}</div></div>
-            <div class="flex items-center gap-2 shrink-0"><span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span><button class="btn-delete-action text-gray-600 hover:text-red-400 transition" data-path="${delPath}" title="Eliminar"><i class="fas fa-trash-alt text-[10px]"></i></button></div>
+            <div class="flex items-center gap-2 shrink-0"><span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span>${delBtn}</div>
         </div>`;
     }).join('');
 }

@@ -28,7 +28,17 @@ service cloud.firestore {
       allow write: if true;
     }
 
-    // Resto (recepción / anotar, uso interno): requiere estar autenticado
-    match /{document=**}               { allow read, write: if request.auth != null; }
+    // Resto (recepción / anotar, uso interno): requiere estar autenticado.
+    // Eliminar documentos queda reservado a admin (mismo criterio que ADMINS/isAdmin en el
+    // cliente: email en la lista, o sesión anónima de recepcionista vía clave "femesb" — la
+    // única función de la app que crea usuarios anónimos). Evita que un barbero logueado en
+    // "anotar" borre sus propios retiros/ventas/etc. por consola, no solo desde la UI.
+    match /{document=**} {
+      allow read, create, update: if request.auth != null;
+      allow delete: if request.auth != null && (
+        request.auth.token.email in ['abalo7272@gmail.com', 'carusomanu21@gmail.com'] ||
+        request.auth.token.firebase.sign_in_provider == 'anonymous'
+      );
+    }
   }
 }
