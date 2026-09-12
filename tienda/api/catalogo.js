@@ -24,7 +24,7 @@ export default async function handler(req, res) {
         cursos.forEach(d => { courseConfig[d.id] = d; });
 
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+        res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
         res.status(200).json({
             productConfig,
             extraProductos,
