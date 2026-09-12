@@ -729,10 +729,11 @@ auth.onAuthStateChanged(function(user) {
             });
         listenProductos();
         listenCombos();
-        listenVisitas();
-        listenPedidos();
         listenCategorias();
         listenEnvios();
+        // Visitas y Pedidos se cargan recién al abrir esa pestaña (ver switchTab):
+        // pedidos trae hasta 300 documentos, no tiene sentido pagarlo si solo
+        // entramos a editar un producto.
     } else {
         document.getElementById('login-view').style.display = 'flex';
         document.getElementById('dashboard-view').style.display = 'none';
@@ -761,6 +762,7 @@ function doLogin() {
 function doLogout() { auth.signOut(); }
 
 // ---- TABS ----
+var visitasLoaded = false, pedidosLoaded = false;
 function switchTab(tab) {
     document.getElementById('panel-productos').style.display = tab === 'productos' ? 'block' : 'none';
     document.getElementById('panel-combos').style.display   = tab === 'combos'    ? 'block' : 'none';
@@ -770,6 +772,9 @@ function switchTab(tab) {
     document.getElementById('tab-combos').classList.toggle('active', tab === 'combos');
     document.getElementById('tab-visitas').classList.toggle('active', tab === 'visitas');
     document.getElementById('tab-pedidos').classList.toggle('active', tab === 'pedidos');
+    // Carga perezosa: recién pedimos a Firestore la primera vez que se abre cada pestaña.
+    if (tab === 'visitas' && !visitasLoaded) { visitasLoaded = true; listenVisitas(); }
+    if (tab === 'pedidos' && !pedidosLoaded) { pedidosLoaded = true; listenPedidos(); }
 }
 
 // ---- CARGA DE DATOS ----
@@ -847,11 +852,17 @@ function timeAgo(date) {
     return 'hace ' + Math.floor(diff / 86400) + ' d';
 }
 
+// Tráfico de afuera de Argentina en tienda_visitas es en la práctica todo bots/scrapers,
+// no clientes reales (la tienda solo vende y envía dentro del país) — se descarta del
+// conteo. Si no hay país guardado (geolocalización falló) se sigue contando: puede ser
+// un visitante real de Argentina con un lookup fallido.
+function esVisitaReal(v) { return !v.pais || v.pais === 'Argentina'; }
 function renderVisitList() {
     var el = document.getElementById('visit-list');
-    var total = allVisitas.length;
-    var checkoutCount = allVisitas.filter(function(v) { return v.reachedCheckout; }).length;
-    var completedCount = allVisitas.filter(function(v) { return v.completedOrder; }).length;
+    var visitasReales = allVisitas.filter(esVisitaReal);
+    var total = visitasReales.length;
+    var checkoutCount = visitasReales.filter(function(v) { return v.reachedCheckout; }).length;
+    var completedCount = visitasReales.filter(function(v) { return v.completedOrder; }).length;
     document.getElementById('vstat-total').textContent = total;
     document.getElementById('vstat-checkout').textContent = checkoutCount;
     document.getElementById('vstat-completed').textContent = completedCount;
@@ -860,7 +871,7 @@ function renderVisitList() {
         el.innerHTML = '<div class="empty-state"><i class="fas fa-globe"></i><p>Todavía no hay visitas hoy.</p></div>';
         return;
     }
-    el.innerHTML = allVisitas.map(function(v) {
+    el.innerHTML = visitasReales.map(function(v) {
         var badge = v.completedOrder
             ? '<span class="visit-badge completed">Completó pedido</span>'
             : (v.reachedCheckout ? '<span class="visit-badge checkout">Llegó al checkout</span>' : '<span class="visit-badge viewing">Solo miró</span>');
