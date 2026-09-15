@@ -1166,6 +1166,7 @@ function addKitToCart(id) {
     const ex = cart.find(x=>x.id===id);
     if(ex) ex.qty++;
     else cart.push({ id:kit.id, name:kit.name, variant:'', price, qty:1, image:kit.image||null, icon:KIT_ICON, freeShipping: !!kit.freeShipping });
+    if (typeof fbq === 'function') fbq('track', 'AddToCart', { content_ids:[id], content_type:'product', value:price, currency:'ARS' });
     saveCart(); updateCartUI(); showToast('Agregado al carrito'); bounceCart();
 }
 
@@ -1621,6 +1622,7 @@ function addToCart(id, variant) {
     const ex = cart.find(x=>x.id===id && x.variant===selVariant);
     if(ex) ex.qty++;
     else cart.push({...p, name: cfg.name || p.name, price, qty:1, variant: selVariant});
+    if (typeof fbq === 'function') fbq('track', 'AddToCart', { content_ids:[id], content_type:'product', value:price, currency:'ARS' });
     saveCart(); updateCartUI(); showToast('Agregado al carrito'); bounceCart();
 }
 
@@ -1732,6 +1734,7 @@ function openCheckout() {
     document.getElementById('checkout-modal').classList.add('show');
     document.body.style.overflow='hidden';
     if (typeof window._markReachedCheckout === 'function') window._markReachedCheckout();
+    if (typeof fbq === 'function') fbq('track', 'InitiateCheckout', { value: getFinalTotal(), currency:'ARS', num_items: cart.reduce((n,i)=>n+i.qty,0) });
 }
 
 function closeCheckout() {
