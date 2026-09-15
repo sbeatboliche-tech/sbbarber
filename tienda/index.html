@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
     <title>SB Barber — Tienda</title>
+    <script>
+    // GitHub Pages sirve este mismo archivo en sbbarber.com.ar/tienda/, donde /api/*
+    // no existe (no corre funciones serverless) y el catálogo/checkout no funcionan.
+    // La tienda real vive en Vercel bajo tienda.sbbarber.com.ar. Redirigir solo si
+    // no estamos ya en el subdominio bueno.
+    if (location.hostname === 'sbbarber.com.ar') {
+        location.replace('https://tienda.sbbarber.com.ar/' + location.search + location.hash);
+    }
+    </script>
     <!-- Meta Pixel Code -->
     <script>
     !function(f,b,e,v,n,t,s)
