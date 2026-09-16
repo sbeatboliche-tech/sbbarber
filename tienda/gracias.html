@@ -5,12 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SB Barber — Gracias</title>
     <script>
-    if (location.hostname === 'sbbarber.com.ar') {
+    var REDIRECTING_OLD_DOMAIN = (location.hostname === 'sbbarber.com.ar');
+    if (REDIRECTING_OLD_DOMAIN) {
         location.replace('https://tienda.sbbarber.com.ar/gracias.html' + location.search + location.hash);
     }
     </script>
     <!-- Meta Pixel Code -->
     <script>
+    if (!REDIRECTING_OLD_DOMAIN) {
     !function(f,b,e,v,n,t,s)
     {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
     n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -21,6 +23,7 @@
     'https://connect.facebook.net/en_US/fbevents.js');
     fbq('init', '2960741850931896');
     fbq('track', 'PageView');
+    }
     </script>
     <noscript><img height="1" width="1" style="display:none"
     src="https://www.facebook.com/tr?id=2960741850931896&ev=PageView&noscript=1"
