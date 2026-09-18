@@ -935,6 +935,7 @@ function renderPedidoList() {
                 '</div>' +
                 '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:stretch;">' +
                     '<button class="btn-print" style="background:#16a34a;color:#fff;" onclick="aprobarPedido(\'' + p.id + '\')"><i class="fas fa-check"></i> Aprobar pago</button>' +
+                    (b.email ? '<button class="btn-print" style="background:#d97706;color:#fff;" onclick="enviarRecordatorioPago(\'' + p.id + '\')"><i class="fas fa-envelope"></i> Recordar por mail</button>' : '') +
                     '<button class="btn-del" style="width:auto;height:auto;padding:8px;" onclick="eliminarPedido(\'' + p.id + '\')" title="Eliminar pedido"><i class="fas fa-trash"></i></button>' +
                 '</div>' +
             '</div>';
@@ -1088,6 +1089,25 @@ function aprobarPedido(pedidoId) {
         console.error('aprobarPedido error:', e);
         showToast('No se pudo aprobar (' + (e.code || e.message) + ')', false, 4000);
     });
+}
+
+function enviarRecordatorioPago(pedidoId) {
+    var p = allPedidos.find(function(x) { return x.id === pedidoId; });
+    if (!p || !p.buyer || !p.buyer.email) { showToast('Este pedido no tiene email', false, 4000); return; }
+    fetch('/api/recordatorio-pago', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: p.items, buyer: p.buyer, orderId: p.id, total: p.total, shipping: p.shipping })
+    })
+        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, d: d }; }); })
+        .then(function(res) {
+            if (!res.ok) throw new Error(res.d && res.d.error || 'Error');
+            showToast('Recordatorio enviado ✓', true);
+        })
+        .catch(function(e) {
+            console.error('enviarRecordatorioPago error:', e);
+            showToast('No se pudo enviar el recordatorio', false, 4000);
+        });
 }
 
 function printLabel(pedidoId) {
