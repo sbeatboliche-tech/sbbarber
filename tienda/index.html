@@ -1189,7 +1189,7 @@ const ZONE_LABELS = { CABA: 'CABA', GBA1: 'Zona 1', GBA2: 'Zona 2', GBA3: 'Zona 
 const PARTIDOS_GBA = {
     GBA1: ['Avellaneda','Vicente López','San Isidro','San Martín','Tres de Febrero','Hurlingham','Ituzaingó','Morón','La Matanza','Lomas de Zamora','Lanús','Quilmes','San Fernando'],
     GBA2: ['Tigre','Malvinas Argentinas','San Miguel','José C. Paz','Moreno','Merlo','Esteban Echeverría','Ezeiza','Almirante Brown','Berazategui','Florencio Varela'],
-    GBA3: ['Pilar','Escobar','General Rodríguez','Marcos Paz','Cañuelas','San Vicente','Presidente Perón','General Las Heras']
+    GBA3: ['Pilar','Escobar','General Rodríguez','Marcos Paz','Cañuelas','San Vicente','Presidente Perón','General Las Heras','La Plata','Berisso','Ensenada','Luján','Campana','Zárate']
 };
 const PROVINCIAS = [
     'Ciudad Autónoma de Buenos Aires','Buenos Aires','Catamarca','Chaco','Chubut','Córdoba',
@@ -1198,59 +1198,25 @@ const PROVINCIAS = [
     'Santiago del Estero','Tierra del Fuego','Tucumán'
 ];
 let shippingZone = null, shippingProvincia = '', shippingPartido = '';
+// Cualquier localidad de la provincia que no está en las listas del GBA (Mar del Plata, Bahía Blanca, etc.)
+// se elige con esta opción y se cotiza como Interior.
+const OTRO_PARTIDO_BA = 'Otro (interior de Buenos Aires)';
 function zonaPorPartido(partido) {
     for (const z of ['GBA1','GBA2','GBA3']) if (PARTIDOS_GBA[z].includes(partido)) return z;
-    return 'GBA3'; // partido de Buenos Aires no listado: se asume el más alejado por seguridad
+    return 'Interior';
 }
-// Tabla aproximada de código postal (4 dígitos) → partido/CABA, para autodetectar la zona sin
-// pedirle al comprador que elija provincia/partido a mano. Es orientativa (los códigos postales
-// reales no son rangos perfectamente contiguos por partido) — por eso siempre queda el link
-// "elegir manualmente" como respaldo si el CP no cae en ningún rango conocido.
-const CP_RANGES = [
-    { min: 1000, max: 1499, provincia: 'Ciudad Autónoma de Buenos Aires' },
-    { min: 1602, max: 1644, partido: 'San Isidro' },
-    { min: 1646, max: 1647, partido: 'San Fernando' },
-    { min: 1648, max: 1649, partido: 'Tigre' },
-    { min: 1650, max: 1653, partido: 'San Martín' },
-    { min: 1663, max: 1663, partido: 'San Miguel' },
-    { min: 1665, max: 1667, partido: 'José C. Paz' },
-    { min: 1667, max: 1672, partido: 'Malvinas Argentinas' },
-    { min: 1674, max: 1678, partido: 'Tres de Febrero' },
-    { min: 1686, max: 1687, partido: 'Hurlingham' },
-    { min: 1708, max: 1713, partido: 'Morón' },
-    { min: 1714, max: 1714, partido: 'Ituzaingó' },
-    { min: 1722, max: 1723, partido: 'Merlo' },
-    { min: 1727, max: 1727, partido: 'Marcos Paz' },
-    { min: 1741, max: 1741, partido: 'General Las Heras' },
-    { min: 1744, max: 1744, partido: 'Moreno' },
-    { min: 1748, max: 1748, partido: 'General Rodríguez' },
-    { min: 1754, max: 1772, partido: 'La Matanza' },
-    { min: 1804, max: 1804, partido: 'Ezeiza' },
-    { min: 1814, max: 1814, partido: 'Cañuelas' },
-    { min: 1824, max: 1826, partido: 'Lanús' },
-    { min: 1832, max: 1836, partido: 'Lomas de Zamora' },
-    { min: 1842, max: 1846, partido: 'Esteban Echeverría' },
-    { min: 1846, max: 1849, partido: 'Almirante Brown' },
-    { min: 1854, max: 1854, partido: 'Presidente Perón' },
-    { min: 1625, max: 1625, partido: 'Escobar' },
-    { min: 1629, max: 1629, partido: 'Pilar' },
-    { min: 1865, max: 1865, partido: 'San Vicente' },
-    { min: 1870, max: 1870, partido: 'Avellaneda' },
-    { min: 1878, max: 1881, partido: 'Quilmes' },
-    { min: 1884, max: 1884, partido: 'Berazategui' },
-    { min: 1888, max: 1888, partido: 'Florencio Varela' }
-];
+// El código postal solo autocompleta CABA (1000–1499): es un rango exacto y su costo no depende del
+// partido. En el GBA y el interior los rangos no son confiables (un partido mal detectado cambia el
+// precio del envío), así que ahí siempre elige el comprador. Acepta "1425" y "C1425DKE".
 function lookupZonaPorCP(cp) {
-    const n = parseInt(String(cp).slice(0,4), 10);
-    if (!n) return null;
-    const hit = CP_RANGES.find(r => n >= r.min && n <= r.max);
-    if (!hit) return null;
-    if (hit.provincia) return { provincia: hit.provincia, partido: '' };
-    return { provincia: 'Buenos Aires', partido: hit.partido };
+    const m = String(cp).match(/d{4}/);
+    const n = m ? parseInt(m[0], 10) : 0;
+    if (n >= 1000 && n <= 1499) return { provincia: 'Ciudad Autónoma de Buenos Aires', partido: '' };
+    return null;
 }
 let _postalDebounce = null;
 // El CP solo autocompleta provincia/partido si el comprador todavía no eligió; nunca pisa su elección
-// ni muestra error (la tabla CP_RANGES no cubre el interior).
+// ni muestra error (solo se reconoce CABA).
 function onPostalInput() {
     clearTimeout(_postalDebounce);
     const cp = document.getElementById('buyer-postal').value.trim();
@@ -1310,7 +1276,7 @@ function onProvinciaChange() {
     const citySel = document.getElementById('buyer-city');
     if (prov === 'Buenos Aires') {
         const todos = [...PARTIDOS_GBA.GBA1, ...PARTIDOS_GBA.GBA2, ...PARTIDOS_GBA.GBA3].sort((a,b)=>a.localeCompare(b));
-        partidoSel.innerHTML = '<option value="">Elegí tu partido</option>' + todos.map(p=>`<option>${p}</option>`).join('');
+        partidoSel.innerHTML = '<option value="">Elegí tu partido</option>' + todos.map(p=>`<option>${p}</option>`).join('') + `<option>${OTRO_PARTIDO_BA}</option>`;
         partidoSel.style.display = 'block';
         citySel.style.display = 'none';
     } else {
