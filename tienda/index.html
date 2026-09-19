@@ -666,15 +666,12 @@
                     <div id="delivery-fields" style="display:none;">
                         <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);margin-bottom:10px;">
                             <span style="font-size:16px;line-height:1.2;">📦</span>
-                            <span style="font-size:11.5px;color:#4ade80;line-height:1.5;">Ingresá tu <b>código postal</b> y calculamos el envío. ¡<b>Gratis</b> en compras desde $40.000! Envío por Correo Argentino: <b>2 a 5 días hábiles</b>.</span>
+                            <span style="font-size:11.5px;color:#4ade80;line-height:1.5;">Elegí tu <b>provincia</b> y calculamos el envío. ¡<b>Gratis</b> en compras desde $40.000! Envío por Correo Argentino: <b>2 a 5 días hábiles</b>.</span>
                         </div>
-                        <input id="buyer-postal" class="field" type="text" inputmode="numeric" maxlength="8" placeholder="Código postal" oninput="onPostalInput()" style="height:46px;font-size:16px;margin-bottom:8px;">
+                        <select id="buyer-provincia" class="field" onchange="onProvinciaChange()" style="height:46px;font-size:16px;margin-bottom:8px;-webkit-appearance:menulist;appearance:menulist;"></select>
+                        <select id="buyer-partido" class="field" onchange="calcularEnvio()" style="display:none;height:46px;font-size:16px;margin-bottom:8px;-webkit-appearance:menulist;appearance:menulist;"></select>
                         <div id="cp-zone-result" style="font-size:12px;margin:0 0 8px;min-height:18px;"></div>
-                        <button type="button" id="cp-manual-link" onclick="showManualZonePicker()" style="display:none;background:none;border:none;color:#4ade80;font-size:11.5px;text-decoration:underline;padding:0 0 10px;cursor:pointer;">No pudimos detectar tu zona — elegir manualmente</button>
-                        <div id="manual-zone-fields" style="display:none;">
-                            <select id="buyer-provincia" class="field" onchange="onProvinciaChange()" style="height:46px;font-size:16px;margin-bottom:8px;-webkit-appearance:menulist;appearance:menulist;"></select>
-                            <select id="buyer-partido" class="field" onchange="calcularEnvio()" style="display:none;height:46px;font-size:16px;margin-bottom:8px;-webkit-appearance:menulist;appearance:menulist;"></select>
-                        </div>
+                        <input id="buyer-postal" class="field" type="text" inputmode="numeric" maxlength="8" placeholder="Código postal" autocomplete="postal-code" oninput="onPostalInput()" style="height:46px;font-size:16px;margin-bottom:8px;">
                         <input id="buyer-city" class="field" type="text" placeholder="Ciudad / Localidad" autocomplete="address-level2" style="height:46px;font-size:16px;margin-bottom:8px;">
                         <input id="buyer-address" class="field" type="text" placeholder="Dirección completa (calle, número, piso, depto)" autocomplete="street-address" style="height:46px;font-size:16px;">
                     </div>
@@ -1230,31 +1227,21 @@ function lookupZonaPorCP(cp) {
     return { provincia: 'Buenos Aires', partido: hit.partido };
 }
 let _postalDebounce = null;
+// El CP solo autocompleta provincia/partido si el comprador todavía no eligió; nunca pisa su elección
+// ni muestra error (la tabla CP_RANGES no cubre el interior).
 function onPostalInput() {
     clearTimeout(_postalDebounce);
     const cp = document.getElementById('buyer-postal').value.trim();
-    const resultEl = document.getElementById('cp-zone-result');
-    const linkEl = document.getElementById('cp-manual-link');
-    if (cp.length < 4) { resultEl.innerHTML = ''; linkEl.style.display = 'none'; return; }
+    if (cp.length < 4) return;
     _postalDebounce = setTimeout(() => {
+        if (document.getElementById('buyer-provincia').value) return;
         const hit = lookupZonaPorCP(cp);
-        if (!hit) {
-            resultEl.innerHTML = '<span style="color:#fbbf24;">No reconocemos ese código postal.</span>';
-            linkEl.style.display = 'block';
-            return;
-        }
-        document.getElementById('manual-zone-fields').style.display = 'none';
-        linkEl.style.display = 'none';
+        if (!hit) return;
         document.getElementById('buyer-provincia').value = hit.provincia;
         onProvinciaChange();
         if (hit.partido) document.getElementById('buyer-partido').value = hit.partido;
         calcularEnvio();
     }, 300);
-}
-function showManualZonePicker() {
-    document.getElementById('manual-zone-fields').style.display = 'block';
-    document.getElementById('cp-manual-link').style.display = 'none';
-    document.getElementById('cp-zone-result').innerHTML = '';
 }
 // ── Wizard de checkout: un paso visible a la vez ──
 let checkoutStep = 1;
@@ -1287,7 +1274,7 @@ function continueFromEntrega() {
         const isBA = shippingProvincia === 'Buenos Aires';
         const city = isBA ? shippingPartido : document.getElementById('buyer-city').value.trim();
         const address = document.getElementById('buyer-address').value.trim();
-        if (!shippingProvincia) { errEl.textContent = 'Ingresá tu código postal o elegí tu provincia.'; errEl.style.display = 'block'; return; }
+        if (!shippingProvincia) { errEl.textContent = 'Elegí tu provincia para calcular el envío.'; errEl.style.display = 'block'; return; }
         if (isBA && !shippingPartido) { errEl.textContent = 'Elegí tu partido para calcular el envío.'; errEl.style.display = 'block'; return; }
         if (!city) { errEl.textContent = 'Ingresá tu ciudad o localidad.'; errEl.style.display = 'block'; return; }
         if (!address) { errEl.textContent = 'Ingresá tu dirección de entrega.'; errEl.style.display = 'block'; return; }
