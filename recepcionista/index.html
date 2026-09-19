@@ -3461,6 +3461,7 @@ function listenToRetiros() {
     onSnapshot(query(collection(db, PATH_RETIROS), orderBy('creadoEn','desc'), limit(300)), snap => {
         allRetiros = snap.docs.map(d => ({...d.data(), id: d.id}));
         updateRetirosBadge();
+        if (!document.getElementById('cierre-caja-view').classList.contains('hidden') && cierreCajaTab === 'semanal') renderCierreCajaSemanal();
         if (!document.getElementById('retiros-panel').classList.contains('hidden')) renderRetirosPanel();
         if (!document.getElementById('barber-detail-panel').classList.contains('hidden')) {
             renderBarberDetail(document.getElementById('barber-detail-name').textContent);
@@ -3759,23 +3760,12 @@ document.getElementById('retiro-manual-rec-form').addEventListener('submit', asy
 
 // ---- ATAJO DE TECLADO: descuento puntual al cierre de caja semanal ----
 // Se aprieta una vez y carga UN retiro confirmado (origen 'atajo') con fecha de hoy: solo afecta a la
-// semana en curso, no se repite. Si ya se cargó ese descuento esta semana, un segundo toque no hace nada.
+// semana en curso, no se repite. Sin avisos en pantalla; si ya se cargó esta semana, un segundo toque no hace nada.
 // Se puede borrar desde el historial de retiros como cualquier otro. Ctrl+1..8 lo reserva el navegador
 // para cambiar de pestaña, por eso se usa Ctrl+Shift.
 const ATAJOS_DESCUENTO = {
     Digit7: { barbero: 'Tony', monto: 5000, motivo: 'Descuento' }
 };
-function avisoAtajo(msg) {
-    let el = document.getElementById('atajo-toast');
-    if (!el) {
-        el = document.createElement('div');
-        el.id = 'atajo-toast';
-        el.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:9999;background:#111827;color:#fff;border:1px solid rgba(255,255,255,.15);padding:12px 18px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.5);';
-        document.body.appendChild(el);
-    }
-    el.textContent = msg; el.style.display = 'block';
-    clearTimeout(el._t); el._t = setTimeout(() => { el.style.display = 'none'; }, 3500);
-}
 document.addEventListener('keydown', async e => {
     if (!e.ctrlKey || !e.shiftKey || e.altKey || e.metaKey) return;
     const a = ATAJOS_DESCUENTO[e.code];
@@ -3784,7 +3774,6 @@ document.addEventListener('keydown', async e => {
     if (e.repeat || !currentUser) return;
     const semana = periodStartFor(a.barbero);
     if (allRetiros.some(r => !r.eliminado && r.origen === 'atajo' && r.barbero === a.barbero && r.monto === a.monto && r.fecha >= semana)) {
-        avisoAtajo(`Ya se descontó $${a.monto.toLocaleString('es-AR')} a ${a.barbero} esta semana`);
         return;
     }
     try {
@@ -3794,9 +3783,7 @@ document.addEventListener('keydown', async e => {
             descripcion: `${a.motivo} (atajo de teclado)`,
             userEmail: currentUser.email || null, creadoEn: serverTimestamp()
         });
-        avisoAtajo(`−$${a.monto.toLocaleString('es-AR')} descontado a ${a.barbero} esta semana`);
-        if (!document.getElementById('cierre-caja-view').classList.contains('hidden') && cierreCajaTab === 'semanal') renderCierreCajaSemanal();
-    } catch (err) { console.error('atajo descuento error:', err); avisoAtajo('Error al guardar el descuento'); }
+    } catch (err) { console.error('atajo descuento error:', err); }
 });
 
 window.openRetiroNotaRec = (retiroId, currentDesc, monto, barbero) => {
