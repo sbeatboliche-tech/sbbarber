@@ -615,6 +615,7 @@
             <span class="cart-total-label">Total</span>
             <span id="cart-total" class="cart-total-value">$0</span>
         </div>
+        <div style="font-size:11.5px;color:#a3a3a3;text-align:center;line-height:1.6;margin-bottom:10px;">💸 <b style="color:#4ade80;">10% OFF</b> pagando por transferencia · Retiro en local <b style="color:#4ade80;">gratis</b><br>Compra en 3 pasos rápidos, sin crear cuenta</div>
         <button class="btn-checkout" onclick="openCheckout()">Comprar ahora</button>
     </div>
 </div>
@@ -638,26 +639,18 @@
              (ver goToStep() en el script), para que nunca haga falta deslizar hacia abajo. -->
         <div class="checkout-step" data-step="1">
             <div class="co-section">
-                <div class="co-section-label"><span class="co-num">1</span>Tu email</div>
-                <div class="field-group" style="margin-bottom:10px;"><input class="field" id="buyer-email" type="email" placeholder="Para recibir la confirmación" autocomplete="email" inputmode="email" onkeydown="if(event.key==='Enter'){event.preventDefault();continueFromEmail();}"></div>
-                <button type="button" class="btn-pay" onclick="continueFromEmail()">Continuar</button>
-                <p id="email-gate-error" class="error-msg"></p>
+                <div class="co-section-label"><span class="co-num">1</span>Tus datos</div>
+                <div class="field-group"><label class="field-label">Nombre completo</label><input class="field" id="buyer-name" type="text" placeholder="Tu nombre" autocomplete="name"></div>
+                <div class="field-group"><label class="field-label">Email</label><input class="field" id="buyer-email" type="email" placeholder="Para recibir la confirmación" autocomplete="email" inputmode="email"></div>
+                <div class="field-group" style="margin-bottom:0;"><label class="field-label">Teléfono</label><input class="field" id="buyer-phone" type="tel" placeholder="Tu teléfono" autocomplete="tel" inputmode="tel" onkeydown="if(event.key==='Enter'){event.preventDefault();continueFromDatos();}"></div>
+                <div class="co-step-nav"><button type="button" class="btn-pay" onclick="continueFromDatos()">Continuar</button></div>
+                <p id="datos-error" class="error-msg"></p>
             </div>
         </div>
 
         <div class="checkout-step" data-step="2" style="display:none;">
             <div class="co-section">
-                <div class="co-section-label"><span class="co-num">2</span>Tus datos</div>
-                <div class="field-group"><label class="field-label">Nombre completo</label><input class="field" id="buyer-name" type="text" placeholder="Tu nombre" autocomplete="name"></div>
-                <div class="field-group" style="margin-bottom:0;"><label class="field-label">Teléfono</label><input class="field" id="buyer-phone" type="tel" placeholder="Tu teléfono" autocomplete="tel" inputmode="tel"></div>
-                <div class="co-step-nav"><button type="button" class="btn-cancel" onclick="goToStep(1)">Atrás</button><button type="button" class="btn-pay" onclick="continueFromDatos()">Continuar</button></div>
-                <p id="datos-error" class="error-msg"></p>
-            </div>
-        </div>
-
-        <div class="checkout-step" data-step="3" style="display:none;">
-            <div class="co-section">
-                <div class="co-section-label"><span class="co-num">3</span>Entrega</div>
+                <div class="co-section-label"><span class="co-num">2</span>Entrega</div>
                 <div class="ship-options">
                     <button id="ship-pickup" class="ship-opt active" onclick="setShipping('pickup')">
                         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/></svg>
@@ -686,14 +679,14 @@
                         <input id="buyer-address" class="field" type="text" placeholder="Dirección completa (calle, número, piso, depto)" autocomplete="street-address" style="height:46px;font-size:16px;">
                     </div>
                 </div>
-                <div class="co-step-nav"><button type="button" class="btn-cancel" onclick="goToStep(2)">Atrás</button><button type="button" class="btn-pay" onclick="continueFromEntrega()">Continuar</button></div>
+                <div class="co-step-nav"><button type="button" class="btn-cancel" onclick="goToStep(1)">Atrás</button><button type="button" class="btn-pay" onclick="continueFromEntrega()">Continuar</button></div>
                 <p id="entrega-error" class="error-msg"></p>
             </div>
         </div>
 
-        <div class="checkout-step" data-step="4" style="display:none;">
+        <div class="checkout-step" data-step="3" style="display:none;">
             <div class="co-section">
-                <div class="co-section-label"><span class="co-num">4</span>Método de pago</div>
+                <div class="co-section-label"><span class="co-num">3</span>Pago y resumen</div>
                 <div class="payment-tabs">
                     <button id="tab-mp" class="payment-tab active" onclick="setTab('mp')">
                         <span style="display:inline-flex;align-items:center;gap:7px;justify-content:center;">
@@ -717,15 +710,8 @@
                     <div style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.2);padding:10px 14px;margin-bottom:12px;text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;color:#4ade80;">10% OFF pagando con transferencia</div>
                     <p style="font-size:12.5px;color:#a3a3a3;line-height:1.6;margin:0;">Al tocar <b style="color:#e8e8e8;">Confirmar pedido</b> te mostramos el alias para transferir y te lo enviamos por mail. Hacés la transferencia y nos pasás el comprobante por WhatsApp. 🖤</p>
                 </div>
-                <div class="co-step-nav"><button type="button" class="btn-cancel" onclick="goToStep(3)">Atrás</button><button type="button" class="btn-pay" onclick="goToStep(5)">Continuar</button></div>
-            </div>
-        </div>
-
-        <div class="checkout-step" data-step="5" style="display:none;">
-            <div class="co-section">
-                <div class="co-section-label"><span class="co-num">5</span>Resumen</div>
-                <div class="order-summary" id="order-summary"></div>
-                <button type="button" class="btn-cancel" style="margin-top:12px;" onclick="goToStep(4)">Atrás</button>
+                <div class="order-summary" id="order-summary" style="margin-top:14px;"></div>
+                <button type="button" class="btn-cancel" style="margin-top:12px;width:100%;flex:none;height:44px;" onclick="goToStep(2)">Atrás</button>
             </div>
 
             <div class="co-pay-bar">
@@ -922,6 +908,7 @@ const DEFAULT_TIENDA_TITLE = document.title;
 
 function openItemDetail(id, type, silent) {
     _detailId = id; _detailType = type;
+    if (!silent && typeof fbq === 'function') fbq('track', 'ViewContent', { content_ids:[id], content_type:'product' });
     let _dlgTitleName = '';
     const modal = document.getElementById('item-detail-modal');
 
@@ -1276,25 +1263,23 @@ function goToStep(n) {
     document.querySelectorAll('.checkout-step').forEach(el => {
         el.style.display = Number(el.dataset.step) === n ? 'block' : 'none';
     });
-    if (n === 5) renderSummary();
+    if (n === 3) { renderSummary(); if (typeof fbq === 'function' && !window._apiFired) { window._apiFired = true; fbq('track', 'AddPaymentInfo', { value: getFinalTotal(), currency:'ARS' }); } }
+    if (window._markCheckoutStep) window._markCheckoutStep(n);
     const box = document.querySelector('#checkout-modal .modal-box');
     if (box) box.scrollTop = 0;
 }
-function continueFromEmail() {
-    const email = document.getElementById('buyer-email').value.trim();
-    const errEl = document.getElementById('email-gate-error');
-    if (!email || !email.includes('@')) { errEl.textContent = 'Ingresá un email válido.'; errEl.style.display = 'block'; return; }
-    errEl.style.display = 'none';
-    goToStep(2);
-}
 function continueFromDatos() {
     const name = document.getElementById('buyer-name').value.trim();
+    const email = document.getElementById('buyer-email').value.trim();
     const phone = document.getElementById('buyer-phone').value.trim();
     const errEl = document.getElementById('datos-error');
     if (!name) { errEl.textContent = 'Ingresá tu nombre.'; errEl.style.display = 'block'; return; }
+    if (!email || !email.includes('@')) { errEl.textContent = 'Ingresá un email válido.'; errEl.style.display = 'block'; return; }
     if (!phone) { errEl.textContent = 'Ingresá tu teléfono.'; errEl.style.display = 'block'; return; }
     errEl.style.display = 'none';
-    goToStep(3);
+    if (window._saveLead) window._saveLead({ name, email, phone });
+    if (typeof fbq === 'function') fbq('track', 'Lead', { value: getFinalTotal(), currency:'ARS' });
+    goToStep(2);
 }
 function continueFromEntrega() {
     const errEl = document.getElementById('entrega-error');
@@ -1308,7 +1293,7 @@ function continueFromEntrega() {
         if (!address) { errEl.textContent = 'Ingresá tu dirección de entrega.'; errEl.style.display = 'block'; return; }
     }
     errEl.style.display = 'none';
-    goToStep(4);
+    goToStep(3);
 }
 function onProvinciaChange() {
     const prov = document.getElementById('buyer-provincia').value;
@@ -2152,6 +2137,15 @@ let _visitId = null;
 window._markReachedCheckout = function () {
     if (!_visitId) return;
     setDoc(doc(db, 'tienda_visitas', _visitId), { reachedCheckout: true }, { merge: true }).catch(() => {});
+};
+window._markCheckoutStep = function (n) {
+    if (!_visitId) return;
+    setDoc(doc(db, 'tienda_visitas', _visitId), { checkoutStep: n, checkoutTs: serverTimestamp() }, { merge: true }).catch(() => {});
+};
+// Contacto de quien avanzó del paso 1 (para recuperar carritos abandonados desde el admin)
+window._saveLead = function (lead) {
+    if (!_visitId) return;
+    setDoc(doc(db, 'tienda_visitas', _visitId), { lead: { ...lead, cart: cart.map(i => i.name + ' x' + i.qty).join(', '), total: getTotal() } }, { merge: true }).catch(() => {});
 };
 window._markCompletedOrder = function () {
     if (!_visitId) return;
