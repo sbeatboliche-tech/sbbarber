@@ -1209,7 +1209,7 @@ function zonaPorPartido(partido) {
 // partido. En el GBA y el interior los rangos no son confiables (un partido mal detectado cambia el
 // precio del envío), así que ahí siempre elige el comprador. Acepta "1425" y "C1425DKE".
 function lookupZonaPorCP(cp) {
-    const m = String(cp).match(/d{4}/);
+    const m = String(cp).match(/\d{4}/);
     const n = m ? parseInt(m[0], 10) : 0;
     if (n >= 1000 && n <= 1499) return { provincia: 'Ciudad Autónoma de Buenos Aires', partido: '' };
     return null;
