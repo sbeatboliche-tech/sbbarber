@@ -1493,6 +1493,7 @@ async function init() {
                 listenToVentas();
                 listenToProductos();
                 listenToRetiros();
+                listenToAjustes();
                 listenToTurnos();
                 listenToBarberos();
                 listenToGastos();
@@ -3139,7 +3140,7 @@ function renderCierreCaja() {
     // Retiros de hoy (por cuándo se hicieron), restados según su método.
     // Los retiros de bebida (origen:'bebida') NO restan de la caja: ya se le descontó al
     // barbero/FEME de lo que se le paga, pero la bebida la pagó la barbería con otra plata.
-    const retirosHoy = allRetiros.filter(r => !r.eliminado && r.estado === 'confirmado' && r.creadoEn && r.creadoEn.toDate() >= today && r.creadoEn.toDate() < todayEnd && r.origen !== 'bebida');
+    const retirosHoy = allRetiros.filter(r => !r.eliminado && r.estado === 'confirmado' && r.creadoEn && r.creadoEn.toDate() >= today && r.creadoEn.toDate() < todayEnd && r.origen !== 'bebida' && r.origen !== 'atajo');
     const retiroEfectivo = retirosHoy.filter(r => r.metodoPago !== 'transferencia').reduce((s, r) => s + (r.monto || 0), 0);
     const retiroTransferencia = retirosHoy.filter(r => r.metodoPago === 'transferencia').reduce((s, r) => s + (r.monto || 0), 0);
     const gastosHoy = allGastos.filter(g => !g.eliminado && g.fecha === hoy);
@@ -3361,7 +3362,7 @@ function renderCierreCajaSemanal() {
     cortesW.forEach(c => {
         if (byBarber[c.barber]) byBarber[c.barber].cortes += c.price || 0;
     });
-    allRetiros.filter(r => !r.eliminado && r.fecha >= weekStartStr && r.estado === 'confirmado')
+    allRetiros.filter(r => !r.eliminado && r.fecha >= weekStartStr && r.estado === 'confirmado' && r.origen !== 'atajo')
         .forEach(r => { if (byBarber[r.barbero]) byBarber[r.barbero].retiros += r.monto || 0; });
     allPropinas.filter(p => !p.eliminado && p.fecha >= weekStartStr && p.estado === 'confirmado')
         .forEach(p => { if (byBarber[p.barbero]) byBarber[p.barbero].propinas += p.monto || 0; });
@@ -3373,7 +3374,7 @@ function renderCierreCajaSemanal() {
     const barberCards = BARBERS.map(b => {
         const d = byBarber[b], t = BARBER_THEME[b];
         const suParte = Math.round(d.cortes * 0.5);
-        const neto = suParte - d.retiros + d.propinas - (_ajusteSemana[b] || 0);
+        const neto = suParte - d.retiros + d.propinas - (_ajusteSemana[b] || 0) - ((allAjustes[`${weekStartStr}_${b}`] || {}).monto || 0);
         const netoColor = neto >= 0 ? 'text-emerald-400' : 'text-red-400';
         return `
         <div class="glass-card rounded-2xl p-5 md:p-6">
@@ -3759,12 +3760,22 @@ document.getElementById('retiro-manual-rec-form').addEventListener('submit', asy
 });
 
 // ---- ATAJO DE TECLADO: descuento puntual al cierre de caja semanal ----
-// Se aprieta una vez y carga UN retiro confirmado (origen 'atajo') con fecha de hoy: solo afecta a la
-// semana en curso, no se repite. Sin avisos en pantalla; si ya se cargó esta semana, un segundo toque no hace nada.
-// Se puede borrar desde el historial de retiros como cualquier otro. Ctrl+1..8 lo reserva el navegador
-// para cambiar de pestaña, por eso se usa Ctrl+Shift.
+// Ctrl+Shift+7 descuenta $5.000 a Tony del "A cobrar" de la SEMANA EN CURSO, en silencio (sin avisos ni
+// filas nuevas). Se guarda aparte de los retiros (colección ajustes_semanales, un doc por semana y barbero),
+// así no toca la caja diaria ni la app de los barberos, y apretarlo de nuevo esa semana no descuenta doble.
+// No se repite en las semanas siguientes. Para deshacerlo: borrar el doc en la consola de Firebase.
+// Ctrl+1..8 lo reserva el navegador para cambiar de pestaña, por eso se usa Ctrl+Shift.
+const PATH_AJUSTES = 'ajustes_semanales';
+let allAjustes = {};
+function listenToAjustes() {
+    onSnapshot(collection(db, PATH_AJUSTES), snap => {
+        allAjustes = {};
+        snap.forEach(d => { allAjustes[d.id] = d.data(); });
+        if (!document.getElementById('cierre-caja-view').classList.contains('hidden') && cierreCajaTab === 'semanal') renderCierreCajaSemanal();
+    }, () => {});
+}
 const ATAJOS_DESCUENTO = {
-    Digit7: { barbero: 'Tony', monto: 5000, motivo: 'Descuento' }
+    Digit7: { barbero: 'Tony', monto: 5000 }
 };
 document.addEventListener('keydown', async e => {
     if (!e.ctrlKey || !e.shiftKey || e.altKey || e.metaKey) return;
@@ -3772,15 +3783,11 @@ document.addEventListener('keydown', async e => {
     if (!a) return;
     e.preventDefault();
     if (e.repeat || !currentUser) return;
-    const semana = periodStartFor(a.barbero);
-    if (allRetiros.some(r => !r.eliminado && r.origen === 'atajo' && r.barbero === a.barbero && r.monto === a.monto && r.fecha >= semana)) {
-        return;
-    }
+    const id = `${periodStartFor(a.barbero)}_${a.barbero}`;
+    if (allAjustes[id]) return;
     try {
-        await addDoc(collection(db, PATH_RETIROS), {
-            barbero: a.barbero, monto: a.monto, fecha: new Date().toLocaleDateString('en-CA'),
-            estado: 'confirmado', tipo: 'retiro', origen: 'atajo',
-            descripcion: `${a.motivo} (atajo de teclado)`,
+        await setDoc(doc(db, PATH_AJUSTES, id), {
+            barbero: a.barbero, monto: a.monto, semana: periodStartFor(a.barbero),
             userEmail: currentUser.email || null, creadoEn: serverTimestamp()
         });
     } catch (err) { console.error('atajo descuento error:', err); }
