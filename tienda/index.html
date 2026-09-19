@@ -506,6 +506,28 @@
         .ba-tag.ba-tag-after { right:8px; }
         .ba-handle { position:absolute;top:0;bottom:0;left:50%;width:2px;background:#e8e8e8;z-index:4;transform:translateX(-1px);pointer-events:none; }
         .ba-handle::after { content:'⟷';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:#e8e8e8;color:#111;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900; }
+        /* ── PULIDO MOBILE-FIRST (minimalista) ── */
+        .hero-eyebrow { display:flex; }
+        h1.hero-search-title { display:block; }
+        .hero { padding:26px 16px 22px; }
+        .hero-search-title { font-size:clamp(26px,7.5vw,40px); margin-bottom:16px; }
+        /* Grilla sin fondo gris: si queda un hueco (nº impar de tarjetas) no se ve como un error */
+        .products-grid { background:transparent; border:none; gap:2px; }
+        .section-header { margin-bottom:14px; }
+        .section-title { color:var(--ink); font-size:11px; letter-spacing:.18em; }
+        .product-count { color:var(--g600); }
+        @media(max-width:899px) {
+            /* Última tarjeta suelta: ocupa el ancho completo en vez de dejar un hueco */
+            .products-grid > .product-card:last-child:nth-child(odd) { grid-column:1/-1; }
+            .products-grid > .product-card:last-child:nth-child(odd) .product-image-wrap { aspect-ratio:16/10; }
+        }
+        @media(max-width:640px) {
+            .benefits { padding:0 16px; gap:6px 14px; margin:14px auto 6px; }
+            .benefit { border:none; background:none; padding:0; gap:5px; font-size:11px; border-radius:0; }
+            .benefit svg { width:13px; height:13px; }
+            .benefit:hover { transform:none; box-shadow:none; }
+            .btn-add { height:46px; font-size:11px; }
+        }
     </style>
     <link rel="stylesheet" href="../assets/sb-motion.css">
 </head>
