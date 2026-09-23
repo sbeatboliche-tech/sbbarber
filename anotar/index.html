@@ -133,6 +133,19 @@
                 </div>
             </div>
 
+            <!-- Desafío semanal: 30 cortes en la semana = $25.000 extra. Se resetea solo porque
+                 cuenta cortes desde el lunes de la semana en curso (misma lógica que "semana" en render()). -->
+            <div id="challenge-card" class="hidden glass-card rounded-2xl p-5 border border-amber-500/20 bg-amber-500/5 no-select">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-amber-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2"><i class="fas fa-trophy"></i> Desafío semanal</span>
+                    <span id="challenge-count" class="text-sm font-extrabold text-white">0/30</span>
+                </div>
+                <div class="w-full h-2 bg-black/30 rounded-full overflow-hidden mb-2">
+                    <div id="challenge-bar" class="h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all" style="width:0%"></div>
+                </div>
+                <p id="challenge-msg" class="text-[11px] text-gray-400">Llegá a 30 cortes esta semana y ganás <span class="text-amber-400 font-bold">$25.000</span> extra</p>
+            </div>
+
             <!-- Top performer -->
             <div id="top-performer-card" class="hidden glass-card p-4 rounded-xl items-center justify-between border-l-4 border-yellow-500 bg-gradient-to-r from-yellow-500/10 to-transparent shine-effect animate-enter no-select">
                 <div class="flex items-center gap-4 z-10">
@@ -1998,6 +2011,24 @@ function render() {
 
     const isAdmin=ADMINS.includes(currentUser.email);
     const myName=BARBER_EMAIL_MAP[currentUser.email];
+
+    // Desafío semanal (30 cortes = $25.000). Cuenta siempre desde el lunes de la semana en
+    // curso, sin importar el período elegido en la nav — así se resetea solo cada semana.
+    const challengeCard=document.getElementById('challenge-card');
+    if(myName){
+        const CHALLENGE_GOAL=30, CHALLENGE_REWARD=25000;
+        const myWeekCuts=allCuts.filter(c=>!c.eliminado&&c.barber===myName&&c.createdAt&&c.createdAt.toDate()>=week).length;
+        const pct=Math.min(100,Math.round(myWeekCuts/CHALLENGE_GOAL*100));
+        document.getElementById('challenge-count').textContent=`${myWeekCuts}/${CHALLENGE_GOAL}`;
+        document.getElementById('challenge-bar').style.width=pct+'%';
+        document.getElementById('challenge-msg').innerHTML = myWeekCuts>=CHALLENGE_GOAL
+            ? `🎉 ¡Objetivo cumplido! Ganás <span class="text-amber-400 font-bold">$${CHALLENGE_REWARD.toLocaleString('es-AR')}</span> extra esta semana`
+            : `Te faltan <span class="text-amber-400 font-bold">${CHALLENGE_GOAL-myWeekCuts}</span> cortes para ganar <span class="text-amber-400 font-bold">$${CHALLENGE_REWARD.toLocaleString('es-AR')}</span> extra`;
+        challengeCard.classList.remove('hidden');
+    } else {
+        challengeCard.classList.add('hidden');
+    }
+
     const ePanel=document.getElementById('admin-earnings-panel');
     if(isAdmin&&(activePeriod==='semanal'||customDateFilter)){
         ePanel.classList.remove('hidden');
