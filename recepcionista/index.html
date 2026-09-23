@@ -283,6 +283,16 @@
                     <div id="barber-summary-list" class="space-y-2"></div>
                 </div>
 
+                <!-- Desafío semanal: 35 cortes en la semana = $25.000 extra (mismo desafío de "anotar").
+                     Siempre semana en curso, sin importar la fecha elegida arriba (Hoy/Ayer/buscar). -->
+                <div id="challenge-summary" class="glass-card rounded-2xl p-5 animate-enter hidden">
+                    <span class="text-amber-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2 mb-1">
+                        <i class="fas fa-trophy"></i> Desafío semanal
+                    </span>
+                    <p class="text-[10px] text-gray-500 mb-3">35 cortes en la semana = $25.000 extra · 🧪 modo prueba</p>
+                    <div id="challenge-summary-list" class="space-y-3"></div>
+                </div>
+
             </div>
 
             <!-- Columna derecha / Tab ventas -->
@@ -1562,6 +1572,7 @@ function listenToCuts() {
         snap => {
             allCuts = snap.docs.map(d => ({ ...d.data(), id: d.id }));
             renderCuts();
+            renderChallengeSummary();
             if (!document.getElementById('cierre-caja-view').classList.contains('hidden')) renderCierreCaja();
             document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
         }
@@ -1601,6 +1612,47 @@ window.setDashboardFecha = (value) => {
     dashboardFechaSel = value === hoyStr ? null : value;
     updateDashFechaUI(); renderCuts(); renderVentas();
 };
+
+// Desafío semanal (mismo de "anotar"): 35 cortes en la semana en curso = $25.000 extra.
+// Siempre lunes-a-hoy, sin importar qué fecha esté eligiendo la recepción arriba.
+function renderChallengeSummary() {
+    const CHALLENGE_GOAL = 35, CHALLENGE_REWARD = 25000;
+    const today = new Date(); const wd = today.getDay() || 7;
+    const weekStart = new Date(today); if (wd !== 1) weekStart.setDate(today.getDate() - (wd - 1));
+    weekStart.setHours(0, 0, 0, 0);
+
+    const counts = {};
+    allCuts.forEach(c => {
+        if (c.eliminado || !c.createdAt) return;
+        if (c.createdAt.toDate() < weekStart) return;
+        counts[c.barber] = (counts[c.barber] || 0) + 1;
+    });
+
+    const card = document.getElementById('challenge-summary');
+    const list = document.getElementById('challenge-summary-list');
+    const activeBarbers = BARBERS.filter(b => b !== 'FEME');
+    if (!activeBarbers.length) { card.classList.add('hidden'); return; }
+    card.classList.remove('hidden');
+    list.innerHTML = activeBarbers.map(b => {
+        const n = counts[b] || 0;
+        const t = BARBER_THEME[b] || { text: 'text-gray-300' };
+        const pct = Math.min(100, Math.round(n / CHALLENGE_GOAL * 100));
+        const cumplido = n >= CHALLENGE_GOAL;
+        return `
+        <div>
+            <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold ${t.text} flex items-center gap-1.5">
+                    <div class="w-5 h-5 rounded-full overflow-hidden flex-shrink-0">${barberAvatar(b, 5)}</div>
+                    ${b}${cumplido ? ' 🎉' : ''}
+                </span>
+                <span class="text-xs font-bold text-gray-300">${n}/${CHALLENGE_GOAL}</span>
+            </div>
+            <div class="w-full h-1.5 bg-black/30 rounded-full overflow-hidden">
+                <div class="h-full ${cumplido ? 'bg-emerald-500' : 'bg-gradient-to-r from-amber-500 to-yellow-400'}" style="width:${pct}%"></div>
+            </div>
+        </div>`;
+    }).join('');
+}
 
 function renderCuts() {
     const { hoy, today, todayEnd } = getDashFecha();
