@@ -1130,7 +1130,8 @@ function renderHistoryBarber(barberName) {
         const ec=item.estado==='confirmado'?'text-emerald-400':item.estado==='rechazado'?'text-red-400':'text-yellow-400';
         const ei=item.estado==='confirmado'?'✓':item.estado==='rechazado'?'✗':'⏳';
         const bdr=item.tipo==='retiro'?'border-violet-500/20':'border-yellow-500/20';
-        const lbl=item.tipo==='retiro'?'Retiro':`Propina${item.descripcion?' · '+item.descripcion:''}`;
+        const metodoIco=item.tipo==='retiro'?(item.metodoPago==='transferencia'?' 📲':' 💵'):'';
+        const lbl=item.tipo==='retiro'?`Retiro${metodoIco}`:`Propina${item.descripcion?' · '+item.descripcion:''}`;
         const f=item.creadoEn?item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
         const delBtn=item.tipo==='retiro' ? '' : `<button class="btn-delete-action text-gray-600 hover:text-red-400 transition" data-path="${PATH_PROPINAS}/${item.id}" title="Eliminar"><i class="fas fa-trash-alt text-[10px]"></i></button>`;
         return `<div class="flex items-center justify-between gap-3 bg-black/30 p-3 rounded-xl border ${bdr}">
@@ -1157,7 +1158,8 @@ function renderHistoryAdmin() {
         const bdr=bt?`${bt.border}/40`:item.tipo==='retiro'?'border-violet-500/20':'border-yellow-500/20';
         const barberCls=bt?bt.text:'text-gray-200';
         const desc=item.descripcion?`<span class="text-gray-500"> · ${item.descripcion}</span>`:'';
-        const lbl=item.tipo==='retiro'?`Retiro · <span class="${barberCls}">${item.barbero}</span>${desc}`:`Propina · <span class="${barberCls}">${item.barbero}</span>${item.descripcion?' · '+item.descripcion:''}`;
+        const metodoIco=item.tipo==='retiro'?(item.metodoPago==='transferencia'?' 📲':' 💵'):'';
+        const lbl=item.tipo==='retiro'?`Retiro${metodoIco} · <span class="${barberCls}">${item.barbero}</span>${desc}`:`Propina · <span class="${barberCls}">${item.barbero}</span>${item.descripcion?' · '+item.descripcion:''}`;
         const f=item.creadoEn?item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
         const notaBtn=item.tipo==='retiro'?`<button onclick="window.openRetiroNota('${item.id}','${item.descripcion||''}',${item.monto},'${item.barbero}')" class="text-gray-600 hover:text-violet-400 transition ml-1" title="Agregar nota"><i class="fas fa-pencil-alt text-[10px]"></i></button>`:'';
         const delBtn=item.tipo==='retiro'?`<button onclick="window.deleteRetiro('${item.id}')" class="text-gray-700 hover:text-red-400 transition" title="Eliminar retiro"><i class="fas fa-trash text-[10px]"></i></button>`:`<button onclick="window.deletePropina('${item.id}')" class="text-gray-700 hover:text-red-400 transition" title="Eliminar propina"><i class="fas fa-trash text-[10px]"></i></button>`;
@@ -1227,7 +1229,8 @@ function renderPendingPanel() {
         <div class="space-y-3">
             ${pending.map(item=>{
                 const path=item.tipo==='retiro'?PATH_RETIROS:PATH_PROPINAS;
-                const lbl=item.tipo==='retiro'?`Retiro · ${item.barbero}`:`Propina · ${item.barbero}${item.descripcion?' · '+item.descripcion:''}`;
+                const metodoIco=item.tipo==='retiro'?(item.metodoPago==='transferencia'?' 📲':' 💵'):'';
+                const lbl=item.tipo==='retiro'?`Retiro${metodoIco} · ${item.barbero}`:`Propina · ${item.barbero}${item.descripcion?' · '+item.descripcion:''}`;
                 const f=item.creadoEn?item.creadoEn.toDate().toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
                 const icoBg=item.tipo==='retiro'?'bg-violet-600/20 text-violet-400':'bg-yellow-600/20 text-yellow-400';
                 const ico=item.tipo==='retiro'?'fa-money-bill-wave':'fa-hand-holding-usd';
@@ -1288,7 +1291,8 @@ function renderBarberDetail(name) {
             const ei = item.estado==='confirmado' ? '✓' : item.estado==='rechazado' ? '✗' : '⏳';
             const bdr = item.tipo==='retiro' ? 'border-violet-500/20' : 'border-yellow-500/20';
             const desc = item.descripcion ? ` · <span class="text-gray-500 font-normal">${item.descripcion}</span>` : '';
-            const lbl = item.tipo==='retiro' ? `Retiro${desc}` : `Propina${item.descripcion?' · '+item.descripcion:''}`;
+            const metodoIco = item.tipo==='retiro' ? (item.metodoPago==='transferencia' ? ' 📲' : ' 💵') : '';
+            const lbl = item.tipo==='retiro' ? `Retiro${metodoIco}${desc}` : `Propina${item.descripcion?' · '+item.descripcion:''}`;
             const notaBtn = item.tipo==='retiro' ? `<button onclick="window.openRetiroNota('${item.id}','${(item.descripcion||'').replace(/'/g,"\\'")}',${item.monto},'${name}')" class="ml-1 text-gray-600 hover:text-violet-400 transition" title="Agregar nota"><i class="fas fa-pencil-alt text-[10px]"></i></button>` : '';
             const delBtn = item.tipo==='retiro' ? `<button onclick="window.deleteRetiro('${item.id}')" class="ml-1 text-gray-700 hover:text-red-400 transition" title="Eliminar retiro"><i class="fas fa-trash text-[10px]"></i></button>` : `<button onclick="window.deletePropina('${item.id}')" class="ml-1 text-gray-700 hover:text-red-400 transition" title="Eliminar propina"><i class="fas fa-trash text-[10px]"></i></button>`;
             const f = item.creadoEn ? item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : item.fecha||'';

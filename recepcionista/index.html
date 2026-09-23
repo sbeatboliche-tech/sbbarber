@@ -3538,7 +3538,8 @@ function renderPendingRetiros() {
                 const path = item.tipo === 'retiro' ? PATH_RETIROS : PATH_PROPINAS;
                 const icoBg = item.tipo === 'retiro' ? 'bg-violet-600/20 text-violet-400' : 'bg-yellow-600/20 text-yellow-400';
                 const ico = item.tipo === 'retiro' ? 'fa-money-bill-wave' : 'fa-hand-holding-usd';
-                const lbl = item.tipo === 'retiro' ? `Retiro · ${item.barbero}` : `Propina · ${item.barbero}${item.descripcion ? ' · '+item.descripcion : ''}`;
+                const metodoIco = item.tipo === 'retiro' ? (item.metodoPago === 'transferencia' ? ' 📲' : ' 💵') : '';
+                const lbl = item.tipo === 'retiro' ? `Retiro${metodoIco} · ${item.barbero}` : `Propina · ${item.barbero}${item.descripcion ? ' · '+item.descripcion : ''}`;
                 const f = item.creadoEn ? item.creadoEn.toDate().toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
                 return `<div class="bg-black/30 p-4 md:p-5 rounded-xl border border-white/5">
                     <div class="flex items-center justify-between mb-3">
@@ -3623,7 +3624,8 @@ function renderHistoryRec() {
         const textCls = eliminado ? 'line-through text-gray-600' : 'text-gray-100';
         const montoCls = eliminado ? 'line-through text-gray-600' : 'text-white';
         const desc = item.descripcion ? ` · <span class="font-normal">${item.descripcion}</span>` : '';
-        const lbl = item.tipo === 'retiro' ? `Retiro · <span class="${barberCls}">${item.barbero}</span>${desc}` : `Propina · <span class="${barberCls}">${item.barbero}</span>${item.descripcion ? ' · '+item.descripcion : ''}`;
+        const metodoIco = item.tipo === 'retiro' ? (item.metodoPago === 'transferencia' ? ' 📲' : ' 💵') : '';
+        const lbl = item.tipo === 'retiro' ? `Retiro${metodoIco} · <span class="${barberCls}">${item.barbero}</span>${desc}` : `Propina · <span class="${barberCls}">${item.barbero}</span>${item.descripcion ? ' · '+item.descripcion : ''}`;
         const f = item.creadoEn ? item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) : '';
         const notaBtn = (!eliminado && item.tipo === 'retiro') ? `<button onclick="window.openRetiroNotaRec('${item.id}','${(item.descripcion||'').replace(/'/g,"\\'")}',${item.monto},'${item.barbero}')" class="text-gray-600 hover:text-violet-400 transition ml-2"><i class="fas fa-pencil-alt text-xs"></i></button>` : '';
         const delBtn = eliminado ? '' : item.tipo === 'retiro' ? `<button onclick="window.deleteRetiroRec('${item.id}')" class="text-gray-700 hover:text-red-400 transition ml-1"><i class="fas fa-trash text-xs"></i></button>` : `<button onclick="window.deletePropinaRec('${item.id}')" class="text-gray-700 hover:text-red-400 transition ml-1"><i class="fas fa-trash text-xs"></i></button>`;
@@ -3673,7 +3675,8 @@ function renderBarberDetail(name) {
             const textCls = eliminado ? 'line-through text-gray-600' : 'text-gray-100';
             const montoCls = eliminado ? 'line-through text-gray-600' : 'text-white';
             const desc = item.descripcion ? ` · <span class="font-normal">${item.descripcion}</span>` : '';
-            const lbl = item.tipo==='retiro' ? `Retiro${desc}` : `Propina${item.descripcion?' · '+item.descripcion:''}`;
+            const metodoIco = item.tipo==='retiro' ? (item.metodoPago==='transferencia' ? ' 📲' : ' 💵') : '';
+            const lbl = item.tipo==='retiro' ? `Retiro${metodoIco}${desc}` : `Propina${item.descripcion?' · '+item.descripcion:''}`;
             const notaBtn = (!eliminado && item.tipo==='retiro') ? `<button onclick="window.openRetiroNotaRec('${item.id}','${(item.descripcion||'').replace(/'/g,"\\'")}',${item.monto},'${name}')" class="ml-2 text-gray-600 hover:text-violet-400 transition"><i class="fas fa-pencil-alt text-xs"></i></button>` : '';
             const delBtn = eliminado ? '' : item.tipo==='retiro' ? `<button onclick="window.deleteRetiroRec('${item.id}')" class="ml-1 text-gray-700 hover:text-red-400 transition"><i class="fas fa-trash text-xs"></i></button>` : `<button onclick="window.deletePropinaRec('${item.id}')" class="ml-1 text-gray-700 hover:text-red-400 transition"><i class="fas fa-trash text-xs"></i></button>`;
             const f = item.creadoEn ? item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) : '';
