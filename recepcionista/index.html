@@ -967,8 +967,7 @@
                     <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Barbero</label>
                     <select id="ret-man-barbero" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-violet-500 outline-none transition text-white mt-1">
                         <option value="" disabled selected>Elegí</option>
-                        <option>Tony</option><option>Maxi</option><option>Stefa</option>
-                        <option value="FEME">FEME (Recepción · mensual)</option>
+                        <option>Tony</option><option>Maxi</option><option>Stefa</option><option>Santi</option><option>SantiF</option>
                     </select>
                 </div>
                 <div>
@@ -1311,7 +1310,7 @@ const PATH_STOCK   = `stock_items`;
 const PATH_VENTAS    = `ventas_productos`;
 const PATH_PRODUCTOS = `productos_barber`;
 const PATH_PROFILES  = `barber_profiles`;
-let BARBER_EMAIL_MAP = { 'gomezmaximilianorodrigo@gmail.com':'Maxi', 'ap1773508@gmail.com':'Tony', 'stefanoacostasla@gmail.com':'Stefa' };
+let BARBER_EMAIL_MAP = { 'gomezmaximilianorodrigo@gmail.com':'Maxi', 'ap1773508@gmail.com':'Tony', 'stefanoacostasla@gmail.com':'Stefa', 'santiagofl551@gmail.com':'SantiF' };
 let barberProfilesData = {};
 
 const SERVICES = [
@@ -1325,13 +1324,14 @@ const SERVICES = [
     { name:'Global',          price:60000 }
 ];
 
-let BARBERS = ['Tony', 'Maxi', 'Stefa', 'Santi'];
+let BARBERS = ['Tony', 'Maxi', 'Stefa', 'Santi', 'SantiF'];
 let BARBER_THEME = {
-    Tony:  { color:'blue',    text:'text-blue-400',    border:'border-blue-500',    bg:'bg-blue-500',    initial:'T' },
-    Maxi:  { color:'emerald', text:'text-emerald-400', border:'border-emerald-500', bg:'bg-emerald-500', initial:'M' },
-    Stefa: { color:'purple',  text:'text-purple-400',  border:'border-purple-500',  bg:'bg-purple-500',  initial:'S' },
-    Santi: { color:'orange',  text:'text-orange-400',  border:'border-orange-500',  bg:'bg-orange-500',  initial:'Sa' },
-    FEME:  { color:'cyan',    text:'text-cyan-400',    border:'border-cyan-500',    bg:'bg-cyan-500',    initial:'F' }
+    Tony:   { color:'blue',    text:'text-blue-400',    border:'border-blue-500',    bg:'bg-blue-500',    initial:'T' },
+    Maxi:   { color:'emerald', text:'text-emerald-400', border:'border-emerald-500', bg:'bg-emerald-500', initial:'M' },
+    Stefa:  { color:'purple',  text:'text-purple-400',  border:'border-purple-500',  bg:'bg-purple-500',  initial:'S' },
+    Santi:  { color:'orange',  text:'text-orange-400',  border:'border-orange-500',  bg:'bg-orange-500',  initial:'Sa' },
+    SantiF: { color:'pink',    text:'text-pink-400',    border:'border-pink-500',    bg:'bg-pink-500',    initial:'F' },
+    FEME:   { color:'cyan',    text:'text-cyan-400',    border:'border-cyan-500',    bg:'bg-cyan-500',    initial:'F' }
 };
 const BARBER_EXTRA_THEMES = [
     { color:'orange', text:'text-orange-400', border:'border-orange-500', bg:'bg-orange-500' },
@@ -3731,11 +3731,11 @@ window.setRetMetodo = (m) => {
     document.getElementById('ret-man-transferencia').className = m === 'transferencia' ? onT : off;
 };
 window.openRetiroManualModal = () => {
-    // Poblar barberos dinámicamente (incluye los agregados nuevos) + FEME
+    // Poblar barberos dinámicamente (incluye los agregados nuevos). FEME no es barbero,
+    // no se le carga retiro manual acá (su consumo/acumulado mensual se maneja aparte).
     const sel = document.getElementById('ret-man-barbero');
     sel.innerHTML = '<option value="" disabled selected>Elegí</option>'
-        + BARBERS.map(b => `<option>${b}</option>`).join('')
-        + '<option value="FEME">FEME (Recepción · mensual)</option>';
+        + BARBERS.map(b => `<option>${b}</option>`).join('');
     document.getElementById('ret-man-monto').value = '';
     setRetMetodo('efectivo');
     showModal('retiro-manual-rec-modal');
