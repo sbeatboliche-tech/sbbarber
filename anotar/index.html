@@ -138,12 +138,12 @@
             <div id="challenge-card" class="hidden glass-card rounded-2xl p-5 border border-amber-500/20 bg-amber-500/5 no-select">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-amber-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2"><i class="fas fa-trophy"></i> Desafío semanal</span>
-                    <span id="challenge-count" class="text-sm font-extrabold text-white">0/32</span>
+                    <span id="challenge-count" class="text-sm font-extrabold text-white">0/35</span>
                 </div>
                 <div class="w-full h-2 bg-black/30 rounded-full overflow-hidden mb-2">
                     <div id="challenge-bar" class="h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all" style="width:0%"></div>
                 </div>
-                <p id="challenge-msg" class="text-[11px] text-gray-400">Llegá a 32 cortes esta semana y ganás <span class="text-amber-400 font-bold">$25.000</span> extra</p>
+                <p id="challenge-msg" class="text-[11px] text-gray-400">Llegá a 35 cortes esta semana y ganás <span class="text-amber-400 font-bold">$25.000</span> extra</p>
                 <p class="text-[10px] text-gray-500 mt-2 pt-2 border-t border-white/5">🧪 Modo prueba: el número de cortes y el monto del bono pueden cambiar.</p>
             </div>
 
@@ -2017,7 +2017,7 @@ function render() {
     // curso, sin importar el período elegido en la nav — así se resetea solo cada semana.
     const challengeCard=document.getElementById('challenge-card');
     if(myName){
-        const CHALLENGE_GOAL=32, CHALLENGE_REWARD=25000;
+        const CHALLENGE_GOAL=35, CHALLENGE_REWARD=25000;
         const myWeekCuts=allCuts.filter(c=>!c.eliminado&&c.barber===myName&&c.createdAt&&c.createdAt.toDate()>=week).length;
         const pct=Math.min(100,Math.round(myWeekCuts/CHALLENGE_GOAL*100));
         document.getElementById('challenge-count').textContent=`${myWeekCuts}/${CHALLENGE_GOAL}`;
