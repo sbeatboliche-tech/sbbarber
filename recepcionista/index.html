@@ -335,6 +335,12 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
+                            <button id="btn-historial-stock" onclick="window.openHistorialStock()" title="Historial de movimientos" class="hidden w-8 h-8 rounded-lg bg-white/5 border border-white/10 items-center justify-center text-gray-400 hover:text-cyan-400 transition">
+                                <i class="fas fa-clock-rotate-left text-xs"></i>
+                            </button>
+                            <button id="btn-conteo-stock" onclick="window.openConteoStock()" class="hidden bg-amber-700/30 border border-amber-500/30 text-amber-400 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-amber-700/50 transition items-center gap-1.5">
+                                <i class="fas fa-clipboard-check text-[10px]"></i> Conteo
+                            </button>
                             <button id="btn-add-stock-item" onclick="window.openAddItemModal()" class="hidden bg-cyan-700/40 border border-cyan-500/30 text-cyan-400 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-cyan-700/60 transition flex items-center gap-1.5">
                                 <i class="fas fa-plus text-[10px]"></i> Agregar
                             </button>
@@ -938,6 +944,32 @@
         </div>
     </div>
 
+    <!-- Conteo físico de bebidas (admin) -->
+    <div id="conteo-stock-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
+        <div class="glass-modal md:rounded-3xl md:max-w-md md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-xl font-bold text-white"><i class="fas fa-clipboard-check text-amber-400 mr-2"></i>Conteo de heladera</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <p class="text-xs text-gray-500 mb-4">Contá lo que hay y cargá la cantidad real. Lo que dejes vacío no se toca.</p>
+            <div id="conteo-stock-list" class="space-y-2 overflow-y-auto flex-1 min-h-0 mb-3"></div>
+            <div id="conteo-stock-resumen" class="text-xs text-center mb-3"></div>
+            <button id="btn-guardar-conteo-stock" onclick="window.guardarConteoStock()" class="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest">Guardar conteo</button>
+        </div>
+    </div>
+
+    <!-- Historial de stock de bebidas (admin) -->
+    <div id="historial-stock-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
+        <div class="glass-modal md:rounded-3xl md:max-w-md md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-xl font-bold text-white"><i class="fas fa-clock-rotate-left text-cyan-400 mr-2"></i>Historial bebidas</h2>
+                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <select id="historial-stock-filtro" onchange="window.renderHistorialStock()" class="w-full p-3 mb-3 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none text-white text-sm"></select>
+            <div id="historial-stock-body" class="overflow-y-auto flex-1 min-h-0 space-y-4"></div>
+        </div>
+    </div>
+
     <!-- Venta rápida de bebida -->
     <div id="quick-sale-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
         <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl max-h-[90vh] overflow-y-auto">
@@ -1303,7 +1335,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signInAnonymously, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, orderBy, where, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, getDoc, doc, increment, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, orderBy, where, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, getDoc, doc, increment, serverTimestamp, limit, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -1317,6 +1349,9 @@ const firebaseConfig = {
 const ADMINS    = ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
 const PATH_CUTS = `artifacts/sb-barber-6dc16/public/data/all_cuts`;
 const PATH_STOCK   = `stock_items`;
+// Historial de bebidas: cada entrada/salida deja un movimiento; los conteos físicos van aparte
+const PATH_STOCK_MOV     = 'stock_movimientos';
+const PATH_STOCK_CONTEOS = 'stock_conteos';
 const PATH_VENTAS    = `ventas_productos`;
 const PATH_PRODUCTOS = `productos_barber`;
 const PATH_PROFILES  = `barber_profiles`;
@@ -1492,7 +1527,13 @@ async function init() {
             document.getElementById('dashboard-view').classList.remove('hidden');
             document.getElementById('login-view').classList.add('hidden');
             window.dispatchEvent(new Event('sb-dashboard-ready'));
-            if (isAdmin) document.getElementById('btn-add-stock-item').classList.remove('hidden');
+            if (isAdmin) {
+                document.getElementById('btn-add-stock-item').classList.remove('hidden');
+                ['btn-conteo-stock', 'btn-historial-stock'].forEach(id => {
+                    document.getElementById(id).classList.remove('hidden');
+                    document.getElementById(id).classList.add('flex');
+                });
+            }
             if (isOwner) { document.getElementById('btn-dispositivos').classList.remove('hidden'); document.getElementById('btn-dispositivos').classList.add('flex'); }
             if (!_listenersAttached) {
                 _listenersAttached = true;
@@ -1893,6 +1934,16 @@ function listenToStock() {
     });
 }
 
+// Deja registrado un movimiento de bebida dentro del mismo batch que toca el stock.
+// cantidad va con signo: + entra a la heladera, - sale.
+function addStockMov(batch, { itemId, itemName, tipo, cantidad, detalle = null }) {
+    batch.set(doc(collection(db, PATH_STOCK_MOV)), {
+        itemId, itemName, tipo, cantidad, detalle,
+        fecha: new Date().toLocaleDateString('en-CA'),
+        userEmail: currentUser?.email || null, creadoEn: serverTimestamp()
+    });
+}
+
 function renderStock() {
     const totalUnits = allStock.reduce((s, i) => s + (i.quantity || 0), 0);
     const lowCount = allStock.filter(i => (i.quantity || 0) <= 2).length;
@@ -2005,49 +2056,60 @@ document.getElementById('movement-form').addEventListener('submit', async e => {
     e.preventDefault();
     const qty = Number(document.getElementById('movement-qty').value);
     if (!qty || qty < 1) return alert('Ingresá una cantidad válida');
+    const { itemId, itemName, type } = currentMovement;
+    const item = allStock.find(i => i.id === itemId);
+    const disponible = item?.quantity || 0;
+    if (type === 'venta' && qty > disponible) {
+        return alert(`El sistema tiene ${disponible} de ${itemName}. Si en la heladera hay más, primero corregilo con "Conteo".`);
+    }
     const btn = document.getElementById('btn-submit-movement');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
-        const { itemId, itemName, type } = currentMovement;
+        // Todo en un batch: o se guarda stock + venta + retiro + movimiento, o nada (antes,
+        // un corte de conexión a mitad podía descontar la bebida sin registrar la venta).
+        const batch = writeBatch(db);
         const delta = type === 'compra' ? qty : -qty;
-        await updateDoc(doc(db, PATH_STOCK, itemId), { quantity: increment(delta) });
-        if (type === 'venta' && drinkSalidaTipo === 'venta') {
-            const item = allStock.find(i => i.id === itemId);
-            const precio = item?.price || 0;
-            const hoy = new Date().toLocaleDateString('en-CA');
+        batch.update(doc(db, PATH_STOCK, itemId), { quantity: increment(delta) });
+        const precio = item?.price || 0;
+        const hoy = new Date().toLocaleDateString('en-CA');
+        if (type === 'compra') {
+            addStockMov(batch, { itemId, itemName, tipo: 'compra', cantidad: qty });
+        } else if (drinkSalidaTipo === 'venta') {
             const comprador = document.getElementById('mv-comprador').value || 'cliente';
             const esStaff = BARBERS.includes(comprador) || comprador === 'FEME';
             const metodo = esStaff ? null : (document.getElementById('mv-metodo-pago').value || 'efectivo');
-            await addDoc(collection(db, PATH_VENTAS), {
-                producto: itemName, tipo: 'bebida',
+            const retiroRef = esStaff ? doc(collection(db, PATH_RETIROS)) : null;
+            batch.set(doc(collection(db, PATH_VENTAS)), {
+                producto: itemName, tipo: 'bebida', stockItemId: itemId,
                 precio, cantidad: qty, total: precio * qty,
                 barbero: comprador,
                 ...(metodo ? { metodoPago: metodo } : {}),
+                ...(retiroRef ? { retiroId: retiroRef.id } : {}),
                 esConsumoStaff: esStaff,
                 userEmail: currentUser.email,
                 fecha: hoy, creadoEn: serverTimestamp()
             });
-            if (esStaff) {
-                await addDoc(collection(db, PATH_RETIROS), {
+            if (retiroRef) {
+                batch.set(retiroRef, {
                     barbero: comprador, monto: Number(precio) * qty, fecha: hoy,
                     estado: 'confirmado', tipo: 'retiro', origen: 'bebida',
                     descripcion: `Bebida: ${itemName}${qty > 1 ? ' ×' + qty : ''}`,
                     userEmail: currentUser?.email || null, creadoEn: serverTimestamp()
                 });
             }
-        } else if (type === 'venta' && drinkSalidaTipo === 'regalo') {
-            const item = allStock.find(i => i.id === itemId);
-            const precio = item?.price || 0;
-            const hoy = new Date().toLocaleDateString('en-CA');
+            addStockMov(batch, { itemId, itemName, tipo: 'venta', cantidad: -qty, detalle: comprador === 'cliente' ? 'Cliente' : comprador });
+        } else {
             const motivo = document.getElementById('mv-motivo').value.trim();
-            await addDoc(collection(db, PATH_VENTAS), {
-                producto: itemName, tipo: 'bebida',
+            batch.set(doc(collection(db, PATH_VENTAS)), {
+                producto: itemName, tipo: 'bebida', stockItemId: itemId,
                 precio, cantidad: qty, total: 0,
                 esRegalo: true, motivo: motivo || null,
                 userEmail: currentUser.email,
                 fecha: hoy, creadoEn: serverTimestamp()
             });
+            addStockMov(batch, { itemId, itemName, tipo: 'regalo', cantidad: -qty, detalle: motivo || null });
         }
+        await batch.commit();
         closeModals();
     } catch(err) { console.error('movement error:', err); alert('Error al guardar: ' + (err?.message || err)); }
     btn.disabled = false;
@@ -2148,7 +2210,11 @@ document.getElementById('add-item-form').addEventListener('submit', async e => {
     try {
         const data = { name, quantity: qty, price, createdAt: serverTimestamp() };
         if (newItemPhoto) data.photoURL = newItemPhoto;
-        await addDoc(collection(db, PATH_STOCK), data);
+        const batch = writeBatch(db);
+        const ref = doc(collection(db, PATH_STOCK));
+        batch.set(ref, data);
+        addStockMov(batch, { itemId: ref.id, itemName: name, tipo: 'alta', cantidad: qty });
+        await batch.commit();
         closeModals();
     } catch { alert('Error al guardar'); }
     btn.disabled = false; btn.textContent = 'AGREGAR';
@@ -2199,31 +2265,40 @@ window.openQuickSaleModal = () => {
     showModal('quick-sale-modal');
 };
 
+// Evita que un doble toque descuente dos bebidas y le cobre dos al barbero
+let quickSaleBusy = false;
 window.quickSale = async id => {
+    if (quickSaleBusy) return;
     const barbero = document.getElementById('qs-barbero').value;
     if (!barbero) return alert('Seleccioná un barbero primero');
     const item = allStock.find(i => i.id === id);
     if (!item || (item.quantity || 0) < 1) return alert('Sin stock');
     const metodo = document.getElementById('qs-metodo-pago').value;
+    quickSaleBusy = true;
     try {
         const hoy = new Date().toLocaleDateString('en-CA');
-        await updateDoc(doc(db, PATH_STOCK, id), { quantity: increment(-1) });
-        await addDoc(collection(db, PATH_VENTAS), {
-            producto: item.name, tipo: 'bebida',
+        const batch = writeBatch(db);
+        const retiroRef = doc(collection(db, PATH_RETIROS));
+        batch.update(doc(db, PATH_STOCK, id), { quantity: increment(-1) });
+        batch.set(doc(collection(db, PATH_VENTAS)), {
+            producto: item.name, tipo: 'bebida', stockItemId: id, retiroId: retiroRef.id,
             precio: item.price || 0, cantidad: 1, total: item.price || 0,
             metodoPago: metodo,
             esConsumoStaff: true,
             barbero, userEmail: currentUser.email,
             fecha: hoy, creadoEn: serverTimestamp()
         });
-        await addDoc(collection(db, PATH_RETIROS), {
+        batch.set(retiroRef, {
             barbero, monto: Number(item.price) || 0, fecha: hoy,
             estado: 'confirmado', tipo: 'retiro', origen: 'bebida',
             descripcion: `Bebida: ${item.name}`,
             userEmail: currentUser?.email || null, creadoEn: serverTimestamp()
         });
+        addStockMov(batch, { itemId: id, itemName: item.name, tipo: 'venta', cantidad: -1, detalle: barbero });
+        await batch.commit();
         closeModals();
     } catch(err) { console.error('quickSale error:', err); alert('Error: ' + (err?.message || err)); }
+    quickSaleBusy = false;
 };
 
 // ---- VENTAS DE PRODUCTOS ----
@@ -2374,11 +2449,41 @@ window.setVentaMetodo = (m) => {
     }
 };
 
+// Retiro que generó una venta de bebida a un barbero/FEME. Las ventas nuevas guardan retiroId;
+// para las viejas se busca uno equivalente (mismo día, persona, monto y bebida).
+function findRetiroDeVenta(v) {
+    // Solo retiros que siguen vivos: un update sobre un doc borrado haría fallar todo el batch
+    if (v.retiroId) return allRetiros.find(r => r.id === v.retiroId && !r.eliminado) || null;
+    if (!v.esConsumoStaff) return null;
+    const persona = v.compradorTipo ? v.comprador : v.barbero;
+    return allRetiros.find(r => !r.eliminado && r.origen === 'bebida' && r.fecha === v.fecha &&
+        r.barbero === persona && Number(r.monto) === Number(v.total) && (r.descripcion || '').includes(v.producto)) || null;
+}
+
 window.deleteVenta = async (id) => {
-    if (!await customConfirm('¿Eliminar esta venta?')) return;
-    allVentas = allVentas.map(v => v.id === id ? {...v, eliminado: true} : v);
+    const v = allVentas.find(x => x.id === id);
+    if (!v) return;
+    // Bebida: al borrar la venta la unidad vuelve a la heladera y se anula el retiro del barbero
+    // (antes quedaba descontada y cobrada igual, y el stock dejaba de coincidir).
+    const esBebida = v.tipo === 'bebida' && !v.stockDevuelto;
+    const item = esBebida ? (allStock.find(i => i.id === v.stockItemId) || allStock.find(i => i.name === v.producto)) : null;
+    const retiro = esBebida ? findRetiroDeVenta(v) : null;
+    let msg = '¿Eliminar esta venta?';
+    if (item) msg += ` Vuelve ${v.cantidad || 1} ${item.name} al stock.`;
+    if (retiro) msg += ` Se anula el retiro de ${retiro.barbero || (v.compradorTipo ? v.comprador : v.barbero)}.`;
+    if (!await customConfirm(msg)) return;
+    allVentas = allVentas.map(x => x.id === id ? {...x, eliminado: true} : x);
     renderVentas(); renderSalesHistory();
-    try { await updateDoc(doc(db, PATH_VENTAS, id), { eliminado: true }); } catch { alert('Error'); }
+    try {
+        const batch = writeBatch(db);
+        batch.update(doc(db, PATH_VENTAS, id), { eliminado: true, ...(esBebida ? { stockDevuelto: !!item } : {}) });
+        if (item) {
+            batch.update(doc(db, PATH_STOCK, item.id), { quantity: increment(v.cantidad || 1) });
+            addStockMov(batch, { itemId: item.id, itemName: item.name, tipo: 'devolucion', cantidad: v.cantidad || 1, detalle: 'Venta eliminada' });
+        }
+        if (retiro) batch.update(doc(db, PATH_RETIROS, retiro.id), { eliminado: true });
+        await batch.commit();
+    } catch (err) { console.error('deleteVenta error:', err); alert('Error al eliminar'); }
 };
 
 function renderProductosGrid() {
@@ -3896,6 +4001,156 @@ window.closeBebidasPanel = () => {
     p.classList.add('hidden'); p.classList.remove('flex', 'flex-col');
 };
 
+// ---- CONTEO FÍSICO DE BEBIDAS ----
+// Se cuenta la heladera y se carga lo real: el stock queda igual a lo contado y la diferencia
+// se guarda (stock_conteos + un movimiento 'ajuste') para ver si los faltantes se repiten.
+window.openConteoStock = () => {
+    document.getElementById('conteo-stock-list').innerHTML = allStock.map(item => `
+        <div class="flex items-center justify-between gap-3 bg-black/30 p-3 rounded-xl border border-white/5">
+            <div class="min-w-0">
+                <div class="text-sm font-bold text-white truncate">${item.name}</div>
+                <div class="text-[10px] text-gray-500">Sistema: <span class="text-cyan-300 font-bold">${item.quantity || 0}</span><span data-conteo-diff="${item.id}"></span></div>
+            </div>
+            <input type="number" min="0" inputmode="numeric" data-conteo-id="${item.id}" oninput="window.updateConteoDiff()" placeholder="—" class="w-20 p-2 text-center bg-black/40 rounded-lg border border-gray-700 focus:border-amber-500 outline-none text-white font-bold">
+        </div>`).join('') || '<p class="text-xs text-gray-600 text-center py-4">No hay bebidas cargadas</p>';
+    window.updateConteoDiff();
+    showModal('conteo-stock-modal');
+};
+
+function leerConteoStock() {
+    return [...document.querySelectorAll('[data-conteo-id]')]
+        .filter(inp => inp.value !== '')
+        .map(inp => {
+            const item = allStock.find(i => i.id === inp.dataset.conteoId);
+            const sistema = item?.quantity || 0;
+            const real = Math.max(0, Math.floor(Number(inp.value) || 0));
+            return { itemId: inp.dataset.conteoId, itemName: item?.name || '', sistema, real, diferencia: real - sistema };
+        });
+}
+
+window.updateConteoDiff = () => {
+    const items = leerConteoStock();
+    document.querySelectorAll('[data-conteo-diff]').forEach(el => { el.textContent = ''; el.className = ''; });
+    items.forEach(it => {
+        const el = document.querySelector(`[data-conteo-diff="${it.itemId}"]`);
+        if (!el) return;
+        el.textContent = it.diferencia === 0 ? ' · ✓ coincide' : it.diferencia < 0 ? ` · faltan ${-it.diferencia}` : ` · sobran ${it.diferencia}`;
+        el.className = `font-bold ${it.diferencia === 0 ? 'text-emerald-400' : it.diferencia < 0 ? 'text-red-400' : 'text-yellow-400'}`;
+    });
+    const faltan = items.reduce((s, i) => s + Math.max(0, -i.diferencia), 0);
+    const sobran = items.reduce((s, i) => s + Math.max(0, i.diferencia), 0);
+    document.getElementById('conteo-stock-resumen').innerHTML = items.length === 0
+        ? '<span class="text-gray-600">Cargá la cantidad real de al menos una bebida</span>'
+        : `<span class="text-gray-400">${items.length} contada${items.length !== 1 ? 's' : ''}</span> · <span class="text-red-400 font-bold">Faltan ${faltan}</span> · <span class="text-yellow-400 font-bold">Sobran ${sobran}</span>`;
+};
+
+window.guardarConteoStock = async () => {
+    const items = leerConteoStock();
+    if (!items.length) return alert('Cargá la cantidad real de al menos una bebida');
+    const btn = document.getElementById('btn-guardar-conteo-stock');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        const batch = writeBatch(db);
+        items.forEach(it => {
+            if (it.diferencia === 0) return;
+            batch.update(doc(db, PATH_STOCK, it.itemId), { quantity: it.real });
+            addStockMov(batch, { itemId: it.itemId, itemName: it.itemName, tipo: 'ajuste', cantidad: it.diferencia, detalle: `Conteo: sistema ${it.sistema}, real ${it.real}` });
+        });
+        batch.set(doc(collection(db, PATH_STOCK_CONTEOS)), {
+            fecha: new Date().toLocaleDateString('en-CA'), items,
+            faltantes: items.reduce((s, i) => s + Math.max(0, -i.diferencia), 0),
+            sobrantes: items.reduce((s, i) => s + Math.max(0, i.diferencia), 0),
+            userEmail: currentUser?.email || null, creadoEn: serverTimestamp()
+        });
+        await batch.commit();
+        closeModals();
+    } catch (err) { console.error('conteo stock error:', err); alert('Error al guardar el conteo'); }
+    btn.disabled = false; btn.textContent = 'Guardar conteo';
+};
+
+// ---- HISTORIAL DE BEBIDAS ----
+let historialStock = { conteos: [], movs: [] };
+const MOV_TIPO = {
+    alta:       { label: 'Alta',            icon: '🆕' },
+    compra:     { label: 'Compra',          icon: '📦' },
+    venta:      { label: 'Venta',           icon: '🥤' },
+    regalo:     { label: 'Regalo / uso',    icon: '🎁' },
+    devolucion: { label: 'Venta eliminada', icon: '↩️' },
+    ajuste:     { label: 'Ajuste conteo',   icon: '📋' }
+};
+
+window.openHistorialStock = async () => {
+    const sel = document.getElementById('historial-stock-filtro');
+    sel.innerHTML = '<option value="">Todas las bebidas</option>' + allStock.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+    const body = document.getElementById('historial-stock-body');
+    body.innerHTML = '<p class="text-xs text-gray-500 text-center py-6"><i class="fas fa-spinner fa-spin mr-1.5"></i>Cargando...</p>';
+    showModal('historial-stock-modal');
+    try {
+        const [cs, ms] = await Promise.all([
+            getDocs(query(collection(db, PATH_STOCK_CONTEOS), orderBy('creadoEn', 'desc'), limit(20))),
+            getDocs(query(collection(db, PATH_STOCK_MOV), orderBy('creadoEn', 'desc'), limit(300)))
+        ]);
+        historialStock = { conteos: cs.docs.map(d => d.data()), movs: ms.docs.map(d => d.data()) };
+        window.renderHistorialStock();
+    } catch (err) {
+        console.error('historial stock error:', err);
+        body.innerHTML = '<p class="text-xs text-red-400 text-center py-6">No se pudo cargar el historial</p>';
+    }
+};
+
+window.renderHistorialStock = () => {
+    const filtro = document.getElementById('historial-stock-filtro').value;
+    const fmtDia = f => { const [y, m, d] = (f || '').split('-'); return d ? `${d}/${m}/${y.slice(2)}` : ''; };
+    const hora = ts => ts ? ts.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    const signo = n => n > 0 ? `+${n}` : `${n}`;
+
+    const conteos = historialStock.conteos
+        .map(c => ({ ...c, items: (c.items || []).filter(i => !filtro || i.itemId === filtro) }))
+        .filter(c => c.items.length);
+    const conteosHtml = conteos.length === 0 ? '<p class="text-xs text-gray-600 text-center py-2">Todavía no hay conteos</p>' : conteos.map(c => {
+        const conDif = c.items.filter(i => i.diferencia !== 0);
+        const faltan = c.items.reduce((s, i) => s + Math.max(0, -i.diferencia), 0);
+        const sobran = c.items.reduce((s, i) => s + Math.max(0, i.diferencia), 0);
+        return `<div class="bg-black/30 p-3 rounded-xl border-l-2 ${faltan ? 'border-red-500/60' : 'border-emerald-500/50'}">
+            <div class="flex justify-between items-center">
+                <span class="text-xs font-bold text-white">${fmtDia(c.fecha)} · ${hora(c.creadoEn)}</span>
+                <span class="text-[11px] font-bold">${faltan ? `<span class="text-red-400">Faltan ${faltan}</span>` : ''}${faltan && sobran ? ' · ' : ''}${sobran ? `<span class="text-yellow-400">Sobran ${sobran}</span>` : ''}${!faltan && !sobran ? '<span class="text-emerald-400">✓ Todo coincide</span>' : ''}</span>
+            </div>
+            ${conDif.length ? `<div class="text-[10px] text-gray-400 mt-1">${conDif.map(i => `${i.itemName} <span class="${i.diferencia < 0 ? 'text-red-400' : 'text-yellow-400'} font-bold">${signo(i.diferencia)}</span> <span class="text-gray-600">(${i.sistema}→${i.real})</span>`).join(' · ')}</div>` : ''}
+        </div>`;
+    }).join('');
+
+    const movs = historialStock.movs.filter(m => !filtro || m.itemId === filtro);
+    const porDia = {};
+    movs.forEach(m => { (porDia[m.fecha] = porDia[m.fecha] || []).push(m); });
+    const movsHtml = movs.length === 0
+        ? '<p class="text-xs text-gray-600 text-center py-2">Sin movimientos registrados todavía</p>'
+        : Object.entries(porDia).map(([fecha, lista]) => `
+            <div>
+                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">${fmtDia(fecha)}</p>
+                <div class="space-y-1">${lista.map(m => {
+                    const t = MOV_TIPO[m.tipo] || { label: m.tipo, icon: '•' };
+                    return `<div class="flex justify-between items-center bg-black/20 px-3 py-2 rounded-lg">
+                        <div class="min-w-0">
+                            <div class="text-xs text-white"><span class="mr-1">${t.icon}</span><b>${m.itemName}</b> <span class="text-gray-500">· ${t.label}</span></div>
+                            <div class="text-[10px] text-gray-600 truncate">${hora(m.creadoEn)}${m.detalle ? ` · ${m.detalle}` : ''}</div>
+                        </div>
+                        <span class="text-sm font-bold flex-shrink-0 ml-2 ${m.cantidad > 0 ? 'text-emerald-400' : 'text-red-400'}">${signo(m.cantidad)}</span>
+                    </div>`;
+                }).join('')}</div>
+            </div>`).join('');
+
+    document.getElementById('historial-stock-body').innerHTML = `
+        <div>
+            <p class="text-[11px] font-bold text-amber-400 uppercase tracking-widest mb-2"><i class="fas fa-clipboard-check mr-1"></i>Conteos</p>
+            <div class="space-y-2">${conteosHtml}</div>
+        </div>
+        <div>
+            <p class="text-[11px] font-bold text-cyan-400 uppercase tracking-widest mb-2"><i class="fas fa-right-left mr-1"></i>Movimientos</p>
+            <div class="space-y-3">${movsHtml}</div>
+        </div>`;
+};
+
 // ---- GASTOS ----
 function listenToGastos() {
     onSnapshot(
@@ -4803,7 +5058,7 @@ window.saveChecklistItems = async () => {
     }
 };
 
-const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal', 'nuevo-gasto-modal', 'precios-modal', 'checklist-editor-modal', 'dispositivos-modal', 'nuevo-producto-modal'];
+const MODALS = ['add-cut-modal', 'movement-modal', 'add-item-modal', 'quick-sale-modal', 'conteo-stock-modal', 'historial-stock-modal', 'ventas-modal', 'producto-movement-modal', 'edit-photo-modal', 'retiro-manual-rec-modal', 'retiro-nota-rec-modal', 'nuevo-turno-modal', 'nuevo-gasto-modal', 'precios-modal', 'checklist-editor-modal', 'dispositivos-modal', 'nuevo-producto-modal'];
 function showModal(id) {
     document.getElementById(id).classList.remove('hidden');
     document.getElementById(id).classList.add('flex', 'flex-col');

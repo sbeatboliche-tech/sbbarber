@@ -856,7 +856,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -923,6 +923,7 @@ const PATH_PROFILES = `barber_profiles`;
 const PATH_SETTINGS = `settings`;
 const PATH_EXPENSES = `expenses`;
 const PATH_STOCK    = `stock_items`;
+const PATH_STOCK_MOV = `stock_movimientos`;   // historial de bebidas (se ve en recepcionista)
 const PATH_RETIROS  = `retiros`;
 const PATH_PROPINAS = `propinas`;
 const PATH_VENTAS   = `ventas_productos`;
@@ -1917,44 +1918,63 @@ document.getElementById('stock-item-form').addEventListener('submit', async e=>{
     const qty=Number(document.getElementById('stock-quantity').value);
     if(!qty||qty<1) return alert('Ingresá una cantidad válida');
     if(currentStockAction.type==='venta' && ventaComprador==='barbero' && !ventaBarbero) return alert('Elegí el barbero');
+    if(currentStockAction.type==='venta'){
+        const disp=allStock.find(i=>i.id===currentStockAction.itemId)?.quantity||0;
+        if(qty>disp) return alert(`El sistema tiene ${disp} de ${currentStockAction.itemName}. Si en la heladera hay más, corregilo primero con "Conteo" en recepción.`);
+    }
     btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
     try{
+        // Todo en un batch (stock + venta + retiro + movimiento): o se guarda completo o nada
+        const batch=writeBatch(db);
+        const mov=(itemId,itemName,tipo,cantidad,detalle=null)=>batch.set(doc(collection(db,PATH_STOCK_MOV)),{
+            itemId,itemName,tipo,cantidad,detalle,fecha:new Date().toLocaleDateString('en-CA'),
+            userEmail:currentUser.email,creadoEn:serverTimestamp()
+        });
         if(currentStockAction.type==='nuevo'){
             const name=document.getElementById('stock-name').value.trim();
             const price=Number(document.getElementById('stock-price').value)||0;
             if(!name){ alert('Ingresá el nombre'); btn.disabled=false; return; }
-            await addDoc(collection(db,PATH_STOCK),{name,quantity:qty,price,createdAt:serverTimestamp()});
+            const ref=doc(collection(db,PATH_STOCK));
+            batch.set(ref,{name,quantity:qty,price,createdAt:serverTimestamp()});
+            mov(ref.id,name,'alta',qty);
         } else {
+            const {itemId,itemName}=currentStockAction;
             const delta=currentStockAction.type==='compra'?qty:-qty;
-            await updateDoc(doc(db,PATH_STOCK,currentStockAction.itemId),{quantity:increment(delta)});
-            if(currentStockAction.type==='venta'){
-                const item=allStock.find(i=>i.id===currentStockAction.itemId);
+            batch.update(doc(db,PATH_STOCK,itemId),{quantity:increment(delta)});
+            if(currentStockAction.type==='compra'){
+                mov(itemId,itemName,'compra',qty);
+            } else {
+                const item=allStock.find(i=>i.id===itemId);
                 const precio=item?.price||0;
                 const total=precio*qty;
                 const hoy=new Date().toLocaleDateString('en-CA');
                 const esRetiro = ventaComprador==='barbero' || ventaComprador==='feme';
                 const persona = ventaComprador==='feme' ? 'FEME' : ventaBarbero;
                 const cliente=(document.getElementById('stock-cliente').value||'').trim();
-                await addDoc(collection(db,PATH_VENTAS),{
-                    producto:currentStockAction.itemName, tipo:'bebida',
+                const retiroRef = esRetiro ? doc(collection(db,PATH_RETIROS)) : null;
+                batch.set(doc(collection(db,PATH_VENTAS)),{
+                    producto:itemName, tipo:'bebida', stockItemId:itemId,
                     precio, cantidad:qty, total,
                     barbero:'Admin', userEmail:currentUser.email,
                     comprador: esRetiro ? persona : (cliente||null),
                     compradorTipo: ventaComprador,
                     metodoPago: esRetiro ? null : ventaMetodoPago,
                     esConsumoStaff: esRetiro,
+                    ...(retiroRef ? {retiroId:retiroRef.id} : {}),
                     fecha:hoy, creadoEn:serverTimestamp()
                 });
-                if(esRetiro){
-                    await addDoc(collection(db,PATH_RETIROS),{
+                if(retiroRef){
+                    batch.set(retiroRef,{
                         barbero:persona, userEmail:currentUser.email, monto:total,
                         fecha:hoy, estado:'confirmado', origen:'bebida',
-                        descripcion:`🥤 ${currentStockAction.itemName}${qty>1?' ×'+qty:''}`,
+                        descripcion:`🥤 ${itemName}${qty>1?' ×'+qty:''}`,
                         creadoEn:serverTimestamp()
                     });
                 }
+                mov(itemId,itemName,'venta',-qty,esRetiro?persona:(cliente||'Cliente'));
             }
         }
+        await batch.commit();
         window.closeModals();
     } catch{ alert('Error al guardar'); }
     btn.disabled=false;
