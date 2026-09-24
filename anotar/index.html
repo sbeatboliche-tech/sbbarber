@@ -734,9 +734,10 @@
                     <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Barbero</label>
                     <select id="retiro-manual-barbero" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-violet-500 outline-none transition text-white mt-1">
                         <option value="">Seleccioná un barbero</option>
-                        <option value="Maxi">Maxi</option>
                         <option value="Tony">Tony</option>
                         <option value="Stefa">Stefa</option>
+                        <option value="Santi">Santi</option>
+                        <option value="SantiF">Santi F</option>
                     </select>
                 </div>
                 <div>
@@ -894,7 +895,7 @@ const FIXED_CATEGORIES = [
 ];
 
 const ADMINS = ['abalo7272@gmail.com','carusomanu21@gmail.com'];
-let BARBER_EMAIL_MAP = { 'gomezmaximilianorodrigo@gmail.com':'Maxi', 'ap1773508@gmail.com':'Tony', 'stefanoacostasla@gmail.com':'Stefa', 'rodriguezsantiagoet5@gmail.com':'Santi', 'santiagofl551@gmail.com':'SantiF' };
+let BARBER_EMAIL_MAP = { 'ap1773508@gmail.com':'Tony', 'stefanoacostasla@gmail.com':'Stefa', 'rodriguezsantiagoet5@gmail.com':'Santi', 'santiagofl551@gmail.com':'SantiF' };
 let BARBER_THEME = {
     Tony:   { color:'blue',   text:'text-blue-400',   border:'border-blue-500',   bg:'bg-blue-500',   initial:'T' },
     Maxi:   { color:'emerald',text:'text-emerald-400', border:'border-emerald-500', bg:'bg-emerald-500', initial:'M' },
@@ -928,7 +929,7 @@ const PATH_RETIROS  = `retiros`;
 const PATH_PROPINAS = `propinas`;
 const PATH_VENTAS   = `ventas_productos`;
 const PATH_TURNOS   = `turnos`;
-let BARBERS_LIST  = ['Tony', 'Maxi', 'Stefa', 'Santi', 'SantiF'];
+let BARBERS_LIST  = ['Tony', 'Stefa', 'Santi', 'SantiF'];
 const PATH_GASTOS = 'gastos';
 const PATH_CONTEOS = 'conteos_caja';
 const GASTOS_CATS = [
@@ -2149,7 +2150,7 @@ function renderServiceStats(filtered) {
 window.renderServices = (selectedBarber) => {
     document.getElementById('svc-name').value = '';
     document.getElementById('svc-price').value = '';
-    document.getElementById('services-grid').innerHTML = SERVICES.filter(s => ['Mechas','Global'].includes(s.name) ? selectedBarber === 'Maxi' : true).map((s, i) => `
+    document.getElementById('services-grid').innerHTML = SERVICES.filter(s => ['Mechas','Global'].includes(s.name) ? selectedBarber === 'SantiF' : true).map((s, i) => `
         <button type="button" onclick="window.selectSvc('${s.name}',${s.price},this)"
             class="svc-card svc-appear text-left p-4 bg-white/5 border-2 border-transparent rounded-2xl cursor-pointer transition-all duration-150 hover:bg-white/8 active:scale-[0.97] no-select"
             style="animation-delay:${i * 35}ms">

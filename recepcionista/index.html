@@ -822,6 +822,10 @@
                             class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
                             Santi
                         </button>
+                        <button type="button" onclick="window.setDrinkComprador('SantiF', this)" id="mv-comp-SantiF"
+                            class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
+                            Santi F
+                        </button>
                         <button type="button" onclick="window.setDrinkComprador('FEME', this)" id="mv-comp-FEME"
                             class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
                             FEME
@@ -1005,7 +1009,7 @@
                     <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Barbero</label>
                     <select id="ret-man-barbero" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-violet-500 outline-none transition text-white mt-1">
                         <option value="" disabled selected>Elegí</option>
-                        <option>Tony</option><option>Maxi</option><option>Stefa</option><option>Santi</option><option>SantiF</option>
+                        <option>Tony</option><option>Stefa</option><option>Santi</option><option>SantiF</option>
                     </select>
                 </div>
                 <div>
@@ -1351,7 +1355,7 @@ const PATH_STOCK_CONTEOS = 'stock_conteos';
 const PATH_VENTAS    = `ventas_productos`;
 const PATH_PRODUCTOS = `productos_barber`;
 const PATH_PROFILES  = `barber_profiles`;
-let BARBER_EMAIL_MAP = { 'gomezmaximilianorodrigo@gmail.com':'Maxi', 'ap1773508@gmail.com':'Tony', 'stefanoacostasla@gmail.com':'Stefa', 'rodriguezsantiagoet5@gmail.com':'Santi', 'santiagofl551@gmail.com':'SantiF' };
+let BARBER_EMAIL_MAP = { 'ap1773508@gmail.com':'Tony', 'stefanoacostasla@gmail.com':'Stefa', 'rodriguezsantiagoet5@gmail.com':'Santi', 'santiagofl551@gmail.com':'SantiF' };
 let barberProfilesData = {};
 
 const SERVICES = [
@@ -1365,7 +1369,7 @@ const SERVICES = [
     { name:'Global',          price:60000 }
 ];
 
-let BARBERS = ['Tony', 'Maxi', 'Stefa', 'Santi', 'SantiF'];
+let BARBERS = ['Tony', 'Stefa', 'Santi', 'SantiF'];
 let BARBER_THEME = {
     Tony:   { color:'blue',    text:'text-blue-400',    border:'border-blue-500',    bg:'bg-blue-500',    initial:'T' },
     Maxi:   { color:'emerald', text:'text-emerald-400', border:'border-emerald-500', bg:'bg-emerald-500', initial:'M' },
@@ -1841,7 +1845,7 @@ function renderBarberGrid() {
 window.renderServices = (selectedBarber) => {
     document.getElementById('svc-name').value = '';
     document.getElementById('svc-price').value = '';
-    const filtered = SERVICES.filter(s => ['Mechas','Global'].includes(s.name) ? selectedBarber === 'Maxi' : true);
+    const filtered = SERVICES.filter(s => ['Mechas','Global'].includes(s.name) ? selectedBarber === 'SantiF' : true);
     document.getElementById('services-grid').innerHTML = filtered.map((s, i) => `
         <button type="button" onclick="window.selectSvc('${s.name}', ${s.price}, this)"
             class="svc-card svc-appear text-left p-4 bg-white/5 border-2 border-transparent rounded-2xl cursor-pointer transition-all duration-150 hover:bg-white/8 active:scale-[0.97]"
