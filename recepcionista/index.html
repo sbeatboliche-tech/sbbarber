@@ -38,6 +38,8 @@
         @keyframes pulse-red { 0%,100%{border-color:rgba(239,68,68,0.4)} 50%{border-color:rgba(239,68,68,0.9)} }
         .ml-pending { animation:pulse-ml 1.3s ease-in-out infinite; }
         @keyframes pulse-ml { 0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(249,115,22,0.55)} 50%{transform:scale(1.07);box-shadow:0 0 0 7px rgba(249,115,22,0)} }
+        .pickit-pending { animation:pulse-pickit 1.3s ease-in-out infinite; }
+        @keyframes pulse-pickit { 0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(139,92,246,0.55)} 50%{transform:scale(1.07);box-shadow:0 0 0 7px rgba(139,92,246,0)} }
         body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
         button:disabled { opacity:0.7; cursor:not-allowed; }
         /* Ocultar saldo de facturación con asteriscos */
@@ -135,6 +137,11 @@
                     <i class="fas fa-box text-xs"></i>
                     <span class="hidden md:inline">HISTORIAL ML</span>
                     <span class="md:hidden">ML</span>
+                </button>
+                <!-- Botón historial Pickit -->
+                <button id="btn-historial-pickit" title="Historial Pickit" onclick="window.openHistorialPickitPanel()" class="flex items-center gap-1.5 bg-white/10 border border-white/20 text-white px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/20 transition">
+                    <i class="fas fa-box-open text-xs"></i>
+                    <span class="hidden md:inline">HISTORIAL PICKIT</span>
                 </button>
             </div>
             <div class="flex items-center gap-2">
@@ -705,6 +712,67 @@
             </div>
         </div>
     </div><!-- /historial-ml-panel -->
+
+    <!-- Historial Pickit (despachos punto Pickit) -->
+    <div id="historial-pickit-panel" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+        <header class="px-5 md:px-8 py-4 md:py-5 glass flex items-center justify-between flex-shrink-0 border-b border-white/5">
+            <div class="flex items-center gap-4">
+                <button onclick="window.closeHistorialPickitPanel()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
+                    <i class="fas fa-arrow-left text-sm"></i>
+                </button>
+                <div>
+                    <h1 class="text-base md:text-xl font-bold text-white leading-none tracking-wide">Historial Pickit</h1>
+                    <span class="text-[10px] md:text-xs text-violet-400 font-medium">Despachos punto Pickit</span>
+                </div>
+            </div>
+        </header>
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-8 pb-10 max-w-2xl md:mx-auto w-full space-y-4">
+                <!-- Carga rápida -->
+                <div class="glass-card rounded-2xl p-5">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fas fa-box-open text-violet-400"></i> Cargar día</h3>
+                    <div class="flex items-end gap-3">
+                        <div class="flex-1">
+                            <label class="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Fecha</label>
+                            <input type="date" id="pk-fecha-input" onchange="window.loadPickitFechaInput()" class="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-violet-500 outline-none">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Paquetes</label>
+                            <input type="number" id="pk-cantidad-input" min="0" step="1" placeholder="0" class="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-violet-500 outline-none">
+                        </div>
+                    </div>
+                    <button onclick="window.savePickitDespacho()" id="btn-save-pickit" class="w-full mt-4 bg-violet-600 hover:bg-violet-500 text-white font-bold py-3 rounded-xl text-sm transition shadow-lg shadow-violet-900/40">Guardar</button>
+                </div>
+
+                <!-- Período -->
+                <div class="glass-card rounded-2xl p-5">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fas fa-calendar-alt text-violet-400"></i> Ver por período</h3>
+                    <div class="flex items-end gap-3 mb-4">
+                        <div class="flex-1">
+                            <label class="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Desde</label>
+                            <input type="date" id="pk-desde-input" onchange="window.renderPickitPeriodo()" class="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-violet-500 outline-none">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Hasta</label>
+                            <input type="date" id="pk-hasta-input" onchange="window.renderPickitPeriodo()" class="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-violet-500 outline-none">
+                        </div>
+                    </div>
+                    <div id="pk-periodo-resumen" class="flex items-center justify-between bg-black/20 rounded-xl px-4 py-3">
+                        <span id="pk-periodo-label" class="text-xs text-gray-400">Total del período</span>
+                        <span id="pk-periodo-total" class="text-xl font-extrabold text-violet-400">0</span>
+                    </div>
+                </div>
+
+                <!-- Lista -->
+                <div class="glass-card rounded-2xl p-5">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fas fa-list text-violet-400"></i> Últimos días</h3>
+                    <div id="pk-lista" class="space-y-2">
+                        <p class="text-xs text-gray-600 text-center py-4">Sin registros</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><!-- /historial-pickit-panel -->
 
 
     <!-- ===== MODALES ===== -->
@@ -1417,6 +1485,7 @@ const PATH_GASTOS = 'gastos';
 const PATH_CONTEOS = 'conteos_caja';
 const PATH_SESSIONS = 'sessions';
 const PATH_ML_DESPACHOS = 'ml_despachos';
+const PATH_PICKIT_DESPACHOS = 'pickit_despachos';
 const GASTOS_CATS = [
     { id:'insumos',   label:'Insumos',   icon:'🧴' },
     { id:'servicios', label:'Servicios', icon:'💡' },
@@ -1426,7 +1495,7 @@ const GASTOS_CATS = [
 ];
 
 let app, auth, db, currentUser;
-let allCuts = [], allStock = [], allVentas = [], allTurnos = [], allGastos = [], allConteos = [], allMlDespachos = [];
+let allCuts = [], allStock = [], allVentas = [], allTurnos = [], allGastos = [], allConteos = [], allMlDespachos = [], allPickitDespachos = [];
 let productoStock = {};
 let currentMovement = null, currentProductoMovement = null, salidaTipo = 'venta', drinkSalidaTipo = 'venta';
 let newItemPhoto = null, editItemPhoto = null, editItemId = null, editPhotoCollection = null;
@@ -1550,6 +1619,7 @@ async function init() {
                 listenToGastos();
                 listenToConteos();
                 listenToMlDespachos();
+                listenToPickitDespachos();
                 listenToMenuData();
                 listenToPrecios();
                 listenToChecklist();
@@ -4473,6 +4543,108 @@ function renderMlPeriodoInternal() {
     total.textContent = suma;
 }
 window.renderMlPeriodo = renderMlPeriodoInternal;
+
+// ---- HISTORIAL PICKIT (despachos punto Pickit) ----
+function listenToPickitDespachos() {
+    onSnapshot(
+        query(collection(db, PATH_PICKIT_DESPACHOS), orderBy('fecha', 'desc'), limit(400)),
+        snap => {
+            allPickitDespachos = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+            if (!document.getElementById('historial-pickit-panel').classList.contains('hidden')) renderHistorialPickitPanel();
+            updateHistorialPickitBadge();
+        }
+    );
+}
+
+// Después de las 12:30, el botón "Historial Pickit" resalta si todavía no se cargó el despacho del día.
+// Se apaga solo al guardar el registro de hoy (o si todavía no son las 12:30).
+function updateHistorialPickitBadge() {
+    const btn = document.getElementById('btn-historial-pickit');
+    if (!btn) return;
+    const now = new Date();
+    const hoy = now.toLocaleDateString('en-CA');
+    const yaCargadoHoy = allPickitDespachos.some(m => m.fecha === hoy);
+    const despuesDe1230 = now.getHours() * 60 + now.getMinutes() >= 12 * 60 + 30;
+    btn.classList.toggle('pickit-pending', despuesDe1230 && !yaCargadoHoy);
+}
+setInterval(updateHistorialPickitBadge, 60000);
+
+window.openHistorialPickitPanel = () => {
+    const p = document.getElementById('historial-pickit-panel');
+    p.classList.remove('hidden'); p.classList.add('flex', 'flex-col');
+    const hoy = new Date().toLocaleDateString('en-CA');
+    const desde = new Date(); desde.setDate(desde.getDate() - 6);
+    document.getElementById('pk-fecha-input').value = hoy;
+    document.getElementById('pk-desde-input').value = desde.toLocaleDateString('en-CA');
+    document.getElementById('pk-hasta-input').value = hoy;
+    window.loadPickitFechaInput();
+    renderHistorialPickitPanel();
+};
+window.closeHistorialPickitPanel = () => {
+    const p = document.getElementById('historial-pickit-panel');
+    p.classList.add('hidden'); p.classList.remove('flex', 'flex-col');
+};
+
+window.loadPickitFechaInput = () => {
+    const fecha = document.getElementById('pk-fecha-input').value;
+    const existing = allPickitDespachos.find(m => m.fecha === fecha);
+    document.getElementById('pk-cantidad-input').value = existing ? existing.cantidad : '';
+};
+
+window.savePickitDespacho = async () => {
+    const fecha = document.getElementById('pk-fecha-input').value;
+    const cantidad = parseInt(document.getElementById('pk-cantidad-input').value);
+    if (!fecha || isNaN(cantidad) || cantidad < 0) { alert('Completá fecha y cantidad'); return; }
+    const btn = document.getElementById('btn-save-pickit');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        await setDoc(doc(db, PATH_PICKIT_DESPACHOS, fecha), { fecha, cantidad, actualizadoEn: serverTimestamp() });
+        const existing = allPickitDespachos.find(m => m.fecha === fecha);
+        if (existing) existing.cantidad = cantidad; else allPickitDespachos.unshift({ fecha, cantidad, id: fecha });
+        updateHistorialPickitBadge();
+    } catch { alert('Error al guardar'); }
+    btn.disabled = false; btn.textContent = 'Guardar';
+};
+
+window.deletePickitDespacho = async (id) => {
+    if (!await customConfirm('¿Eliminar este registro?')) return;
+    try { await deleteDoc(doc(db, PATH_PICKIT_DESPACHOS, id)); } catch { alert('Error'); }
+};
+
+function renderHistorialPickitPanel() {
+    renderPickitPeriodoInternal();
+    const list = document.getElementById('pk-lista');
+    if (allPickitDespachos.length === 0) {
+        list.innerHTML = '<p class="text-xs text-gray-600 text-center py-4">Sin registros</p>';
+        return;
+    }
+    list.innerHTML = allPickitDespachos.slice(0, 30).map(m => {
+        const d = new Date(m.fecha + 'T12:00:00');
+        const fechaLabel = d.toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short' });
+        return `<div class="flex items-center gap-3 bg-black/20 rounded-xl px-3 py-2.5">
+            <div class="flex-1 min-w-0">
+                <div class="text-sm text-white capitalize">${fechaLabel}</div>
+            </div>
+            <span class="text-sm font-bold text-violet-400 whitespace-nowrap">${m.cantidad} paq.</span>
+            <button onclick="window.deletePickitDespacho('${m.id}')" class="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-600/20 transition flex-shrink-0">
+                <i class="fas fa-trash text-[10px]"></i>
+            </button>
+        </div>`;
+    }).join('');
+}
+
+function renderPickitPeriodoInternal() {
+    const desde = document.getElementById('pk-desde-input').value;
+    const hasta = document.getElementById('pk-hasta-input').value;
+    const label = document.getElementById('pk-periodo-label');
+    const total = document.getElementById('pk-periodo-total');
+    if (!desde || !hasta) { label.textContent = 'Total del período'; total.textContent = '0'; return; }
+    const enRango = allPickitDespachos.filter(m => m.fecha >= desde && m.fecha <= hasta);
+    const suma = enRango.reduce((s, m) => s + (m.cantidad || 0), 0);
+    label.textContent = `Total del período (${enRango.length} día${enRango.length === 1 ? '' : 's'})`;
+    total.textContent = suma;
+}
+window.renderPickitPeriodo = renderPickitPeriodoInternal;
 
 // ---- TURNOS ----
 function getTodayStr(daysOffset = 0) {
