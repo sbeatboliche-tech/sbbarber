@@ -309,7 +309,7 @@
     </div><!-- /stock-productos-view -->
 
     <!-- Modal: cantidad movimiento producto (anotar) -->
-    <div id="stock-mov-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
+    <div id="stock-mov-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-[60] hidden flex-col justify-end sm:justify-center animate-enter">
         <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl flex flex-col rounded-t-3xl">
             <div class="flex justify-between items-center mb-4">
                 <h2 id="spm-title" class="text-xl font-bold text-white">Entrada de stock</h2>
@@ -460,23 +460,115 @@
 
     <!-- ====== MODALES ====== -->
 
-    <!-- Venta de producto -->
-    <div id="ventas-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end sm:justify-center animate-enter">
-        <div class="glass-modal sm:rounded-3xl sm:max-w-sm sm:mx-auto w-full border-t sm:border border-white/10 p-6 shadow-2xl flex flex-col rounded-t-3xl">
-            <div class="flex justify-between items-center mb-5">
+    <!-- Venta de producto (mismo modal que recepcionista) -->
+    <div id="ventas-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-col justify-end md:justify-center animate-enter">
+        <div class="glass-modal md:rounded-3xl md:max-w-5xl md:mx-auto w-full border-t md:border border-white/10 shadow-2xl rounded-t-3xl max-h-[92vh] md:max-h-[85vh] flex flex-col overflow-hidden">
+            <div class="flex justify-between items-center p-5 pb-3 md:pb-4 flex-shrink-0 md:border-b md:border-white/5">
                 <h2 class="text-xl font-bold text-white"><i class="fas fa-shopping-bag text-indigo-400 mr-2"></i>Venta de producto</h2>
-                <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="grid grid-cols-1 gap-2 mb-5" id="productos-grid"></div>
-            <div class="flex items-center justify-between bg-black/30 rounded-xl px-4 py-3 mb-5">
-                <span class="text-sm text-gray-300 font-medium">Cantidad</span>
-                <div class="flex items-center gap-3">
-                    <button onclick="window.cambiarCantVenta(-1)" class="w-8 h-8 rounded-full bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 transition">−</button>
-                    <span id="venta-cantidad-display" class="text-lg font-bold text-white w-6 text-center">1</span>
-                    <button onclick="window.cambiarCantVenta(1)" class="w-8 h-8 rounded-full bg-white/10 text-white font-bold flex items-center justify-center hover:bg-white/20 transition">+</button>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.openNuevoProductoModal()" class="flex items-center gap-1.5 bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-xs font-bold px-3 py-2 rounded-xl hover:bg-indigo-600/30 transition">
+                        <i class="fas fa-plus text-[10px]"></i> Nuevo producto
+                    </button>
+                    <button onclick="window.closeModals()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:bg-white/20 transition"><i class="fas fa-times"></i></button>
                 </div>
             </div>
-            <button onclick="window.submitVenta()" id="btn-submit-venta" class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white p-4 rounded-xl font-bold text-base shadow-lg uppercase tracking-widest no-select">Registrar venta</button>
+            <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+                <div class="overflow-y-auto flex-1 px-5 pb-1 md:pb-5 md:pt-1">
+                <div class="relative mb-3">
+                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+                    <input type="text" id="venta-producto-search" oninput="window.filterProductosGrid(this.value)" placeholder="Buscar producto..."
+                        class="w-full pl-9 pr-3 py-2.5 bg-black/30 rounded-xl border border-white/10 focus:border-indigo-500/60 outline-none transition text-white placeholder-gray-600 text-sm">
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3 mb-4" id="productos-grid"></div>
+                </div><!-- /scroll -->
+                <div class="px-5 pb-5 pt-3 md:pt-5 flex-shrink-0 border-t md:border-t-0 md:border-l border-white/5 space-y-3 md:w-72 flex flex-col md:overflow-hidden">
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-1.5">Carrito</p>
+                        <div id="venta-carrito-list" class="space-y-1.5 max-h-36 md:max-h-64 overflow-y-auto pr-0.5">
+                            <p class="text-xs text-gray-600 text-center py-3">Tocá un producto para agregarlo</p>
+                        </div>
+                    </div>
+                    <div id="venta-carrito-total-row" class="hidden justify-between items-center bg-black/30 rounded-xl px-4 py-2.5">
+                        <span class="text-sm text-gray-300 font-medium">Total</span>
+                        <span id="venta-carrito-total" class="text-lg font-bold text-indigo-300">$0</span>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-1.5">Canal de venta</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" id="venta-canal-local" onclick="window.setVentaCanal('local')" class="p-2.5 bg-indigo-600/20 border border-indigo-500 rounded-xl font-bold text-sm text-indigo-300 transition">🏪 Local</button>
+                            <button type="button" id="venta-canal-ml" onclick="window.setVentaCanal('ml')" class="p-2.5 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition">🛒 MercadoLibre</button>
+                        </div>
+                        <input type="hidden" id="venta-canal" value="local">
+                    </div>
+                    <div id="venta-metodo-wrap">
+                        <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-1.5">Método de pago</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" id="venta-mp-efectivo" onclick="window.setVentaMetodo('efectivo')" class="p-2.5 bg-emerald-600/20 border border-emerald-500 rounded-xl font-bold text-sm text-emerald-300 transition">💵 Efectivo</button>
+                            <button type="button" id="venta-mp-transferencia" onclick="window.setVentaMetodo('transferencia')" class="p-2.5 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition">📲 Transferencia</button>
+                        </div>
+                        <input type="hidden" id="venta-metodo-pago" value="efectivo">
+                    </div>
+                    <button onclick="window.submitVenta()" id="btn-submit-venta" disabled class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white p-3.5 rounded-xl font-bold text-base shadow-lg uppercase tracking-widest hover:shadow-indigo-500/30 hover:scale-[1.01] transition opacity-50 disabled:cursor-not-allowed">Registrar venta</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nuevo producto (alta libre, sin depender de un catálogo fijo) -->
+    <div id="nuevo-producto-modal" class="absolute inset-0 bg-black/75 backdrop-blur-md z-[70] hidden flex-col justify-end md:justify-center">
+        <div class="glass-modal md:rounded-3xl md:max-w-md md:mx-auto w-full border-t md:border border-white/10 pt-3 pb-8 px-5 shadow-2xl rounded-t-3xl max-h-[92vh] overflow-y-auto" style="animation:slideUp 0.32s cubic-bezier(0.16,1,0.3,1)">
+            <div class="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5 md:hidden"></div>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-extrabold text-white tracking-tight">Nuevo producto</h2>
+                <button onclick="window.closeNuevoProductoModal()" class="w-9 h-9 rounded-full bg-white/8 flex items-center justify-center text-gray-400 hover:bg-white/15 transition active:scale-90">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+            <form id="nuevo-producto-form" class="space-y-5">
+                <div class="flex items-center gap-4">
+                    <div id="np-photo-preview" onclick="document.getElementById('np-photo-input').click()" class="w-16 h-16 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center cursor-pointer hover:border-indigo-500 transition overflow-hidden flex-shrink-0">
+                        <i class="fas fa-camera text-gray-500 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-500 uppercase">Foto (opcional)</p>
+                        <p class="text-xs text-gray-600 mt-0.5">Tocá para agregar una imagen</p>
+                    </div>
+                    <input type="file" id="np-photo-input" accept="image/*" class="hidden">
+                </div>
+                <input type="text" id="np-nombre" placeholder="Nombre del producto" required
+                    class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-indigo-500/60 focus:bg-indigo-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-2">Precio de venta</p>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                        <input type="number" id="np-precio" placeholder="0" min="0" required
+                            class="w-full pl-8 pr-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-indigo-500/60 focus:bg-indigo-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
+                    </div>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-2">Stock inicial</p>
+                    <input type="number" id="np-stock" placeholder="0" min="0" value="1" required
+                        class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-indigo-500/60 focus:bg-indigo-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">Canal</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" id="np-canal-local" onclick="window.setNpCanal('local')"
+                            class="py-3.5 rounded-2xl font-bold text-sm transition-all bg-indigo-500/15 border border-indigo-500/60 text-indigo-300 active:scale-95">
+                            🏪 Local
+                        </button>
+                        <button type="button" id="np-canal-ml" onclick="window.setNpCanal('ml')"
+                            class="py-3.5 rounded-2xl font-bold text-sm transition-all bg-white/5 border border-white/10 text-gray-500 hover:border-white/20 active:scale-95">
+                            🛒 MercadoLibre
+                        </button>
+                    </div>
+                    <input type="hidden" id="np-canal" value="local">
+                </div>
+                <button type="submit" id="btn-submit-np"
+                    class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white py-4 rounded-2xl font-extrabold text-base shadow-lg shadow-indigo-900/40 uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all">
+                    Agregar producto
+                </button>
+            </form>
         </div>
     </div>
 
@@ -940,12 +1032,27 @@ const GASTOS_CATS = [
     { id:'otros',     label:'Otros',     icon:'📦' },
 ];
 const RETIRO_LIMITE = 10000;
-const PRODUCTOS_BARBER = [
-    { name:'Pomada Mate',              precio:11000 },
-    { name:'Pomada Brillosa',          precio:11000 },
-    { name:'Polvo Texturizador',       precio:11000 },
-    { name:'Aftershave',               precio:10000 },
-    { name:'Matizador Violeta Opción', precio:10000 },
+const PRODUCTOS_BARBER_BASE = [
+    { id:'pomada-mate',               name:'Pomada Mate',                  precio:11000 },
+    { id:'pomada-brillosa',           name:'Pomada Brillosa',              precio:11000 },
+    { id:'polvo-texturizador',        name:'Polvo Texturizador',           precio:11000 },
+    { id:'polvo-texturizador-opcion', name:'Polvo texturizador Opción',    precio:10000 },
+    { id:'matizador-violeta',         name:'Matizador Violeta Opción',     precio:10000 },
+    { id:'pack-rollos-viggo',          name:'Pack 5 rollos Viggo',          precio:0 },
+    { id:'ml-aftershave-celeste',     name:'Aftershave celeste',           precio:10000 },
+    { id:'ml-aftershave-verde',       name:'Aftershave verde',             precio:10000 },
+    { id:'ml-aftershave-violeta',     name:'Aftershave violeta',           precio:10000 },
+    { id:'ml-papel-cuello',           name:'Papel cuello 5 capas Everest', precio:0, isML:true },
+    { id:'ml-peine-largo',            name:'Peine largo',                  precio:0, isML:true },
+    { id:'ml-cepillito-colores',      name:'Cepillito varios colores',     precio:0, isML:true },
+    { id:'ml-alfombra-everest',       name:'Alfombra Everest',             precio:0, isML:true },
+    { id:'ml-tijera-entresacar',      name:'Tijera entresacar Everest',    precio:0, isML:true },
+    { id:'ml-portanavaja',            name:'Portanavaja',                  precio:0, isML:true },
+    { id:'ml-quitapelo',              name:'Quitapelo',                    precio:0, isML:true },
+    { id:'ml-cepillito-violeta',      name:'Cepillito violeta',            precio:0, isML:true },
+    { id:'ml-cepillo-naranja',        name:'Cepillo naranja',              precio:0, isML:true },
+    { id:'ml-clipper-spray',          name:'Clipper spray desinfectante',  precio:0, isML:true },
+    { id:'ml-polvo-black-80g',        name:'Polvo texturizador Black 80g', precio:0, isML:true },
 ];
 
 let app, auth, db, currentUser;
@@ -2220,7 +2327,7 @@ window.openAddModal = () => {
     renderBarberSelection();
 };
 
-const ALL_MODALS=['settings-modal','add-modal','expense-modal','date-search-modal','admin-settings-modal','updates-modal','fixed-expenses-modal','stock-item-modal','retiro-modal','propina-modal','ventas-modal','retiro-manual-modal','retiro-nota-modal','nuevo-turno-modal','stock-mov-modal'];
+const ALL_MODALS=['settings-modal','add-modal','expense-modal','date-search-modal','admin-settings-modal','updates-modal','fixed-expenses-modal','stock-item-modal','retiro-modal','propina-modal','ventas-modal','retiro-manual-modal','retiro-nota-modal','nuevo-turno-modal','stock-mov-modal','nuevo-producto-modal'];
 
 window.deleteRetiro = async (id) => {
     if (!confirm('¿Eliminar este retiro?')) return;
@@ -2326,6 +2433,7 @@ function listenToStockProductos() {
         stockProductosData = {};
         snap.docs.forEach(d => { stockProductosData[d.id] = { id: d.id, ...d.data() }; });
         stockProductosLoaded = true;
+        rebuildProductosBarber();
         if (!document.getElementById('stock-productos-view').classList.contains('hidden')) {
             renderStockProductos();
         }
@@ -2418,46 +2526,295 @@ function listenToVentas() {
     });
 }
 
-let selectedProducto = null, cantVenta = 1;
+// Venta de producto: mismo modal que recepcionista (buscador, carrito, canal y método de pago).
+// El catálogo sale de productos_barber (stockProductosData): base + custom, sin los ocultos.
+let PRODUCTOS_BARBER = [];
+let ventaCart = [];
+let ventaSearchQuery = '';
+let newProductoPhoto = null;
+
+function rebuildProductosBarber() {
+    const baseIds = new Set(PRODUCTOS_BARBER_BASE.map(p => p.id));
+    const ocultos = new Set(Object.values(stockProductosData).filter(d => d.oculto).map(d => d.id));
+    const customProds = Object.values(stockProductosData)
+        .filter(d => !d.oculto && !baseIds.has(d.id) && d.custom)
+        .map(d => ({ id: d.id, name: d.name, precio: d.precio || 0, isML: !!d.isML, custom: true }));
+    PRODUCTOS_BARBER = [...PRODUCTOS_BARBER_BASE.filter(p => !ocultos.has(p.id)), ...customProds];
+    if (!document.getElementById('ventas-modal').classList.contains('hidden')) renderProductosGrid();
+}
+
+function normalizarTexto(s) {
+    return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function resizeImageToBase64(file, cb) {
+    const reader = new FileReader();
+    reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+            const size = 200;
+            const canvas = document.createElement('canvas');
+            canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const min = Math.min(img.width, img.height);
+            const sx = (img.width - min) / 2, sy = (img.height - min) / 2;
+            ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+            cb(canvas.toDataURL('image/jpeg', 0.75));
+        };
+        img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+window.setVentaCanal = (canal) => {
+    document.getElementById('venta-canal').value = canal;
+    const esML = canal === 'ml';
+    document.getElementById('venta-canal-local').className = `p-3 rounded-xl font-bold text-sm transition ${!esML ? 'bg-indigo-600/20 border border-indigo-500 text-indigo-300' : 'bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    document.getElementById('venta-canal-ml').className = `p-3 rounded-xl font-bold text-sm transition ${esML ? 'bg-yellow-600/20 border border-yellow-500 text-yellow-300' : 'bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    document.getElementById('venta-metodo-wrap').classList.toggle('hidden', esML);
+};
+
+window.setVentaMetodo = (m) => {
+    document.getElementById('venta-metodo-pago').value = m;
+    const efBtn = document.getElementById('venta-mp-efectivo');
+    const trBtn = document.getElementById('venta-mp-transferencia');
+    if (m === 'efectivo') {
+        efBtn.className = 'p-3 bg-emerald-600/20 border border-emerald-500 rounded-xl font-bold text-sm text-emerald-300 transition';
+        trBtn.className = 'p-3 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition';
+    } else {
+        trBtn.className = 'p-3 bg-blue-600/20 border border-blue-500 rounded-xl font-bold text-sm text-blue-300 transition';
+        efBtn.className = 'p-3 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition';
+    }
+};
+
+function renderProductosGrid() {
+    const grid = document.getElementById('productos-grid');
+    if (!stockProductosLoaded) {
+        grid.innerHTML = '<div class="col-span-full text-xs text-gray-600 text-center py-8"><i class="fas fa-spinner fa-spin mr-1.5"></i>Cargando productos...</div>';
+        return;
+    }
+    const q = normalizarTexto(ventaSearchQuery.trim());
+    const matches = q ? PRODUCTOS_BARBER.filter(p => normalizarTexto(p.name).includes(q)) : PRODUCTOS_BARBER;
+    const localProds = matches.filter(p => !p.isML);
+    const mlProds    = matches.filter(p =>  p.isML);
+
+    const itemHtml = (p, i) => {
+        const stock = (stockProductosData[p.id]?.stock) || 0;
+        const sinStock = stock === 0;
+        const stockColor = sinStock ? 'text-red-400' : stock <= 3 ? 'text-yellow-400' : 'text-gray-500';
+        const safeId = p.id.replace(/'/g, "\\'");
+        const safeName = p.name.replace(/'/g, "\\'");
+        const enCarrito = ventaCart.find(it => it.id === p.id);
+        const cantEnCarrito = enCarrito ? enCarrito.cantidad : 0;
+        const alTope = !sinStock && cantEnCarrito >= Math.min(20, stock);
+        const isInCart = cantEnCarrito > 0;
+        const stateClasses = sinStock
+            ? 'bg-gray-900/40 opacity-50 cursor-not-allowed border-gray-700/60'
+            : isInCart
+                ? 'bg-indigo-600/20 cursor-pointer border-indigo-500 scale-[1.01] shadow-lg'
+                : 'bg-gray-800/50 cursor-pointer hover:bg-gray-700/60 md:hover:border-indigo-500/40 active:scale-95 border-gray-700/60';
+        const photoURL = stockProductosData[p.id]?.photoURL;
+        const photoBlock = photoURL
+            ? `<img src="${photoURL}" class="w-full aspect-square rounded-lg object-cover">`
+            : `<div class="w-full aspect-square rounded-lg bg-black/25 flex items-center justify-center"><i class="fas fa-box text-gray-700 text-xl md:text-2xl"></i></div>`;
+        return `<div onclick="${sinStock || alTope ? '' : `window.selectProductoVenta(${i})`}"
+            class="prod-btn p-2 md:p-2.5 ${stateClasses} border rounded-2xl flex flex-col gap-1.5 md:gap-2 transition relative no-select">
+            <div class="relative">
+                ${photoBlock}
+                ${isInCart ? `<span class="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-bold flex items-center justify-center shadow z-10">${cantEnCarrito}</span>` : ''}
+                <button onclick="event.stopPropagation();window.openStockMov('${safeId}','${safeName}','entrada')"
+                    class="absolute top-1 right-1 w-6 h-6 rounded-lg bg-emerald-600/85 border border-emerald-400/40 flex items-center justify-center text-white hover:bg-emerald-600 transition active:scale-90 shadow" title="Agregar stock">
+                    <i class="fas fa-plus" style="font-size:10px"></i>
+                </button>
+                <button onclick="event.stopPropagation();window.eliminarProductoCatalogo('${safeId}','${safeName}')"
+                    class="absolute top-1 right-8 w-6 h-6 rounded-lg bg-red-600/75 border border-red-400/40 flex items-center justify-center text-white hover:bg-red-600 transition active:scale-90 shadow" title="Eliminar producto">
+                    <i class="fas fa-trash" style="font-size:9px"></i>
+                </button>
+            </div>
+            <span class="text-xs md:text-sm font-semibold text-gray-200 leading-tight line-clamp-2">${p.name}</span>
+            <div class="flex justify-between items-center mt-auto pt-0.5">
+                <span class="${stockColor} text-[10px] font-bold">${sinStock ? 'Sin stock' : stock + ' u.'}</span>
+                ${p.precio > 0 ? `<span class="text-[10px] font-bold text-white/60">$${(p.precio/1000).toFixed(0)}k</span>` : ''}
+            </div>
+        </div>`;
+    };
+
+    const header = (label) =>
+        `<div class="col-span-full text-[10px] font-bold text-gray-600 uppercase tracking-wider pt-1">${label}</div>`;
+
+    if (matches.length === 0) {
+        grid.innerHTML = '<div class="col-span-full text-xs text-gray-600 text-center py-8"><i class="fas fa-search mr-1.5"></i>No hay productos que coincidan con la búsqueda</div>';
+        return;
+    }
+    grid.innerHTML =
+        (localProds.length ? header('🏪 Local') + localProds.map((p) => itemHtml(p, PRODUCTOS_BARBER.indexOf(p))).join('') : '') +
+        (mlProds.length ? header('🛒 MercadoLibre') + mlProds.map((p) => itemHtml(p, PRODUCTOS_BARBER.indexOf(p))).join('') : '');
+}
 
 window.openVentaModal = () => {
-    selectedProducto = null; cantVenta = 1;
-    document.getElementById('venta-cantidad-display').textContent = '1';
-    document.getElementById('productos-grid').innerHTML = PRODUCTOS_BARBER.map((p,i) =>
-        `<div onclick="window.selectProductoVenta(${i},this)" class="prod-btn p-3 bg-gray-800/50 border border-gray-700 rounded-xl flex justify-between items-center cursor-pointer hover:bg-gray-800 transition no-select">
-            <span class="text-sm font-medium text-gray-300">${p.name}</span>
-            <span class="text-sm font-bold text-white bg-black/30 px-2 py-1 rounded-md">$${p.precio.toLocaleString('es-AR')}</span>
-        </div>`
-    ).join('');
+    ventaCart = [];
+    ventaSearchQuery = '';
+    document.getElementById('venta-producto-search').value = '';
+    window.setVentaCanal('local');
+    window.setVentaMetodo('efectivo');
+    renderProductosGrid();
+    renderCarrito();
     showModal('ventas-modal');
 };
-window.selectProductoVenta = (i, el) => {
-    selectedProducto = PRODUCTOS_BARBER[i];
-    document.querySelectorAll('.prod-btn').forEach(b => b.className='prod-btn p-3 bg-gray-800/50 border border-gray-700 rounded-xl flex justify-between items-center cursor-pointer hover:bg-gray-800 transition no-select');
-    el.className='prod-btn p-3 bg-indigo-600/20 border border-indigo-500 rounded-xl flex justify-between items-center cursor-pointer transition scale-[1.01] shadow-lg no-select';
+
+window.filterProductosGrid = (value) => {
+    ventaSearchQuery = value;
+    renderProductosGrid();
 };
-window.cambiarCantVenta = (d) => {
-    cantVenta = Math.max(1, Math.min(20, cantVenta + d));
-    document.getElementById('venta-cantidad-display').textContent = cantVenta;
+
+window.selectProductoVenta = (i) => {
+    const p = PRODUCTOS_BARBER[i];
+    if (!p) return;
+    const stock = (stockProductosData[p.id]?.stock) || 0;
+    const item = ventaCart.find(it => it.id === p.id);
+    const cantidadActual = item ? item.cantidad : 0;
+    if (cantidadActual >= Math.min(20, stock)) return;
+    if (item) item.cantidad++;
+    else ventaCart.push({ id: p.id, name: p.name, precio: p.precio, cantidad: 1 });
+    renderProductosGrid();
+    renderCarrito();
 };
+
+window.cambiarCantCarrito = (id, d) => {
+    const item = ventaCart.find(it => it.id === id);
+    if (!item) return;
+    const stock = (stockProductosData[id]?.stock) || 0;
+    const max = Math.max(1, Math.min(20, stock));
+    item.cantidad = Math.max(1, Math.min(max, item.cantidad + d));
+    renderProductosGrid();
+    renderCarrito();
+};
+
+window.removeFromCarrito = (id) => {
+    ventaCart = ventaCart.filter(it => it.id !== id);
+    renderProductosGrid();
+    renderCarrito();
+};
+
+function renderCarrito() {
+    const list = document.getElementById('venta-carrito-list');
+    const totalRow = document.getElementById('venta-carrito-total-row');
+    const btn = document.getElementById('btn-submit-venta');
+    if (ventaCart.length === 0) {
+        list.innerHTML = '<p class="text-xs text-gray-600 text-center py-3">Tocá un producto para agregarlo</p>';
+        totalRow.classList.add('hidden'); totalRow.classList.remove('flex');
+        btn.disabled = true; btn.classList.add('opacity-50');
+        return;
+    }
+    btn.disabled = false; btn.classList.remove('opacity-50');
+    list.innerHTML = ventaCart.map(it => `
+        <div class="flex items-center justify-between bg-black/30 rounded-xl px-3 py-2 gap-2">
+            <div class="min-w-0 flex-1">
+                <p class="text-xs font-semibold text-gray-200 truncate">${it.name}</p>
+                <p class="text-[10px] text-gray-500">$${it.precio.toLocaleString('es-AR')} c/u</p>
+            </div>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+                <button onclick="window.cambiarCantCarrito('${it.id}',-1)" class="w-6 h-6 rounded-full bg-white/10 text-white text-xs font-bold flex items-center justify-center hover:bg-white/20 transition">−</button>
+                <span class="text-sm font-bold text-white w-4 text-center">${it.cantidad}</span>
+                <button onclick="window.cambiarCantCarrito('${it.id}',1)" class="w-6 h-6 rounded-full bg-white/10 text-white text-xs font-bold flex items-center justify-center hover:bg-white/20 transition">+</button>
+                <button onclick="window.removeFromCarrito('${it.id}')" class="w-6 h-6 rounded-full bg-red-600/20 text-red-400 text-xs flex items-center justify-center hover:bg-red-600/40 transition ml-1"><i class="fas fa-trash" style="font-size:9px"></i></button>
+            </div>
+        </div>
+    `).join('');
+    const total = ventaCart.reduce((s, it) => s + it.precio * it.cantidad, 0);
+    document.getElementById('venta-carrito-total').textContent = `$${total.toLocaleString('es-AR')}`;
+    totalRow.classList.remove('hidden'); totalRow.classList.add('flex');
+}
+
+window.eliminarProductoCatalogo = async (id, name) => {
+    if (!confirm(`¿Eliminar "${name}" del catálogo? Ya no vas a poder venderlo ni verlo en stock.`)) return;
+    try { await updateDoc(doc(db, PATH_PRODUCTOS, id), { oculto: true }); }
+    catch (e) { alert('Error al eliminar'); }
+};
+
+window.setNpCanal = (canal) => {
+    document.getElementById('np-canal').value = canal;
+    const esML = canal === 'ml';
+    document.getElementById('np-canal-local').className = `py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95 ${!esML ? 'bg-indigo-500/15 border border-indigo-500/60 text-indigo-300' : 'bg-white/5 border border-white/10 text-gray-500 hover:border-white/20'}`;
+    document.getElementById('np-canal-ml').className = `py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95 ${esML ? 'bg-yellow-500/15 border border-yellow-500/60 text-yellow-300' : 'bg-white/5 border border-white/10 text-gray-500 hover:border-white/20'}`;
+};
+
+window.openNuevoProductoModal = () => {
+    document.getElementById('nuevo-producto-form').reset();
+    document.getElementById('np-stock').value = 1;
+    window.setNpCanal('local');
+    newProductoPhoto = null;
+    document.getElementById('np-photo-preview').innerHTML = '<i class="fas fa-camera text-gray-500 text-xl"></i>';
+    showModal('nuevo-producto-modal');
+};
+
+window.closeNuevoProductoModal = () => {
+    const m = document.getElementById('nuevo-producto-modal');
+    m.classList.add('hidden'); m.classList.remove('flex');
+};
+
+document.getElementById('np-photo-input').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    resizeImageToBase64(file, b64 => {
+        newProductoPhoto = b64;
+        document.getElementById('np-photo-preview').innerHTML = `<img src="${b64}" class="w-full h-full object-cover">`;
+    });
+});
+
+document.getElementById('nuevo-producto-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nombre = document.getElementById('np-nombre').value.trim();
+    const precio = Math.max(0, Number(document.getElementById('np-precio').value) || 0);
+    const stock = Math.max(0, Number(document.getElementById('np-stock').value) || 0);
+    const isML = document.getElementById('np-canal').value === 'ml';
+    if (!nombre) return;
+    const slug = normalizarTexto(nombre).replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const id = `custom-${slug || 'producto'}-${Date.now().toString(36)}`;
+    const btn = document.getElementById('btn-submit-np');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        const data = { name: nombre, precio, stock, isML, custom: true };
+        if (newProductoPhoto) data.photoURL = newProductoPhoto;
+        await setDoc(doc(db, PATH_PRODUCTOS, id), data);
+        window.closeNuevoProductoModal();
+        stockProductosData[id] = { id, ...data };
+        if (!PRODUCTOS_BARBER.find(p => p.id === id)) PRODUCTOS_BARBER.push({ id, name: nombre, precio, isML, custom: true });
+        renderProductosGrid();
+        window.selectProductoVenta(PRODUCTOS_BARBER.findIndex(p => p.id === id));
+    } catch (err) { alert('Error al crear el producto'); }
+    btn.disabled = false; btn.innerHTML = 'Agregar producto';
+});
+
 window.submitVenta = async () => {
-    if (!selectedProducto) return alert('Seleccioná un producto');
+    if (ventaCart.length === 0) return alert('Agregá al menos un producto');
+    for (const it of ventaCart) {
+        const stockActual = (stockProductosData[it.id]?.stock) || 0;
+        if (it.cantidad > stockActual) return alert(`No podés vender esa cantidad de ${it.name}. Disponible: ${stockActual}`);
+    }
     const btn = document.getElementById('btn-submit-venta');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
         const hoy = new Date().toLocaleDateString('en-CA');
+        const canal = document.getElementById('venta-canal').value || 'local';
+        const grupoVenta = `${Date.now()}`;
         const myName = BARBER_EMAIL_MAP[currentUser.email] || currentUser.email;
-        await addDoc(collection(db,PATH_VENTAS), {
-            producto: selectedProducto.name,
-            precio: selectedProducto.precio,
-            cantidad: cantVenta,
-            total: selectedProducto.precio * cantVenta,
-            barbero: myName,
-            metodoPago: 'efectivo',
-            userEmail: currentUser.email,
-            fecha: hoy,
-            creadoEn: serverTimestamp()
-        });
+        for (const it of ventaCart) {
+            await addDoc(collection(db, PATH_VENTAS), {
+                producto: it.name,
+                precio: it.precio,
+                cantidad: it.cantidad,
+                total: it.precio * it.cantidad,
+                tipo: 'producto',
+                canal,
+                ...(canal !== 'ml' ? { metodoPago: document.getElementById('venta-metodo-pago').value } : {}),
+                barbero: myName,
+                userEmail: currentUser.email,
+                fecha: hoy,
+                grupoVenta,
+                creadoEn: serverTimestamp()
+            });
+            await updateDoc(doc(db, PATH_PRODUCTOS, it.id), { stock: increment(-it.cantidad) });
+        }
         window.closeModals();
     } catch(e) { alert('Error al guardar'); }
     btn.disabled = false; btn.innerHTML = 'Registrar venta';
