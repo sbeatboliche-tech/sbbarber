@@ -173,6 +173,10 @@
                     <span class="hidden sm:inline">CIERRE DE CAJA</span>
                     <span class="sm:hidden">CIERRE</span>
                 </button>
+                <a id="btn-estadisticas" href="../estadisticas/" target="_blank" rel="noopener" title="Estadísticas" class="hidden items-center gap-1.5 bg-white/5 border border-white/10 text-gray-300 px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/10 transition">
+                    <i class="fas fa-chart-line text-xs"></i>
+                    <span class="hidden md:inline">ESTADÍSTICAS</span>
+                </a>
                 <button id="btn-dispositivos" onclick="window.openDispositivosPanel()" class="hidden items-center gap-1.5 bg-white/5 border border-white/10 text-gray-300 px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/10 transition">
                     <i class="fas fa-mobile-screen-button text-xs"></i>
                     <span class="hidden md:inline">DISPOSITIVOS</span>
@@ -1607,7 +1611,9 @@ async function init() {
                     document.getElementById(id).classList.add('flex');
                 });
             }
-            if (isOwner) { document.getElementById('btn-dispositivos').classList.remove('hidden'); document.getElementById('btn-dispositivos').classList.add('flex'); }
+            if (isOwner) {
+                ['btn-dispositivos', 'btn-estadisticas'].forEach(id => { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); });
+            }
             if (!_listenersAttached) {
                 _listenersAttached = true;
                 if (isOwner) listenToSessions();

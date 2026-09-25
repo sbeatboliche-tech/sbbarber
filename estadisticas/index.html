@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SB BARBER — Estadísticas</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/jpeg" href="https://i.imgur.com/PzcD4W2.jpeg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    /* Paleta de gráficos: pasos oscuros validados (dataviz), mismo orden fijo de categorías */
+    :root {
+        color-scheme: dark;
+        --page:#0d0d0d; --surface:#1a1a19; --surface-2:#232322; --border:rgba(255,255,255,0.10);
+        --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781; --grid:#2c2c2a; --axis:#383835;
+        --brand:#06b6d4; --brand-2:#0d9488;
+        --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+        --other:#5f5e5a;
+        --good:#0ca30c; --critical:#d03b3b;
+    }
+    * { box-sizing:border-box; }
+    html, body { margin:0; background:var(--page); color:var(--ink); font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; }
+    body { -webkit-tap-highlight-color:transparent; }
+    button, input, select { font:inherit; color:inherit; }
+    .hidden { display:none !important; }
+
+    /* Login / carga */
+    .center-view { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px 16px; gap:16px; text-align:center; }
+    .center-view img { height:96px; }
+    .login-box { width:100%; max-width:320px; display:flex; flex-direction:column; gap:10px; }
+    .input { width:100%; padding:14px 16px; background:rgba(0,0,0,0.4); border:1px solid #374151; border-radius:12px; outline:none; color:var(--ink); }
+    .input:focus { border-color:var(--brand); }
+    .btn-main { padding:14px; border:0; border-radius:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; background:linear-gradient(90deg,#0891b2,#0d9488); color:#fff; cursor:pointer; }
+    .err { color:#f87171; font-size:14px; }
+    .spinner { width:32px; height:32px; border-radius:50%; border:2px solid transparent; border-top-color:var(--brand); border-bottom-color:var(--brand); animation:spin 1s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    #load-msg { color:var(--muted); font-size:13px; }
+
+    /* Layout */
+    header.top { position:sticky; top:0; z-index:20; background:rgba(13,13,13,0.9); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
+    .top-in { max-width:1240px; margin:0 auto; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .brand { display:flex; align-items:center; gap:10px; min-width:0; }
+    .brand img { height:34px; }
+    .brand h1 { font-size:14px; margin:0; letter-spacing:.08em; }
+    .brand span { font-size:11px; color:var(--brand); font-weight:600; }
+    .top-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:10px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:var(--ink-2); font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
+    .btn:hover { background:rgba(255,255,255,0.1); color:var(--ink); }
+    .btn.primary { background:linear-gradient(90deg,#059669,#16a34a); border-color:transparent; color:#fff; }
+    main { max-width:1240px; margin:0 auto; padding:16px 16px 48px; }
+
+    /* Filtros: una sola fila arriba de todo */
+    .filters { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:16px; }
+    .chip { padding:7px 12px; border-radius:999px; border:1px solid var(--border); background:transparent; color:var(--ink-2); font-size:12px; font-weight:600; cursor:pointer; }
+    .chip:hover { border-color:#52514e; color:var(--ink); }
+    .chip.on { background:rgba(6,182,212,0.15); border-color:var(--brand); color:#a5f3fc; }
+    .filters input[type=date], .filters select { padding:6px 10px; border-radius:10px; border:1px solid var(--border); background:var(--surface); font-size:12px; color-scheme:dark; }
+    .filters .sep { width:1px; height:22px; background:var(--border); margin:0 4px; }
+    .range-label { color:var(--muted); font-size:12px; margin-left:auto; }
+
+    /* Tarjetas */
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px; min-width:0; }
+    .card.wide { grid-column:1 / -1; }
+    .card-h { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:12px; }
+    .card h2 { font-size:15px; margin:0; font-weight:700; }
+    .card .sub { color:var(--muted); font-size:12px; margin-top:3px; line-height:1.4; }
+    .tbl-btn { flex-shrink:0; padding:5px 10px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:11px; font-weight:600; cursor:pointer; }
+    .tbl-btn:hover { color:var(--ink); }
+    .chart { width:100%; position:relative; }
+    .chart svg { display:block; overflow:visible; }
+    .ax { fill:var(--muted); font-size:10px; font-variant-numeric:tabular-nums; }
+    .empty { color:var(--muted); font-size:13px; padding:28px 0; text-align:center; }
+    .section-title { grid-column:1 / -1; font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:14px 0 -4px; }
+
+    /* Tiles */
+    .tiles { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .tile { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 16px; min-width:0; }
+    .tile .label { color:var(--ink-2); font-size:12px; font-weight:500; }
+    .tile .value { font-size:24px; font-weight:700; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tile .extra { color:var(--muted); font-size:11px; margin-top:4px; }
+    .tile.hero { grid-column:span 2; background:linear-gradient(135deg,rgba(6,182,212,0.10),rgba(13,148,136,0.06)),var(--surface); }
+    .tile.hero .value { font-size:48px; line-height:1.05; }
+    .delta { font-size:11px; font-weight:700; margin-top:4px; }
+    .delta.up { color:var(--good); }
+    .delta.down { color:#e66767; }
+    .delta.flat { color:var(--muted); }
+
+    /* Leyenda */
+    .legend { display:flex; flex-wrap:wrap; gap:6px 14px; margin-bottom:10px; }
+    .legend span { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2); }
+    .legend i { width:10px; height:10px; border-radius:3px; display:inline-block; }
+    .legend i.line { height:2px; width:14px; border-radius:1px; }
+
+    /* Barras horizontales (rankings) */
+    .hb { display:grid; grid-template-columns:minmax(90px,34%) 1fr auto; align-items:center; gap:10px; padding:5px 0; }
+    .hb-l { font-size:12px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:6px; }
+    .hb-l i { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .hb-t { height:14px; }
+    .hb-b { height:14px; border-radius:0 4px 4px 0; min-width:2px; }
+    .hb-v { font-size:12px; font-weight:600; color:var(--ink); white-space:nowrap; font-variant-numeric:tabular-nums; }
+    .hb-v small { color:var(--muted); font-weight:500; margin-left:4px; }
+
+    /* Heatmap */
+    .heat-scale { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:11px; margin-top:8px; }
+    .heat-scale i { width:18px; height:10px; border-radius:2px; display:inline-block; }
+
+    /* Tablas */
+    .tbl-wrap { overflow-x:auto; margin-top:12px; }
+    table { width:100%; border-collapse:collapse; font-size:12px; }
+    th { text-align:left; color:var(--muted); font-weight:600; padding:6px 8px; border-bottom:1px solid var(--axis); white-space:nowrap; }
+    td { padding:6px 8px; border-bottom:1px solid var(--grid); color:var(--ink-2); white-space:nowrap; font-variant-numeric:tabular-nums; }
+    td.num, th.num { text-align:right; }
+    .mini-stats { display:flex; flex-wrap:wrap; gap:8px 20px; margin-bottom:12px; }
+    .mini-stats div { font-size:12px; color:var(--muted); }
+    .mini-stats b { color:var(--ink); font-size:16px; display:block; }
+
+    /* Tooltip */
+    #tt { position:fixed; z-index:100; pointer-events:none; background:#262625; border:1px solid var(--border); border-radius:10px; padding:8px 10px; font-size:12px; color:var(--ink); box-shadow:0 8px 24px rgba(0,0,0,0.5); min-width:120px; max-width:260px; }
+    #tt .tt-h { color:var(--ink-2); font-weight:600; margin-bottom:4px; }
+    #tt .tt-r { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    #tt .tt-r span { display:inline-flex; align-items:center; gap:6px; color:var(--ink-2); }
+    #tt .tt-r i { width:8px; height:8px; border-radius:2px; display:inline-block; }
+    #tt .tt-r b { font-variant-numeric:tabular-nums; }
+
+    @media (max-width:900px) {
+        .grid { grid-template-columns:minmax(0,1fr); }
+        .tiles { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .tile.hero .value { font-size:36px; }
+        .range-label { margin-left:0; width:100%; }
+    }
+    @media (max-width:520px) {
+        .brand div { display:none; }
+        .btn .txt { display:none; }
+        .tile .value { font-size:20px; }
+    }
+</style>
+</head>
+<body>
+
+<div id="auth-loading" class="center-view">
+    <img src="https://i.imgur.com/xyjMT6X.png" alt="SB BARBER">
+    <div class="spinner"></div>
+</div>
+
+<div id="login-view" class="center-view hidden">
+    <img src="https://i.imgur.com/xyjMT6X.png" alt="SB BARBER">
+    <p style="color:var(--muted);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin:0">Estadísticas · solo admins</p>
+    <form id="login-form" class="login-box">
+        <input class="input" type="email" id="login-email" placeholder="Correo electrónico" required autocomplete="username">
+        <input class="input" type="password" id="login-password" placeholder="Contraseña" required autocomplete="current-password">
+        <button class="btn-main" type="submit">Ingresar</button>
+        <p id="login-error" class="err hidden"></p>
+    </form>
+</div>
+
+<div id="data-loading" class="center-view hidden">
+    <img src="https://i.imgur.com/xyjMT6X.png" alt="SB BARBER">
+    <div class="spinner"></div>
+    <p id="load-msg">Cargando datos…</p>
+</div>
+
+<div id="app" class="hidden">
+    <header class="top">
+        <div class="top-in">
+            <div class="brand">
+                <img src="https://i.imgur.com/xyjMT6X.png" alt="SB">
+                <div><h1>SB BARBER</h1><span>Estadísticas</span></div>
+            </div>
+            <div class="top-actions">
+                <button class="btn" id="btn-refresh" title="Traer lo último"><span aria-hidden="true">↻</span><span class="txt">Actualizar</span></button>
+                <button class="btn primary" id="btn-export" title="Descargar el período elegido en Excel"><span aria-hidden="true">⬇</span><span class="txt">Descargar Excel</span></button>
+                <button class="btn" id="btn-logout" title="Salir">Salir</button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="filters" id="filters">
+            <button class="chip" data-p="todo">Todo</button>
+            <button class="chip" data-p="12m">Últimos 12 meses</button>
+            <button class="chip" data-p="90d">Últimos 90 días</button>
+            <button class="chip" data-p="anio">Este año</button>
+            <button class="chip" data-p="anioPasado">Año pasado</button>
+            <span class="sep"></span>
+            <input type="date" id="f-desde" title="Desde">
+            <input type="date" id="f-hasta" title="Hasta">
+            <span class="sep"></span>
+            <select id="f-barbero" title="Barbero"></select>
+            <span class="range-label" id="range-label"></span>
+        </div>
+
+        <div class="tiles" id="tiles"></div>
+
+        <div class="grid" style="margin-top:16px">
+            <div class="section-title">Plata</div>
+            <div class="card wide" id="c-ingresos">
+                <div class="card-h"><div><h2>Facturación</h2><div class="sub">Cortes, productos y bebidas por <span class="bk-name">mes</span></div></div><button class="tbl-btn">Ver tabla</button></div>
+                <div class="legend"></div><div class="chart"></div>
+            </div>
+            <div class="card" id="c-ticket">
+                <div class="card-h"><div><h2>Ticket promedio por corte</h2><div class="sub">Facturación de cortes ÷ cantidad, por <span class="bk-name">mes</span></div></div><button class="tbl-btn">Ver tabla</button></div>
+                <div class="chart"></div>
+            </div>
+            <div class="card" id="c-gastos">
+                <div class="card-h"><div><h2>Gastos por categoría</h2><div class="sub">Lo cargado en Gastos de recepción</div></div><button class="tbl-btn">Ver tabla</button></div>
+                <div class="chart"></div>
+            </div>
+
+            <div class="section-title">Demanda</div>
+            <div class="card wide" id="c-cortes-barbero">
+                <div class="card-h"><div><h2>Cortes por barbero</h2><div class="sub">Cantidad de cortes por <span class="bk-name">mes</span></div></div><button class="tbl-btn">Ver tabla</button></div>
+                <div class="legend"></div><div class="chart"></div>
+            </div>
+            <div class="card wide" id="c-heat">
+                <div class="card-h"><div><h2>¿Cuándo hay más movimiento?</h2><div class="sub">Promedio de cortes por día y hora (según la hora en que se anotó el corte)</div></div><button class="tbl-btn">Ver tabla</button></div>
+                <div class="chart"></div>
+                <div class="heat-scale" id="heat-scale"></div>
+            </div>
+            <div class="card" id="c-servicios">
+                <div class="card-h"><div><h2>Servicios</h2><div class="sub">Cantidad y facturación por servicio</div></div><button class="tbl-btn">Ver tabla</button></div>
+                <div class="chart"></div>
+            </div>
+            <div class="card" id="c-barberos">
+                <div class="card-h"><div><h2>Facturación por barbero</h2><div class="sub">Cortes del período</div></div><button class="tbl-btn">Ver tabla</button></div>
+                <div class="chart"></div>
+            </div>
+
+            <div class="section-title">Clientes</div>
+            <div class="card wide" id="c-clientes">
+                <div class="card-h"><div><h2>Clientes nuevos y que vuelven</h2><div class="sub">Solo cortes con nombre de cliente anotado. «Vuelve» = ya se había cortado antes</div></div><button class="tbl-btn">Ver tabla</button></div>
+                <div class="mini-stats" id="clientes-stats"></div>
+                <div class="legend"></div><div class="chart"></div>
+            </div>
+            <div class="card" id="c-top-clientes">
+                <div class="card-h"><div><h2>Mejores clientes</h2><div class="sub">Por cantidad de visitas en el período</div></div></div>
+                <div class="chart"></div>
+            </div>
+            <div class="card" id="c-perdidos">
+                <div class="card-h"><div><h2>Clientes que dejaron de venir</h2><div class="sub">Vinieron 2+ veces y hace más de 45 días que no vuelven (todo el historial)</div></div></div>
+                <div class="chart"></div>
+            </div>
+
+            <div class="section-title">Productos y bebidas</div>
+            <div class="card" id="c-productos">
+                <div class="card-h"><div><h2>Productos más vendidos</h2><div class="sub">Unidades y facturación (local + MercadoLibre)</div></div><button class="tbl-btn">Ver tabla</button></div>
+                <div class="chart"></div>
+            </div>
+            <div class="card" id="c-bebidas">
+                <div class="card-h"><div><h2>Bebidas más vendidas</h2><div class="sub">Unidades vendidas (sin regalos)</div></div><button class="tbl-btn">Ver tabla</button></div>
+                <div class="chart"></div>
+            </div>
+            <div class="card" id="c-pagos">
+                <div class="card-h"><div><h2>Cómo pagan los cortes</h2><div class="sub">Facturación de cortes por método de pago</div></div><button class="tbl-btn">Ver tabla</button></div>
+                <div class="chart"></div>
+            </div>
+            <div class="card" id="c-canal">
+                <div class="card-h"><div><h2>Productos: local vs MercadoLibre</h2><div class="sub">Facturación de productos por canal</div></div><button class="tbl-btn">Ver tabla</button></div>
+                <div class="chart"></div>
+            </div>
+
+            <div class="section-title">Turnos</div>
+            <div class="card wide" id="c-turnos">
+                <div class="card-h"><div><h2>Turnos por <span class="bk-name">mes</span></h2><div class="sub">Reservados online (página de turnos) y anotados en recepción, según la fecha del turno</div></div><button class="tbl-btn">Ver tabla</button></div>
+                <div class="legend"></div><div class="chart"></div>
+            </div>
+
+            <div class="section-title">Datos</div>
+            <div class="card wide" id="c-cobertura">
+                <div class="card-h"><div><h2>Desde cuándo hay datos</h2><div class="sub">Tenelo en cuenta al comparar: cada cosa se empezó a registrar en una fecha distinta</div></div></div>
+                <div class="chart"></div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="tt" class="hidden"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
+    authDomain: "sb-barber-6dc16.firebaseapp.com",
+    projectId: "sb-barber-6dc16",
+    storageBucket: "sb-barber-6dc16.firebasestorage.app",
+    messagingSenderId: "213501157745",
+    appId: "1:213501157745:web:09fd59996cf1d72b6696d0"
+};
+const ADMINS = ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const $ = id => document.getElementById(id);
+const show = (id, on) => $(id).classList.toggle('hidden', !on);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const DAY = 864e5;
+
+/* =========================================================
+   CARGA DE DATOS con caché local (IndexedDB)
+   La primera vez se lee todo; después solo los últimos 45 días
+   (para agarrar lo nuevo y lo que se haya borrado/editado).
+   Así no se gasta la cuota gratis de Firebase en cada visita.
+   ========================================================= */
+const REFRESH_DIAS = 45;
+const tsMs = v => v == null ? null
+    : typeof v.toMillis === 'function' ? v.toMillis()
+    : typeof v === 'string' ? (Date.parse(v) || null)
+    : typeof v === 'number' ? v
+    : typeof v.seconds === 'number' ? v.seconds * 1000 : null;
+const fechaDe = ms => ms == null ? null : new Date(ms).toLocaleDateString('en-CA');
+
+const normCut = (id, x) => {
+    const t = tsMs(x.createdAt);
+    return { id, _ts: t, t, barber: x.barber || '—', service: String(x.service || '—').trim(), price: Number(x.price) || 0,
+        metodo: x.metodoPago || 'sin dato', cliente: String(x.clientName || '').trim(), eliminado: !!x.eliminado };
+};
+const normVenta = (id, x) => {
+    const t = tsMs(x.creadoEn);
+    return { id, _ts: t, t, fecha: x.fecha || fechaDe(t), producto: String(x.producto || '—').trim(), cantidad: Number(x.cantidad) || 1,
+        total: Number(x.total) || 0, tipo: x.tipo === 'bebida' ? 'bebida' : 'producto', canal: x.canal === 'ml' ? 'ml' : 'local',
+        metodo: x.metodoPago || '', barbero: x.barbero || '', regalo: !!x.esRegalo, eliminado: !!x.eliminado };
+};
+const normGasto = (id, x) => {
+    const t = tsMs(x.creadoEn);
+    return { id, _ts: t, fecha: x.fecha || fechaDe(t), monto: Number(x.monto) || 0, categoria: x.categoria || 'otro',
+        descripcion: x.descripcion || '', metodo: x.metodoPago || '', eliminado: !!x.eliminado };
+};
+const normPropina = (id, x) => {
+    const t = tsMs(x.creadoEn);
+    return { id, _ts: t, fecha: x.fecha || fechaDe(t), barbero: x.barbero || '—', monto: Number(x.monto) || 0,
+        estado: x.estado || '', eliminado: !!x.eliminado };
+};
+// Turnos: el teléfono no se guarda en la caché ni se muestra
+const normTurno = (id, x) => ({ id, fecha: x.fecha || null, hora: x.hora || '', barbero: x.nombreBarbero || x.barbero || '—',
+    servicio: String(x.nombreServicio || x.servicio || '').trim(), estado: x.estado || '',
+    origen: x.telefono ? 'online' : 'recepcion', precio: Number(x.precio) || 0 });
+
+const FUENTES = [
+    { key:'cuts',       path:'artifacts/sb-barber-6dc16/public/data/all_cuts', tf:'createdAt', norm:normCut,     label:'cortes' },
+    { key:'cutsLegacy', path:'barbershop',                                     tf:'createdAt', norm:normCut,     label:'cortes viejos' },
+    { key:'ventas',     path:'ventas_productos',                               tf:'creadoEn',  norm:normVenta,   label:'ventas' },
+    { key:'gastos',     path:'gastos',                                         tf:'creadoEn',  norm:normGasto,   label:'gastos' },
+    { key:'propinas',   path:'propinas',                                       tf:'creadoEn',  norm:normPropina, label:'propinas' },
+    // creadoEn de turnos mezcla Timestamp y texto: se trae completo (son pocos)
+    { key:'turnos',     path:'turnos',                                         tf:null,        norm:normTurno,   label:'turnos' },
+];
+
+function idb() {
+    return new Promise((res, rej) => {
+        const r = indexedDB.open('sb-estadisticas', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('cache');
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+    });
+}
+async function cacheGet(key) {
+    try {
+        const d = await idb();
+        return await new Promise(res => { const q = d.transaction('cache').objectStore('cache').get(key); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); });
+    } catch { return null; }
+}
+async function cacheSet(key, val) {
+    try {
+        const d = await idb();
+        await new Promise(res => { const tx = d.transaction('cache', 'readwrite'); tx.objectStore('cache').put(val, key); tx.oncomplete = res; tx.onerror = res; });
+    } catch {}
+}
+
+async function syncFuente(f, forzarTodo) {
+    const cached = forzarTodo ? null : await cacheGet(f.key);
+    const ahora = Date.now();
+    let docs;
+    if (!cached || !f.tf) {
+        const snap = await getDocs(collection(db, f.path));
+        docs = snap.docs.map(d => f.norm(d.id, d.data()));
+    } else {
+        const desde = new Date(cached.syncedAt - REFRESH_DIAS * DAY);
+        const snap = await getDocs(query(collection(db, f.path), where(f.tf, '>=', desde)));
+        const nuevos = snap.docs.map(d => f.norm(d.id, d.data()));
+        const ids = new Set(nuevos.map(d => d.id));
+        // Lo viejo se conserva; lo de la ventana se reemplaza por lo que devolvió el server (si se borró, desaparece)
+        docs = cached.docs.filter(d => !ids.has(d.id) && (d._ts == null || d._ts < desde.getTime())).concat(nuevos);
+    }
+    await cacheSet(f.key, { syncedAt: ahora, docs });
+    return docs;
+}
+
+const D = { cuts: [], ventas: [], gastos: [], propinas: [], turnos: [] };
+let primeraFecha = { };
+
+async function cargarTodo(forzarTodo = false) {
+    const res = {};
+    for (const f of FUENTES) {
+        $('load-msg').textContent = `Cargando ${f.label}…`;
+        res[f.key] = await syncFuente(f, forzarTodo);
+    }
+    // Cortes nuevos + viejos, sin duplicados (mismo criterio que anotar)
+    const map = new Map();
+    [...res.cutsLegacy, ...res.cuts].forEach(c => map.set(c.id, c));
+    D.cuts = [...map.values()].filter(c => !c.eliminado && c.t);
+    D.ventas = res.ventas.filter(v => !v.eliminado && v.fecha);
+    D.gastos = res.gastos.filter(g => !g.eliminado && g.fecha);
+    D.propinas = res.propinas.filter(p => !p.eliminado && p.fecha && p.estado !== 'rechazado');
+    D.turnos = res.turnos.filter(t => t.fecha);
+    D.cuts.forEach(c => { c.fecha = fechaDe(c.t); });
+    prepararClientes();
+    prepararBarberos();
+}
+
+/* =========================================================
+   Helpers de fechas, formato y colores
+   ========================================================= */
+const dayMs = f => new Date(f + 'T00:00:00').getTime();
+const hoy0 = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const addDays = (ms, n) => { const d = new Date(ms); d.setDate(d.getDate() + n); return d.getTime(); };
+const monthKey = ms => { const d = new Date(ms); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
+const mondayMs = ms => { const d = new Date(ms); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d.getTime(); };
+const fmtFecha = ms => new Date(ms).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+const money = n => '$' + Math.round(n).toLocaleString('es-AR');
+const num = n => Math.round(n).toLocaleString('es-AR');
+const compact = n => {
+    const a = Math.abs(n);
+    if (a >= 1e6) return (n / 1e6).toLocaleString('es-AR', { maximumFractionDigits: 1 }) + ' M';
+    if (a >= 1e3) return (n / 1e3).toLocaleString('es-AR', { maximumFractionDigits: 0 }) + ' k';
+    return num(n);
+};
+const minOf = arr => arr.reduce((m, v) => v < m ? v : m, Infinity);
+const maxOf = arr => arr.reduce((m, v) => v > m ? v : m, -Infinity);
+const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
+
+const SERIE = ['var(--s1)','var(--s2)','var(--s3)','var(--s4)','var(--s5)','var(--s6)','var(--s7)','var(--s8)'];
+const RAMP = ['#104281','#184f95','#1c5cab','#256abf','#2a78d6','#3987e5','#5598e7','#6da7ec','#86b6ef']; // secuencial azul, oscuro = poco
+const DIAS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+const CAT_GASTO = { insumos:'Insumos', servicios:'Servicios', alquiler:'Alquiler', limpieza:'Limpieza', otro:'Otro' };
+const METODO = { efectivo:'Efectivo', transferencia:'Transferencia', mixto:'Mixto', 'sin dato':'Sin dato' };
+
+// Color fijo por barbero (según cortes de todo el historial): no cambia al filtrar
+let BARBER_COLOR = {}, BARBER_ORDEN = [];
+function prepararBarberos() {
+    const cnt = {};
+    D.cuts.forEach(c => { cnt[c.barber] = (cnt[c.barber] || 0) + 1; });
+    BARBER_ORDEN = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]);
+    BARBER_COLOR = {};
+    BARBER_ORDEN.forEach((b, i) => { BARBER_COLOR[b] = i < 7 ? SERIE[i] : 'var(--other)'; });
+    const sel = $('f-barbero');
+    sel.innerHTML = '<option value="todos">Todos los barberos</option>' + BARBER_ORDEN.map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join('');
+    sel.value = BARBER_ORDEN.includes(state.barber) ? state.barber : 'todos';
+    state.barber = sel.value;
+}
+
+// Clientes: nombre normalizado; primera visita de todo el historial
+const normNombre = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ñ ]/g, ' ').replace(/\s+/g, ' ').trim();
+const NOMBRES_GENERICOS = new Set(['cliente', 'clienta', 'x', 'xx', 'nn', 'sin nombre', 'nuevo', 'amigo']);
+let CLIENTES = new Map(); // key -> { nombre, visitas:[{t,price,barber}] }
+function prepararClientes() {
+    CLIENTES = new Map();
+    D.cuts.slice().sort((a, b) => a.t - b.t).forEach(c => {
+        const k = normNombre(c.cliente);
+        c.ck = (k.length >= 2 && !NOMBRES_GENERICOS.has(k)) ? k : null;
+        if (!c.ck) return;
+        if (!CLIENTES.has(k)) CLIENTES.set(k, { nombre: c.cliente, visitas: [] });
+        const cl = CLIENTES.get(k);
+        c.primera = cl.visitas.length === 0;
+        cl.visitas.push(c);
+    });
+}
+
+/* =========================================================
+   Filtros y período
+   ========================================================= */
+const state = { periodo: 'todo', desde: null, hasta: null, barber: 'todos' };
+
+function rangoActual() {
+    const h0 = hoy0(), manana = addDays(h0, 1);
+    switch (state.periodo) {
+        case '12m':  return { from: addDays(h0, -364), to: manana };
+        case '90d':  return { from: addDays(h0, -89), to: manana };
+        case 'anio': return { from: new Date(new Date().getFullYear(), 0, 1).getTime(), to: manana };
+        case 'anioPasado': { const y = new Date().getFullYear(); return { from: new Date(y - 1, 0, 1).getTime(), to: new Date(y, 0, 1).getTime() }; }
+        case 'custom': return { from: state.desde, to: addDays(state.hasta, 1) };
+        default: {
+            // "Todo": desde el primer registro de cualquier cosa
+            const from = new Date(Math.min(h0, minOf(D.cuts.map(c => c.t)), minOf(D.ventas.map(v => dayMs(v.fecha))), minOf(D.gastos.map(g => dayMs(g.fecha))))); from.setHours(0, 0, 0, 0);
+            return { from: from.getTime(), to: manana };
+        }
+    }
+}
+
+function makeBuckets(from, to) {
+    const semanal = (to - from) / DAY <= 120;
+    const keys = [];
+    if (semanal) {
+        for (let m = mondayMs(from); m < to; m = addDays(m, 7)) keys.push(String(m));
+        return { semanal, keys, keyOf: ms => String(mondayMs(ms)),
+            label: k => { const d = new Date(+k); return d.getDate() + '/' + (d.getMonth() + 1); },
+            largo: k => 'Semana del ' + new Date(+k).toLocaleDateString('es-AR', { day:'numeric', month:'long', year:'numeric' }) };
+    }
+    const d = new Date(from); d.setDate(1); d.setHours(0, 0, 0, 0);
+    while (d.getTime() < to) { keys.push(monthKey(d.getTime())); d.setMonth(d.getMonth() + 1); }
+    const nombreMes = (k, opts) => { const [y, m] = k.split('-'); return new Date(+y, +m - 1, 1).toLocaleDateString('es-AR', opts).replace('.', ''); };
+    return { semanal, keys, keyOf: monthKey,
+        label: k => nombreMes(k, { month:'short', year:'2-digit' }),
+        largo: k => { const s = nombreMes(k, { month:'long', year:'numeric' }); return s.charAt(0).toUpperCase() + s.slice(1); } };
+}
+
+function filtrar(from, to) {
+    const enR = ms => ms >= from && ms < to;
+    const b = state.barber;
+    return {
+        cuts: D.cuts.filter(c => enR(c.t) && (b === 'todos' || c.barber === b)),
+        ventas: D.ventas.filter(v => enR(dayMs(v.fecha))),
+        gastos: D.gastos.filter(g => enR(dayMs(g.fecha))),
+        propinas: D.propinas.filter(p => enR(dayMs(p.fecha)) && (b === 'todos' || p.barbero === b)),
+        turnos: D.turnos.filter(t => enR(dayMs(t.fecha)) && (b === 'todos' || t.barbero === b)),
+    };
+}
+
+document.querySelectorAll('#filters .chip').forEach(ch => ch.addEventListener('click', () => {
+    state.periodo = ch.dataset.p; renderAll();
+}));
+const onFecha = () => {
+    const d = $('f-desde').value, h = $('f-hasta').value;
+    if (!d || !h) return;
+    state.periodo = 'custom'; state.desde = dayMs(d); state.hasta = dayMs(h);
+    if (state.hasta < state.desde) [state.desde, state.hasta] = [state.hasta, state.desde];
+    renderAll();
+};
+$('f-desde').addEventListener('change', onFecha);
+$('f-hasta').addEventListener('change', onFecha);
+$('f-barbero').addEventListener('change', e => { state.barber = e.target.value; renderAll(); });
+
+/* =========================================================
+   Tooltip
+   ========================================================= */
+const tt = $('tt');
+function showTT(e, html) {
+    tt.innerHTML = html; tt.classList.remove('hidden');
+    const r = tt.getBoundingClientRect();
+    let x = e.clientX + 14, y = e.clientY + 14;
+    if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+    if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+    tt.style.left = Math.max(8, x) + 'px'; tt.style.top = Math.max(8, y) + 'px';
+}
+const hideTT = () => tt.classList.add('hidden');
+const ttRow = (color, name, val) => `<div class="tt-r"><span>${color ? `<i style="background:${color}"></i>` : ''}${esc(name)}</span><b>${val}</b></div>`;
+
+/* =========================================================
+   Gráficos (SVG a mano, specs de dataviz)
+   ========================================================= */
+const drawers = new Map(); // card id -> función que redibuja (para resize)
+
+function niceScale(maxVal) {
+    if (!(maxVal > 0)) return { max: 1, ticks: [0, 1] };
+    const raw = maxVal / 4, e = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / e;
+    const step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e;
+    const max = step * Math.ceil(maxVal / step);
+    const ticks = []; for (let v = 0; v <= max + step / 2; v += step) ticks.push(v);
+    return { max, ticks };
+}
+const colPath = (x, y, w, h, r) => { r = Math.max(0, Math.min(r, h, w / 2)); return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`; };
+
+function legendHTML(series, tipo) {
+    if (series.length < 2) return '';
+    return series.map(s => `<span><i class="${tipo === 'line' ? 'line' : ''}" style="background:${s.color}"></i>${esc(s.name)}</span>`).join('');
+}
+
+function columnas(host, { labels, largos, series, fmt, axisFmt = compact, h = 230 }) {
+    const w = host.clientWidth; if (!w) return;
+    const P = { l: 46, r: 8, t: 10, b: 26 }, pw = w - P.l - P.r, ph = h - P.t - P.b, n = labels.length;
+    const totals = labels.map((_, i) => series.reduce((s, se) => s + (se.values[i] || 0), 0));
+    const { max, ticks } = niceScale(Math.max(0, ...totals));
+    const band = pw / n, bw = Math.max(2, Math.min(24, band * 0.72));
+    const y = v => P.t + ph - v / max * ph;
+    let s = `<svg width="${w}" height="${h}" role="img">`;
+    ticks.forEach(v => { s += `<line x1="${P.l}" x2="${w - P.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)" stroke-width="1"/><text class="ax" x="${P.l - 6}" y="${y(v) + 3}" text-anchor="end">${axisFmt(v)}</text>`; });
+    for (let i = 0; i < n; i++) {
+        const x = P.l + band * i + (band - bw) / 2;
+        const vis = series.map((se, k) => ({ k, v: se.values[i] || 0 })).filter(o => o.v > 0);
+        let base = P.t + ph;
+        vis.forEach((o, j) => {
+            const hh = o.v / max * ph, gap = j > 0 ? 2 : 0, top = base - hh;
+            const segH = Math.max(0, hh - gap);
+            const isTop = j === vis.length - 1;
+            s += isTop
+                ? `<path d="${colPath(x, top, bw, segH, 4)}" fill="${series[o.k].color}"/>`
+                : `<rect x="${x}" y="${top}" width="${bw}" height="${segH}" fill="${series[o.k].color}"/>`;
+            base = top;
+        });
+    }
+    s += `<line x1="${P.l}" x2="${w - P.r}" y1="${P.t + ph}" y2="${P.t + ph}" stroke="var(--axis)" stroke-width="1"/>`;
+    const every = Math.max(1, Math.ceil(44 / band));
+    labels.forEach((l, i) => { if (i % every === 0) s += `<text class="ax" x="${P.l + band * i + band / 2}" y="${h - 8}" text-anchor="middle">${esc(l)}</text>`; });
+    labels.forEach((_, i) => { s += `<rect data-i="${i}" x="${P.l + band * i}" y="${P.t}" width="${band}" height="${ph}" fill="transparent"/>`; });
+    s += '</svg>';
+    host.innerHTML = s;
+    host.querySelectorAll('rect[data-i]').forEach(r => {
+        r.addEventListener('pointermove', e => {
+            const i = +r.dataset.i;
+            let html = `<div class="tt-h">${esc(largos[i])}</div>`;
+            series.slice().reverse().forEach(se => { html += ttRow(se.color, se.name, fmt(se.values[i] || 0)); });
+            if (series.length > 1) html += ttRow(null, 'Total', fmt(totals[i]));
+            showTT(e, html);
+            r.setAttribute('fill', 'rgba(255,255,255,0.04)');
+        });
+        r.addEventListener('pointerleave', () => { hideTT(); r.setAttribute('fill', 'transparent'); });
+    });
+}
+
+function lineas(host, { labels, largos, series, fmt, axisFmt = compact, h = 240 }) {
+    const w = host.clientWidth; if (!w) return;
+    const P = { l: 46, r: 14, t: 12, b: 26 }, pw = w - P.l - P.r, ph = h - P.t - P.b, n = labels.length;
+    const { max, ticks } = niceScale(Math.max(0, maxOf(series.flatMap(s => s.values.filter(v => v != null)))));
+    const x = i => n === 1 ? P.l + pw / 2 : P.l + i * pw / (n - 1);
+    const y = v => P.t + ph - v / max * ph;
+    let s = `<svg width="${w}" height="${h}" role="img">`;
+    ticks.forEach(v => { s += `<line x1="${P.l}" x2="${w - P.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)" stroke-width="1"/><text class="ax" x="${P.l - 6}" y="${y(v) + 3}" text-anchor="end">${axisFmt(v)}</text>`; });
+    s += `<line x1="${P.l}" x2="${w - P.r}" y1="${P.t + ph}" y2="${P.t + ph}" stroke="var(--axis)" stroke-width="1"/>`;
+    s += `<line class="xh" x1="0" x2="0" y1="${P.t}" y2="${P.t + ph}" stroke="var(--axis)" stroke-width="1" visibility="hidden"/>`;
+    series.forEach(se => {
+        let d = '', pen = false;
+        se.values.forEach((v, i) => { if (v == null) { pen = false; return; } d += (pen ? 'L' : 'M') + x(i) + ',' + y(v); pen = true; });
+        s += `<path d="${d}" fill="none" stroke="${se.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+        const last = se.values.map((v, i) => v != null ? i : -1).filter(i => i >= 0).pop();
+        if (last != null) s += `<circle cx="${x(last)}" cy="${y(se.values[last])}" r="4" fill="${se.color}" stroke="var(--surface)" stroke-width="2"/>`;
+    });
+    const every = Math.max(1, Math.ceil(44 / (pw / Math.max(1, n))));
+    labels.forEach((l, i) => { if (i % every === 0) s += `<text class="ax" x="${x(i)}" y="${h - 8}" text-anchor="middle">${esc(l)}</text>`; });
+    s += `<rect class="hit" x="${P.l}" y="${P.t}" width="${pw}" height="${ph}" fill="transparent"/></svg>`;
+    host.innerHTML = s;
+    const hit = host.querySelector('.hit'), xh = host.querySelector('.xh'), svg = host.querySelector('svg');
+    hit.addEventListener('pointermove', e => {
+        const bx = svg.getBoundingClientRect().left;
+        const i = n === 1 ? 0 : Math.max(0, Math.min(n - 1, Math.round((e.clientX - bx - P.l) / (pw / (n - 1)))));
+        xh.setAttribute('x1', x(i)); xh.setAttribute('x2', x(i)); xh.setAttribute('visibility', 'visible');
+        let html = `<div class="tt-h">${esc(largos[i])}</div>`;
+        series.map(se => ({ se, v: se.values[i] })).filter(o => o.v != null).sort((a, b) => b.v - a.v)
+            .forEach(o => { html += ttRow(o.se.color, o.se.name, fmt(o.v)); });
+        showTT(e, html);
+    });
+    hit.addEventListener('pointerleave', () => { hideTT(); xh.setAttribute('visibility', 'hidden'); });
+}
+
+function heatmap(host, { matriz, filas, horas }) {
+    const w = host.clientWidth; if (!w) return;
+    const P = { l: 36, t: 4, b: 22 }, gap = 2;
+    const cw = Math.max(10, (w - P.l) / horas.length), ch = 26, h = P.t + filas.length * ch + P.b;
+    const max = Math.max(0, maxOf(matriz.flat()));
+    let s = `<svg width="${w}" height="${h}" role="img">`;
+    filas.forEach((f, r) => {
+        s += `<text class="ax" x="${P.l - 8}" y="${P.t + r * ch + ch / 2 + 3}" text-anchor="end">${f}</text>`;
+        horas.forEach((hr, c) => {
+            const v = matriz[r][c];
+            const fill = v > 0 ? RAMP[Math.min(RAMP.length - 1, Math.floor(v / max * (RAMP.length - 1e-9)))] : 'var(--surface-2)';
+            s += `<rect data-r="${r}" data-c="${c}" x="${P.l + c * cw}" y="${P.t + r * ch}" width="${cw - gap}" height="${ch - gap}" rx="3" fill="${fill}"/>`;
+        });
+    });
+    const every = Math.max(1, Math.ceil(28 / cw));
+    horas.forEach((hr, c) => { if (c % every === 0) s += `<text class="ax" x="${P.l + c * cw + (cw - gap) / 2}" y="${h - 6}" text-anchor="middle">${hr}h</text>`; });
+    s += '</svg>';
+    host.innerHTML = s;
+    host.querySelectorAll('rect[data-r]').forEach(el => {
+        el.addEventListener('pointermove', e => {
+            const r = +el.dataset.r, c = +el.dataset.c;
+            showTT(e, `<div class="tt-h">${filas[r]} · ${horas[c]}:00 a ${horas[c] + 1}:00</div>` + ttRow(null, 'Cortes promedio', matriz[r][c].toLocaleString('es-AR', { maximumFractionDigits: 1 })));
+            el.setAttribute('stroke', 'var(--ink)'); el.setAttribute('stroke-width', '1');
+        });
+        el.addEventListener('pointerleave', () => { hideTT(); el.removeAttribute('stroke'); });
+    });
+    $('heat-scale').innerHTML = 'Menos ' + RAMP.filter((_, i) => i % 2 === 0).map(c => `<i style="background:${c}"></i>`).join('') + ' Más';
+}
+
+function barrasH(host, rows, { fmt, extra, color = 'var(--s1)', max: topN = 12 } = {}) {
+    if (!rows.length) { host.innerHTML = '<div class="empty">Sin datos en este período</div>'; return; }
+    let lista = rows.slice().sort((a, b) => b.value - a.value);
+    if (lista.length > topN) {
+        const resto = lista.slice(topN - 1);
+        lista = lista.slice(0, topN - 1).concat([{ label: `Otros (${resto.length})`, value: resto.reduce((s, r) => s + r.value, 0),
+            extraVal: resto.reduce((s, r) => s + (r.extraVal || 0), 0), color: 'var(--other)' }]);
+    }
+    const max = Math.max(...lista.map(r => r.value)) || 1;
+    host.innerHTML = lista.map(r => `
+        <div class="hb">
+            <span class="hb-l" title="${esc(r.label)}">${r.dot ? `<i style="background:${r.dot}"></i>` : ''}${esc(r.label)}</span>
+            <div class="hb-t"><div class="hb-b" style="width:${Math.max(0.5, r.value / max * 100)}%;background:${r.color || color}"></div></div>
+            <span class="hb-v">${fmt(r.value)}${extra ? `<small>${extra(r)}</small>` : ''}</span>
+        </div>`).join('');
+}
+
+function tablaHTML(headers, rows) {
+    return `<div class="tbl-wrap"><table><thead><tr>${headers.map(h => `<th class="${h.num ? 'num' : ''}">${esc(h.t)}</th>`).join('')}</tr></thead><tbody>${
+        rows.map(r => `<tr>${r.map((c, i) => `<td class="${headers[i].num ? 'num' : ''}">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+
+// Cada tarjeta puede mostrar sus datos como tabla (accesible y para copiar)
+const tablas = {};
+function setTabla(cardId, headers, rows) {
+    tablas[cardId] = { headers, rows };
+    const card = $(cardId), cont = card.querySelector('.tbl-slot');
+    if (cont) cont.innerHTML = tablaHTML(headers, rows);
+}
+document.querySelectorAll('.card .tbl-btn').forEach(btn => btn.addEventListener('click', () => {
+    const card = btn.closest('.card');
+    let slot = card.querySelector('.tbl-slot');
+    if (slot) { slot.remove(); btn.textContent = 'Ver tabla'; return; }
+    slot = document.createElement('div'); slot.className = 'tbl-slot';
+    const t = tablas[card.id];
+    slot.innerHTML = t ? tablaHTML(t.headers, t.rows) : '';
+    card.appendChild(slot); btn.textContent = 'Ocultar tabla';
+}));
+
+function dibujar(cardId, fn) { drawers.set(cardId, fn); fn(); }
+
+/* =========================================================
+   Secciones
+   ========================================================= */
+function totales(F) {
+    const cortes = F.cuts.reduce((s, c) => s + c.price, 0);
+    const prods = F.ventas.filter(v => v.tipo === 'producto' && !v.regalo);
+    const bebs = F.ventas.filter(v => v.tipo === 'bebida' && !v.regalo);
+    const clientes = new Set(F.cuts.map(c => c.ck).filter(Boolean));
+    return {
+        cortes, nCortes: F.cuts.length,
+        productos: prods.reduce((s, v) => s + v.total, 0), uProductos: prods.reduce((s, v) => s + v.cantidad, 0),
+        bebidas: bebs.reduce((s, v) => s + v.total, 0), uBebidas: bebs.reduce((s, v) => s + v.cantidad, 0),
+        propinas: F.propinas.reduce((s, p) => s + p.monto, 0),
+        gastos: F.gastos.reduce((s, g) => s + g.monto, 0),
+        clientes: clientes.size,
+        clientesNuevos: F.cuts.filter(c => c.ck && c.primera).length,
+        turnos: F.turnos.length, turnosOnline: F.turnos.filter(t => t.origen === 'online').length,
+        diasTrabajados: new Set(F.cuts.map(c => c.fecha)).size,
+    };
+}
+
+function deltaHTML(act, prev, masEsMejor = true) {
+    if (prev == null || !(prev > 0)) return '';
+    const d = (act - prev) / prev * 100;
+    if (Math.abs(d) < 0.5) return `<div class="delta flat">= igual que el período anterior</div>`;
+    const up = d > 0, bueno = up === masEsMejor;
+    return `<div class="delta ${bueno ? 'up' : 'down'}">${up ? '▲' : '▼'} ${Math.abs(d).toFixed(0)}% vs período anterior</div>`;
+}
+
+function renderTiles(T, Tp) {
+    const facturacion = T.cortes + T.productos + T.bebidas;
+    const factPrev = Tp ? Tp.cortes + Tp.productos + Tp.bebidas : null;
+    const ticket = T.nCortes ? T.cortes / T.nCortes : 0;
+    const ticketPrev = Tp && Tp.nCortes ? Tp.cortes / Tp.nCortes : null;
+    const tile = (label, value, extra = '', delta = '', cls = '') =>
+        `<div class="tile ${cls}"><div class="label">${label}</div><div class="value" title="${esc(value)}">${value}</div>${delta}${extra ? `<div class="extra">${extra}</div>` : ''}</div>`;
+    $('tiles').innerHTML =
+        tile('Facturación total', money(facturacion), 'Cortes + productos + bebidas', deltaHTML(facturacion, factPrev), 'hero') +
+        tile('Cortes', num(T.nCortes), T.diasTrabajados ? `${(T.nCortes / T.diasTrabajados).toLocaleString('es-AR', { maximumFractionDigits: 1 })} por día trabajado` : '', deltaHTML(T.nCortes, Tp?.nCortes)) +
+        tile('Ticket promedio', money(ticket), 'Por corte', deltaHTML(ticket, ticketPrev)) +
+        tile('Facturación cortes', money(T.cortes), '', deltaHTML(T.cortes, Tp?.cortes)) +
+        tile('Productos', money(T.productos), `${num(T.uProductos)} unidades`, deltaHTML(T.productos, Tp?.productos)) +
+        tile('Bebidas', money(T.bebidas), `${num(T.uBebidas)} unidades`, deltaHTML(T.bebidas, Tp?.bebidas)) +
+        tile('Clientes distintos', num(T.clientes), 'Con nombre anotado', deltaHTML(T.clientes, Tp?.clientes)) +
+        tile('Clientes nuevos', num(T.clientesNuevos), 'Primera vez que se cortan', deltaHTML(T.clientesNuevos, Tp?.clientesNuevos)) +
+        tile('Turnos', num(T.turnos), T.turnos ? `${pct(T.turnosOnline, T.turnos)} reservados online` : '', deltaHTML(T.turnos, Tp?.turnos)) +
+        tile('Propinas', money(T.propinas), '', deltaHTML(T.propinas, Tp?.propinas)) +
+        tile('Gastos registrados', money(T.gastos), '', deltaHTML(T.gastos, Tp?.gastos, false));
+}
+
+function porBucket(B, items, msDe, valDe) {
+    const idx = new Map(B.keys.map((k, i) => [k, i]));
+    const out = new Array(B.keys.length).fill(0);
+    items.forEach(it => { const i = idx.get(B.keyOf(msDe(it))); if (i != null) out[i] += valDe(it); });
+    return out;
+}
+
+function renderIngresos(F, B) {
+    const series = [
+        { name: 'Cortes', color: 'var(--s1)', values: porBucket(B, F.cuts, c => c.t, c => c.price) },
+        { name: 'Productos', color: 'var(--s2)', values: porBucket(B, F.ventas.filter(v => v.tipo === 'producto' && !v.regalo), v => dayMs(v.fecha), v => v.total) },
+        { name: 'Bebidas', color: 'var(--s3)', values: porBucket(B, F.ventas.filter(v => v.tipo === 'bebida' && !v.regalo), v => dayMs(v.fecha), v => v.total) },
+    ];
+    const card = $('c-ingresos');
+    card.querySelector('.legend').innerHTML = legendHTML(series);
+    const labels = B.keys.map(B.label), largos = B.keys.map(B.largo);
+    dibujar('c-ingresos', () => columnas(card.querySelector('.chart'), { labels, largos, series, fmt: money }));
+    setTabla('c-ingresos', [{ t: B.semanal ? 'Semana' : 'Mes' }, { t: 'Cortes', num: 1 }, { t: 'Productos', num: 1 }, { t: 'Bebidas', num: 1 }, { t: 'Total', num: 1 }],
+        B.keys.map((k, i) => [largos[i], money(series[0].values[i]), money(series[1].values[i]), money(series[2].values[i]), money(series[0].values[i] + series[1].values[i] + series[2].values[i])]));
+
+    // Ticket promedio
+    const cnt = porBucket(B, F.cuts, c => c.t, () => 1);
+    const ticket = series[0].values.map((v, i) => cnt[i] ? v / cnt[i] : null);
+    dibujar('c-ticket', () => lineas($('c-ticket').querySelector('.chart'), { labels, largos, series: [{ name: 'Ticket promedio', color: 'var(--s1)', values: ticket }], fmt: money, h: 220 }));
+    setTabla('c-ticket', [{ t: B.semanal ? 'Semana' : 'Mes' }, { t: 'Cortes', num: 1 }, { t: 'Ticket promedio', num: 1 }],
+        B.keys.map((k, i) => [largos[i], num(cnt[i]), ticket[i] == null ? '—' : money(ticket[i])]));
+}
+
+function renderCortesBarbero(F, B) {
+    const presentes = BARBER_ORDEN.filter(b => F.cuts.some(c => c.barber === b));
+    const principales = presentes.filter(b => BARBER_COLOR[b] !== 'var(--other)');
+    const otros = presentes.filter(b => BARBER_COLOR[b] === 'var(--other)');
+    const recortar = vals => {
+        const a = vals.findIndex(v => v > 0), z = vals.length - 1 - [...vals].reverse().findIndex(v => v > 0);
+        return vals.map((v, i) => i < a || i > z ? null : v);
+    };
+    const series = principales.map(b => ({ name: b, color: BARBER_COLOR[b], values: recortar(porBucket(B, F.cuts.filter(c => c.barber === b), c => c.t, () => 1)) }));
+    if (otros.length) series.push({ name: 'Otros', color: 'var(--other)', values: porBucket(B, F.cuts.filter(c => otros.includes(c.barber)), c => c.t, () => 1) });
+    const card = $('c-cortes-barbero');
+    card.querySelector('.legend').innerHTML = legendHTML(series, 'line');
+    const labels = B.keys.map(B.label), largos = B.keys.map(B.largo);
+    if (!series.length) { card.querySelector('.chart').innerHTML = '<div class="empty">Sin cortes en este período</div>'; drawers.delete('c-cortes-barbero'); }
+    else dibujar('c-cortes-barbero', () => lineas(card.querySelector('.chart'), { labels, largos, series, fmt: v => num(v) + ' cortes', axisFmt: num }));
+    setTabla('c-cortes-barbero', [{ t: B.semanal ? 'Semana' : 'Mes' }, ...series.map(s => ({ t: s.name, num: 1 }))],
+        B.keys.map((k, i) => [largos[i], ...series.map(s => s.values[i] == null ? '—' : num(s.values[i]))]));
+}
+
+function renderHeat(F) {
+    const horasSet = F.cuts.map(c => new Date(c.t).getHours());
+    const card = $('c-heat');
+    if (!horasSet.length) { card.querySelector('.chart').innerHTML = '<div class="empty">Sin cortes en este período</div>'; $('heat-scale').innerHTML = ''; drawers.delete('c-heat'); return; }
+    const hMin = Math.max(7, minOf(horasSet)), hMax = Math.min(23, maxOf(horasSet));
+    const horas = []; for (let h = hMin; h <= hMax; h++) horas.push(h);
+    // Promedio = cortes en esa franja ÷ cantidad de ese día de la semana con actividad
+    const diasConActividad = [0, 0, 0, 0, 0, 0, 0];
+    new Set(F.cuts.map(c => c.fecha)).forEach(f => { diasConActividad[(new Date(f + 'T00:00:00').getDay() + 6) % 7]++; });
+    const tot = Array.from({ length: 7 }, () => new Array(horas.length).fill(0));
+    F.cuts.forEach(c => { const d = new Date(c.t), r = (d.getDay() + 6) % 7, col = d.getHours() - hMin; if (col >= 0 && col < horas.length) tot[r][col]++; });
+    const filasIdx = [0, 1, 2, 3, 4, 5, 6].filter(r => diasConActividad[r] > 0);
+    const matriz = filasIdx.map(r => tot[r].map(v => v / diasConActividad[r]));
+    dibujar('c-heat', () => heatmap(card.querySelector('.chart'), { matriz, filas: filasIdx.map(r => DIAS[r]), horas }));
+    setTabla('c-heat', [{ t: 'Día' }, { t: 'Días con actividad', num: 1 }, { t: 'Cortes promedio por día', num: 1 }, { t: 'Hora pico' }],
+        filasIdx.map((r, j) => {
+            const fila = matriz[j], pico = fila.indexOf(Math.max(...fila));
+            return [DIAS[r], num(diasConActividad[r]), (tot[r].reduce((a, b) => a + b, 0) / diasConActividad[r]).toLocaleString('es-AR', { maximumFractionDigits: 1 }), `${horas[pico]}:00`];
+        }));
+}
+
+function agrupar(items, keyFn, valFn, extraFn) {
+    const m = new Map();
+    items.forEach(it => {
+        const k = keyFn(it); if (!k) return;
+        const o = m.get(k) || { label: k, value: 0, extraVal: 0 };
+        o.value += valFn(it); o.extraVal += extraFn ? extraFn(it) : 0;
+        m.set(k, o);
+    });
+    return [...m.values()];
+}
+
+function renderServiciosBarberos(F) {
+    const serv = agrupar(F.cuts, c => c.service, () => 1, c => c.price);
+    barrasH($('c-servicios').querySelector('.chart'), serv, { fmt: v => num(v), extra: r => money(r.extraVal) });
+    setTabla('c-servicios', [{ t: 'Servicio' }, { t: 'Cortes', num: 1 }, { t: '% de cortes', num: 1 }, { t: 'Facturación', num: 1 }, { t: 'Precio promedio', num: 1 }],
+        serv.sort((a, b) => b.value - a.value).map(r => [r.label, num(r.value), pct(r.value, F.cuts.length), money(r.extraVal), money(r.extraVal / r.value)]));
+
+    const barb = agrupar(F.cuts, c => c.barber, c => c.price, () => 1).map(r => ({ ...r, dot: BARBER_COLOR[r.label], color: BARBER_COLOR[r.label] }));
+    barrasH($('c-barberos').querySelector('.chart'), barb, { fmt: money, extra: r => `${num(r.extraVal)} cortes` });
+    setTabla('c-barberos', [{ t: 'Barbero' }, { t: 'Cortes', num: 1 }, { t: 'Facturación', num: 1 }, { t: 'Ticket promedio', num: 1 }],
+        barb.sort((a, b) => b.value - a.value).map(r => [r.label, num(r.extraVal), money(r.value), money(r.value / r.extraVal)]));
+}
+
+function renderClientes(F, B, from, to) {
+    const conNombre = F.cuts.filter(c => c.ck);
+    const nuevos = conNombre.filter(c => c.primera), vuelven = conNombre.filter(c => !c.primera);
+    const clientesPeriodo = new Set(conNombre.map(c => c.ck));
+    const recurrentes = [...clientesPeriodo].filter(k => CLIENTES.get(k).visitas.filter(v => v.t >= from && v.t < to).length >= 2).length;
+    $('clientes-stats').innerHTML = `
+        <div><b>${pct(conNombre.length, F.cuts.length)}</b>cortes con nombre de cliente</div>
+        <div><b>${num(clientesPeriodo.size)}</b>clientes distintos</div>
+        <div><b>${num(nuevos.length)}</b>clientes nuevos</div>
+        <div><b>${pct(recurrentes, clientesPeriodo.size)}</b>vinieron 2+ veces en el período</div>`;
+    const series = [
+        { name: 'Vuelven', color: 'var(--s1)', values: porBucket(B, vuelven, c => c.t, () => 1) },
+        { name: 'Nuevos', color: 'var(--s2)', values: porBucket(B, nuevos, c => c.t, () => 1) },
+    ];
+    const card = $('c-clientes');
+    card.querySelector('.legend').innerHTML = legendHTML(series);
+    const labels = B.keys.map(B.label), largos = B.keys.map(B.largo);
+    dibujar('c-clientes', () => columnas(card.querySelector('.chart'), { labels, largos, series, fmt: v => num(v) + ' cortes', axisFmt: num, h: 210 }));
+    setTabla('c-clientes', [{ t: B.semanal ? 'Semana' : 'Mes' }, { t: 'Nuevos', num: 1 }, { t: 'Vuelven', num: 1 }],
+        B.keys.map((k, i) => [largos[i], num(series[1].values[i]), num(series[0].values[i])]));
+
+    // Top clientes del período
+    const top = [...clientesPeriodo].map(k => {
+        const cl = CLIENTES.get(k), vs = cl.visitas.filter(v => v.t >= from && v.t < to && (state.barber === 'todos' || v.barber === state.barber));
+        const porBarbero = {}; vs.forEach(v => { porBarbero[v.barber] = (porBarbero[v.barber] || 0) + 1; });
+        const fav = Object.keys(porBarbero).sort((a, b) => porBarbero[b] - porBarbero[a])[0] || '—';
+        return { nombre: cl.nombre, visitas: vs.length, gasto: vs.reduce((s, v) => s + v.price, 0), ultima: maxOf(vs.map(v => v.t)), fav };
+    }).filter(r => r.visitas > 0).sort((a, b) => b.visitas - a.visitas || b.gasto - a.gasto).slice(0, 20);
+    $('c-top-clientes').querySelector('.chart').innerHTML = top.length
+        ? tablaHTML([{ t: 'Cliente' }, { t: 'Visitas', num: 1 }, { t: 'Gastó', num: 1 }, { t: 'Última' }, { t: 'Barbero' }],
+            top.map(r => [r.nombre, num(r.visitas), money(r.gasto), fmtFecha(r.ultima), r.fav]))
+        : '<div class="empty">No hay cortes con nombre de cliente en este período</div>';
+
+    // Clientes que dejaron de venir (todo el historial)
+    const limite = Date.now() - 45 * DAY;
+    const perdidos = [...CLIENTES.values()].map(cl => {
+        const vs = state.barber === 'todos' ? cl.visitas : cl.visitas.filter(v => v.barber === state.barber);
+        return { nombre: cl.nombre, visitas: vs.length, ultima: vs.length ? vs[vs.length - 1].t : 0, gasto: vs.reduce((s, v) => s + v.price, 0), barber: vs.length ? vs[vs.length - 1].barber : '' };
+    }).filter(r => r.visitas >= 2 && r.ultima < limite).sort((a, b) => b.visitas - a.visitas || b.ultima - a.ultima).slice(0, 20);
+    $('c-perdidos').querySelector('.chart').innerHTML = perdidos.length
+        ? tablaHTML([{ t: 'Cliente' }, { t: 'Visitas', num: 1 }, { t: 'Última visita' }, { t: 'Días sin venir', num: 1 }, { t: 'Con' }],
+            perdidos.map(r => [r.nombre, num(r.visitas), fmtFecha(r.ultima), num((Date.now() - r.ultima) / DAY), r.barber]))
+        : '<div class="empty">Nadie en esta lista 🎉</div>';
+}
+
+function renderProductos(F) {
+    const prods = F.ventas.filter(v => v.tipo === 'producto' && !v.regalo);
+    const p = agrupar(prods, v => v.producto, v => v.cantidad, v => v.total);
+    barrasH($('c-productos').querySelector('.chart'), p, { fmt: v => num(v) + ' u.', extra: r => money(r.extraVal), color: 'var(--s2)' });
+    setTabla('c-productos', [{ t: 'Producto' }, { t: 'Unidades', num: 1 }, { t: 'Facturación', num: 1 }],
+        p.sort((a, b) => b.value - a.value).map(r => [r.label, num(r.value), money(r.extraVal)]));
+
+    const bebs = F.ventas.filter(v => v.tipo === 'bebida' && !v.regalo);
+    const b = agrupar(bebs, v => v.producto, v => v.cantidad, v => v.total);
+    barrasH($('c-bebidas').querySelector('.chart'), b, { fmt: v => num(v) + ' u.', extra: r => money(r.extraVal), color: 'var(--s3)' });
+    setTabla('c-bebidas', [{ t: 'Bebida' }, { t: 'Unidades', num: 1 }, { t: 'Facturación', num: 1 }],
+        b.sort((a, b2) => b2.value - a.value).map(r => [r.label, num(r.value), money(r.extraVal)]));
+
+    const pagos = agrupar(F.cuts, c => METODO[c.metodo] || c.metodo, c => c.price, () => 1);
+    const totalCortes = F.cuts.reduce((s, c) => s + c.price, 0);
+    barrasH($('c-pagos').querySelector('.chart'), pagos, { fmt: money, extra: r => pct(r.value, totalCortes) });
+    setTabla('c-pagos', [{ t: 'Método' }, { t: 'Cortes', num: 1 }, { t: 'Facturación', num: 1 }, { t: '%', num: 1 }],
+        pagos.sort((a, b2) => b2.value - a.value).map(r => [r.label, num(r.extraVal), money(r.value), pct(r.value, totalCortes)]));
+
+    const canal = agrupar(prods, v => v.canal === 'ml' ? 'MercadoLibre' : 'Local', v => v.total, v => v.cantidad);
+    const totalProds = prods.reduce((s, v) => s + v.total, 0);
+    barrasH($('c-canal').querySelector('.chart'), canal, { fmt: money, extra: r => `${num(r.extraVal)} u. · ${pct(r.value, totalProds)}`, color: 'var(--s2)' });
+    setTabla('c-canal', [{ t: 'Canal' }, { t: 'Unidades', num: 1 }, { t: 'Facturación', num: 1 }],
+        canal.map(r => [r.label, num(r.extraVal), money(r.value)]));
+
+    const g = agrupar(F.gastos, x => CAT_GASTO[x.categoria] || x.categoria, x => x.monto, () => 1);
+    barrasH($('c-gastos').querySelector('.chart'), g, { fmt: money, extra: r => `${num(r.extraVal)} gastos`, color: 'var(--s8)' });
+    setTabla('c-gastos', [{ t: 'Categoría' }, { t: 'Cantidad', num: 1 }, { t: 'Total', num: 1 }],
+        g.sort((a, b2) => b2.value - a.value).map(r => [r.label, num(r.extraVal), money(r.value)]));
+}
+
+function renderTurnos(F, B) {
+    const series = [
+        { name: 'Recepción', color: 'var(--s1)', values: porBucket(B, F.turnos.filter(t => t.origen !== 'online'), t => dayMs(t.fecha), () => 1) },
+        { name: 'Online', color: 'var(--s2)', values: porBucket(B, F.turnos.filter(t => t.origen === 'online'), t => dayMs(t.fecha), () => 1) },
+    ];
+    const card = $('c-turnos');
+    card.querySelector('.legend').innerHTML = legendHTML(series);
+    const labels = B.keys.map(B.label), largos = B.keys.map(B.largo);
+    if (!F.turnos.length) { card.querySelector('.chart').innerHTML = '<div class="empty">Sin turnos en este período</div>'; drawers.delete('c-turnos'); }
+    else dibujar('c-turnos', () => columnas(card.querySelector('.chart'), { labels, largos, series, fmt: v => num(v) + ' turnos', axisFmt: num, h: 200 }));
+    setTabla('c-turnos', [{ t: B.semanal ? 'Semana' : 'Mes' }, { t: 'Recepción', num: 1 }, { t: 'Online', num: 1 }],
+        B.keys.map((k, i) => [largos[i], num(series[0].values[i]), num(series[1].values[i])]));
+}
+
+function renderCobertura() {
+    const fila = (nombre, fechas) => {
+        const ms = fechas.filter(Boolean);
+        return [nombre, num(ms.length), ms.length ? fmtFecha(minOf(ms)) : '—', ms.length ? fmtFecha(maxOf(ms)) : '—'];
+    };
+    $('c-cobertura').querySelector('.chart').innerHTML = tablaHTML(
+        [{ t: 'Qué' }, { t: 'Registros', num: 1 }, { t: 'Primer registro' }, { t: 'Último registro' }],
+        [
+            fila('Cortes', D.cuts.map(c => c.t)),
+            fila('Cortes con nombre de cliente', D.cuts.filter(c => c.ck).map(c => c.t)),
+            fila('Ventas de productos', D.ventas.filter(v => v.tipo === 'producto').map(v => dayMs(v.fecha))),
+            fila('Ventas de bebidas', D.ventas.filter(v => v.tipo === 'bebida').map(v => dayMs(v.fecha))),
+            fila('Gastos', D.gastos.map(g => dayMs(g.fecha))),
+            fila('Propinas', D.propinas.map(p => dayMs(p.fecha))),
+            fila('Turnos', D.turnos.map(t => dayMs(t.fecha))),
+        ]);
+}
+
+function renderAll() {
+    document.querySelectorAll('#filters .chip').forEach(ch => ch.classList.toggle('on', ch.dataset.p === state.periodo));
+    const { from, to } = rangoActual();
+    $('f-desde').value = new Date(from).toLocaleDateString('en-CA');
+    $('f-hasta').value = new Date(to - 1).toLocaleDateString('en-CA');
+    $('range-label').textContent = `${fmtFecha(from)} → ${fmtFecha(to - 1)}${state.barber !== 'todos' ? ' · ' + state.barber : ''}`;
+    const B = makeBuckets(from, to);
+    document.querySelectorAll('.bk-name').forEach(el => { el.textContent = B.semanal ? 'semana' : 'mes'; });
+    const F = filtrar(from, to);
+    const T = totales(F);
+    const Tp = state.periodo === 'todo' ? null : totales(filtrar(from - (to - from), from));
+    renderTiles(T, Tp);
+    renderIngresos(F, B);
+    renderCortesBarbero(F, B);
+    renderHeat(F);
+    renderServiciosBarberos(F);
+    renderClientes(F, B, from, to);
+    renderProductos(F);
+    renderTurnos(F, B);
+    renderCobertura();
+    // Refrescar tablas abiertas
+    document.querySelectorAll('.card .tbl-slot').forEach(slot => {
+        const t = tablas[slot.closest('.card').id];
+        slot.innerHTML = t ? tablaHTML(t.headers, t.rows) : '';
+    });
+}
+
+let rzT = null;
+new ResizeObserver(() => { clearTimeout(rzT); rzT = setTimeout(() => drawers.forEach(fn => fn()), 120); }).observe(document.querySelector('main'));
+
+/* =========================================================
+   Exportar a Excel (una hoja por tipo de dato + resumen mensual)
+   ========================================================= */
+function loadScript(src) {
+    return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+}
+$('btn-export').addEventListener('click', async () => {
+    const btn = $('btn-export'), txt = btn.querySelector('.txt').textContent;
+    btn.disabled = true; btn.querySelector('.txt').textContent = 'Armando…';
+    try {
+        if (!window.XLSX) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+        const { from, to } = rangoActual();
+        const F = filtrar(from, to);
+        const fh = ms => new Date(ms);
+        const cortes = F.cuts.slice().sort((a, b) => a.t - b.t).map(c => ({
+            Fecha: c.fecha, Hora: fh(c.t).toTimeString().slice(0, 5), Dia: DIAS[(fh(c.t).getDay() + 6) % 7],
+            Barbero: c.barber, Servicio: c.service, Precio: c.price, 'Método de pago': METODO[c.metodo] || c.metodo,
+            Cliente: c.cliente, 'Cliente nuevo': c.ck ? (c.primera ? 'Sí' : 'No') : '' }));
+        const ventas = F.ventas.slice().sort((a, b) => a.fecha.localeCompare(b.fecha)).map(v => ({
+            Fecha: v.fecha, Tipo: v.tipo === 'bebida' ? 'Bebida' : 'Producto', Producto: v.producto, Cantidad: v.cantidad, Total: v.total,
+            Canal: v.canal === 'ml' ? 'MercadoLibre' : 'Local', 'Método de pago': v.metodo, 'Vendido por': v.barbero, Regalo: v.regalo ? 'Sí' : '' }));
+        const gastos = F.gastos.slice().sort((a, b) => a.fecha.localeCompare(b.fecha)).map(g => ({
+            Fecha: g.fecha, Categoría: CAT_GASTO[g.categoria] || g.categoria, Descripción: g.descripcion, Monto: g.monto, 'Método de pago': g.metodo }));
+        const propinas = F.propinas.slice().sort((a, b) => a.fecha.localeCompare(b.fecha)).map(p => ({ Fecha: p.fecha, Barbero: p.barbero, Monto: p.monto }));
+        const turnos = F.turnos.slice().sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora)).map(t => ({
+            Fecha: t.fecha, Hora: t.hora, Barbero: t.barbero, Servicio: t.servicio, Estado: t.estado, Origen: t.origen === 'online' ? 'Online' : 'Recepción' }));
+        // Resumen mensual (siempre por mes, sirve para comparar y graficar en Excel)
+        const MB = { keys: [], keyOf: monthKey };
+        { const d = new Date(from); d.setDate(1); while (d.getTime() < to) { MB.keys.push(monthKey(d.getTime())); d.setMonth(d.getMonth() + 1); } }
+        const idx = k => MB.keys.indexOf(k);
+        const res = MB.keys.map(k => ({ Mes: k, Cortes: 0, 'Facturación cortes': 0, 'Ticket promedio': 0, Productos: 0, Bebidas: 0, Gastos: 0, Propinas: 0, 'Clientes nuevos': 0, Turnos: 0 }));
+        F.cuts.forEach(c => { const r = res[idx(monthKey(c.t))]; if (!r) return; r.Cortes++; r['Facturación cortes'] += c.price; if (c.ck && c.primera) r['Clientes nuevos']++; });
+        F.ventas.filter(v => !v.regalo).forEach(v => { const r = res[idx(v.fecha.slice(0, 7))]; if (r) r[v.tipo === 'bebida' ? 'Bebidas' : 'Productos'] += v.total; });
+        F.gastos.forEach(g => { const r = res[idx(g.fecha.slice(0, 7))]; if (r) r.Gastos += g.monto; });
+        F.propinas.forEach(p => { const r = res[idx(p.fecha.slice(0, 7))]; if (r) r.Propinas += p.monto; });
+        F.turnos.forEach(t => { const r = res[idx(t.fecha.slice(0, 7))]; if (r) r.Turnos++; });
+        res.forEach(r => { r['Ticket promedio'] = r.Cortes ? Math.round(r['Facturación cortes'] / r.Cortes) : 0; });
+
+        const wb = XLSX.utils.book_new();
+        const hoja = (rows, nombre) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ '(sin datos)': '' }]), nombre);
+        hoja(res, 'Resumen mensual');
+        hoja(cortes, 'Cortes');
+        hoja(ventas, 'Ventas');
+        hoja(gastos, 'Gastos');
+        hoja(propinas, 'Propinas');
+        hoja(turnos, 'Turnos');
+        const f = ms => new Date(ms).toLocaleDateString('en-CA');
+        XLSX.writeFile(wb, `sb-barber-estadisticas_${f(from)}_a_${f(to - 1)}${state.barber !== 'todos' ? '_' + state.barber : ''}.xlsx`);
+    } catch (err) { console.error(err); alert('No se pudo armar el Excel'); }
+    btn.disabled = false; btn.querySelector('.txt').textContent = txt;
+});
+
+/* =========================================================
+   Sesión
+   ========================================================= */
+async function arrancar(forzarTodo = false) {
+    show('app', false); show('data-loading', true);
+    try {
+        await cargarTodo(forzarTodo);
+        show('data-loading', false); show('app', true);
+        renderAll();
+    } catch (err) {
+        console.error(err);
+        $('load-msg').textContent = 'No se pudieron cargar los datos: ' + (err?.message || err);
+    }
+}
+
+$('btn-refresh').addEventListener('click', () => arrancar(false));
+$('btn-logout').addEventListener('click', () => signOut(auth));
+
+$('login-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    $('login-error').classList.add('hidden');
+    try {
+        await signInWithEmailAndPassword(auth, $('login-email').value.trim(), $('login-password').value);
+    } catch {
+        $('login-error').textContent = 'Correo o contraseña incorrectos.';
+        $('login-error').classList.remove('hidden');
+    }
+});
+
+onAuthStateChanged(auth, user => {
+    show('auth-loading', false);
+    if (!user || user.isAnonymous) { show('app', false); show('data-loading', false); show('login-view', true); return; }
+    if (!ADMINS.includes(user.email)) {
+        signOut(auth);
+        $('login-error').textContent = 'Esta cuenta no tiene acceso a las estadísticas.';
+        $('login-error').classList.remove('hidden');
+        return;
+    }
+    show('login-view', false);
+    arrancar(false);
+});
+</script>
+</body>
+</html>
