@@ -342,6 +342,9 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
+                            <button id="btn-expand-bebidas" onclick="window.openBebidasPanel()" title="Ver todas en pantalla completa" class="hidden md:flex w-8 h-8 rounded-lg bg-white/5 border border-white/10 items-center justify-center text-gray-400 hover:text-cyan-400 transition">
+                                <i class="fas fa-expand text-xs"></i>
+                            </button>
                             <button id="btn-historial-stock" onclick="window.openHistorialStock()" title="Historial de movimientos" class="hidden w-8 h-8 rounded-lg bg-white/5 border border-white/10 items-center justify-center text-gray-400 hover:text-cyan-400 transition">
                                 <i class="fas fa-clock-rotate-left text-xs"></i>
                             </button>
@@ -1648,6 +1651,7 @@ async function init() {
         if (btn && await customConfirm('¿Eliminar este corte?')) {
             const id = btn.dataset.id;
             allCuts = allCuts.map(c => c.id === id ? {...c, eliminado: true} : c);
+            for (const f in cortesPorDia) cortesPorDia[f] = cortesPorDia[f].map(c => c.id === id ? {...c, eliminado: true} : c);
             renderCuts();
             await updateDoc(doc(db, PATH_CUTS, id), { eliminado: true });
         }
@@ -1678,11 +1682,36 @@ window.switchTab = (tab, el) => {
 };
 
 // ---- CORTES ----
+// En vivo: todos los cortes desde el lunes de esta semana (si hoy es lunes, desde ayer), sin límite.
+// Antes era limit(200) y en semanas cargadas el cierre semanal y el desafío contaban de menos.
+// Los días más viejos que se elijan en el dashboard o en el cierre diario se traen a demanda.
+let liveCuts = [], liveCutsDesde = null;
+const cortesPorDia = {}; // 'YYYY-MM-DD' -> cortes de días fuera de la ventana en vivo
+function mergeCuts() {
+    const ids = new Set(liveCuts.map(c => c.id));
+    allCuts = [...liveCuts, ...Object.values(cortesPorDia).flat().filter(c => !ids.has(c.id))];
+}
+async function cargarCortesDelDia(fecha, rerender) {
+    const inicio = new Date(fecha + 'T00:00:00');
+    if (!liveCutsDesde || inicio >= liveCutsDesde || cortesPorDia[fecha]) return;
+    const fin = new Date(inicio); fin.setDate(fin.getDate() + 1);
+    try {
+        const snap = await getDocs(query(collection(db, PATH_CUTS), where('createdAt', '>=', inicio), where('createdAt', '<', fin)));
+        cortesPorDia[fecha] = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        mergeCuts();
+        rerender();
+    } catch (err) { console.error('cargarCortesDelDia error:', err); }
+}
 function listenToCuts() {
+    const desde = new Date(); desde.setHours(0, 0, 0, 0);
+    const wd = desde.getDay() || 7;
+    desde.setDate(desde.getDate() - Math.max(wd - 1, 1));
+    liveCutsDesde = desde;
     onSnapshot(
-        query(collection(db, PATH_CUTS), orderBy('createdAt', 'desc'), limit(200)),
+        query(collection(db, PATH_CUTS), where('createdAt', '>=', desde), orderBy('createdAt', 'desc')),
         snap => {
-            allCuts = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+            liveCuts = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+            mergeCuts();
             renderCuts();
             renderChallengeSummary();
             if (!document.getElementById('cierre-caja-view').classList.contains('hidden')) renderCierreCaja();
@@ -1723,6 +1752,7 @@ window.setDashboardFecha = (value) => {
     const hoyStr = new Date().toLocaleDateString('en-CA');
     dashboardFechaSel = value === hoyStr ? null : value;
     updateDashFechaUI(); renderCuts(); renderVentas();
+    cargarCortesDelDia(value, () => { if (dashboardFechaSel === value) { renderCuts(); renderVentas(); } });
 };
 
 // Desafío semanal (mismo de "anotar"): 35 cortes en la semana en curso = $25.000 extra.
@@ -1979,6 +2009,7 @@ document.getElementById('add-cut-form').addEventListener('submit', async e => {
 
 // ---- STOCK ----
 let stockSortable = null;
+let bebidasExpandida = false; // true mientras la tarjeta está en el panel a pantalla completa
 
 function initSortable() {
     if (stockSortable) { try { stockSortable.destroy(); } catch(e) {} }
@@ -2026,6 +2057,50 @@ function renderStock() {
     const list = document.getElementById('stock-list');
     if (allStock.length === 0) {
         list.innerHTML = '<p class="text-xs text-gray-600 text-center py-4">No hay bebidas cargadas aún</p>';
+        return;
+    }
+    // Pantalla completa: grilla compacta para ver todas sin scrollear
+    list.className = bebidasExpandida
+        ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2'
+        : 'space-y-2';
+    if (bebidasExpandida) {
+        list.innerHTML = allStock.map(item => {
+            const qty = item.quantity || 0;
+            const isLow = qty <= 2;
+            const qtyColor = qty === 0 ? 'text-red-400' : isLow ? 'text-yellow-400' : 'text-cyan-300';
+            const border = isLow ? 'border-red-500/40 stock-low' : 'border-cyan-500/10';
+            const thumb = item.photoURL
+                ? `<img src="${item.photoURL}" class="w-9 h-9 rounded-lg object-cover flex-shrink-0 ${isAdmin ? 'cursor-pointer' : ''}" ${isAdmin ? `onclick="window.openEditPhoto('${item.id}','${item.name}')"` : ''}>`
+                : `<div class="w-9 h-9 rounded-lg bg-cyan-900/30 flex items-center justify-center flex-shrink-0 ${isAdmin ? 'cursor-pointer hover:bg-cyan-900/60 transition' : ''}" ${isAdmin ? `onclick="window.openEditPhoto('${item.id}','${item.name}')"` : ''}><i class="fas fa-wine-bottle text-cyan-600 text-xs"></i></div>`;
+            const deleteBtn = isAdmin
+                ? `<button onclick="window.deleteStockItem('${item.id}')" class="absolute top-1 right-1 w-6 h-6 rounded-md flex items-center justify-center text-gray-600 hover:text-red-400 transition"><i class="fas fa-trash text-[10px]"></i></button>`
+                : '';
+            return `
+            <div data-stock-id="${item.id}" class="relative flex flex-col gap-2 bg-black/30 p-2.5 rounded-xl border ${border}">
+                ${deleteBtn}
+                <div class="flex items-center gap-2 min-w-0 ${isAdmin ? 'pr-5' : ''}">
+                    <div class="drag-handle text-gray-600 hover:text-gray-400 transition select-none"><i class="fas fa-grip-vertical text-xs"></i></div>
+                    ${thumb}
+                    <div class="min-w-0">
+                        <div class="text-xs font-bold text-white leading-tight line-clamp-2">${item.name}</div>
+                        ${item.price ? `<div class="text-[10px] text-gray-500">$${Number(item.price).toLocaleString('es-AR')}</div>` : ''}
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <button onclick="window.openMovement('${item.id}','${item.name}','venta')" class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 hover:bg-red-600/40 transition">
+                        <i class="fas fa-minus text-xs"></i>
+                    </button>
+                    <div class="text-center">
+                        <div class="${qtyColor} font-bold text-xl leading-none">${qty}</div>
+                        <div class="text-[9px] ${qty === 0 ? 'text-red-500 font-bold' : isLow ? 'text-yellow-500 font-bold' : 'text-gray-600'}">${qty === 0 ? 'sin stock' : isLow ? 'bajo' : 'unid.'}</div>
+                    </div>
+                    <button onclick="window.openMovement('${item.id}','${item.name}','compra')" class="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 hover:bg-emerald-600/40 transition">
+                        <i class="fas fa-plus text-xs"></i>
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
+        initSortable();
         return;
     }
     list.innerHTML = allStock.map(item => {
@@ -3058,6 +3133,9 @@ window.setCierreCajaFecha = (value) => {
     const hoyStr = new Date().toLocaleDateString('en-CA');
     cierreCajaFechaSel = value === hoyStr ? null : value;
     updateCierreCajaFechaUI(); renderCierreCaja();
+    cargarCortesDelDia(value, () => {
+        if (cierreCajaFechaSel === value && cierreCajaTab === 'diario' && !document.getElementById('cierre-caja-view').classList.contains('hidden')) renderCierreCaja();
+    });
 };
 
 window.openCierreCaja = () => {
@@ -4057,19 +4135,26 @@ window.closeStockProductosPanel = () => {
 // ---- PANEL STOCK BEBIDAS (mobile) ----
 // En desktop la tarjeta de bebidas queda siempre inline (ver #bebidas-card, hidden md:block).
 // En mobile se reutiliza el mismo elemento moviéndolo dentro de este panel a pantalla completa.
+// En desktop el botón de expandir usa el mismo panel. Dentro del panel la lista se pinta en grilla.
 window.openBebidasPanel = () => {
     const card = document.getElementById('bebidas-card');
     document.getElementById('bebidas-panel-body').appendChild(card);
     card.classList.remove('hidden');
+    document.getElementById('btn-expand-bebidas').style.display = 'none';
     const p = document.getElementById('bebidas-panel');
     p.classList.remove('hidden'); p.classList.add('flex', 'flex-col');
+    bebidasExpandida = true;
+    renderStock();
 };
 window.closeBebidasPanel = () => {
     const card = document.getElementById('bebidas-card');
     document.getElementById('bebidas-card-anchor').after(card);
     card.classList.add('hidden');
+    document.getElementById('btn-expand-bebidas').style.display = '';
     const p = document.getElementById('bebidas-panel');
     p.classList.add('hidden'); p.classList.remove('flex', 'flex-col');
+    bebidasExpandida = false;
+    renderStock();
 };
 
 // ---- CONTEO FÍSICO DE BEBIDAS ----
