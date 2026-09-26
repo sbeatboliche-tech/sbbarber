@@ -117,6 +117,12 @@
     .lista-acciones { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:10px; }
     .lista-acciones .sub { margin-left:auto; }
     .buscar-cliente { flex:1 1 220px; max-width:360px; padding:8px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink); font-size:13px; font-family:inherit; }
+    /* Vista "Clientes" (#clientes): solo la lista, a pantalla completa */
+    body.solo-clientes main > .filters, body.solo-clientes main > .tiles,
+    body.solo-clientes main > .grid > :not(#c-lista-nombres) { display:none !important; }
+    body.solo-clientes main > .grid { margin-top:0 !important; }
+    body.solo-clientes .lista-clientes { max-height:none; }
+    body.solo-clientes #btn-export { display:none; }
     .lista-clientes { max-height:360px; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:2px 16px; border:1px solid var(--border); border-radius:10px; padding:6px 10px; }
     .cli-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--grid); font-size:13px; min-width:0; }
     .cli-nombre { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -184,6 +190,7 @@
                 <div><h1>SB BARBER</h1><span>Estadísticas</span></div>
             </div>
             <div class="top-actions">
+                <a class="btn" id="btn-vista" href="#clientes" title="Ver y editar la lista de clientes"><span aria-hidden="true">👥</span><span class="txt">Clientes</span></a>
                 <button class="btn" id="btn-refresh" title="Traer lo último"><span aria-hidden="true">↻</span><span class="txt">Actualizar</span></button>
                 <button class="btn primary" id="btn-export" title="Descargar el período elegido en Excel"><span aria-hidden="true">⬇</span><span class="txt">Descargar Excel</span></button>
                 <button class="btn" id="btn-logout" title="Salir">Salir</button>
@@ -1143,6 +1150,20 @@ async function arrancar(forzarTodo = false) {
 
 $('btn-refresh').addEventListener('click', () => arrancar(false));
 
+// #clientes = solo la lista de clientes (acceso directo desde recepcionista)
+function aplicarVista() {
+    const solo = location.hash === '#clientes';
+    document.body.classList.toggle('solo-clientes', solo);
+    $('btn-vista').href = solo ? '#' : '#clientes';
+    $('btn-vista').querySelector('.txt').textContent = solo ? 'Estadísticas' : 'Clientes';
+    $('btn-vista').querySelector('[aria-hidden]').textContent = solo ? '📊' : '👥';
+    document.querySelector('.brand span').textContent = solo ? 'Clientes' : 'Estadísticas';
+    if (D.clientes.length || D.cuts.length) renderListaClientes();
+    window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', aplicarVista);
+aplicarVista();
+
 /* =========================================================
    Lista de clientes (colección `clientes`, la que usa el buscador
    de recepcionista/anotar al anotar un corte)
@@ -1186,7 +1207,7 @@ function renderListaClientes() {
     const activos = D.clientes.filter(c => !c.eliminado);
     const q = normNombre($('buscar-cliente').value);
     const lista = activos.filter(c => !q || c.n.includes(q)).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
-    const MAX = 300;
+    const MAX = document.body.classList.contains('solo-clientes') ? 5000 : 300;
     $('lista-total').textContent = `${num(activos.length)} clientes${q ? ` · ${num(lista.length)} coinciden` : ''}`;
     $('lista-clientes').innerHTML = lista.length
         ? lista.slice(0, MAX).map(c => {
