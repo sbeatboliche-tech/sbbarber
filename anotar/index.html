@@ -634,7 +634,7 @@
                     <input type="hidden" id="svc-price">
                 </div>
                 <!-- Cliente -->
-                <input type="text" id="client-name" placeholder="Nombre, aspecto o detalles del cliente"
+                <input type="text" id="client-name" placeholder="Nombre del cliente"
                     class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-blue-500/60 focus:bg-blue-500/5 outline-none transition text-white placeholder-gray-600 text-sm no-select">
                 <!-- Propina -->
                 <div class="flex items-center gap-3 px-4 py-3 bg-yellow-500/5 rounded-2xl border border-yellow-500/20">
@@ -949,7 +949,8 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment, where, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initClientes, pickerCliente, resolverCliente, limpiarCliente } from "../assets/clientes.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -1131,6 +1132,7 @@ function init() {
                 listenToPropinas();
                 listenToVentas();
                 listenToAnotarTurnos();
+                initClientes(db, { collection, query, where, getDocs, doc, setDoc, serverTimestamp }, () => currentUser?.email);
                 startDualSync();
             }
         } else {
@@ -2318,7 +2320,7 @@ window.openAddModal = () => {
     document.getElementById('services-grid').innerHTML = '';
     document.getElementById('svc-name').value = '';
     document.getElementById('svc-price').value = '';
-    document.getElementById('client-name').value = '';
+    limpiarCliente(document.getElementById('client-name'));
     document.getElementById('cut-propina').value = '';
     document.getElementById('cut-monto-efectivo').value = '';
     document.getElementById('cut-monto-transferencia').value = '';
@@ -2369,13 +2371,14 @@ document.getElementById('login-form').addEventListener('submit', async e=>{
     catch{ alert('Error de acceso'); }
     btn.disabled=false; btn.innerHTML='INGRESAR';
 });
+pickerCliente(document.getElementById('client-name'));
+
 document.getElementById('add-form').addEventListener('submit', async e=>{
     e.preventDefault();
     const btn=document.getElementById('btn-submit-cut');
     const barber=document.querySelector('input[name="barber"]:checked')?.value;
     const serviceName=document.getElementById('svc-name').value;
     const servicePrice=Number(document.getElementById('svc-price').value);
-    const clientName=document.getElementById('client-name').value.trim();
     const propinaMonto=Number(document.getElementById('cut-propina').value)||0;
     if(!barber||!serviceName) return alert('Selecciona barbero y servicio');
     let montoEfectivo=null, montoTransferencia=null;
@@ -2386,8 +2389,9 @@ document.getElementById('add-form').addEventListener('submit', async e=>{
     }
     btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
     try{
+        const {clienteId,clientName}=resolverCliente(document.getElementById('client-name'));
         const hoy=new Date().toLocaleDateString('en-CA');
-        const cutData={barber,service:serviceName,price:servicePrice,clientName,userEmail:currentUser.email,metodoPago:cutMetodoPago,createdAt:serverTimestamp()};
+        const cutData={barber,service:serviceName,price:servicePrice,clientName,clienteId,userEmail:currentUser.email,metodoPago:cutMetodoPago,createdAt:serverTimestamp()};
         if(cutMetodoPago==='mixto'){ cutData.montoEfectivo=montoEfectivo; cutData.montoTransferencia=montoTransferencia; }
         await addDoc(collection(db,PATH_MAIN),cutData);
         if(propinaMonto>0){
@@ -2395,7 +2399,8 @@ document.getElementById('add-form').addEventListener('submit', async e=>{
         }
         window.closeModals();
         document.getElementById('add-form').reset();
-        ['svc-name','svc-price','client-name','cut-propina','cut-monto-efectivo','cut-monto-transferencia'].forEach(id=>document.getElementById(id).value='');
+        limpiarCliente(document.getElementById('client-name'));
+        ['svc-name','svc-price','cut-propina','cut-monto-efectivo','cut-monto-transferencia'].forEach(id=>document.getElementById(id).value='');
         window.setCutPago('efectivo');
         document.querySelectorAll('.svc-card').forEach(c=>c.className='svc-card text-left p-4 bg-white/5 border-2 border-transparent rounded-2xl cursor-pointer transition-all duration-150 hover:bg-white/8 active:scale-[0.97] no-select');
     } catch{ alert('Error al guardar'); }

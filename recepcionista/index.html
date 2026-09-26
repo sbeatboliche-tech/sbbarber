@@ -1415,6 +1415,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signInAnonymously, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, orderBy, where, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, getDoc, doc, increment, serverTimestamp, limit, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initClientes, pickerCliente, resolverCliente, limpiarCliente } from "../assets/clientes.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -1637,6 +1638,7 @@ async function init() {
                 listenToMenuData();
                 listenToPrecios();
                 listenToChecklist();
+                initClientes(db, { collection, query, where, getDocs, doc, setDoc, serverTimestamp }, () => currentUser?.email);
             }
         } else {
             _listenersAttached = false;
@@ -1903,7 +1905,7 @@ window.openAddCutModal = () => {
     document.getElementById('services-grid').innerHTML = '';
     document.getElementById('svc-name').value = '';
     document.getElementById('svc-price').value = '';
-    document.getElementById('client-name').value = '';
+    limpiarCliente(document.getElementById('client-name'));
     document.getElementById('metodo-pago').value = 'efectivo';
     document.getElementById('mp-monto-efectivo').value = '';
     document.getElementById('mp-monto-transferencia').value = '';
@@ -1983,7 +1985,6 @@ document.getElementById('add-cut-form').addEventListener('submit', async e => {
     const barber = document.querySelector('input[name="barber"]:checked')?.value;
     const serviceName = document.getElementById('svc-name').value;
     const servicePrice = Number(document.getElementById('svc-price').value);
-    const clientName = document.getElementById('client-name').value.trim();
     const propinaAmt = Number(document.getElementById('propina-monto').value) || 0;
     if (!barber || !serviceName) return alert('Seleccioná barbero y servicio');
     const metodoPago = document.getElementById('metodo-pago').value || 'efectivo';
@@ -1996,10 +1997,11 @@ document.getElementById('add-cut-form').addEventListener('submit', async e => {
     const btn = document.getElementById('btn-submit-cut');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
+        const { clienteId, clientName } = resolverCliente(document.getElementById('client-name'));
         const hoy = new Date().toLocaleDateString('en-CA');
         const cutData = {
             barber, service: serviceName, price: servicePrice,
-            clientName, metodoPago, userEmail: currentUser.email, createdAt: serverTimestamp()
+            clientName, clienteId, metodoPago, userEmail: currentUser.email, createdAt: serverTimestamp()
         };
         if (metodoPago === 'mixto') { cutData.montoEfectivo = montoEfectivo; cutData.montoTransferencia = montoTransferencia; }
         await addDoc(collection(db, PATH_CUTS), cutData);
@@ -5068,6 +5070,8 @@ document.getElementById('nuevo-turno-form').addEventListener('submit', async e =
     btn.disabled = false; btn.textContent = 'Guardar turno';
 });
 
+
+pickerCliente(document.getElementById('client-name'));
 
 // ---- BARBEROS DINÁMICOS ----
 async function listenToBarberos() {
