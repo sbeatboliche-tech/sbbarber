@@ -642,6 +642,10 @@
                     <input type="number" id="cut-propina" placeholder="Propina (opcional)" min="0"
                         class="flex-1 bg-transparent outline-none text-white placeholder-yellow-700/60 text-sm no-select">
                 </div>
+                <label class="flex items-center gap-3 px-4 py-3 -mt-1 rounded-2xl bg-white/5 border border-white/10 cursor-pointer no-select">
+                    <input type="checkbox" id="cut-propina-afecta-caja" checked class="w-5 h-5 accent-yellow-500">
+                    <span class="text-sm text-gray-300 font-semibold">Que la propina afecte al cierre de caja de hoy</span>
+                </label>
                 <!-- Método de pago -->
                 <div>
                     <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">Método de pago</p>
@@ -2322,6 +2326,7 @@ window.openAddModal = () => {
     document.getElementById('svc-price').value = '';
     limpiarCliente(document.getElementById('client-name'));
     document.getElementById('cut-propina').value = '';
+    document.getElementById('cut-propina-afecta-caja').checked = true;
     document.getElementById('cut-monto-efectivo').value = '';
     document.getElementById('cut-monto-transferencia').value = '';
     window.setCutPago('efectivo');
@@ -2380,6 +2385,7 @@ document.getElementById('add-form').addEventListener('submit', async e=>{
     const serviceName=document.getElementById('svc-name').value;
     const servicePrice=Number(document.getElementById('svc-price').value);
     const propinaMonto=Number(document.getElementById('cut-propina').value)||0;
+    const propinaAfectaCaja=document.getElementById('cut-propina-afecta-caja').checked;
     if(!barber||!serviceName) return alert('Selecciona barbero y servicio');
     let montoEfectivo=null, montoTransferencia=null;
     if(cutMetodoPago==='mixto'){
@@ -2395,12 +2401,13 @@ document.getElementById('add-form').addEventListener('submit', async e=>{
         if(cutMetodoPago==='mixto'){ cutData.montoEfectivo=montoEfectivo; cutData.montoTransferencia=montoTransferencia; }
         await addDoc(collection(db,PATH_MAIN),cutData);
         if(propinaMonto>0){
-            await addDoc(collection(db,PATH_PROPINAS),{barbero:barber,userEmail:currentUser.email,monto:propinaMonto,descripcion:`Propina corte${clientName?' — '+clientName:''}`,origen:'corte',metodoPago:cutMetodoPago==='transferencia'?'transferencia':'efectivo',fecha:hoy,estado:'confirmado',creadoEn:serverTimestamp()});
+            await addDoc(collection(db,PATH_PROPINAS),{barbero:barber,userEmail:currentUser.email,monto:propinaMonto,descripcion:`Propina corte${clientName?' — '+clientName:''}`,origen:'corte',metodoPago:cutMetodoPago==='transferencia'?'transferencia':'efectivo',...(propinaAfectaCaja?{}:{afectaCaja:false}),fecha:hoy,estado:'confirmado',creadoEn:serverTimestamp()});
         }
         window.closeModals();
         document.getElementById('add-form').reset();
         limpiarCliente(document.getElementById('client-name'));
         ['svc-name','svc-price','cut-propina','cut-monto-efectivo','cut-monto-transferencia'].forEach(id=>document.getElementById(id).value='');
+        document.getElementById('cut-propina-afecta-caja').checked=true;
         window.setCutPago('efectivo');
         document.querySelectorAll('.svc-card').forEach(c=>c.className='svc-card text-left p-4 bg-white/5 border-2 border-transparent rounded-2xl cursor-pointer transition-all duration-150 hover:bg-white/8 active:scale-[0.97] no-select');
     } catch{ alert('Error al guardar'); }

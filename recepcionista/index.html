@@ -854,6 +854,10 @@
                             class="w-full pl-8 pr-4 py-3.5 bg-yellow-500/5 rounded-2xl border border-yellow-500/20 focus:border-yellow-500/50 outline-none transition text-white placeholder-gray-600 text-sm">
                     </div>
                     <p class="text-[10px] text-gray-600 ml-1 mt-1.5">Se suma al retiro del barbero asignado · queda pendiente de aprobación</p>
+                    <label class="flex items-center gap-3 mt-2 p-3 rounded-xl bg-black/30 border border-gray-700 cursor-pointer select-none">
+                        <input type="checkbox" id="propina-afecta-caja" checked class="w-5 h-5 accent-yellow-500">
+                        <span class="text-sm text-gray-300 font-semibold">Que la propina afecte al cierre de caja de hoy</span>
+                    </label>
                 </div>
                 <button type="submit" id="btn-submit-cut"
                     class="w-full bg-gradient-to-r from-cyan-500 to-teal-500 text-white py-4 rounded-2xl font-extrabold text-base shadow-lg shadow-cyan-900/40 uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all">
@@ -1931,6 +1935,7 @@ window.openAddCutModal = () => {
     document.getElementById('svc-price').value = '';
     limpiarCliente(document.getElementById('client-name'));
     document.getElementById('metodo-pago').value = 'efectivo';
+    document.getElementById('propina-afecta-caja').checked = true;
     document.getElementById('mp-monto-efectivo').value = '';
     document.getElementById('mp-monto-transferencia').value = '';
     const sec = document.getElementById('services-section');
@@ -2010,6 +2015,7 @@ document.getElementById('add-cut-form').addEventListener('submit', async e => {
     const serviceName = document.getElementById('svc-name').value;
     const servicePrice = Number(document.getElementById('svc-price').value);
     const propinaAmt = Number(document.getElementById('propina-monto').value) || 0;
+    const propinaAfectaCaja = document.getElementById('propina-afecta-caja').checked;
     if (!barber || !serviceName) return alert('Seleccioná barbero y servicio');
     const metodoPago = document.getElementById('metodo-pago').value || 'efectivo';
     let montoEfectivo = null, montoTransferencia = null;
@@ -2035,6 +2041,7 @@ document.getElementById('add-cut-form').addEventListener('submit', async e => {
                 estado: 'pendiente',
                 descripcion: clientName ? `Propina de ${clientName}` : 'Propina de cliente',
                 origen: 'corte', metodoPago: metodoPago === 'transferencia' ? 'transferencia' : 'efectivo',
+                ...(propinaAfectaCaja ? {} : { afectaCaja: false }),
                 userEmail: currentUser.email, creadoEn: serverTimestamp()
             });
         }
@@ -3402,9 +3409,10 @@ function splitPorCierre1(list, tsField, horaCierre1) {
 }
 // Propinas cargadas junto con un corte (origen:'corte'): esa plata entra a la caja con el corte.
 // Las propinas sueltas que carga el barbero desde anotar no pasan por la caja y no se cuentan.
+// Tampoco las cargadas sin el tilde "Que afecte al cierre de caja de hoy" (afectaCaja:false).
 // Sin metodoPago se toma como efectivo.
 function propinasCajaDelDia(desde, hasta) {
-    return allPropinas.filter(p => p.origen === 'corte' && !p.eliminado && p.estado !== 'rechazado' && p.creadoEn && p.creadoEn.toDate() >= desde && p.creadoEn.toDate() < hasta);
+    return allPropinas.filter(p => p.origen === 'corte' && p.afectaCaja !== false && !p.eliminado && p.estado !== 'rechazado' && p.creadoEn && p.creadoEn.toDate() >= desde && p.creadoEn.toDate() < hasta);
 }
 const propinaEfectivoDe = list => list.filter(p => p.metodoPago !== 'transferencia').reduce((s, p) => s + (p.monto || 0), 0);
 const propinaTransferenciaDe = list => list.filter(p => p.metodoPago === 'transferencia').reduce((s, p) => s + (p.monto || 0), 0);
