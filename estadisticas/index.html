@@ -191,8 +191,6 @@
     <main>
         <div class="filters" id="filters">
             <button class="chip" data-p="todo">Todo</button>
-            <button class="chip" data-p="12m">Últimos 12 meses</button>
-            <button class="chip" data-p="90d">Últimos 90 días</button>
             <button class="chip" data-p="anio">Este año</button>
             <button class="chip" data-p="anioPasado">Año pasado</button>
             <span class="sep"></span>
@@ -537,8 +535,6 @@ function rangoActual() {
 function rangoElegido() {
     const h0 = hoy0(), manana = addDays(h0, 1);
     switch (state.periodo) {
-        case '12m':  return { from: addDays(h0, -364), to: manana };
-        case '90d':  return { from: addDays(h0, -89), to: manana };
         case 'anio': return { from: new Date(new Date().getFullYear(), 0, 1).getTime(), to: manana };
         case 'anioPasado': { const y = new Date().getFullYear(); return { from: new Date(y - 1, 0, 1).getTime(), to: new Date(y, 0, 1).getTime() }; }
         case 'custom': return { from: state.desde, to: addDays(state.hasta, 1) };
