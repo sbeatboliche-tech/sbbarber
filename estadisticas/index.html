@@ -335,7 +335,7 @@ const DAY = 864e5;
    Así no se gasta la cuota gratis de Firebase en cada visita.
    ========================================================= */
 const REFRESH_DIAS = 45;
-const CACHE_V = 2; // subir si cambia lo que guardan los norm* (fuerza a bajar todo de nuevo)
+const CACHE_V = 3; // subir si cambia lo que guardan los norm* (fuerza a bajar todo de nuevo)
 const tsMs = v => v == null ? null
     : typeof v.toMillis === 'function' ? v.toMillis()
     : typeof v === 'string' ? (Date.parse(v) || null)
@@ -356,7 +356,7 @@ const normVenta = (id, x) => {
     const t = tsMs(x.creadoEn);
     return { id, _ts: t, t, fecha: x.fecha || fechaDe(t), producto: String(x.producto || '—').trim(), cantidad: Number(x.cantidad) || 1,
         total: Number(x.total) || 0, tipo: x.tipo === 'bebida' ? 'bebida' : 'producto', canal: x.canal === 'ml' ? 'ml' : 'local',
-        metodo: x.metodoPago || '', barbero: x.barbero || '', regalo: !!x.esRegalo, eliminado: !!x.eliminado };
+        metodo: x.metodoPago || '', barbero: x.barbero || '', regalo: !!x.esRegalo, precio: Number(x.precio) || 0, eliminado: !!x.eliminado };
 };
 const normGasto = (id, x) => {
     const t = tsMs(x.creadoEn);
@@ -430,14 +430,17 @@ const D = { cuts: [], ventas: [], gastos: [], propinas: [], turnos: [], clientes
 let primeraFecha = { };
 let INICIO = 0; // día en que arrancó la app (ver calcularInicio)
 
-// Inicio real: el primer día desde el que hay movimiento seguido (10+ cortes en 7 días).
-// Lo anterior son registros sueltos, de prueba o con la fecha mal cargada.
+let DESCARTADOS = { cortes: 0, monto: 0 }; // lo anterior al inicio (se muestra en Cobertura)
+
+// Inicio real: el primer día del primer mes con 10+ cortes. Lo anterior son registros
+// sueltos, de prueba o con la fecha mal cargada (ej. años viejos).
 function calcularInicio(cuts) {
-    const ts = cuts.map(c => c.t).sort((a, b) => a - b);
-    const i = ts.findIndex((t, j) => j + 9 < ts.length && ts[j + 9] - t <= 7 * DAY);
-    const d = new Date(ts.length ? ts[Math.max(i, 0)] : Date.now());
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
+    const porMes = new Map();
+    cuts.forEach(c => { const k = monthKey(c.t); porMes.set(k, (porMes.get(k) || 0) + 1); });
+    const mes = [...porMes.keys()].sort().find(k => porMes.get(k) >= 10) || [...porMes.keys()].sort()[0];
+    if (!mes) return hoy0();
+    const [y, m] = mes.split('-');
+    return new Date(+y, +m - 1, 1).getTime();
 }
 
 async function cargarTodo(forzarTodo = false) {
@@ -456,6 +459,8 @@ async function cargarTodo(forzarTodo = false) {
     D.turnos = res.turnos.filter(t => t.fecha);
     D.clientes = res.clientes.filter(c => c.n);
     INICIO = calcularInicio(D.cuts);
+    const antes = D.cuts.filter(c => c.t < INICIO);
+    DESCARTADOS = { cortes: antes.length, monto: antes.reduce((s, c) => s + c.price, 0) };
     D.cuts = D.cuts.filter(c => c.t >= INICIO);
     ['ventas', 'gastos', 'propinas', 'turnos'].forEach(k => { D[k] = D[k].filter(x => dayMs(x.fecha) >= INICIO); });
     D.cuts.forEach(c => { c.fecha = fechaDe(c.t); });
@@ -774,7 +779,10 @@ function totales(F) {
     const prods = F.ventas.filter(v => v.tipo === 'producto' && !v.regalo);
     const bebs = F.ventas.filter(v => v.tipo === 'bebida' && !v.regalo);
     const clientes = new Set(F.cuts.map(c => c.ck).filter(Boolean));
+    const regaladas = F.ventas.filter(v => v.tipo === 'bebida' && v.regalo);
     return {
+        uRegaladas: regaladas.reduce((s, v) => s + v.cantidad, 0),
+        regaladas: regaladas.reduce((s, v) => s + v.precio * v.cantidad, 0), // lo que valían (no entra en la facturación)
         cortes, nCortes: F.cuts.length,
         productos: prods.reduce((s, v) => s + v.total, 0), uProductos: prods.reduce((s, v) => s + v.cantidad, 0),
         bebidas: bebs.reduce((s, v) => s + v.total, 0), uBebidas: bebs.reduce((s, v) => s + v.cantidad, 0),
@@ -812,6 +820,7 @@ function renderTiles(T, Tp) {
         tile('Facturación cortes', money(T.cortes), '', deltaHTML(T.cortes, Tp?.cortes)) +
         tile('Productos', money(T.productos), `${num(T.uProductos)} unidades`, deltaHTML(T.productos, Tp?.productos)) +
         tile('Bebidas', money(T.bebidas), `${num(T.uBebidas)} unidades`, deltaHTML(T.bebidas, Tp?.bebidas)) +
+        tile('Bebidas regaladas', num(T.uRegaladas), T.regaladas ? `Valen ${money(T.regaladas)} · no suman a la facturación` : 'No suman a la facturación', deltaHTML(T.uRegaladas, Tp?.uRegaladas, false)) +
         tile('Clientes distintos', num(T.clientes), 'Con nombre anotado', deltaHTML(T.clientes, Tp?.clientes)) +
         tile('Clientes nuevos', num(T.clientesNuevos), 'Primera vez que se cortan', deltaHTML(T.clientesNuevos, Tp?.clientesNuevos)) +
         tile('Turnos', num(T.turnos), T.turnos ? `${pct(T.turnosOnline, T.turnos)} reservados online` : '', deltaHTML(T.turnos, Tp?.turnos)) +
@@ -1015,6 +1024,8 @@ function renderCobertura() {
             fila('Gastos', D.gastos.map(g => dayMs(g.fecha))),
             fila('Propinas', D.propinas.map(p => dayMs(p.fecha))),
             fila('Turnos', D.turnos.map(t => dayMs(t.fecha))),
+            ['Se cuenta desde', '', fmtFecha(INICIO), ''],
+            ['Cortes anteriores (no se cuentan)', num(DESCARTADOS.cortes), DESCARTADOS.cortes ? money(DESCARTADOS.monto) : '—', ''],
         ]);
 }
 
