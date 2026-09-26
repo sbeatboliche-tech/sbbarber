@@ -636,6 +636,10 @@
                 <!-- Cliente -->
                 <input type="text" id="client-name" placeholder="Nombre del cliente"
                     class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-blue-500/60 focus:bg-blue-500/5 outline-none transition text-white placeholder-gray-600 text-sm no-select">
+                <label class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5 border border-white/10 cursor-pointer no-select">
+                    <input type="checkbox" id="cut-afecta-caja" checked class="w-5 h-5 accent-cyan-500">
+                    <span class="text-sm text-gray-300 font-semibold">Que el corte afecte al cierre de caja <span class="block text-[10px] text-gray-500 font-normal">Destildalo si no pagó (lo regala SB)</span></span>
+                </label>
                 <!-- Propina -->
                 <div class="flex items-center gap-3 px-4 py-3 bg-yellow-500/5 rounded-2xl border border-yellow-500/20">
                     <i class="fas fa-coins text-yellow-400 text-sm flex-shrink-0"></i>
@@ -2324,6 +2328,7 @@ window.openAddModal = () => {
     limpiarCliente(document.getElementById('client-name'));
     document.getElementById('cut-propina').value = '';
     document.getElementById('cut-propina-afecta-caja').checked = true;
+    document.getElementById('cut-afecta-caja').checked = true;
     document.getElementById('cut-monto-efectivo').value = '';
     document.getElementById('cut-monto-transferencia').value = '';
     window.setCutPago('efectivo');
@@ -2396,6 +2401,7 @@ document.getElementById('add-form').addEventListener('submit', async e=>{
         const hoy=new Date().toLocaleDateString('en-CA');
         const cutData={barber,service:serviceName,price:servicePrice,clientName,clienteId,userEmail:currentUser.email,metodoPago:cutMetodoPago,createdAt:serverTimestamp()};
         if(cutMetodoPago==='mixto'){ cutData.montoEfectivo=montoEfectivo; cutData.montoTransferencia=montoTransferencia; }
+        if(!document.getElementById('cut-afecta-caja').checked) cutData.afectaCaja=false;   // lo regala SB: cuenta para el barbero, no entra plata
         await addDoc(collection(db,PATH_MAIN),cutData);
         if(propinaMonto>0){
             await addDoc(collection(db,PATH_PROPINAS),{barbero:barber,userEmail:currentUser.email,monto:propinaMonto,descripcion:`Propina corte${clientName?' — '+clientName:''}`,origen:'corte',metodoPago:cutMetodoPago==='transferencia'?'transferencia':'efectivo',...(propinaAfectaCaja?{}:{afectaCaja:false}),fecha:hoy,estado:'confirmado',creadoEn:serverTimestamp()});
@@ -2405,6 +2411,7 @@ document.getElementById('add-form').addEventListener('submit', async e=>{
         limpiarCliente(document.getElementById('client-name'));
         ['svc-name','svc-price','cut-propina','cut-monto-efectivo','cut-monto-transferencia'].forEach(id=>document.getElementById(id).value='');
         document.getElementById('cut-propina-afecta-caja').checked=true;
+        document.getElementById('cut-afecta-caja').checked=true;
         window.setCutPago('efectivo');
         document.querySelectorAll('.svc-card').forEach(c=>c.className='svc-card text-left p-4 bg-white/5 border-2 border-transparent rounded-2xl cursor-pointer transition-all duration-150 hover:bg-white/8 active:scale-[0.97] no-select');
     } catch{ alert('Error al guardar'); }
@@ -2955,10 +2962,12 @@ function ccDetalleRows(cortesX, bebidaX, prodX, gastoX, row) {
 }
 
 function cutCashAmount(c) {
+    if (c.afectaCaja === false) return 0;   // corte regalado por SB: no entra plata a la caja
     if (c.metodoPago === 'mixto') return c.montoEfectivo || 0;
     return c.metodoPago === 'transferencia' ? 0 : (c.price || 0);
 }
 function cutTransferAmount(c) {
+    if (c.afectaCaja === false) return 0;   // corte regalado por SB: no entra plata a la caja
     if (c.metodoPago === 'mixto') return c.montoTransferencia || 0;
     return c.metodoPago === 'transferencia' ? (c.price || 0) : 0;
 }
@@ -2978,7 +2987,7 @@ function renderCierreDia() {
     // (esConsumoStaff — eso resta de lo que se le paga al barbero, no de la caja).
     const ventasProductos = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo);
 
-    const totalCortes    = cuts.reduce((s, c) => s + (c.price || 0), 0);
+    const totalCortes    = cuts.filter(c => c.afectaCaja !== false).reduce((s, c) => s + (c.price || 0), 0);
     const cortesEfectivo = cuts.reduce((s, c) => s + cutCashAmount(c), 0);
     const cortesTransferencia = cuts.reduce((s, c) => s + cutTransferAmount(c), 0);
     // Detalle de qué compone Efectivo/Transferencia: bebidas de cliente aparte de otros productos.
@@ -3202,7 +3211,7 @@ function renderCierreSemana() {
     });
     const ventasProductos = ventasSemana.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo);
 
-    const totalCortes    = cuts.reduce((s, c) => s + (c.price || 0), 0);
+    const totalCortes    = cuts.filter(c => c.afectaCaja !== false).reduce((s, c) => s + (c.price || 0), 0);
     const totalComm      = cuts.reduce((s, c) => s + c.price*(barberCommissions[c.barber]||0.5), 0);
     const bizNet         = totalCortes - totalComm;
     const totalProductos = ventasProductos.reduce((s, v) => s + (v.total || 0), 0);
