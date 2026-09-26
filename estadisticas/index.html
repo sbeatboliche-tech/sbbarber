@@ -235,7 +235,7 @@
                 <div class="legend"></div><div class="chart"></div>
             </div>
             <div class="card" id="c-top-clientes">
-                <div class="card-h"><div><h2>Mejores clientes</h2><div class="sub">Por cantidad de visitas en el período</div></div></div>
+                <div class="card-h"><div><h2>Mejores clientes</h2><div class="sub">Por cantidad de visitas en el período</div></div><button class="tbl-btn" id="btn-importar-clientes" title="Carga los nombres ya anotados en el buscador de clientes al anotar un corte">Pasar nombres al buscador</button></div>
                 <div class="chart"></div>
             </div>
             <div class="card" id="c-perdidos">
@@ -281,7 +281,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, getDocs, query, where, doc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -309,6 +309,7 @@ const DAY = 864e5;
    Así no se gasta la cuota gratis de Firebase en cada visita.
    ========================================================= */
 const REFRESH_DIAS = 45;
+const CACHE_V = 2; // subir si cambia lo que guardan los norm* (fuerza a bajar todo de nuevo)
 const tsMs = v => v == null ? null
     : typeof v.toMillis === 'function' ? v.toMillis()
     : typeof v === 'string' ? (Date.parse(v) || null)
@@ -319,8 +320,12 @@ const fechaDe = ms => ms == null ? null : new Date(ms).toLocaleDateString('en-CA
 const normCut = (id, x) => {
     const t = tsMs(x.createdAt);
     return { id, _ts: t, t, barber: x.barber || '—', service: String(x.service || '—').trim(), price: Number(x.price) || 0,
-        metodo: x.metodoPago || 'sin dato', cliente: String(x.clientName || '').trim(), eliminado: !!x.eliminado };
+        metodo: x.metodoPago || 'sin dato', cliente: String(x.clientName || '').trim(), eliminado: !!x.eliminado,
+        montoTransf: Number(x.montoTransferencia) || 0 };
 };
+// Lo que entró por transferencia (en mixto, solo esa parte; ventas de ML no cuentan)
+const transfCorte = c => c.metodo === 'transferencia' ? c.price : c.metodo === 'mixto' ? c.montoTransf : 0;
+const transfVenta = v => v.canal !== 'ml' && v.metodo === 'transferencia' ? v.total : 0;
 const normVenta = (id, x) => {
     const t = tsMs(x.creadoEn);
     return { id, _ts: t, t, fecha: x.fecha || fechaDe(t), producto: String(x.producto || '—').trim(), cantidad: Number(x.cantidad) || 1,
@@ -374,7 +379,8 @@ async function cacheSet(key, val) {
 }
 
 async function syncFuente(f, forzarTodo) {
-    const cached = forzarTodo ? null : await cacheGet(f.key);
+    let cached = forzarTodo ? null : await cacheGet(f.key);
+    if (cached && cached.v !== CACHE_V) cached = null;
     const ahora = Date.now();
     let docs;
     if (!cached || !f.tf) {
@@ -388,12 +394,23 @@ async function syncFuente(f, forzarTodo) {
         // Lo viejo se conserva; lo de la ventana se reemplaza por lo que devolvió el server (si se borró, desaparece)
         docs = cached.docs.filter(d => !ids.has(d.id) && (d._ts == null || d._ts < desde.getTime())).concat(nuevos);
     }
-    await cacheSet(f.key, { syncedAt: ahora, docs });
+    await cacheSet(f.key, { v: CACHE_V, syncedAt: ahora, docs });
     return docs;
 }
 
 const D = { cuts: [], ventas: [], gastos: [], propinas: [], turnos: [] };
 let primeraFecha = { };
+let INICIO = 0; // día en que arrancó la app (ver calcularInicio)
+
+// Inicio real: el primer día desde el que hay movimiento seguido (10+ cortes en 7 días).
+// Lo anterior son registros sueltos, de prueba o con la fecha mal cargada.
+function calcularInicio(cuts) {
+    const ts = cuts.map(c => c.t).sort((a, b) => a - b);
+    const i = ts.findIndex((t, j) => j + 9 < ts.length && ts[j + 9] - t <= 7 * DAY);
+    const d = new Date(ts.length ? ts[Math.max(i, 0)] : Date.now());
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+}
 
 async function cargarTodo(forzarTodo = false) {
     const res = {};
@@ -409,6 +426,9 @@ async function cargarTodo(forzarTodo = false) {
     D.gastos = res.gastos.filter(g => !g.eliminado && g.fecha);
     D.propinas = res.propinas.filter(p => !p.eliminado && p.fecha && p.estado !== 'rechazado');
     D.turnos = res.turnos.filter(t => t.fecha);
+    INICIO = calcularInicio(D.cuts);
+    D.cuts = D.cuts.filter(c => c.t >= INICIO);
+    ['ventas', 'gastos', 'propinas', 'turnos'].forEach(k => { D[k] = D[k].filter(x => dayMs(x.fecha) >= INICIO); });
     D.cuts.forEach(c => { c.fecha = fechaDe(c.t); });
     prepararClientes();
     prepararBarberos();
@@ -477,7 +497,12 @@ function prepararClientes() {
    ========================================================= */
 const state = { periodo: 'todo', desde: null, hasta: null, barber: 'todos' };
 
+// Nada antes del día en que arrancó la app
 function rangoActual() {
+    const r = rangoElegido();
+    return { from: Math.max(r.from, INICIO), to: Math.max(r.to, INICIO + DAY) };
+}
+function rangoElegido() {
     const h0 = hoy0(), manana = addDays(h0, 1);
     switch (state.periodo) {
         case '12m':  return { from: addDays(h0, -364), to: manana };
@@ -485,11 +510,7 @@ function rangoActual() {
         case 'anio': return { from: new Date(new Date().getFullYear(), 0, 1).getTime(), to: manana };
         case 'anioPasado': { const y = new Date().getFullYear(); return { from: new Date(y - 1, 0, 1).getTime(), to: new Date(y, 0, 1).getTime() }; }
         case 'custom': return { from: state.desde, to: addDays(state.hasta, 1) };
-        default: {
-            // "Todo": desde el primer registro de cualquier cosa
-            const from = new Date(Math.min(h0, minOf(D.cuts.map(c => c.t)), minOf(D.ventas.map(v => dayMs(v.fecha))), minOf(D.gastos.map(g => dayMs(g.fecha))))); from.setHours(0, 0, 0, 0);
-            return { from: from.getTime(), to: manana };
-        }
+        default: return { from: INICIO, to: manana }; // "Todo": desde que arrancó la app
     }
 }
 
@@ -731,6 +752,8 @@ function totales(F) {
         bebidas: bebs.reduce((s, v) => s + v.total, 0), uBebidas: bebs.reduce((s, v) => s + v.cantidad, 0),
         propinas: F.propinas.reduce((s, p) => s + p.monto, 0),
         gastos: F.gastos.reduce((s, g) => s + g.monto, 0),
+        transfCortes: F.cuts.reduce((s, c) => s + transfCorte(c), 0),
+        transfVentas: prods.concat(bebs).reduce((s, v) => s + transfVenta(v), 0),
         clientes: clientes.size,
         clientesNuevos: F.cuts.filter(c => c.ck && c.primera).length,
         turnos: F.turnos.length, turnosOnline: F.turnos.filter(t => t.origen === 'online').length,
@@ -756,6 +779,7 @@ function renderTiles(T, Tp) {
     $('tiles').innerHTML =
         tile('Facturación total', money(facturacion), 'Cortes + productos + bebidas', deltaHTML(facturacion, factPrev), 'hero') +
         tile('Cortes', num(T.nCortes), T.diasTrabajados ? `${(T.nCortes / T.diasTrabajados).toLocaleString('es-AR', { maximumFractionDigits: 1 })} por día trabajado` : '', deltaHTML(T.nCortes, Tp?.nCortes)) +
+        tile('Facturado en transferencia', money(T.transfCortes + T.transfVentas), `${pct(T.transfCortes + T.transfVentas, facturacion)} del total · cortes ${money(T.transfCortes)}`, deltaHTML(T.transfCortes + T.transfVentas, Tp ? Tp.transfCortes + Tp.transfVentas : null)) +
         tile('Ticket promedio', money(ticket), 'Por corte', deltaHTML(ticket, ticketPrev)) +
         tile('Facturación cortes', money(T.cortes), '', deltaHTML(T.cortes, Tp?.cortes)) +
         tile('Productos', money(T.productos), `${num(T.uProductos)} unidades`, deltaHTML(T.productos, Tp?.productos)) +
@@ -969,6 +993,10 @@ function renderCobertura() {
 function renderAll() {
     document.querySelectorAll('#filters .chip').forEach(ch => ch.classList.toggle('on', ch.dataset.p === state.periodo));
     const { from, to } = rangoActual();
+    const min = new Date(INICIO).toLocaleDateString('en-CA');
+    $('f-desde').min = $('f-hasta').min = min;
+    // "Año pasado" solo si la app ya estaba el año pasado
+    document.querySelector('#filters .chip[data-p="anioPasado"]').hidden = INICIO >= new Date(new Date().getFullYear(), 0, 1).getTime();
     $('f-desde').value = new Date(from).toLocaleDateString('en-CA');
     $('f-hasta').value = new Date(to - 1).toLocaleDateString('en-CA');
     $('range-label').textContent = `${fmtFecha(from)} → ${fmtFecha(to - 1)}${state.barber !== 'todos' ? ' · ' + state.barber : ''}`;
@@ -976,7 +1004,8 @@ function renderAll() {
     document.querySelectorAll('.bk-name').forEach(el => { el.textContent = B.semanal ? 'semana' : 'mes'; });
     const F = filtrar(from, to);
     const T = totales(F);
-    const Tp = state.periodo === 'todo' ? null : totales(filtrar(from - (to - from), from));
+    // Sin comparación si el período anterior cae antes de que arrancara la app
+    const Tp = state.periodo === 'todo' || from - (to - from) < INICIO ? null : totales(filtrar(from - (to - from), from));
     renderTiles(T, Tp);
     renderIngresos(F, B);
     renderCortesBarbero(F, B);
@@ -1026,9 +1055,9 @@ $('btn-export').addEventListener('click', async () => {
         const MB = { keys: [], keyOf: monthKey };
         { const d = new Date(from); d.setDate(1); while (d.getTime() < to) { MB.keys.push(monthKey(d.getTime())); d.setMonth(d.getMonth() + 1); } }
         const idx = k => MB.keys.indexOf(k);
-        const res = MB.keys.map(k => ({ Mes: k, Cortes: 0, 'Facturación cortes': 0, 'Ticket promedio': 0, Productos: 0, Bebidas: 0, Gastos: 0, Propinas: 0, 'Clientes nuevos': 0, Turnos: 0 }));
-        F.cuts.forEach(c => { const r = res[idx(monthKey(c.t))]; if (!r) return; r.Cortes++; r['Facturación cortes'] += c.price; if (c.ck && c.primera) r['Clientes nuevos']++; });
-        F.ventas.filter(v => !v.regalo).forEach(v => { const r = res[idx(v.fecha.slice(0, 7))]; if (r) r[v.tipo === 'bebida' ? 'Bebidas' : 'Productos'] += v.total; });
+        const res = MB.keys.map(k => ({ Mes: k, Cortes: 0, 'Facturación cortes': 0, 'Ticket promedio': 0, Productos: 0, Bebidas: 0, Transferencia: 0, Gastos: 0, Propinas: 0, 'Clientes nuevos': 0, Turnos: 0 }));
+        F.cuts.forEach(c => { const r = res[idx(monthKey(c.t))]; if (!r) return; r.Cortes++; r['Facturación cortes'] += c.price; r.Transferencia += transfCorte(c); if (c.ck && c.primera) r['Clientes nuevos']++; });
+        F.ventas.filter(v => !v.regalo).forEach(v => { const r = res[idx(v.fecha.slice(0, 7))]; if (r) { r[v.tipo === 'bebida' ? 'Bebidas' : 'Productos'] += v.total; r.Transferencia += transfVenta(v); } });
         F.gastos.forEach(g => { const r = res[idx(g.fecha.slice(0, 7))]; if (r) r.Gastos += g.monto; });
         F.propinas.forEach(p => { const r = res[idx(p.fecha.slice(0, 7))]; if (r) r.Propinas += p.monto; });
         F.turnos.forEach(t => { const r = res[idx(t.fecha.slice(0, 7))]; if (r) r.Turnos++; });
@@ -1064,6 +1093,34 @@ async function arrancar(forzarTodo = false) {
 }
 
 $('btn-refresh').addEventListener('click', () => arrancar(false));
+
+// Crea en `clientes` los nombres del historial que todavía no están, para que el buscador
+// de recepcionista/anotar los sugiera. Se puede tocar más de una vez: solo agrega los que faltan.
+$('btn-importar-clientes').addEventListener('click', async () => {
+    const btn = $('btn-importar-clientes');
+    btn.disabled = true; btn.textContent = 'Revisando…';
+    try {
+        const snap = await getDocs(collection(db, 'clientes'));
+        const ya = new Set(snap.docs.map(d => d.data().n || normNombre(d.data().nombre || '')));
+        // El nombre como se escribió la última vez
+        const faltan = [...CLIENTES].filter(([k]) => !ya.has(k)).map(([k, cl]) => ({ n: k, nombre: cl.visitas[cl.visitas.length - 1].cliente }));
+        if (!faltan.length) { alert('Todos los nombres ya están en el buscador.'); return; }
+        if (!confirm(`Se van a agregar ${num(faltan.length)} nombres al buscador de clientes. ¿Seguir?`)) return;
+        for (let i = 0; i < faltan.length; i += 400) {
+            const b = writeBatch(db);
+            faltan.slice(i, i + 400).forEach(c => b.set(doc(collection(db, 'clientes')),
+                { nombre: c.nombre, n: c.n, creadoEn: serverTimestamp(), creadoPor: auth.currentUser?.email || null, origen: 'historial' }));
+            await b.commit();
+            btn.textContent = `Guardando… ${num(Math.min(i + 400, faltan.length))}/${num(faltan.length)}`;
+        }
+        alert(`Listo: ${num(faltan.length)} nombres agregados.`);
+    } catch (err) {
+        console.error(err);
+        alert('No se pudieron guardar los nombres: ' + (err?.message || err));
+    } finally {
+        btn.disabled = false; btn.textContent = 'Pasar nombres al buscador';
+    }
+});
 $('btn-logout').addEventListener('click', () => signOut(auth));
 
 $('login-form').addEventListener('submit', async e => {
