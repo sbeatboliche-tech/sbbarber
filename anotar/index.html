@@ -840,10 +840,10 @@
                     <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Monto</label>
                     <input type="number" id="retiro-manual-monto" placeholder="Ej: 26000" min="1" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-violet-500 outline-none transition text-white placeholder-gray-500 mt-1">
                 </div>
-                <div>
-                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Fecha</label>
-                    <input type="date" id="retiro-manual-fecha" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-violet-500 outline-none transition text-white mt-1">
-                </div>
+                <label class="flex items-center gap-3 p-4 rounded-xl bg-black/30 border border-gray-700 cursor-pointer no-select">
+                    <input type="checkbox" id="retiro-manual-no-caja" class="w-5 h-5 accent-violet-500">
+                    <span class="text-sm text-gray-300 font-semibold">Que no cuente al cierre de caja</span>
+                </label>
                 <button type="submit" id="btn-submit-retiro-manual" class="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest">Confirmar</button>
             </form>
         </div>
@@ -1476,12 +1476,8 @@ window.rejectItem = async (path, id) => {
 const BARBER_NAME_TO_EMAIL = Object.fromEntries(Object.entries(BARBER_EMAIL_MAP).map(([k,v])=>[v,k]));
 
 window.openRetiroManualModal = () => {
-    const today = new Date();
-    const wd = today.getDay() || 7;
-    const ws = new Date(today);
-    if (wd !== 1) ws.setDate(today.getDate() - (wd - 1));
-    document.getElementById('retiro-manual-fecha').value = ws.toLocaleDateString('en-CA');
     document.getElementById('retiro-manual-monto').value = '';
+    document.getElementById('retiro-manual-no-caja').checked = false;
     // Poblar barberos dinámicamente (incluye los agregados nuevos) + FEME
     document.getElementById('retiro-manual-barbero').innerHTML =
         '<option value="">Seleccioná un barbero</option>'
@@ -1495,12 +1491,13 @@ document.getElementById('retiro-manual-form').addEventListener('submit', async e
     const btn = document.getElementById('btn-submit-retiro-manual');
     const barbero = document.getElementById('retiro-manual-barbero').value;
     const monto = parseInt(document.getElementById('retiro-manual-monto').value);
-    const fecha = document.getElementById('retiro-manual-fecha').value;
-    if (!barbero || !monto || !fecha) return;
+    const fecha = new Date().toLocaleDateString('en-CA');   // el momento del retiro
+    if (!barbero || !monto) return;
     btn.disabled = true; btn.textContent = 'Guardando...';
     try {
         await addDoc(collection(db, PATH_RETIROS), {
             barbero, monto, fecha,
+            ...(document.getElementById('retiro-manual-no-caja').checked ? { afectaCaja: false } : {}),
             userEmail: BARBER_NAME_TO_EMAIL[barbero] || '',
             estado: 'confirmado',
             confirmadoPor: currentUser.email,
