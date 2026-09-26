@@ -116,6 +116,14 @@
     .lista-nombres { width:100%; min-height:140px; resize:vertical; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink); font:13px/1.5 inherit; font-family:inherit; box-sizing:border-box; }
     .lista-acciones { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:10px; }
     .lista-acciones .sub { margin-left:auto; }
+    .buscar-cliente { flex:1 1 220px; max-width:360px; padding:8px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink); font-size:13px; font-family:inherit; }
+    .lista-clientes { max-height:360px; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:2px 16px; border:1px solid var(--border); border-radius:10px; padding:6px 10px; }
+    .cli-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--grid); font-size:13px; min-width:0; }
+    .cli-nombre { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .cli-vis { color:var(--muted); font-size:11px; white-space:nowrap; }
+    .cli-del { border:0; background:transparent; color:var(--muted); font-size:16px; line-height:1; cursor:pointer; padding:0 4px; }
+    .cli-del:hover { color:#f87171; }
+    .lista-sub { font-size:13px; margin:18px 0 4px; }
     .mini-stats { display:flex; flex-wrap:wrap; gap:8px 20px; margin-bottom:12px; }
     .mini-stats div { font-size:12px; color:var(--muted); }
     .mini-stats b { color:var(--ink); font-size:16px; display:block; }
@@ -238,7 +246,7 @@
                 <div class="legend"></div><div class="chart"></div>
             </div>
             <div class="card" id="c-top-clientes">
-                <div class="card-h"><div><h2>Mejores clientes</h2><div class="sub">Por cantidad de visitas en el período</div></div><button class="tbl-btn" id="btn-importar-clientes" title="Carga los nombres ya anotados en el buscador de clientes al anotar un corte">Pasar nombres al buscador</button></div>
+                <div class="card-h"><div><h2>Mejores clientes</h2><div class="sub">Por cantidad de visitas en el período</div></div></div>
                 <div class="chart"></div>
             </div>
             <div class="card" id="c-perdidos">
@@ -246,10 +254,17 @@
                 <div class="chart"></div>
             </div>
             <div class="card wide" id="c-lista-nombres">
-                <div class="card-h"><div><h2>Cargar nombres al buscador</h2><div class="sub">Un nombre por línea, o subí los contactos exportados del celular (.vcf). Los que ya están no se repiten</div></div></div>
+                <div class="card-h"><div><h2>Lista de clientes</h2><div class="sub">Son los nombres que aparecen al anotar un corte. Los que ya vinieron se agregan solos</div></div></div>
+                <div class="lista-acciones" style="margin:0 0 10px">
+                    <input type="search" id="buscar-cliente" class="buscar-cliente" placeholder="Buscar cliente…">
+                    <span class="sub" id="lista-total"></span>
+                </div>
+                <div class="lista-clientes" id="lista-clientes"></div>
+                <h3 class="lista-sub">Agregar nombres</h3>
+                <div class="sub" style="margin-bottom:8px">Uno por línea, o subí los contactos exportados del celular (.vcf). Los que ya están no se repiten</div>
                 <textarea id="lista-nombres" class="lista-nombres" placeholder="Juan Pérez&#10;Martín Gómez&#10;…"></textarea>
                 <div class="lista-acciones">
-                    <button class="btn primary" id="btn-guardar-lista">Agregar al buscador</button>
+                    <button class="btn primary" id="btn-guardar-lista">Agregar a la lista</button>
                     <label class="btn" for="archivo-contactos">Subir contactos (.vcf)</label>
                     <input type="file" id="archivo-contactos" accept=".vcf,.txt,text/vcard,text/plain" hidden>
                     <span class="sub" id="lista-info"></span>
@@ -294,7 +309,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, getDocs, query, where, doc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, getDocs, query, where, doc, writeBatch, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -355,6 +370,7 @@ const normPropina = (id, x) => {
     return { id, _ts: t, fecha: x.fecha || fechaDe(t), barbero: x.barbero || '—', monto: Number(x.monto) || 0,
         estado: x.estado || '', eliminado: !!x.eliminado };
 };
+const normCliente = (id, x) => ({ id, _ts: tsMs(x.creadoEn), nombre: x.nombre || '', n: x.n || normNombre(x.nombre || ''), eliminado: !!x.eliminado });
 // Turnos: el teléfono no se guarda en la caché ni se muestra
 const normTurno = (id, x) => ({ id, fecha: x.fecha || null, hora: x.hora || '', barbero: x.nombreBarbero || x.barbero || '—',
     servicio: String(x.nombreServicio || x.servicio || '').trim(), estado: x.estado || '',
@@ -368,6 +384,7 @@ const FUENTES = [
     { key:'propinas',   path:'propinas',                                       tf:'creadoEn',  norm:normPropina, label:'propinas' },
     // creadoEn de turnos mezcla Timestamp y texto: se trae completo (son pocos)
     { key:'turnos',     path:'turnos',                                         tf:null,        norm:normTurno,   label:'turnos' },
+    { key:'clientes',   path:'clientes',                                       tf:'creadoEn',  norm:normCliente, label:'clientes' },
 ];
 
 function idb() {
@@ -411,7 +428,7 @@ async function syncFuente(f, forzarTodo) {
     return docs;
 }
 
-const D = { cuts: [], ventas: [], gastos: [], propinas: [], turnos: [] };
+const D = { cuts: [], ventas: [], gastos: [], propinas: [], turnos: [], clientes: [] };
 let primeraFecha = { };
 let INICIO = 0; // día en que arrancó la app (ver calcularInicio)
 
@@ -439,6 +456,7 @@ async function cargarTodo(forzarTodo = false) {
     D.gastos = res.gastos.filter(g => !g.eliminado && g.fecha);
     D.propinas = res.propinas.filter(p => !p.eliminado && p.fecha && p.estado !== 'rechazado');
     D.turnos = res.turnos.filter(t => t.fecha);
+    D.clientes = res.clientes.filter(c => c.n);
     INICIO = calcularInicio(D.cuts);
     D.cuts = D.cuts.filter(c => c.t >= INICIO);
     ['ventas', 'gastos', 'propinas', 'turnos'].forEach(k => { D[k] = D[k].filter(x => dayMs(x.fecha) >= INICIO); });
@@ -1028,6 +1046,7 @@ function renderAll() {
     renderProductos(F);
     renderTurnos(F, B);
     renderCobertura();
+    renderListaClientes();
     // Refrescar tablas abiertas
     document.querySelectorAll('.card .tbl-slot').forEach(slot => {
         const t = tablas[slot.closest('.card').id];
@@ -1099,6 +1118,7 @@ async function arrancar(forzarTodo = false) {
         await cargarTodo(forzarTodo);
         show('data-loading', false); show('app', true);
         renderAll();
+        sumarHistorial();
     } catch (err) {
         console.error(err);
         $('load-msg').textContent = 'No se pudieron cargar los datos: ' + (err?.message || err);
@@ -1107,11 +1127,14 @@ async function arrancar(forzarTodo = false) {
 
 $('btn-refresh').addEventListener('click', () => arrancar(false));
 
-// Guarda en `clientes` los nombres que todavía no están (para que el buscador de
-// recepcionista/anotar los sugiera). Devuelve cuántos agregó; null si se canceló.
-async function guardarNombres(nombres, origen, progreso) {
-    const snap = await getDocs(collection(db, 'clientes'));
-    const ya = new Set(snap.docs.map(d => d.data().n || normNombre(d.data().nombre || '')));
+/* =========================================================
+   Lista de clientes (colección `clientes`, la que usa el buscador
+   de recepcionista/anotar al anotar un corte)
+   ========================================================= */
+// Guarda los nombres que todavía no están (los borrados tampoco se vuelven a agregar).
+// Devuelve cuántos agregó; null si se canceló.
+async function guardarNombres(nombres, origen, { preguntar = true, progreso } = {}) {
+    const ya = new Set(D.clientes.map(c => c.n));
     const faltan = [];
     nombres.forEach(nombre => {
         nombre = String(nombre || '').replace(/\s+/g, ' ').trim();
@@ -1119,31 +1142,57 @@ async function guardarNombres(nombres, origen, progreso) {
         if (n.length < 2 || NOMBRES_GENERICOS.has(n) || ya.has(n)) return;
         ya.add(n); faltan.push({ nombre, n });
     });
-    if (!faltan.length) { alert('Todos esos nombres ya están en el buscador.'); return 0; }
-    if (!confirm(`Se van a agregar ${num(faltan.length)} nombres al buscador de clientes. ¿Seguir?`)) return null;
+    if (!faltan.length) { if (preguntar) alert('Todos esos nombres ya están en la lista.'); return 0; }
+    if (preguntar && !confirm(`Se van a agregar ${num(faltan.length)} nombres a la lista de clientes. ¿Seguir?`)) return null;
     for (let i = 0; i < faltan.length; i += 400) {
         const b = writeBatch(db);
-        faltan.slice(i, i + 400).forEach(c => b.set(doc(collection(db, 'clientes')),
-            { nombre: c.nombre, n: c.n, creadoEn: serverTimestamp(), creadoPor: auth.currentUser?.email || null, origen }));
+        faltan.slice(i, i + 400).forEach(c => {
+            const ref = doc(collection(db, 'clientes'));
+            b.set(ref, { nombre: c.nombre, n: c.n, creadoEn: serverTimestamp(), creadoPor: auth.currentUser?.email || null, origen });
+            D.clientes.push({ id: ref.id, _ts: Date.now(), nombre: c.nombre, n: c.n, eliminado: false });
+        });
         await b.commit();
         progreso?.(`Guardando… ${num(Math.min(i + 400, faltan.length))}/${num(faltan.length)}`);
     }
-    alert(`Listo: ${num(faltan.length)} nombres agregados.`);
     return faltan.length;
 }
 
-// Nombres del historial de cortes (como se escribieron la última vez)
-$('btn-importar-clientes').addEventListener('click', async () => {
-    const btn = $('btn-importar-clientes');
-    btn.disabled = true; btn.textContent = 'Revisando…';
+// Los que ya vinieron alguna vez entran solos a la lista (como se escribieron la última vez)
+async function sumarHistorial() {
     try {
-        await guardarNombres([...CLIENTES.values()].map(cl => cl.visitas[cl.visitas.length - 1].cliente), 'historial', t => { btn.textContent = t; });
-    } catch (err) {
-        console.error(err);
-        alert('No se pudieron guardar los nombres: ' + (err?.message || err));
-    } finally {
-        btn.disabled = false; btn.textContent = 'Pasar nombres al buscador';
-    }
+        const r = await guardarNombres([...CLIENTES.values()].map(cl => cl.visitas[cl.visitas.length - 1].cliente), 'historial', { preguntar: false });
+        if (r) renderListaClientes();
+    } catch (err) { console.warn('No se pudo sumar el historial a la lista de clientes', err); }
+}
+
+function renderListaClientes() {
+    const visitas = new Map([...CLIENTES].map(([k, cl]) => [k, cl.visitas.length]));
+    const activos = D.clientes.filter(c => !c.eliminado);
+    const q = normNombre($('buscar-cliente').value);
+    const lista = activos.filter(c => !q || c.n.includes(q)).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    const MAX = 300;
+    $('lista-total').textContent = `${num(activos.length)} clientes${q ? ` · ${num(lista.length)} coinciden` : ''}`;
+    $('lista-clientes').innerHTML = lista.length
+        ? lista.slice(0, MAX).map(c => {
+            const v = visitas.get(c.n) || 0;
+            return `<div class="cli-row"><span class="cli-nombre">${esc(c.nombre)}</span><span class="cli-vis">${v ? `${num(v)} ${v === 1 ? 'visita' : 'visitas'}` : 'sin cortes'}</span><button class="cli-del" data-id="${c.id}" title="Sacar de la lista">×</button></div>`;
+        }).join('') + (lista.length > MAX ? `<div class="empty">… y ${num(lista.length - MAX)} más. Buscá para encontrarlos.</div>` : '')
+        : `<div class="empty">${q ? 'No hay clientes con ese nombre' : 'Todavía no hay clientes en la lista'}</div>`;
+}
+$('buscar-cliente').addEventListener('input', renderListaClientes);
+
+// Sacar de la lista: se marca eliminado (no se borra) para que no se vuelva a sumar del historial.
+// creadoEn se actualiza para que los celulares con la lista guardada se enteren del cambio.
+$('lista-clientes').addEventListener('click', async e => {
+    const btn = e.target.closest('.cli-del');
+    if (!btn) return;
+    const c = D.clientes.find(x => x.id === btn.dataset.id);
+    if (!c || !confirm(`¿Sacar a «${c.nombre}» de la lista de clientes?`)) return;
+    try {
+        await updateDoc(doc(db, 'clientes', c.id), { eliminado: true, creadoEn: serverTimestamp() });
+        c.eliminado = true;
+        renderListaClientes();
+    } catch (err) { alert('No se pudo sacar: ' + (err?.message || err)); }
 });
 
 // Lista pegada a mano o contactos del celular
@@ -1177,13 +1226,14 @@ $('btn-guardar-lista').addEventListener('click', async () => {
     const btn = $('btn-guardar-lista');
     btn.disabled = true; btn.textContent = 'Revisando…';
     try {
-        const r = await guardarNombres(nombres, 'lista', t => { btn.textContent = t; });
-        if (r !== null) { $('lista-nombres').value = ''; infoLista(); }
+        const r = await guardarNombres(nombres, 'lista', { progreso: t => { btn.textContent = t; } });
+        if (r) alert(`Listo: ${num(r)} nombres agregados.`);
+        if (r !== null) { $('lista-nombres').value = ''; infoLista(); renderListaClientes(); }
     } catch (err) {
         console.error(err);
         alert('No se pudieron guardar los nombres: ' + (err?.message || err));
     } finally {
-        btn.disabled = false; btn.textContent = 'Agregar al buscador';
+        btn.disabled = false; btn.textContent = 'Agregar a la lista';
     }
 });
 $('btn-logout').addEventListener('click', () => signOut(auth));

@@ -30,6 +30,11 @@ function agregar(c) {
     if (porId.has(c.id)) { Object.assign(porId.get(c.id), c); return; }
     lista.push(c); porId.set(c.id, c);
 }
+function quitar(id) {
+    if (!porId.has(id)) return;
+    porId.delete(id);
+    lista = lista.filter(c => c.id !== id);
+}
 
 async function sync() {
     if (syncing) return syncing;
@@ -41,7 +46,8 @@ async function sync() {
         const snap = await fb.getDocs(q);
         snap.docs.forEach(d => {
             const x = d.data();
-            if (x.eliminado) return;
+            // Sacado de la lista desde estadísticas (ahí se actualiza creadoEn para que llegue acá)
+            if (x.eliminado) { quitar(d.id); return; }
             agregar({ id: d.id, nombre: x.nombre || '', n: x.n || normNombre(x.nombre) });
         });
         syncedAt = ahora;
