@@ -77,6 +77,9 @@ function buscar(texto, max = 6) {
         .slice(0, max).map(x => x.c);
 }
 
+// Celular / tablet (recepcionista en el celu del admin, anotar): filas más grandes y sin zoom
+const esTactil = () => matchMedia('(pointer: coarse)').matches || matchMedia('(max-width: 767px)').matches;
+
 const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 /** Mientras se escribe en el <input>, sugiere nombres ya guardados u ofrece agregar uno nuevo. */
@@ -84,6 +87,10 @@ export function pickerCliente(input) {
     if (!input || input.dataset.picker) return;
     input.dataset.picker = '1';
     input.setAttribute('autocomplete', 'off');
+    input.setAttribute('autocapitalize', 'words');
+    input.setAttribute('enterkeyhint', 'done');
+    // iPhone hace zoom al enfocar un input de menos de 16px y la lista queda fuera de pantalla
+    if (esTactil()) input.style.fontSize = '16px';
 
     const wrap = document.createElement('div');
     wrap.style.position = 'relative';
@@ -104,18 +111,19 @@ export function pickerCliente(input) {
         cerrar();
     };
     const pintar = () => {
+        const fila = esTactil() ? 'padding:13px 16px;font-size:15px;' : 'padding:10px 14px;font-size:13px;';
         menu.innerHTML = items.map((it, i) => {
-            const bg = i === activo ? 'background:rgba(255,255,255,.08);' : '';
+            const bg = (i === activo ? 'background:rgba(255,255,255,.08);' : '') + fila;
             return it.c
-                ? `<div data-i="${i}" style="${bg}padding:10px 14px;font-size:13px;color:#fff;cursor:pointer">${esc(it.c.nombre)}</div>`
-                : `<div data-i="${i}" style="${bg}${i ? 'border-top:1px solid rgba(255,255,255,.08);' : ''}padding:10px 14px;font-size:13px;color:#67e8f9;cursor:pointer">+ Cliente nuevo: <b>${esc(it.nuevo)}</b></div>`;
+                ? `<div data-i="${i}" style="${bg}color:#fff;cursor:pointer">${esc(it.c.nombre)}</div>`
+                : `<div data-i="${i}" style="${bg}${i ? 'border-top:1px solid rgba(255,255,255,.08);' : ''}color:#67e8f9;cursor:pointer">+ Cliente nuevo: <b>${esc(it.nuevo)}</b></div>`;
         }).join('');
         menu.style.display = items.length ? 'block' : 'none';
     };
     const abrir = () => {
         const texto = input.value.trim(), n = normNombre(texto);
         // Si ya está escrito tal cual, no hace falta sugerir
-        items = buscar(texto).filter(c => c.n !== n || c.nombre !== texto).map(c => ({ c }));
+        items = buscar(texto, esTactil() ? 5 : 6).filter(c => c.n !== n || c.nombre !== texto).map(c => ({ c }));
         // Nombre que no está en ninguna lista: ofrecer agregarlo
         if (esNombreValido(n) && !lista.some(c => c.n === n)) items.push({ nuevo: texto });
         activo = -1;
@@ -123,8 +131,13 @@ export function pickerCliente(input) {
     };
 
     input.addEventListener('input', () => { delete input.dataset.clienteId; abrir(); });
-    input.addEventListener('focus', () => { if (Date.now() - syncedAt > RESYNC_MS) sync(); if (input.value.trim() && !input.dataset.clienteId) abrir(); });
-    input.addEventListener('blur', () => setTimeout(cerrar, 150));
+    input.addEventListener('focus', () => {
+        if (Date.now() - syncedAt > RESYNC_MS) sync();
+        if (input.value.trim() && !input.dataset.clienteId) abrir();
+        // En el celu el teclado tapa lo de abajo: subir el campo para que las sugerencias se vean
+        if (esTactil()) setTimeout(() => input.scrollIntoView({ block: 'start', behavior: 'smooth' }), 300);
+    });
+    input.addEventListener('blur', () => setTimeout(cerrar, 250));
     input.addEventListener('keydown', e => {
         if (menu.style.display === 'none' || !items.length) return;
         if (e.key === 'ArrowDown') { e.preventDefault(); activo = (activo + 1) % items.length; pintar(); }
