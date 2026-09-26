@@ -121,8 +121,11 @@
     .cli-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--grid); font-size:13px; min-width:0; }
     .cli-nombre { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .cli-vis { color:var(--muted); font-size:11px; white-space:nowrap; }
-    .cli-del { border:0; background:transparent; color:var(--muted); font-size:16px; line-height:1; cursor:pointer; padding:0 4px; }
+    .cli-del, .cli-edit { border:0; background:transparent; color:var(--muted); font-size:16px; line-height:1; cursor:pointer; padding:0 4px; }
     .cli-del:hover { color:#f87171; }
+    .cli-edit { font-size:14px; }
+    .cli-edit:hover { color:var(--brand); }
+    @media (pointer: coarse) { .cli-del, .cli-edit { font-size:18px; padding:6px 10px; } .cli-row { padding:4px 0; } }
     .lista-sub { font-size:13px; margin:18px 0 4px; }
     .mini-stats { display:flex; flex-wrap:wrap; gap:8px 20px; margin-bottom:12px; }
     .mini-stats div { font-size:12px; color:var(--muted); }
@@ -368,7 +371,8 @@ const normPropina = (id, x) => {
     return { id, _ts: t, fecha: x.fecha || fechaDe(t), barbero: x.barbero || '—', monto: Number(x.monto) || 0,
         estado: x.estado || '', eliminado: !!x.eliminado };
 };
-const normCliente = (id, x) => ({ id, _ts: tsMs(x.creadoEn), nombre: x.nombre || '', n: x.n || normNombre(x.nombre || ''), eliminado: !!x.eliminado });
+const normCliente = (id, x) => ({ id, _ts: tsMs(x.creadoEn), nombre: x.nombre || '', n: x.n || normNombre(x.nombre || ''),
+    alias: Array.isArray(x.alias) ? x.alias : [], eliminado: !!x.eliminado });
 // Turnos: el teléfono no se guarda en la caché ni se muestra
 const normTurno = (id, x) => ({ id, fecha: x.fecha || null, hora: x.hora || '', barbero: x.nombreBarbero || x.barbero || '—',
     servicio: String(x.nombreServicio || x.servicio || '').trim(), estado: x.estado || '',
@@ -515,11 +519,17 @@ const NOMBRES_GENERICOS = new Set(['cliente', 'clienta', 'x', 'xx', 'nn', 'sin n
 let CLIENTES = new Map(); // key -> { nombre, visitas:[{t,price,barber}] }
 function prepararClientes() {
     CLIENTES = new Map();
+    // Nombres viejos (renombrados o unidos en la lista) cuentan para la ficha actual
+    const aliasDe = new Map(), nombreDe = new Map();
+    D.clientes.filter(c => !c.eliminado).forEach(c => {
+        nombreDe.set(c.n, c.nombre);
+        c.alias.forEach(a => aliasDe.set(a, c.n));
+    });
     D.cuts.slice().sort((a, b) => a.t - b.t).forEach(c => {
-        const k = normNombre(c.cliente);
+        const k0 = normNombre(c.cliente), k = nombreDe.has(k0) ? k0 : (aliasDe.get(k0) || k0);
         c.ck = (k.length >= 2 && !NOMBRES_GENERICOS.has(k)) ? k : null;
         if (!c.ck) return;
-        if (!CLIENTES.has(k)) CLIENTES.set(k, { nombre: c.cliente, visitas: [] });
+        if (!CLIENTES.has(k)) CLIENTES.set(k, { nombre: nombreDe.get(k) || c.cliente, visitas: [] });
         const cl = CLIENTES.get(k);
         c.primera = cl.visitas.length === 0;
         cl.visitas.push(c);
@@ -1140,7 +1150,7 @@ $('btn-refresh').addEventListener('click', () => arrancar(false));
 // Guarda los nombres que todavía no están (los borrados tampoco se vuelven a agregar).
 // Devuelve cuántos agregó; null si se canceló.
 async function guardarNombres(nombres, origen, { preguntar = true, progreso } = {}) {
-    const ya = new Set(D.clientes.map(c => c.n));
+    const ya = new Set(D.clientes.flatMap(c => [c.n, ...c.alias]));
     const faltan = [];
     nombres.forEach(nombre => {
         nombre = String(nombre || '').replace(/\s+/g, ' ').trim();
@@ -1155,7 +1165,7 @@ async function guardarNombres(nombres, origen, { preguntar = true, progreso } = 
         faltan.slice(i, i + 400).forEach(c => {
             const ref = doc(collection(db, 'clientes'));
             b.set(ref, { nombre: c.nombre, n: c.n, creadoEn: serverTimestamp(), creadoPor: auth.currentUser?.email || null, origen });
-            D.clientes.push({ id: ref.id, _ts: Date.now(), nombre: c.nombre, n: c.n, eliminado: false });
+            D.clientes.push({ id: ref.id, _ts: Date.now(), nombre: c.nombre, n: c.n, alias: [], eliminado: false });
         });
         await b.commit();
         progreso?.(`Guardando… ${num(Math.min(i + 400, faltan.length))}/${num(faltan.length)}`);
@@ -1181,7 +1191,7 @@ function renderListaClientes() {
     $('lista-clientes').innerHTML = lista.length
         ? lista.slice(0, MAX).map(c => {
             const v = visitas.get(c.n) || 0;
-            return `<div class="cli-row"><span class="cli-nombre">${esc(c.nombre)}</span><span class="cli-vis">${v ? `${num(v)} ${v === 1 ? 'visita' : 'visitas'}` : 'sin cortes'}</span><button class="cli-del" data-id="${c.id}" title="Sacar de la lista">×</button></div>`;
+            return `<div class="cli-row"><span class="cli-nombre">${esc(c.nombre)}</span><span class="cli-vis">${v ? `${num(v)} ${v === 1 ? 'visita' : 'visitas'}` : 'sin cortes'}</span><button class="cli-edit" data-id="${c.id}" title="Cambiar el nombre">✎</button><button class="cli-del" data-id="${c.id}" title="Sacar de la lista">×</button></div>`;
         }).join('') + (lista.length > MAX ? `<div class="empty">… y ${num(lista.length - MAX)} más. Buscá para encontrarlos.</div>` : '')
         : `<div class="empty">${q ? 'No hay clientes con ese nombre' : 'Todavía no hay clientes en la lista'}</div>`;
 }
@@ -1190,6 +1200,8 @@ $('buscar-cliente').addEventListener('input', renderListaClientes);
 // Sacar de la lista: se marca eliminado (no se borra) para que no se vuelva a sumar del historial.
 // creadoEn se actualiza para que los celulares con la lista guardada se enteren del cambio.
 $('lista-clientes').addEventListener('click', async e => {
+    const edit = e.target.closest('.cli-edit');
+    if (edit) return editarCliente(edit.dataset.id);
     const btn = e.target.closest('.cli-del');
     if (!btn) return;
     const c = D.clientes.find(x => x.id === btn.dataset.id);
@@ -1200,6 +1212,35 @@ $('lista-clientes').addEventListener('click', async e => {
         renderListaClientes();
     } catch (err) { alert('No se pudo sacar: ' + (err?.message || err)); }
 });
+
+// Cambiar el nombre. El nombre viejo queda como alias: sus cortes siguen contando para este cliente
+// y si alguien lo vuelve a escribir al anotar, se usa esta ficha. Si el nombre nuevo ya existe, se unen.
+async function editarCliente(id) {
+    const c = D.clientes.find(x => x.id === id);
+    if (!c) return;
+    const nuevo = (prompt('Nombre del cliente:', c.nombre) || '').replace(/\s+/g, ' ').trim();
+    if (!nuevo || nuevo === c.nombre) return;
+    const nn = normNombre(nuevo);
+    if (nn.length < 2 || NOMBRES_GENERICOS.has(nn)) { alert('Ese nombre no sirve para un cliente.'); return; }
+    const otro = D.clientes.find(x => x.id !== c.id && !x.eliminado && (x.n === nn || x.alias.includes(nn)));
+    try {
+        if (otro) {
+            if (!confirm(`Ya existe «${otro.nombre}». ¿Unir a «${c.nombre}» con ese cliente? Sus cortes pasan a contar juntos.`)) return;
+            const alias = [...new Set([...otro.alias, c.n, ...c.alias])].filter(a => a !== otro.n);
+            const b = writeBatch(db);
+            b.update(doc(db, 'clientes', otro.id), { alias, creadoEn: serverTimestamp() });
+            b.update(doc(db, 'clientes', c.id), { eliminado: true, creadoEn: serverTimestamp() });
+            await b.commit();
+            otro.alias = alias; c.eliminado = true;
+        } else {
+            const alias = [...new Set([...c.alias, c.n])].filter(a => a !== nn);
+            await updateDoc(doc(db, 'clientes', c.id), { nombre: nuevo, n: nn, alias, creadoEn: serverTimestamp() });
+            Object.assign(c, { nombre: nuevo, n: nn, alias });
+        }
+        prepararClientes();
+        renderAll();
+    } catch (err) { alert('No se pudo cambiar el nombre: ' + (err?.message || err)); }
+}
 
 // Lista pegada a mano o contactos del celular
 const lineasLista = () => [...new Set($('lista-nombres').value.split(/\r?\n/).map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean))];

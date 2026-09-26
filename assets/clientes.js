@@ -48,7 +48,7 @@ async function sync() {
             const x = d.data();
             // Sacado de la lista desde estadísticas (ahí se actualiza creadoEn para que llegue acá)
             if (x.eliminado) { quitar(d.id); return; }
-            agregar({ id: d.id, nombre: x.nombre || '', n: x.n || normNombre(x.nombre) });
+            agregar({ id: d.id, nombre: x.nombre || '', n: x.n || normNombre(x.nombre), alias: Array.isArray(x.alias) ? x.alias : [] });
         });
         syncedAt = ahora;
         guardarLocal();
@@ -125,7 +125,7 @@ export function pickerCliente(input) {
         // Si ya está escrito tal cual, no hace falta sugerir
         items = buscar(texto, esTactil() ? 5 : 6).filter(c => c.n !== n || c.nombre !== texto).map(c => ({ c }));
         // Nombre que no está en ninguna lista: ofrecer agregarlo
-        if (esNombreValido(n) && !lista.some(c => c.n === n)) items.push({ nuevo: texto });
+        if (esNombreValido(n) && !lista.some(c => c.n === n || c.alias?.includes(n))) items.push({ nuevo: texto });
         activo = -1;
         pintar();
     };
@@ -172,7 +172,7 @@ export function resolverCliente(input) {
     const n = normNombre(texto);
     if (!texto) return { clienteId: null, clientName: '' };
     const elegido = input.dataset.clienteId && porId.get(input.dataset.clienteId);
-    const c = (elegido && elegido.n === n) ? elegido : lista.find(x => x.n === n);
+    const c = (elegido && elegido.n === n) ? elegido : (lista.find(x => x.n === n) || lista.find(x => x.alias?.includes(n)));
     if (c) return { clienteId: c.id, clientName: c.nombre };
     if (!esNombreValido(n) || !db) return { clienteId: null, clientName: texto };
     const ref = fb.doc(fb.collection(db, COL));
