@@ -528,10 +528,11 @@ function prepararClientes() {
    ========================================================= */
 const state = { periodo: 'todo', desde: null, hasta: null, barber: 'todos' };
 
-// Nada antes del día en que arrancó la app
+// Nada antes del día en que arrancó la app. Si el período entero es anterior (ej. "Año pasado"),
+// se muestra ese período tal cual y queda vacío.
 function rangoActual() {
     const r = rangoElegido();
-    return { from: Math.max(r.from, INICIO), to: Math.max(r.to, INICIO + DAY) };
+    return r.to > INICIO ? { from: Math.max(r.from, INICIO), to: r.to } : r;
 }
 function rangoElegido() {
     const h0 = hoy0(), manana = addDays(h0, 1);
@@ -1026,8 +1027,6 @@ function renderAll() {
     const { from, to } = rangoActual();
     const min = new Date(INICIO).toLocaleDateString('en-CA');
     $('f-desde').min = $('f-hasta').min = min;
-    // "Año pasado" solo si la app ya estaba el año pasado
-    document.querySelector('#filters .chip[data-p="anioPasado"]').hidden = INICIO >= new Date(new Date().getFullYear(), 0, 1).getTime();
     $('f-desde').value = new Date(from).toLocaleDateString('en-CA');
     $('f-hasta').value = new Date(to - 1).toLocaleDateString('en-CA');
     $('range-label').textContent = `${fmtFecha(from)} → ${fmtFecha(to - 1)}${state.barber !== 'todos' ? ' · ' + state.barber : ''}`;
