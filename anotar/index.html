@@ -2391,7 +2391,7 @@ document.getElementById('add-form').addEventListener('submit', async e=>{
         if(cutMetodoPago==='mixto'){ cutData.montoEfectivo=montoEfectivo; cutData.montoTransferencia=montoTransferencia; }
         await addDoc(collection(db,PATH_MAIN),cutData);
         if(propinaMonto>0){
-            await addDoc(collection(db,PATH_PROPINAS),{barbero:barber,userEmail:currentUser.email,monto:propinaMonto,descripcion:`Propina corte${clientName?' — '+clientName:''}`,fecha:hoy,estado:'confirmado',creadoEn:serverTimestamp()});
+            await addDoc(collection(db,PATH_PROPINAS),{barbero:barber,userEmail:currentUser.email,monto:propinaMonto,descripcion:`Propina corte${clientName?' — '+clientName:''}`,origen:'corte',metodoPago:cutMetodoPago==='transferencia'?'transferencia':'efectivo',fecha:hoy,estado:'confirmado',creadoEn:serverTimestamp()});
         }
         window.closeModals();
         document.getElementById('add-form').reset();

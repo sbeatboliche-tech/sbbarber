@@ -1098,6 +1098,10 @@
                         <button type="button" id="ret-man-transferencia" onclick="window.setRetMetodo('transferencia')" class="p-3 rounded-xl border font-bold text-sm transition bg-black/30 border-gray-700 text-gray-400">📲 Transferencia</button>
                     </div>
                 </div>
+                <label class="flex items-center gap-3 p-3 rounded-xl bg-black/30 border border-gray-700 cursor-pointer select-none">
+                    <input type="checkbox" id="ret-man-afecta-caja" checked class="w-5 h-5 accent-violet-500">
+                    <span class="text-sm text-gray-300 font-semibold">Que afecte al cierre de caja de hoy</span>
+                </label>
                 <button type="submit" id="btn-submit-ret-manual" class="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest">Confirmar</button>
             </form>
         </div>
@@ -2004,6 +2008,7 @@ document.getElementById('add-cut-form').addEventListener('submit', async e => {
                 barbero: barber, monto: propinaAmt, fecha: hoy,
                 estado: 'pendiente',
                 descripcion: clientName ? `Propina de ${clientName}` : 'Propina de cliente',
+                origen: 'corte', metodoPago: metodoPago === 'transferencia' ? 'transferencia' : 'efectivo',
                 userEmail: currentUser.email, creadoEn: serverTimestamp()
             });
         }
@@ -3330,9 +3335,10 @@ window.saveMenuEditor = async () => {
     }
 };
 
-function ccDetalleRows(cortesX, bebidaX, prodX, gastoX, retiroX, row) {
+function ccDetalleRows(cortesX, propinaX, bebidaX, prodX, gastoX, retiroX, row) {
     const rows = [];
     if (cortesX > 0) rows.push(row('Cortes', `+$${cortesX.toLocaleString('es-AR')}`, 'text-gray-400', 'text-emerald-300'));
+    if (propinaX > 0) rows.push(row('Propinas', `+$${propinaX.toLocaleString('es-AR')}`, 'text-gray-400', 'text-emerald-300'));
     if (bebidaX > 0) rows.push(row('Bebida vendida', `+$${bebidaX.toLocaleString('es-AR')}`, 'text-gray-400', 'text-emerald-300'));
     if (prodX > 0) rows.push(row('Producto vendido', `+$${prodX.toLocaleString('es-AR')}`, 'text-gray-400', 'text-emerald-300'));
     if (gastoX > 0) rows.push(row('Gastos', `−$${gastoX.toLocaleString('es-AR')}`, 'text-gray-400', 'text-rose-400'));
@@ -3368,7 +3374,15 @@ function splitPorCierre1(list, tsField, horaCierre1) {
     });
     return [antes, despues];
 }
-function calcCierreTotales(cuts, ventasProductos, gastosDia, retirosDia) {
+// Propinas cargadas junto con un corte (origen:'corte'): esa plata entra a la caja con el corte.
+// Las propinas sueltas que carga el barbero desde anotar no pasan por la caja y no se cuentan.
+// Sin metodoPago se toma como efectivo.
+function propinasCajaDelDia(desde, hasta) {
+    return allPropinas.filter(p => p.origen === 'corte' && !p.eliminado && p.estado !== 'rechazado' && p.creadoEn && p.creadoEn.toDate() >= desde && p.creadoEn.toDate() < hasta);
+}
+const propinaEfectivoDe = list => list.filter(p => p.metodoPago !== 'transferencia').reduce((s, p) => s + (p.monto || 0), 0);
+const propinaTransferenciaDe = list => list.filter(p => p.metodoPago === 'transferencia').reduce((s, p) => s + (p.monto || 0), 0);
+function calcCierreTotales(cuts, ventasProductos, gastosDia, retirosDia, propinasDia) {
     const totalCortes = cuts.reduce((s, c) => s + (c.price || 0), 0);
     const cortesEfectivo = cuts.reduce((s, c) => s + cutCashAmount(c), 0);
     const cortesTransferencia = cuts.reduce((s, c) => s + cutTransferAmount(c), 0);
@@ -3378,8 +3392,8 @@ function calcCierreTotales(cuts, ventasProductos, gastosDia, retirosDia) {
     const bebidaTransferencia = bebidasCliente.filter(v => v.metodoPago === 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
     const prodEfectivo = productosNoBebida.filter(v => v.metodoPago !== 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
     const prodTransferencia = productosNoBebida.filter(v => v.metodoPago === 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
-    const efectivoBruto = cortesEfectivo + bebidaEfectivo + prodEfectivo;
-    const transferenciaBruto = cortesTransferencia + bebidaTransferencia + prodTransferencia;
+    const efectivoBruto = cortesEfectivo + propinaEfectivoDe(propinasDia) + bebidaEfectivo + prodEfectivo;
+    const transferenciaBruto = cortesTransferencia + propinaTransferenciaDe(propinasDia) + bebidaTransferencia + prodTransferencia;
     const retiroEfectivo = retirosDia.filter(r => r.metodoPago !== 'transferencia').reduce((s, r) => s + (r.monto || 0), 0);
     const retiroTransferencia = retirosDia.filter(r => r.metodoPago === 'transferencia').reduce((s, r) => s + (r.monto || 0), 0);
     const gastoEfectivo = gastosDia.filter(g => g.metodoPago !== 'transferencia').reduce((s, g) => s + (g.monto || 0), 0);
@@ -3447,12 +3461,16 @@ function renderCierreCaja() {
     const prodTransferencia = productosNoBebida.filter(v => v.metodoPago === 'transferencia').reduce((s, v) => s + (v.total || 0), 0);
     const productosEfectivo = bebidaEfectivo + prodEfectivo;
     const productosTransferencia = bebidaTransferencia + prodTransferencia;
-    const efectivoBruto = cortesEfectivo + productosEfectivo;
-    const transferenciaBruto = cortesTransferencia + productosTransferencia;
+    const propinasHoy = propinasCajaDelDia(today, todayEnd);
+    const propinaEfectivo = propinaEfectivoDe(propinasHoy);
+    const propinaTransferencia = propinaTransferenciaDe(propinasHoy);
+    const efectivoBruto = cortesEfectivo + propinaEfectivo + productosEfectivo;
+    const transferenciaBruto = cortesTransferencia + propinaTransferencia + productosTransferencia;
     // Retiros de hoy (por cuándo se hicieron), restados según su método.
+    // Tampoco los retiros manuales cargados sin el tilde "Que afecte al cierre de caja de hoy" (afectaCaja:false).
     // Los retiros de bebida (origen:'bebida') NO restan de la caja: ya se le descontó al
     // barbero/FEME de lo que se le paga, pero la bebida la pagó la barbería con otra plata.
-    const retirosHoy = allRetiros.filter(r => !r.eliminado && r.estado === 'confirmado' && r.creadoEn && r.creadoEn.toDate() >= today && r.creadoEn.toDate() < todayEnd && r.origen !== 'bebida' && r.origen !== 'atajo');
+    const retirosHoy = allRetiros.filter(r => !r.eliminado && r.estado === 'confirmado' && r.creadoEn && r.creadoEn.toDate() >= today && r.creadoEn.toDate() < todayEnd && r.origen !== 'bebida' && r.origen !== 'atajo' && r.afectaCaja !== false);
     const retiroEfectivo = retirosHoy.filter(r => r.metodoPago !== 'transferencia').reduce((s, r) => s + (r.monto || 0), 0);
     const retiroTransferencia = retirosHoy.filter(r => r.metodoPago === 'transferencia').reduce((s, r) => s + (r.monto || 0), 0);
     const gastosHoy = allGastos.filter(g => !g.eliminado && g.fecha === hoy);
@@ -3478,8 +3496,9 @@ function renderCierreCaja() {
     const [ventasT1, ventasT2] = splitPorCierre1(ventasProductos, 'creadoEn', horaCierre1);
     const [gastosT1, gastosT2] = splitPorCierre1(gastosHoy, 'creadoEn', horaCierre1);
     const [retirosT1, retirosT2] = splitPorCierre1(retirosHoy, 'creadoEn', horaCierre1);
-    const cierreT1 = calcCierreTotales(cutsT1, ventasT1, gastosT1, retirosT1);
-    const cierreT2 = calcCierreTotales(cutsT2, ventasT2, gastosT2, retirosT2);
+    const [propinasT1, propinasT2] = splitPorCierre1(propinasHoy, 'creadoEn', horaCierre1);
+    const cierreT1 = calcCierreTotales(cutsT1, ventasT1, gastosT1, retirosT1, propinasT1);
+    const cierreT2 = calcCierreTotales(cutsT2, ventasT2, gastosT2, retirosT2, propinasT2);
     const cierresHtml = `
         <div class="glass-card rounded-2xl p-5 mb-4 border border-cyan-500/20">
             <div class="flex items-center justify-between gap-3 mb-3">
@@ -3578,11 +3597,11 @@ function renderCierreCaja() {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
                 <div>
                     <div class="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mb-1">💵 Efectivo</div>
-                    ${ccDetalleRows(cortesEfectivo, bebidaEfectivo, prodEfectivo, gastoEfectivo, retiroEfectivo, row)}
+                    ${ccDetalleRows(cortesEfectivo, propinaEfectivo, bebidaEfectivo, prodEfectivo, gastoEfectivo, retiroEfectivo, row)}
                 </div>
                 <div>
                     <div class="text-[10px] text-blue-400 font-bold uppercase tracking-widest mb-1">📲 Transferencia</div>
-                    ${ccDetalleRows(cortesTransferencia, bebidaTransferencia, prodTransferencia, gastoTransferencia, retiroTransferencia, row)}
+                    ${ccDetalleRows(cortesTransferencia, propinaTransferencia, bebidaTransferencia, prodTransferencia, gastoTransferencia, retiroTransferencia, row)}
                 </div>
             </div>
         </div>
@@ -3783,6 +3802,7 @@ function listenToRetiros() {
     onSnapshot(query(collection(db, PATH_PROPINAS), orderBy('creadoEn','desc'), limit(300)), snap => {
         allPropinas = snap.docs.map(d => ({...d.data(), id: d.id}));
         updateRetirosBadge();
+        if (!document.getElementById('cierre-caja-view').classList.contains('hidden') && cierreCajaTab === 'diario') renderCierreCaja();
         if (!document.getElementById('retiros-panel').classList.contains('hidden')) renderRetirosPanel();
         if (!document.getElementById('barber-detail-panel').classList.contains('hidden')) {
             renderBarberDetail(document.getElementById('barber-detail-name').textContent);
@@ -4052,6 +4072,7 @@ window.openRetiroManualModal = () => {
     sel.innerHTML = '<option value="" disabled selected>Elegí</option>'
         + BARBERS.map(b => `<option>${b}</option>`).join('');
     document.getElementById('ret-man-monto').value = '';
+    document.getElementById('ret-man-afecta-caja').checked = true;
     setRetMetodo('efectivo');
     showModal('retiro-manual-rec-modal');
 };
@@ -4067,6 +4088,7 @@ document.getElementById('retiro-manual-rec-form').addEventListener('submit', asy
     try {
         await addDoc(collection(db, PATH_RETIROS), {
             barbero, monto, fecha, estado: 'confirmado', metodoPago: retManMetodo,
+            ...(document.getElementById('ret-man-afecta-caja').checked ? {} : { afectaCaja: false }),
             userEmail: currentUser.email, creadoEn: serverTimestamp()
         });
         closeModals();
