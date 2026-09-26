@@ -4548,12 +4548,15 @@ function renderGastosFijos() {
     const total = gastosFijos.reduce((s, g) => s + (Number(g.monto) || 0), 0);
     document.getElementById('gastos-fijos-total').textContent = `$${total.toLocaleString('es-AR')}`;
     const list = document.getElementById('gastos-fijos-list');
-    // No pisar lo que se está escribiendo en un monto
-    if (list.contains(document.activeElement)) return;
+    // No pisar lo que se está escribiendo en un monto ni la fila que se está arrastrando
+    if (list.contains(document.activeElement) || arrastrandoFijo) return;
     list.innerHTML = gastosFijos.length === 0
         ? '<p class="text-xs text-gray-600 text-center py-2">Todavía no hay gastos fijos. Agregalos abajo</p>'
         : gastosFijos.map(g => `
-            <div class="flex items-center gap-2 bg-black/20 rounded-xl pl-3 pr-2 py-2">
+            <div class="fijo-row flex items-center gap-2 bg-black/20 rounded-xl pl-1 pr-2 py-2 transition-shadow" data-id="${escFijo(g.id)}">
+                <span class="fijo-handle w-8 h-9 flex items-center justify-center text-gray-500 hover:text-orange-400 cursor-grab active:cursor-grabbing flex-shrink-0" style="touch-action:none" title="Arrastrá para moverlo">
+                    <i class="fas fa-grip-vertical"></i>
+                </span>
                 <span class="flex-1 min-w-0 text-sm text-white truncate">${escFijo(g.nombre)}</span>
                 <span class="text-gray-500 text-sm">$</span>
                 <input type="number" min="0" step="100" value="${Number(g.monto) || 0}" onchange="window.cambiarMontoFijo('${g.id}', this.value)"
@@ -4572,6 +4575,36 @@ document.getElementById('gasto-fijo-form').addEventListener('submit', e => {
     document.getElementById('gasto-fijo-nombre').value = '';
     document.getElementById('gasto-fijo-monto').value = '';
     document.getElementById('gasto-fijo-nombre').focus();
+});
+// Reordenar arrastrando la manija ⋮⋮ (mouse o dedo); el orden queda guardado
+let arrastrandoFijo = false;
+document.getElementById('gastos-fijos-list').addEventListener('pointerdown', e => {
+    const handle = e.target.closest('.fijo-handle');
+    if (!handle) return;
+    e.preventDefault();
+    const list = e.currentTarget, row = handle.closest('.fijo-row');
+    arrastrandoFijo = true;
+    handle.setPointerCapture(e.pointerId);
+    row.classList.add('ring-2', 'ring-orange-500', 'bg-orange-500/10');
+    const mover = ev => {
+        const siguiente = [...list.querySelectorAll('.fijo-row')].filter(r => r !== row)
+            .find(r => { const b = r.getBoundingClientRect(); return ev.clientY < b.top + b.height / 2; });
+        if (siguiente) { if (row.nextElementSibling !== siguiente) list.insertBefore(row, siguiente); }
+        else if (list.lastElementChild !== row) list.appendChild(row);
+    };
+    const soltar = () => {
+        handle.removeEventListener('pointermove', mover);
+        handle.removeEventListener('pointerup', soltar);
+        handle.removeEventListener('pointercancel', soltar);
+        row.classList.remove('ring-2', 'ring-orange-500', 'bg-orange-500/10');
+        arrastrandoFijo = false;
+        const orden = [...list.querySelectorAll('.fijo-row')].map(r => r.dataset.id);
+        if (orden.join('|') !== gastosFijos.map(g => g.id).join('|'))
+            guardarGastosFijos(orden.map(id => gastosFijos.find(g => g.id === id)).filter(Boolean));
+    };
+    handle.addEventListener('pointermove', mover);
+    handle.addEventListener('pointerup', soltar);
+    handle.addEventListener('pointercancel', soltar);
 });
 window.cambiarMontoFijo = (id, valor) => {
     guardarGastosFijos(gastosFijos.map(g => g.id === id ? { ...g, monto: Number(valor) || 0 } : g));
