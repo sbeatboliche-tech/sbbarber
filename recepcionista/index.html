@@ -1644,6 +1644,7 @@ async function init() {
                 listenToProductos();
                 listenToRetiros();
                 listenToAjustes();
+                listenToPagosSemanales();
                 listenToTurnos();
                 listenToBarberos();
                 listenToGastos();
@@ -3750,11 +3751,17 @@ function renderCierreCajaSemanal() {
         const suParte = Math.round(d.cortes * (BARBER_COMISION[b] ?? 0.5));
         const neto = suParte - d.retiros + d.propinas - (_ajusteSemana[b] || 0) - ((allAjustes[`${weekStartStr}_${b}`] || {}).monto || 0);
         const netoColor = neto >= 0 ? 'text-emerald-400' : 'text-red-400';
+        const pagado = !!(allPagosSemanales[`${weekStartStr}_${b}`] || {}).pagado;
         return `
-        <div class="glass-card rounded-2xl p-5 md:p-6">
+        <div class="glass-card rounded-2xl p-5 md:p-6 ${pagado ? 'border border-emerald-500/40' : ''}">
             <div class="flex items-center gap-3 mb-4">
                 ${barberAvatar(b, 10)}
-                <span class="font-extrabold text-white text-base md:text-lg">${b}</span>
+                <span class="font-extrabold text-white text-base md:text-lg flex-1 min-w-0 truncate">${b}</span>
+                <button type="button" onclick="window.togglePagoSemanal('${weekStartStr}', '${b}', ${neto})" title="${pagado ? 'Marcar como no pagado' : 'Marcar como pagado'}"
+                    class="flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition active:scale-95 ${pagado ? 'bg-emerald-600/25 border-emerald-500 text-emerald-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:text-white'}">
+                    <span class="w-5 h-5 rounded-md border-2 flex items-center justify-center ${pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-500'}">${pagado ? '<i class="fas fa-check text-[10px]"></i>' : ''}</span>
+                    ${pagado ? 'Pagado' : 'Sin pagar'}
+                </button>
             </div>
             <div class="space-y-2">
                 <div class="flex justify-between text-xs md:text-sm">
@@ -4154,6 +4161,30 @@ function listenToAjustes() {
         if (!document.getElementById('cierre-caja-view').classList.contains('hidden') && cierreCajaTab === 'semanal') renderCierreCajaSemanal();
     }, () => {});
 }
+// Cierre semanal: tilde "Pagado" por barbero (colección pagos_semanales, un doc por semana y barbero).
+// Es solo una marca para acordarse; no cambia ningún cálculo.
+const PATH_PAGOS_SEMANALES = 'pagos_semanales';
+let allPagosSemanales = {};
+function listenToPagosSemanales() {
+    onSnapshot(collection(db, PATH_PAGOS_SEMANALES), snap => {
+        allPagosSemanales = {};
+        snap.forEach(d => { allPagosSemanales[d.id] = d.data(); });
+        if (!document.getElementById('cierre-caja-view').classList.contains('hidden') && cierreCajaTab === 'semanal') renderCierreCajaSemanal();
+    }, () => {});
+}
+window.togglePagoSemanal = async (semana, barbero, monto) => {
+    const id = `${semana}_${barbero}`;
+    const pagado = !(allPagosSemanales[id] || {}).pagado;
+    allPagosSemanales[id] = { ...(allPagosSemanales[id] || {}), pagado };
+    renderCierreCajaSemanal();
+    try {
+        await setDoc(doc(db, PATH_PAGOS_SEMANALES, id), {
+            barbero, semana, pagado, monto: pagado ? monto : null,
+            userEmail: currentUser.email || null, actualizadoEn: serverTimestamp()
+        });
+    } catch (err) { console.error('pago semanal error:', err); alert('Error al guardar'); }
+};
+
 const ATAJOS_DESCUENTO = {
     Digit7: { barbero: 'Tony', monto: 5000 },
     Digit6: { barbero: 'Stefa', monto: 5000 }
