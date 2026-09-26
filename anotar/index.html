@@ -219,7 +219,7 @@
                 <div class="flex justify-between items-center mb-4">
                     <div>
                         <h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-home text-orange-400"></i> Gastos Fijos del Mes</h3>
-                        <p class="text-[10px] text-gray-500 mt-0.5">Alquiler, insumos, CM, etc.</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Alquiler, luz, CM, etc. (también se cargan desde recepcionista)</p>
                     </div>
                     <button onclick="window.openFixedExpensesModal()" class="bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-orange-500/20 transition flex items-center gap-1.5">
                         <i class="fas fa-edit text-[10px]"></i> Editar
@@ -1845,43 +1845,53 @@ function listenToFixedExpenses() {
         renderFixedExpensesDisplay();
     });
 }
+// Formato: items [{id, nombre, monto}] (lista libre, también se edita desde recepcionista → Gastos).
+// Si el doc tiene el formato viejo (un monto por categoría de FIXED_CATEGORIES) se muestran esas como ítems.
+const fixedItems = () => Array.isArray(fixedExpenses.items) ? fixedExpenses.items
+    : FIXED_CATEGORIES.filter(c=>(fixedExpenses[c.key]||0)>0).map(c=>({id:c.key,nombre:c.label,monto:fixedExpenses[c.key]}));
+const fixedTotal = () => fixedItems().reduce((s,g)=>s+(Number(g.monto)||0),0);
+const escFijo = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fixedRowHTML = g => `
+        <div class="fixed-row flex items-center gap-2 bg-black/40 p-2 rounded-xl border border-gray-700" data-id="${escFijo(g.id)}">
+            <input type="text" value="${escFijo(g.nombre)}" placeholder="Ej: Alquiler" maxlength="60"
+                class="fixed-nombre flex-1 min-w-0 p-2 bg-gray-900 rounded-lg border border-gray-600 text-white focus:border-orange-500 outline-none text-sm">
+            <span class="text-gray-500 text-sm">$</span>
+            <input type="number" value="${Number(g.monto)||0}" min="0" placeholder="0"
+                class="fixed-monto w-24 p-2 bg-gray-900 rounded-lg border border-gray-600 text-white text-right focus:border-orange-500 outline-none text-sm">
+            <button type="button" onclick="this.closest('.fixed-row').remove()" class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-gray-500 hover:text-red-400 flex-shrink-0"><i class="fas fa-trash text-[10px]"></i></button>
+        </div>`;
 window.openFixedExpensesModal = () => {
-    document.getElementById('fixed-expenses-form-list').innerHTML=FIXED_CATEGORIES.map(cat=>`
-        <div class="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-gray-700">
-            <div class="flex items-center gap-2">
-                <i class="fas ${cat.icon} text-orange-400 w-4 text-center text-sm"></i>
-                <span class="font-medium text-sm text-gray-300">${cat.label}</span>
-            </div>
-            <div class="flex items-center gap-1">
-                <span class="text-gray-500 text-sm">$</span>
-                <input type="number" id="fixed-${cat.key}" value="${fixedExpenses[cat.key]||0}" min="0" placeholder="0"
-                    class="w-28 p-2 bg-gray-900 rounded-lg border border-gray-600 text-white text-right focus:border-orange-500 outline-none text-sm">
-            </div>
-        </div>`).join('');
+    const items=fixedItems();
+    document.getElementById('fixed-expenses-form-list').innerHTML=(items.length?items:[{id:'n'+Date.now().toString(36),nombre:'',monto:0}]).map(fixedRowHTML).join('')
+        + `<button type="button" id="btn-add-fixed" class="w-full p-3 rounded-xl border border-dashed border-orange-500/40 text-orange-400 text-sm font-bold hover:bg-orange-500/10 transition"><i class="fas fa-plus mr-1"></i> Agregar gasto</button>`;
+    document.getElementById('btn-add-fixed').onclick = e => {
+        e.currentTarget.insertAdjacentHTML('beforebegin', fixedRowHTML({id:'n'+Date.now().toString(36),nombre:'',monto:0}));
+        e.currentTarget.previousElementSibling.querySelector('.fixed-nombre').focus();
+    };
     showModal('fixed-expenses-modal');
 };
 window.saveFixedExpenses = async () => {
     const btn=document.getElementById('btn-save-fixed');
     btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
-    const data={};
-    FIXED_CATEGORIES.forEach(cat=>data[cat.key]=Number(document.getElementById(`fixed-${cat.key}`).value)||0);
-    try{ await setDoc(doc(db,PATH_SETTINGS,'fixed_expenses'),data); window.closeModals(); }
+    const items=[...document.querySelectorAll('#fixed-expenses-form-list .fixed-row')]
+        .map(r=>({id:r.dataset.id,nombre:r.querySelector('.fixed-nombre').value.trim(),monto:Number(r.querySelector('.fixed-monto').value)||0}))
+        .filter(g=>g.nombre);
+    try{ await setDoc(doc(db,PATH_SETTINGS,'fixed_expenses'),{items,actualizadoEn:serverTimestamp()},{merge:true}); window.closeModals(); }
     catch{ alert('Error al guardar'); }
     btn.disabled=false; btn.innerHTML='Guardar';
 };
 function renderFixedExpensesDisplay() {
-    const total=FIXED_CATEGORIES.reduce((s,c)=>s+(fixedExpenses[c.key]||0),0);
     const totalEl=document.getElementById('fixed-total-display');
-    if(totalEl) totalEl.textContent=`$${total.toLocaleString('es-AR')}`;
+    if(totalEl) totalEl.textContent=`$${fixedTotal().toLocaleString('es-AR')}`;
     const el=document.getElementById('fixed-expenses-display');
     if(!el)return;
-    const items=FIXED_CATEGORIES.filter(c=>(fixedExpenses[c.key]||0)>0);
+    const items=fixedItems().filter(g=>(Number(g.monto)||0)>0);
     el.innerHTML=items.length===0
         ? '<p class="text-xs text-gray-600 text-center py-2">Sin configurar — tocá "Editar" para cargar los montos</p>'
-        : items.map(c=>`
+        : items.map(g=>`
             <div class="flex justify-between items-center py-1.5 border-b border-white/5">
-                <span class="text-sm text-gray-400 flex items-center gap-2"><i class="fas ${c.icon} w-4 text-center text-orange-400/60 text-xs"></i>${c.label}</span>
-                <span class="text-sm font-bold text-gray-300">$${(fixedExpenses[c.key]||0).toLocaleString('es-AR')}</span>
+                <span class="text-sm text-gray-400 flex items-center gap-2 min-w-0"><i class="fas fa-receipt w-4 text-center text-orange-400/60 text-xs"></i><span class="truncate">${escFijo(g.nombre)}</span></span>
+                <span class="text-sm font-bold text-gray-300">$${(Number(g.monto)||0).toLocaleString('es-AR')}</span>
             </div>`).join('');
 }
 
@@ -1892,12 +1902,12 @@ function renderWeeklyProfit() {
     const weekStart=new Date(today); if(day!==1) weekStart.setDate(today.getDate()-(day-1));
 
     const weekCuts=allCuts.filter(c=>!c.eliminado&&c.createdAt&&c.createdAt.toDate()>=weekStart);
-    const totalBilling=weekCuts.reduce((s,c)=>s+c.price,0);
+    const totalBilling=weekCuts.filter(c=>c.afectaCaja!==false).reduce((s,c)=>s+c.price,0);   // los regalados por SB no entran
     const totalCommissions=weekCuts.reduce((s,c)=>s+(c.price*(barberCommissions[c.barber]||0.5)),0);
     const ownerGross=totalBilling-totalCommissions;
     const weekExp=allExpenses.filter(e=>e.createdAt&&e.createdAt.toDate()>=weekStart);
     const totalVarExp=weekExp.reduce((s,e)=>s+Number(e.amount),0);
-    const totalFixed=FIXED_CATEGORIES.reduce((s,c)=>s+(fixedExpenses[c.key]||0),0);
+    const totalFixed=fixedTotal();
     const fixedWeekly=Math.round(totalFixed/4);
     const net=ownerGross-totalVarExp-fixedWeekly;
     const fmt=n=>`$${Math.round(n).toLocaleString('es-AR')}`;
