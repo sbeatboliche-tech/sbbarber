@@ -133,6 +133,8 @@
     .cli-edit:hover { color:var(--brand); }
     @media (pointer: coarse) { .cli-del, .cli-edit { font-size:18px; padding:6px 10px; } .cli-row { padding:4px 0; } }
     .lista-sub { font-size:13px; margin:18px 0 4px; }
+    .dos-col { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 28px; }
+    @media (max-width:900px) { .dos-col { grid-template-columns:minmax(0,1fr); } }
     .mini-stats { display:flex; flex-wrap:wrap; gap:8px 20px; margin-bottom:12px; }
     .mini-stats div { font-size:12px; color:var(--muted); }
     .mini-stats b { color:var(--ink); font-size:16px; display:block; }
@@ -252,6 +254,18 @@
                 <div class="card-h"><div><h2>Clientes nuevos y que vuelven</h2><div class="sub">Solo cortes con nombre de cliente anotado. «Vuelve» = ya se había cortado antes</div></div><button class="tbl-btn">Ver tabla</button></div>
                 <div class="mini-stats" id="clientes-stats"></div>
                 <div class="legend"></div><div class="chart"></div>
+            </div>
+            <div class="card wide" id="c-frecuencia">
+                <div class="card-h"><div><h2>Cuántas veces vienen y cada cuánto</h2><div class="sub">Visitas de cada cliente en el período y días entre un corte y el siguiente</div></div><button class="tbl-btn">Ver tabla</button></div>
+                <div class="mini-stats" id="frecuencia-stats"></div>
+                <div class="dos-col">
+                    <div><h3 class="lista-sub" style="margin-top:0">Visitas por cliente en el período</h3><div class="chart" id="frec-visitas"></div></div>
+                    <div><h3 class="lista-sub" style="margin-top:0">Cada cuánto vuelven</h3><div class="chart" id="frec-intervalo"></div></div>
+                </div>
+            </div>
+            <div class="card wide" id="c-atrasados">
+                <div class="card-h"><div><h2>Clientes que faltaron</h2><div class="sub">Vinieron 3+ veces y ya se pasaron de su frecuencia de siempre (ej. viene cada semana y hace 3 semanas que no viene). A hoy, hasta 120 días sin venir</div></div></div>
+                <div class="chart"></div>
             </div>
             <div class="card" id="c-top-clientes">
                 <div class="card-h"><div><h2>Mejores clientes</h2><div class="sub">Por cantidad de visitas en el período</div></div></div>
@@ -747,9 +761,9 @@ function heatmap(host, { matriz, filas, horas }) {
     $('heat-scale').innerHTML = 'Menos ' + RAMP.filter((_, i) => i % 2 === 0).map(c => `<i style="background:${c}"></i>`).join('') + ' Más';
 }
 
-function barrasH(host, rows, { fmt, extra, color = 'var(--s1)', max: topN = 12 } = {}) {
+function barrasH(host, rows, { fmt, extra, color = 'var(--s1)', max: topN = 12, ordenar = true } = {}) {
     if (!rows.length) { host.innerHTML = '<div class="empty">Sin datos en este período</div>'; return; }
-    let lista = rows.slice().sort((a, b) => b.value - a.value);
+    let lista = ordenar ? rows.slice().sort((a, b) => b.value - a.value) : rows.slice();
     if (lista.length > topN) {
         const resto = lista.slice(topN - 1);
         lista = lista.slice(0, topN - 1).concat([{ label: `Otros (${resto.length})`, value: resto.reduce((s, r) => s + r.value, 0),
@@ -962,12 +976,15 @@ function renderClientes(F, B, from, to) {
         const cl = CLIENTES.get(k), vs = cl.visitas.filter(v => v.t >= from && v.t < to && (state.barber === 'todos' || v.barber === state.barber));
         const porBarbero = {}; vs.forEach(v => { porBarbero[v.barber] = (porBarbero[v.barber] || 0) + 1; });
         const fav = Object.keys(porBarbero).sort((a, b) => porBarbero[b] - porBarbero[a])[0] || '—';
-        return { nombre: cl.nombre, visitas: vs.length, gasto: vs.reduce((s, v) => s + v.price, 0), ultima: maxOf(vs.map(v => v.t)), fav };
+        const cada = mediana(intervalos(diasDeVisita(visitasDe(cl))));
+        return { nombre: cl.nombre, visitas: vs.length, gasto: vs.reduce((s, v) => s + v.price, 0), ultima: maxOf(vs.map(v => v.t)), fav, cada };
     }).filter(r => r.visitas > 0).sort((a, b) => b.visitas - a.visitas || b.gasto - a.gasto).slice(0, 20);
     $('c-top-clientes').querySelector('.chart').innerHTML = top.length
-        ? tablaHTML([{ t: 'Cliente' }, { t: 'Visitas', num: 1 }, { t: 'Gastó', num: 1 }, { t: 'Última' }, { t: 'Barbero' }],
-            top.map(r => [r.nombre, num(r.visitas), money(r.gasto), fmtFecha(r.ultima), r.fav]))
+        ? tablaHTML([{ t: 'Cliente' }, { t: 'Visitas', num: 1 }, { t: 'Viene cada' }, { t: 'Gastó', num: 1 }, { t: 'Última' }, { t: 'Barbero' }],
+            top.map(r => [r.nombre, num(r.visitas), r.cada ? fmtCada(r.cada) : '—', money(r.gasto), fmtFecha(r.ultima), r.fav]))
         : '<div class="empty">No hay cortes con nombre de cliente en este período</div>';
+
+    renderFrecuencia(clientesPeriodo, from, to);
 
     // Clientes que dejaron de venir (todo el historial)
     const limite = Date.now() - 45 * DAY;
@@ -979,6 +996,81 @@ function renderClientes(F, B, from, to) {
         ? tablaHTML([{ t: 'Cliente' }, { t: 'Visitas', num: 1 }, { t: 'Última visita' }, { t: 'Días sin venir', num: 1 }, { t: 'Con' }],
             perdidos.map(r => [r.nombre, num(r.visitas), fmtFecha(r.ultima), num((Date.now() - r.ultima) / DAY), r.barber]))
         : '<div class="empty">Nadie en esta lista 🎉</div>';
+}
+
+// Frecuencia: dos cortes el mismo día cuentan como una sola visita
+const dia0 = ms => { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const visitasDe = cl => state.barber === 'todos' ? cl.visitas : cl.visitas.filter(v => v.barber === state.barber);
+const diasDeVisita = vs => [...new Set(vs.map(v => dia0(v.t)))].sort((a, b) => a - b);
+const intervalos = dias => dias.slice(1).map((d, i) => Math.round((d - dias[i]) / DAY));
+const mediana = arr => {
+    if (!arr.length) return null;
+    const s = arr.slice().sort((a, b) => a - b), m = s.length >> 1;
+    return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
+};
+const fmtCada = d => {
+    if (d <= 10) return d === 1 ? '1 día' : `${d} días`;
+    if (d < 56) { const s = Math.round(d / 7); return s === 1 ? 'semana' : `${s} semanas`; }
+    const m = Math.round(d / 30); return m === 1 ? 'mes' : `${m} meses`;
+};
+
+function renderFrecuencia(clientesPeriodo, from, to) {
+    // Cuántas veces vino cada cliente en el período
+    const GRUPOS_V = [['1 vez', 1, 1], ['2 veces', 2, 2], ['3 veces', 3, 3], ['4 a 5', 4, 5], ['6 a 9', 6, 9], ['10 o más', 10, Infinity]];
+    const cantV = GRUPOS_V.map(() => 0);
+    let totVisitas = 0, fijos = 0;
+    // Días entre visitas (la segunda visita dentro del período)
+    const GRUPOS_I = [['Hasta 1 semana', 0, 8], ['1 a 2 semanas', 9, 15], ['2 a 3 semanas', 16, 22], ['3 a 4 semanas', 23, 31], ['1 a 2 meses', 32, 62], ['Más de 2 meses', 63, Infinity]];
+    const cantI = GRUPOS_I.map(() => 0);
+    const todosInt = [];
+    clientesPeriodo.forEach(k => {
+        const dias = diasDeVisita(visitasDe(CLIENTES.get(k)));
+        const enP = dias.filter(d => d >= from && d < to).length;
+        if (!enP) return;
+        totVisitas += enP; if (enP >= 3) fijos++;
+        cantV[GRUPOS_V.findIndex(([, a, b]) => enP >= a && enP <= b)]++;
+        dias.forEach((d, i) => {
+            if (!i || d < from || d >= to) return;
+            const n = Math.round((d - dias[i - 1]) / DAY);
+            todosInt.push(n);
+            cantI[GRUPOS_I.findIndex(([, a, b]) => n >= a && n <= b)]++;
+        });
+    });
+    const nCli = cantV.reduce((s, v) => s + v, 0), nInt = todosInt.length, cadaTipico = mediana(todosInt);
+
+    // Clientes que se pasaron de su frecuencia habitual (a hoy)
+    const hoy = hoy0();
+    const atrasados = [...CLIENTES.values()].map(cl => {
+        const vs = visitasDe(cl), dias = diasDeVisita(vs);
+        if (dias.length < 3) return null;
+        const cada = mediana(intervalos(dias));
+        const sin = Math.round((hoy - dias[dias.length - 1]) / DAY);
+        if (!cada || sin > 120 || sin <= Math.max(cada * 1.5, cada + 7)) return null;
+        return { nombre: cl.nombre, visitas: dias.length, cada, ultima: dias[dias.length - 1], sin,
+            falto: Math.max(1, Math.round(sin / cada) - 1), barber: vs[vs.length - 1].barber };
+    }).filter(Boolean).sort((a, b) => b.visitas - a.visitas || b.sin / b.cada - a.sin / a.cada).slice(0, 30);
+
+    $('frecuencia-stats').innerHTML = `
+        <div><b>${nCli ? (totVisitas / nCli).toLocaleString('es-AR', { maximumFractionDigits: 1 }) : '—'}</b>visitas promedio por cliente</div>
+        <div><b>${cadaTipico ? 'Cada ' + fmtCada(cadaTipico) : '—'}</b>vuelven en general (mediana)</div>
+        <div><b>${pct(cantI[0] + cantI[1], nInt)}</b>de las vueltas, en 2 semanas o menos</div>
+        <div><b>${num(fijos)}</b>clientes fijos (3+ visitas en el período)</div>
+        <div><b>${num(atrasados.length)}</b>faltaron a su frecuencia (a hoy)</div>`;
+
+    const extraPct = tot => r => pct(r.value, tot);
+    barrasH($('frec-visitas'), nCli ? GRUPOS_V.map(([l], i) => ({ label: l, value: cantV[i] })) : [],
+        { fmt: v => num(v) + ' clientes', extra: extraPct(nCli), ordenar: false });
+    barrasH($('frec-intervalo'), nInt ? GRUPOS_I.map(([l], i) => ({ label: l, value: cantI[i] })) : [],
+        { fmt: v => num(v) + ' vueltas', extra: extraPct(nInt), color: 'var(--s3)', ordenar: false });
+    setTabla('c-frecuencia', [{ t: 'Qué' }, { t: 'Grupo' }, { t: 'Cantidad', num: 1 }, { t: '%', num: 1 }], [
+        ...GRUPOS_V.map(([l], i) => ['Visitas en el período', l, num(cantV[i]) + ' clientes', pct(cantV[i], nCli)]),
+        ...GRUPOS_I.map(([l], i) => ['Vuelven cada', l, num(cantI[i]) + ' vueltas', pct(cantI[i], nInt)]),
+    ]);
+
+    $('c-atrasados').querySelector('.chart').innerHTML = atrasados.length
+        ? tablaHTML([{ t: 'Cliente' }, { t: 'Visitas', num: 1 }, { t: 'Viene cada' }, { t: 'Última visita' }, { t: 'Días sin venir', num: 1 }, { t: 'Faltó (aprox.)', num: 1 }, { t: 'Con' }],
+            atrasados.map(r => [r.nombre, num(r.visitas), fmtCada(r.cada), fmtFecha(r.ultima), num(r.sin), r.falto === 1 ? '1 vez' : `${r.falto} veces`, r.barber]))
+        : '<div class="empty">Nadie faltó a su frecuencia 🎉</div>';
 }
 
 function renderProductos(F) {
