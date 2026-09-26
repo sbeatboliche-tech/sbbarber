@@ -73,7 +73,7 @@ function buscar(texto, max = 6) {
 
 const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
-/** Mientras se escribe en el <input>, sugiere nombres de clientes ya guardados. */
+/** Mientras se escribe en el <input>, sugiere nombres ya guardados u ofrece agregar uno nuevo. */
 export function pickerCliente(input) {
     if (!input || input.dataset.picker) return;
     input.dataset.picker = '1';
@@ -91,20 +91,27 @@ export function pickerCliente(input) {
     let items = [], activo = -1;
     const cerrar = () => { menu.style.display = 'none'; items = []; activo = -1; };
     const elegir = i => {
-        const c = items[i];
-        if (!c) return;
-        input.value = c.nombre; input.dataset.clienteId = c.id;
+        const it = items[i];
+        if (!it) return;
+        if (it.c) { input.value = it.c.nombre; input.dataset.clienteId = it.c.id; }
+        else input.dataset.clienteId = resolverCliente(input).clienteId; // crea la ficha ya
         cerrar();
     };
     const pintar = () => {
-        menu.innerHTML = items.map((c, i) =>
-            `<div data-i="${i}" style="${i === activo ? 'background:rgba(255,255,255,.08);' : ''}padding:10px 14px;font-size:13px;color:#fff;cursor:pointer">${esc(c.nombre)}</div>`).join('');
+        menu.innerHTML = items.map((it, i) => {
+            const bg = i === activo ? 'background:rgba(255,255,255,.08);' : '';
+            return it.c
+                ? `<div data-i="${i}" style="${bg}padding:10px 14px;font-size:13px;color:#fff;cursor:pointer">${esc(it.c.nombre)}</div>`
+                : `<div data-i="${i}" style="${bg}${i ? 'border-top:1px solid rgba(255,255,255,.08);' : ''}padding:10px 14px;font-size:13px;color:#67e8f9;cursor:pointer">+ Cliente nuevo: <b>${esc(it.nuevo)}</b></div>`;
+        }).join('');
         menu.style.display = items.length ? 'block' : 'none';
     };
     const abrir = () => {
-        const n = normNombre(input.value);
+        const texto = input.value.trim(), n = normNombre(texto);
         // Si ya está escrito tal cual, no hace falta sugerir
-        items = buscar(input.value).filter(c => c.n !== n || c.nombre !== input.value.trim());
+        items = buscar(texto).filter(c => c.n !== n || c.nombre !== texto).map(c => ({ c }));
+        // Nombre que no está en ninguna lista: ofrecer agregarlo
+        if (esNombreValido(n) && !lista.some(c => c.n === n)) items.push({ nuevo: texto });
         activo = -1;
         pintar();
     };

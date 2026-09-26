@@ -113,6 +113,9 @@
     th { text-align:left; color:var(--muted); font-weight:600; padding:6px 8px; border-bottom:1px solid var(--axis); white-space:nowrap; }
     td { padding:6px 8px; border-bottom:1px solid var(--grid); color:var(--ink-2); white-space:nowrap; font-variant-numeric:tabular-nums; }
     td.num, th.num { text-align:right; }
+    .lista-nombres { width:100%; min-height:140px; resize:vertical; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink); font:13px/1.5 inherit; font-family:inherit; box-sizing:border-box; }
+    .lista-acciones { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:10px; }
+    .lista-acciones .sub { margin-left:auto; }
     .mini-stats { display:flex; flex-wrap:wrap; gap:8px 20px; margin-bottom:12px; }
     .mini-stats div { font-size:12px; color:var(--muted); }
     .mini-stats b { color:var(--ink); font-size:16px; display:block; }
@@ -241,6 +244,16 @@
             <div class="card" id="c-perdidos">
                 <div class="card-h"><div><h2>Clientes que dejaron de venir</h2><div class="sub">Vinieron 2+ veces y hace más de 45 días que no vuelven (todo el historial)</div></div></div>
                 <div class="chart"></div>
+            </div>
+            <div class="card wide" id="c-lista-nombres">
+                <div class="card-h"><div><h2>Cargar nombres al buscador</h2><div class="sub">Un nombre por línea, o subí los contactos exportados del celular (.vcf). Los que ya están no se repiten</div></div></div>
+                <textarea id="lista-nombres" class="lista-nombres" placeholder="Juan Pérez&#10;Martín Gómez&#10;…"></textarea>
+                <div class="lista-acciones">
+                    <button class="btn primary" id="btn-guardar-lista">Agregar al buscador</button>
+                    <label class="btn" for="archivo-contactos">Subir contactos (.vcf)</label>
+                    <input type="file" id="archivo-contactos" accept=".vcf,.txt,text/vcard,text/plain" hidden>
+                    <span class="sub" id="lista-info"></span>
+                </div>
             </div>
 
             <div class="section-title">Productos y bebidas</div>
@@ -1094,31 +1107,83 @@ async function arrancar(forzarTodo = false) {
 
 $('btn-refresh').addEventListener('click', () => arrancar(false));
 
-// Crea en `clientes` los nombres del historial que todavía no están, para que el buscador
-// de recepcionista/anotar los sugiera. Se puede tocar más de una vez: solo agrega los que faltan.
+// Guarda en `clientes` los nombres que todavía no están (para que el buscador de
+// recepcionista/anotar los sugiera). Devuelve cuántos agregó; null si se canceló.
+async function guardarNombres(nombres, origen, progreso) {
+    const snap = await getDocs(collection(db, 'clientes'));
+    const ya = new Set(snap.docs.map(d => d.data().n || normNombre(d.data().nombre || '')));
+    const faltan = [];
+    nombres.forEach(nombre => {
+        nombre = String(nombre || '').replace(/\s+/g, ' ').trim();
+        const n = normNombre(nombre);
+        if (n.length < 2 || NOMBRES_GENERICOS.has(n) || ya.has(n)) return;
+        ya.add(n); faltan.push({ nombre, n });
+    });
+    if (!faltan.length) { alert('Todos esos nombres ya están en el buscador.'); return 0; }
+    if (!confirm(`Se van a agregar ${num(faltan.length)} nombres al buscador de clientes. ¿Seguir?`)) return null;
+    for (let i = 0; i < faltan.length; i += 400) {
+        const b = writeBatch(db);
+        faltan.slice(i, i + 400).forEach(c => b.set(doc(collection(db, 'clientes')),
+            { nombre: c.nombre, n: c.n, creadoEn: serverTimestamp(), creadoPor: auth.currentUser?.email || null, origen }));
+        await b.commit();
+        progreso?.(`Guardando… ${num(Math.min(i + 400, faltan.length))}/${num(faltan.length)}`);
+    }
+    alert(`Listo: ${num(faltan.length)} nombres agregados.`);
+    return faltan.length;
+}
+
+// Nombres del historial de cortes (como se escribieron la última vez)
 $('btn-importar-clientes').addEventListener('click', async () => {
     const btn = $('btn-importar-clientes');
     btn.disabled = true; btn.textContent = 'Revisando…';
     try {
-        const snap = await getDocs(collection(db, 'clientes'));
-        const ya = new Set(snap.docs.map(d => d.data().n || normNombre(d.data().nombre || '')));
-        // El nombre como se escribió la última vez
-        const faltan = [...CLIENTES].filter(([k]) => !ya.has(k)).map(([k, cl]) => ({ n: k, nombre: cl.visitas[cl.visitas.length - 1].cliente }));
-        if (!faltan.length) { alert('Todos los nombres ya están en el buscador.'); return; }
-        if (!confirm(`Se van a agregar ${num(faltan.length)} nombres al buscador de clientes. ¿Seguir?`)) return;
-        for (let i = 0; i < faltan.length; i += 400) {
-            const b = writeBatch(db);
-            faltan.slice(i, i + 400).forEach(c => b.set(doc(collection(db, 'clientes')),
-                { nombre: c.nombre, n: c.n, creadoEn: serverTimestamp(), creadoPor: auth.currentUser?.email || null, origen: 'historial' }));
-            await b.commit();
-            btn.textContent = `Guardando… ${num(Math.min(i + 400, faltan.length))}/${num(faltan.length)}`;
-        }
-        alert(`Listo: ${num(faltan.length)} nombres agregados.`);
+        await guardarNombres([...CLIENTES.values()].map(cl => cl.visitas[cl.visitas.length - 1].cliente), 'historial', t => { btn.textContent = t; });
     } catch (err) {
         console.error(err);
         alert('No se pudieron guardar los nombres: ' + (err?.message || err));
     } finally {
         btn.disabled = false; btn.textContent = 'Pasar nombres al buscador';
+    }
+});
+
+// Lista pegada a mano o contactos del celular
+const lineasLista = () => [...new Set($('lista-nombres').value.split(/\r?\n/).map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean))];
+const infoLista = () => { const n = lineasLista().length; $('lista-info').textContent = n ? `${num(n)} nombres en la lista` : ''; };
+$('lista-nombres').addEventListener('input', infoLista);
+
+// .vcf: se toma el FN (nombre para mostrar); Android suele exportarlo en quoted-printable
+function nombresDeVcf(txt) {
+    const lineas = txt.replace(/=\r?\n/g, '').replace(/\r?\n[ \t]/g, '').split(/\r?\n/);
+    const qp = s => { try { return decodeURIComponent(s.replace(/%/g, '%25').replace(/=([0-9A-F]{2})/gi, '%$1')); } catch { return s; } };
+    return lineas.filter(l => /^FN[;:]/i.test(l)).map(l => {
+        const i = l.indexOf(':'), params = l.slice(0, i), val = l.slice(i + 1);
+        return (/QUOTED-PRINTABLE/i.test(params) ? qp(val) : val).replace(/\\([,;\\])/g, '$1').trim();
+    }).filter(Boolean);
+}
+$('archivo-contactos').addEventListener('change', async e => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    const txt = await f.text();
+    const nuevos = /BEGIN:VCARD/i.test(txt) ? nombresDeVcf(txt) : txt.split(/\r?\n/);
+    const actual = $('lista-nombres').value.trim();
+    $('lista-nombres').value = (actual ? actual + '\n' : '') + nuevos.join('\n');
+    infoLista();
+});
+
+$('btn-guardar-lista').addEventListener('click', async () => {
+    const nombres = lineasLista();
+    if (!nombres.length) { alert('Escribí o pegá al menos un nombre (uno por línea).'); return; }
+    const btn = $('btn-guardar-lista');
+    btn.disabled = true; btn.textContent = 'Revisando…';
+    try {
+        const r = await guardarNombres(nombres, 'lista', t => { btn.textContent = t; });
+        if (r !== null) { $('lista-nombres').value = ''; infoLista(); }
+    } catch (err) {
+        console.error(err);
+        alert('No se pudieron guardar los nombres: ' + (err?.message || err));
+    } finally {
+        btn.disabled = false; btn.textContent = 'Agregar al buscador';
     }
 });
 $('btn-logout').addEventListener('click', () => signOut(auth));
