@@ -359,7 +359,7 @@ const DAY = 864e5;
    Así no se gasta la cuota gratis de Firebase en cada visita.
    ========================================================= */
 const REFRESH_DIAS = 45;
-const CACHE_V = 3; // subir si cambia lo que guardan los norm* (fuerza a bajar todo de nuevo)
+const CACHE_V = 4; // subir si cambia lo que guardan los norm* (fuerza a bajar todo de nuevo)
 const tsMs = v => v == null ? null
     : typeof v.toMillis === 'function' ? v.toMillis()
     : typeof v === 'string' ? (Date.parse(v) || null)
@@ -367,10 +367,11 @@ const tsMs = v => v == null ? null
     : typeof v.seconds === 'number' ? v.seconds * 1000 : null;
 const fechaDe = ms => ms == null ? null : new Date(ms).toLocaleDateString('en-CA');
 
+// Corte regalado por SB (tilde "afecta caja" destildado): cuenta como corte del barbero pero no entró plata
 const normCut = (id, x) => {
-    const t = tsMs(x.createdAt);
-    return { id, _ts: t, t, barber: x.barber || '—', service: String(x.service || '—').trim(), price: Number(x.price) || 0,
-        metodo: x.metodoPago || 'sin dato', cliente: String(x.clientName || '').trim(), eliminado: !!x.eliminado,
+    const t = tsMs(x.createdAt), regalado = x.afectaCaja === false;
+    return { id, _ts: t, t, barber: x.barber || '—', service: String(x.service || '—').trim(), price: regalado ? 0 : Number(x.price) || 0,
+        metodo: regalado ? 'regalado' : x.metodoPago || 'sin dato', cliente: String(x.clientName || '').trim(), eliminado: !!x.eliminado,
         montoTransf: Number(x.montoTransferencia) || 0 };
 };
 // Lo que entró por transferencia (en mixto, solo esa parte; ventas de ML no cuentan)
@@ -395,7 +396,7 @@ const normPropina = (id, x) => {
 const normCliente = (id, x) => ({ id, _ts: tsMs(x.creadoEn), nombre: x.nombre || '', n: x.n || normNombre(x.nombre || ''),
     alias: Array.isArray(x.alias) ? x.alias : [], eliminado: !!x.eliminado });
 // Turnos: el teléfono no se guarda en la caché ni se muestra
-const normTurno = (id, x) => ({ id, fecha: x.fecha || null, hora: x.hora || '', barbero: x.nombreBarbero || x.barbero || '—',
+const normTurno = (id, x) => ({ id, eliminado: !!x.eliminado, fecha: x.fecha || null, hora: x.hora || '', barbero: x.nombreBarbero || x.barbero || '—',
     servicio: String(x.nombreServicio || x.servicio || '').trim(), estado: x.estado || '',
     origen: x.telefono ? 'online' : 'recepcion', precio: Number(x.precio) || 0 });
 
@@ -481,7 +482,7 @@ async function cargarTodo(forzarTodo = false) {
     D.ventas = res.ventas.filter(v => !v.eliminado && v.fecha);
     D.gastos = res.gastos.filter(g => !g.eliminado && g.fecha);
     D.propinas = res.propinas.filter(p => !p.eliminado && p.fecha && p.estado !== 'rechazado');
-    D.turnos = res.turnos.filter(t => t.fecha);
+    D.turnos = res.turnos.filter(t => t.fecha && !t.eliminado);
     D.clientes = res.clientes.filter(c => c.n);
     INICIO = calcularInicio(D.cuts);
     const antes = D.cuts.filter(c => c.t < INICIO);
@@ -518,7 +519,7 @@ const SERIE = ['var(--s1)','var(--s2)','var(--s3)','var(--s4)','var(--s5)','var(
 const RAMP = ['#104281','#184f95','#1c5cab','#256abf','#2a78d6','#3987e5','#5598e7','#6da7ec','#86b6ef']; // secuencial azul, oscuro = poco
 const DIAS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 const CAT_GASTO = { insumos:'Insumos', servicios:'Servicios', alquiler:'Alquiler', limpieza:'Limpieza', otro:'Otro' };
-const METODO = { efectivo:'Efectivo', transferencia:'Transferencia', mixto:'Mixto', 'sin dato':'Sin dato' };
+const METODO = { efectivo:'Efectivo', transferencia:'Transferencia', mixto:'Mixto', regalado:'Regalado por SB', 'sin dato':'Sin dato' };
 
 // Color fijo por barbero (según cortes de todo el historial): no cambia al filtrar
 let BARBER_COLOR = {}, BARBER_ORDEN = [];
@@ -814,7 +815,7 @@ function totales(F) {
     return {
         uRegaladas: regaladas.reduce((s, v) => s + v.cantidad, 0),
         regaladas: regaladas.reduce((s, v) => s + v.precio * v.cantidad, 0), // lo que valían (no entra en la facturación)
-        cortes, nCortes: F.cuts.length,
+        cortes, nCortes: F.cuts.length, nCobrados: F.cuts.filter(c => c.metodo !== 'regalado').length,
         productos: prods.reduce((s, v) => s + v.total, 0), uProductos: prods.reduce((s, v) => s + v.cantidad, 0),
         bebidas: bebs.reduce((s, v) => s + v.total, 0), uBebidas: bebs.reduce((s, v) => s + v.cantidad, 0),
         propinas: F.propinas.reduce((s, p) => s + p.monto, 0),
@@ -839,8 +840,9 @@ function deltaHTML(act, prev, masEsMejor = true) {
 function renderTiles(T, Tp) {
     const facturacion = T.cortes + T.productos + T.bebidas;
     const factPrev = Tp ? Tp.cortes + Tp.productos + Tp.bebidas : null;
-    const ticket = T.nCortes ? T.cortes / T.nCortes : 0;
-    const ticketPrev = Tp && Tp.nCortes ? Tp.cortes / Tp.nCortes : null;
+    // Ticket: solo cortes cobrados (los regalados por SB no bajan el promedio)
+    const ticket = T.nCobrados ? T.cortes / T.nCobrados : 0;
+    const ticketPrev = Tp && Tp.nCobrados ? Tp.cortes / Tp.nCobrados : null;
     const tile = (label, value, extra = '', delta = '', cls = '') =>
         `<div class="tile ${cls}"><div class="label">${label}</div><div class="value" title="${esc(value)}">${value}</div>${delta}${extra ? `<div class="extra">${extra}</div>` : ''}</div>`;
     $('tiles').innerHTML =
@@ -880,10 +882,10 @@ function renderIngresos(F, B) {
         B.keys.map((k, i) => [largos[i], money(series[0].values[i]), money(series[1].values[i]), money(series[2].values[i]), money(series[0].values[i] + series[1].values[i] + series[2].values[i])]));
 
     // Ticket promedio
-    const cnt = porBucket(B, F.cuts, c => c.t, () => 1);
+    const cnt = porBucket(B, F.cuts.filter(c => c.metodo !== 'regalado'), c => c.t, () => 1);
     const ticket = series[0].values.map((v, i) => cnt[i] ? v / cnt[i] : null);
     dibujar('c-ticket', () => lineas($('c-ticket').querySelector('.chart'), { labels, largos, series: [{ name: 'Ticket promedio', color: 'var(--s1)', values: ticket }], fmt: money, h: 220 }));
-    setTabla('c-ticket', [{ t: B.semanal ? 'Semana' : 'Mes' }, { t: 'Cortes', num: 1 }, { t: 'Ticket promedio', num: 1 }],
+    setTabla('c-ticket', [{ t: B.semanal ? 'Semana' : 'Mes' }, { t: 'Cortes cobrados', num: 1 }, { t: 'Ticket promedio', num: 1 }],
         B.keys.map((k, i) => [largos[i], num(cnt[i]), ticket[i] == null ? '—' : money(ticket[i])]));
 }
 
@@ -1208,7 +1210,8 @@ $('btn-export').addEventListener('click', async () => {
         F.gastos.forEach(g => { const r = res[idx(g.fecha.slice(0, 7))]; if (r) r.Gastos += g.monto; });
         F.propinas.forEach(p => { const r = res[idx(p.fecha.slice(0, 7))]; if (r) r.Propinas += p.monto; });
         F.turnos.forEach(t => { const r = res[idx(t.fecha.slice(0, 7))]; if (r) r.Turnos++; });
-        res.forEach(r => { r['Ticket promedio'] = r.Cortes ? Math.round(r['Facturación cortes'] / r.Cortes) : 0; });
+        F.cuts.forEach(c => { if (c.metodo === 'regalado') { const r = res[idx(monthKey(c.t))]; if (r) r._regalados = (r._regalados || 0) + 1; } });
+        res.forEach(r => { const n = r.Cortes - (r._regalados || 0); r['Ticket promedio'] = n ? Math.round(r['Facturación cortes'] / n) : 0; delete r._regalados; });
 
         const wb = XLSX.utils.book_new();
         const hoja = (rows, nombre) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ '(sin datos)': '' }]), nombre);
