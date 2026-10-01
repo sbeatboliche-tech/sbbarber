@@ -30,6 +30,10 @@
             const colors = { gray: neutral, slate: neutral, zinc: neutral, stone: neutral, neutral,
                 emerald: verde, green: verde, red: rojo, rose: rojo };
             ['cyan','teal','sky','blue','indigo','violet','purple','fuchsia','pink','amber','yellow','orange','lime'].forEach(c => colors[c] = acento);
+            // Un tono de gris por barbero (claro → oscuro) para distinguirlos sin usar colores
+            [['fafafa','f0f0f0','8c8c8c','767676'], ['e0e0e0','d2d2d2','7a7a7a','666666'], ['c8c8c8','bababa','686868','575757'],
+             ['b0b0b0','a2a2a2','575757','484848'], ['9a9a9a','8c8c8c','484848','3a3a3a'], ['d8d8d8','c4c4c4','5f5f5f','4c4c4c']]
+                .forEach(([t3, t4, t5, t6], i) => colors['tono' + (i + 1)] = { ...neutral, 300:'#' + t3, 400:'#' + t4, 500:'#' + t5, 600:'#' + t6 });
             tailwind.config = { theme: { extend: {
                 colors,
                 fontFamily: { sans: ['Geist','system-ui','sans-serif'], mono: ['Geist Mono','ui-monospace','monospace'] },
@@ -1518,19 +1522,19 @@ const SERVICES = [
 let BARBERS = ['Tony', 'Stefa', 'Santi', 'SantiF'];
 const BARBER_COMISION = { Tony: 0.5, Stefa: 0.5, Santi: 0.5, SantiF: 0.4 };
 let BARBER_THEME = {
-    Tony:   { color:'blue',    text:'text-blue-400',    border:'border-blue-500',    bg:'bg-blue-500',    initial:'T' },
-    Maxi:   { color:'emerald', text:'text-emerald-400', border:'border-emerald-500', bg:'bg-emerald-500', initial:'M' },
-    Stefa:  { color:'purple',  text:'text-purple-400',  border:'border-purple-500',  bg:'bg-purple-500',  initial:'S' },
-    Santi:  { color:'orange',  text:'text-orange-400',  border:'border-orange-500',  bg:'bg-orange-500',  initial:'Sa' },
-    SantiF: { color:'pink',    text:'text-pink-400',    border:'border-pink-500',    bg:'bg-pink-500',    initial:'F' },
-    FEME:   { color:'cyan',    text:'text-cyan-400',    border:'border-cyan-500',    bg:'bg-cyan-500',    initial:'F' }
+    Tony:   { color:'tono1', text:'text-tono1-400', border:'border-tono1-500', bg:'bg-tono1-500', initial:'T' },
+    Maxi:   { color:'tono2', text:'text-tono2-400', border:'border-tono2-500', bg:'bg-tono2-500', initial:'M' },
+    Stefa:  { color:'tono3', text:'text-tono3-400', border:'border-tono3-500', bg:'bg-tono3-500', initial:'S' },
+    Santi:  { color:'tono4', text:'text-tono4-400', border:'border-tono4-500', bg:'bg-tono4-500', initial:'Sa' },
+    SantiF: { color:'tono5', text:'text-tono5-400', border:'border-tono5-500', bg:'bg-tono5-500', initial:'F' },
+    FEME:   { color:'tono6', text:'text-tono6-400', border:'border-tono6-500', bg:'bg-tono6-500', initial:'F' }
 };
 const BARBER_EXTRA_THEMES = [
-    { color:'orange', text:'text-orange-400', border:'border-orange-500', bg:'bg-orange-500' },
-    { color:'pink',   text:'text-pink-400',   border:'border-pink-500',   bg:'bg-pink-500'   },
-    { color:'red',    text:'text-red-400',    border:'border-red-500',    bg:'bg-red-500'    },
-    { color:'indigo', text:'text-indigo-400', border:'border-indigo-500', bg:'bg-indigo-500' },
-    { color:'yellow', text:'text-yellow-400', border:'border-yellow-500', bg:'bg-yellow-500' },
+    { color:'tono4', text:'text-tono4-400', border:'border-tono4-500', bg:'bg-tono4-500' },
+    { color:'tono5', text:'text-tono5-400', border:'border-tono5-500', bg:'bg-tono5-500' },
+    { color:'tono6', text:'text-tono6-400', border:'border-tono6-500', bg:'bg-tono6-500' },
+    { color:'tono1', text:'text-tono1-400', border:'border-tono1-500', bg:'bg-tono1-500' },
+    { color:'tono2', text:'text-tono2-400', border:'border-tono2-500', bg:'bg-tono2-500' },
 ];
 let extraThemeIdx = 0;
 
