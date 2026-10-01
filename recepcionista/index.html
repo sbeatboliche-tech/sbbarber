@@ -17,18 +17,36 @@
     <link rel="dns-prefetch" href="https://www.gstatic.com">
     <link rel="dns-prefetch" href="https://i.imgur.com">
     <!-- Fuente: link directo en lugar de @import (evita cadena de 2 requests) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Paleta blanco y negro: los colores "de adorno" (cyan, violeta, ámbar, etc.) pasan a grises puros;
+        // solo verde (plata que entra) y rojo (plata que sale / errores) conservan color, apagados.
+        (function () {
+            const neutral = { 50:'#fafafa', 100:'#f5f5f5', 200:'#e5e5e5', 300:'#d4d4d4', 400:'#a3a3a3', 500:'#737373', 600:'#525252', 700:'#3a3a3a', 800:'#232323', 900:'#161616', 950:'#0a0a0a' };
+            const acento  = { ...neutral, 200:'#f5f5f5', 300:'#ededed', 400:'#d9d9d9' };
+            const verde   = { 50:'#f0f7f2', 100:'#dcede1', 200:'#b9dbc3', 300:'#8cc39f', 400:'#6aae80', 500:'#4f9466', 600:'#3d7a52', 700:'#326243', 800:'#294e37', 900:'#1f3b2a', 950:'#122219' };
+            const rojo    = { 50:'#fbf2f2', 100:'#f5e0e0', 200:'#ebc0c0', 300:'#dd9595', 400:'#d27272', 500:'#c25555', 600:'#a84343', 700:'#8a3737', 800:'#6e2e2e', 900:'#552525', 950:'#2e1313' };
+            const colors = { gray: neutral, slate: neutral, zinc: neutral, stone: neutral, neutral,
+                emerald: verde, green: verde, red: rojo, rose: rojo };
+            ['cyan','teal','sky','blue','indigo','violet','purple','fuchsia','pink','amber','yellow','orange','lime'].forEach(c => colors[c] = acento);
+            tailwind.config = { theme: { extend: {
+                colors,
+                fontFamily: { sans: ['Geist','system-ui','sans-serif'], mono: ['Geist Mono','ui-monospace','monospace'] },
+                borderRadius: { xl:'0.5rem', '2xl':'0.625rem', '3xl':'0.75rem' }
+            } } };
+        })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
     <!-- Font Awesome async: no bloquea el primer render -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
     <style>
-        body { font-family:'Inter',sans-serif; -webkit-tap-highlight-color:transparent; }
+        body { font-family:'Geist',system-ui,sans-serif; font-feature-settings:'tnum' 1; -webkit-tap-highlight-color:transparent; }
         ::-webkit-scrollbar { display:none; }
-        .glass { background:rgba(17,24,39,0.85); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border-bottom:1px solid rgba(255,255,255,0.08); }
-        .glass-card { background:rgba(30,41,59,0.7); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.05); box-shadow:0 8px 32px rgba(0,0,0,0.4); }
-        .glass-modal { background:rgba(20,25,35,0.97); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.1); }
+        .glass { background:#0a0a0a; border-bottom:1px solid #232323; }
+        .glass-card { background:#121212; border:1px solid #232323; }
+        .glass-modal { background:#111111; border:1px solid #2a2a2a; }
         .animate-enter { animation:enter 0.35s cubic-bezier(0.16,1,0.3,1); }
         @keyframes enter { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
         @keyframes slideUp { from{opacity:0;transform:translateY(40px)} to{opacity:1;transform:translateY(0)} }
@@ -40,6 +58,20 @@
         @keyframes pulse-ml { 0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(249,115,22,0.55)} 50%{transform:scale(1.07);box-shadow:0 0 0 7px rgba(249,115,22,0)} }
         .pickit-pending { animation:pulse-pickit 1.3s ease-in-out infinite; }
         @keyframes pulse-pickit { 0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(139,92,246,0.55)} 50%{transform:scale(1.07);box-shadow:0 0 0 7px rgba(139,92,246,0)} }
+        /* ===== Tema blanco y negro: sin degradés, brillos ni vidrio esmerilado ===== */
+        /* Botones con degradé => blancos con texto negro (los rojos quedan rojos: acciones de salida) */
+        [class*="bg-gradient-to-"]:not(.bg-gradient-to-t):not(.bg-clip-text) {
+            background-image:none !important; background-color:#f5f5f5 !important; color:#0a0a0a !important;
+        }
+        [class*="bg-gradient-to-"][class*="from-red-"]:not(.bg-gradient-to-t),
+        [class*="bg-gradient-to-"][class*="from-rose-"]:not(.bg-gradient-to-t) { background-color:#a84343 !important; color:#fff !important; }
+        [class*="bg-gradient-to-"]:not(.bg-gradient-to-t):not([class*="from-red-"]):not([class*="from-rose-"]) [class*="text-white"],
+        [class*="bg-gradient-to-"]:not(.bg-gradient-to-t):not([class*="from-red-"]):not([class*="from-rose-"]) [class*="text-gray-"] { color:#0a0a0a !important; }
+        .bg-clip-text { background:none !important; color:#fafafa !important; -webkit-text-fill-color:#fafafa; }
+        [class*="shadow-[0_0"] { box-shadow:none !important; }
+        [class*="backdrop-blur"] { backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
+        .tracking-widest { letter-spacing:0.06em !important; }
+        .font-mono, .js-money { font-family:'Geist Mono',ui-monospace,monospace; }
         body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
         button:disabled { opacity:0.7; cursor:not-allowed; }
         /* Ocultar saldo de facturación con asteriscos */
@@ -54,13 +86,13 @@
         #money-eye-btn:hover { color:#e5e7eb; }
         /* Ocultar cantidad de cortes (ojito aparte) */
         .cortes-hidden #stat-cuts-count { font-size:0 !important; }
-        .cortes-hidden #stat-cuts-count::after { content:"•••"; font-size:1.5rem; color:#93c5fd; letter-spacing:0.05em; }
+        .cortes-hidden #stat-cuts-count::after { content:"•••"; font-size:1.5rem; color:#d4d4d4; letter-spacing:0.05em; }
         /* Mobile tabs */
         .tab-content { display:none; }
         .tab-content.active { display:flex; flex-direction:column; }
         .drag-handle { cursor:grab; touch-action:none; }
         .drag-handle:active { cursor:grabbing; }
-        .sortable-ghost { opacity:0.3; border:2px dashed rgba(6,182,212,0.4) !important; }
+        .sortable-ghost { opacity:0.3; border:2px dashed rgba(255,255,255,0.3) !important; }
         @keyframes slideIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
         /* Desktop: both columns always visible */
         @media (min-width:768px) {
@@ -73,17 +105,17 @@
     </style>
     <link rel="stylesheet" href="../assets/sb-motion.css">
 </head>
-<body class="h-full bg-[#0f1115] text-white flex items-center justify-center md:items-stretch md:justify-start">
+<body class="h-full bg-[#0a0a0a] text-white flex items-center justify-center md:items-stretch md:justify-start">
 <div class="w-full max-w-md md:max-w-none h-full flex flex-col relative shadow-2xl overflow-hidden">
 
     <!-- Loading -->
-    <div id="loading-view" class="absolute inset-0 z-50 bg-[#0f1115] flex flex-col justify-center items-center transition-opacity duration-500">
+    <div id="loading-view" class="absolute inset-0 z-50 bg-[#0a0a0a] flex flex-col justify-center items-center transition-opacity duration-500">
         <img src="https://i.imgur.com/xyjMT6X.png" alt="SB BARBER" class="h-24 mb-6 animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">
         <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-500"></div>
     </div>
 
     <!-- Password Gate -->
-    <div id="gate-view" class="absolute inset-0 z-[60] bg-[#0f1115] flex flex-col justify-center items-center p-8">
+    <div id="gate-view" class="absolute inset-0 z-[60] bg-[#0a0a0a] flex flex-col justify-center items-center p-8">
         <img src="https://i.imgur.com/xyjMT6X.png" alt="SB BARBER" class="h-24 mx-auto mb-8 drop-shadow-2xl">
         <div class="w-full max-w-xs">
             <p class="text-xs text-gray-500 uppercase tracking-widest text-center mb-4 font-bold">Acceso recepción</p>
@@ -150,7 +182,7 @@
                 <!-- Botón retiros: solo desktop -->
                 <button onclick="window.openRetirosPanel()" class="hidden md:flex items-center gap-2 bg-violet-600/20 border border-violet-500/40 text-violet-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-violet-600/40 transition relative">
                     <i class="fas fa-wallet text-xs"></i> Retiros
-                    <span id="retiros-badge-header" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border border-[#0f1115] text-[8px] font-bold items-center justify-center leading-none">0</span>
+                    <span id="retiros-badge-header" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border border-[#0a0a0a] text-[8px] font-bold items-center justify-center leading-none">0</span>
                 </button>
                 <!-- Botón turnos: solo desktop -->
                 <button onclick="window.openTurnosPanel()" class="hidden md:flex items-center gap-2 bg-amber-600/20 border border-amber-500/40 text-amber-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-amber-600/40 transition">
@@ -172,7 +204,7 @@
                     <button id="btn-mas" type="button" onclick="window.toggleMasMenu(event)" title="Más opciones" aria-haspopup="true" aria-expanded="false" class="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:bg-white/10 transition">
                         <i class="fas fa-ellipsis-vertical text-sm"></i>
                     </button>
-                    <div id="mas-menu" class="hidden absolute right-0 top-full mt-2 w-60 bg-[#16181d] border border-white/10 rounded-2xl p-2 shadow-2xl z-50 flex-col gap-1">
+                    <div id="mas-menu" class="hidden absolute right-0 top-full mt-2 w-60 bg-[#141414] border border-white/10 rounded-2xl p-2 shadow-2xl z-50 flex-col gap-1">
                         <button type="button" onclick="window.closeMasMenu(); window.openMenuEditor()" class="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-list-ul w-4 text-center text-gray-400"></i> Modificar menú
                         </button>
@@ -195,7 +227,7 @@
         </header>
 
         <!-- Tab nav: solo en mobile -->
-        <div class="md:hidden bg-[#0f1115] sticky top-[73px] z-10 py-3 px-4 border-b border-gray-800/50 flex-shrink-0">
+        <div class="md:hidden bg-[#0a0a0a] sticky top-[73px] z-10 py-3 px-4 border-b border-gray-800/50 flex-shrink-0">
             <nav class="flex bg-gray-900/80 p-1 rounded-xl border border-gray-800">
                 <button onclick="window.switchTab('cortes', this)" id="tab-btn-cortes" class="tab-btn flex-1 py-2 rounded-lg text-[11px] font-bold text-white bg-gradient-to-r from-cyan-600 to-teal-600 shadow-md transition-all flex items-center justify-center gap-1.5">
                     <i class="fas fa-cut text-[9px]"></i> CORTES
@@ -210,7 +242,7 @@
         </div>
 
         <!-- Navegación por fecha: Hoy / Ayer / buscar fecha -->
-        <div class="bg-[#0f1115] px-4 md:px-6 py-2 border-b border-gray-800/50 flex items-center gap-2 flex-shrink-0">
+        <div class="bg-[#0a0a0a] px-4 md:px-6 py-2 border-b border-gray-800/50 flex items-center gap-2 flex-shrink-0">
             <button onclick="window.setDashboardFechaHoy()" id="dash-fecha-hoy-btn" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-cyan-600/20 border border-cyan-500 text-cyan-300 transition">HOY</button>
             <button onclick="window.setDashboardFechaAyer()" id="dash-fecha-ayer-btn" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition">AYER</button>
             <input type="date" id="dash-fecha-input" onchange="window.setDashboardFecha(this.value)" class="flex-1 min-w-0 max-w-[170px] bg-black/30 border border-gray-700 rounded-lg px-2 py-1.5 text-[11px] text-gray-300 focus:border-cyan-500 outline-none">
@@ -413,14 +445,14 @@
         </button>
         <button id="fab-retiros" onclick="window.openRetirosPanel()" class="md:hidden absolute bottom-6 left-6 w-14 h-14 bg-gradient-to-tr from-violet-600 to-purple-500 rounded-full shadow-[0_0_24px_rgba(139,92,246,0.45)] flex items-center justify-center text-lg text-white transition-all active:scale-90 hover:scale-105 z-30 border-2 border-white/10">
             <i class="fas fa-wallet"></i>
-            <span id="retiros-badge" class="hidden absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-[#0f1115] text-[9px] font-bold flex items-center justify-center leading-none">0</span>
+            <span id="retiros-badge" class="hidden absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-[#0a0a0a] text-[9px] font-bold flex items-center justify-center leading-none">0</span>
         </button>
 
     </div><!-- /dashboard-view -->
 
     <!-- MODAL CONTRASEÑA CIERRE -->
     <div id="cierre-pass-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-        <div class="bg-[#0f1115] border border-white/10 rounded-2xl p-6 w-80 shadow-2xl">
+        <div class="bg-[#0a0a0a] border border-white/10 rounded-2xl p-6 w-80 shadow-2xl">
             <div class="text-sm font-bold text-white mb-1">Cierre de Caja</div>
             <div class="text-xs text-gray-500 mb-4">Ingresá la contraseña para continuar</div>
             <input id="cierre-pass-input" type="password" placeholder="Contraseña" class="w-full bg-white/5 border border-white/10 text-white text-sm rounded-xl px-4 h-11 outline-none focus:border-white/30 mb-3" autocomplete="off" onkeydown="if(event.key==='Enter')window.confirmCierrePass()">
@@ -435,7 +467,7 @@
     <!-- ============================================================
          CIERRE DE CAJA
     ============================================================ -->
-    <div id="cierre-caja-view" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+    <div id="cierre-caja-view" class="absolute inset-0 z-40 bg-[#0a0a0a] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
 
         <header class="px-5 md:px-8 py-4 md:py-5 glass flex items-center justify-between flex-shrink-0 border-b border-white/5">
             <div class="flex items-center gap-4">
@@ -469,7 +501,7 @@
     <!-- ============================================================
          MODIFICAR MENÚ (bebidas + productos)
     ============================================================ -->
-    <div id="menu-editor-view" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+    <div id="menu-editor-view" class="absolute inset-0 z-40 bg-[#0a0a0a] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
         <header class="px-4 md:px-8 py-4 md:py-5 glass flex items-center justify-between flex-shrink-0 border-b border-white/5">
             <div class="flex items-center gap-3">
                 <button onclick="window.closeMenuEditor()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
@@ -500,7 +532,7 @@
         </div>
 
         <!-- Barra guardar (fija) -->
-        <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#0f1115] via-[#0f1115] to-transparent">
+        <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a] to-transparent">
             <div class="max-w-2xl mx-auto">
                 <button onclick="window.saveMenuEditor()" id="me-save-btn" class="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 text-white font-bold text-sm uppercase tracking-wider shadow-lg hover:scale-[1.01] transition active:scale-95">
                     Guardar cambios
@@ -512,7 +544,7 @@
     <!-- ============================================================
          PANEL STOCK DE PRODUCTOS
     ============================================================ -->
-    <div id="stock-productos-panel" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+    <div id="stock-productos-panel" class="absolute inset-0 z-40 bg-[#0a0a0a] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
         <header class="px-5 py-4 glass flex items-center gap-4 flex-shrink-0">
             <button onclick="window.closeStockProductosPanel()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition">
                 <i class="fas fa-arrow-left text-sm"></i>
@@ -534,7 +566,7 @@
     <!-- ============================================================
          PANEL STOCK DE BEBIDAS
     ============================================================ -->
-    <div id="bebidas-panel" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+    <div id="bebidas-panel" class="absolute inset-0 z-40 bg-[#0a0a0a] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
         <header class="px-5 py-4 glass flex items-center gap-4 flex-shrink-0">
             <button onclick="window.closeBebidasPanel()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition">
                 <i class="fas fa-arrow-left text-sm"></i>
@@ -550,7 +582,7 @@
     <!-- ============================================================
          PANEL RETIROS Y PROPINAS
     ============================================================ -->
-    <div id="retiros-panel" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+    <div id="retiros-panel" class="absolute inset-0 z-40 bg-[#0a0a0a] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
         <!-- Header -->
         <header class="px-5 md:px-8 py-4 md:py-5 glass flex items-center justify-between flex-shrink-0 border-b border-white/5">
             <div class="flex items-center gap-4">
@@ -581,7 +613,7 @@
         </div>
 
         <!-- Sub-panel: detalle barbero -->
-        <div id="barber-detail-panel" class="absolute inset-0 z-50 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.3s cubic-bezier(0.16,1,0.3,1)">
+        <div id="barber-detail-panel" class="absolute inset-0 z-50 bg-[#0a0a0a] flex-col hidden" style="animation:slideIn 0.3s cubic-bezier(0.16,1,0.3,1)">
             <header class="px-5 md:px-8 py-4 md:py-5 glass flex items-center gap-4 flex-shrink-0 border-b border-white/5">
                 <button onclick="window.closeBarberDetail()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
                     <i class="fas fa-arrow-left text-sm"></i>
@@ -599,7 +631,7 @@
     <!-- ============================================================
          PANEL TURNOS
     ============================================================ -->
-    <div id="turnos-panel" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+    <div id="turnos-panel" class="absolute inset-0 z-40 bg-[#0a0a0a] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
         <!-- Header -->
         <header class="px-5 md:px-8 py-4 md:py-5 glass flex items-center justify-between flex-shrink-0 border-b border-white/5">
             <div class="flex items-center gap-4">
@@ -635,7 +667,7 @@
     <!-- ============================================================
          PANEL GASTOS
     ============================================================ -->
-    <div id="gastos-panel" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+    <div id="gastos-panel" class="absolute inset-0 z-40 bg-[#0a0a0a] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
         <header class="px-5 md:px-8 py-4 md:py-5 glass flex items-center justify-between flex-shrink-0 border-b border-white/5">
             <div class="flex items-center gap-4">
                 <button onclick="window.closeGastosPanel()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
@@ -686,7 +718,7 @@
     </div><!-- /gastos-panel -->
 
     <!-- Historial ML (despachos punto Mercado Libre) -->
-    <div id="historial-ml-panel" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+    <div id="historial-ml-panel" class="absolute inset-0 z-40 bg-[#0a0a0a] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
         <header class="px-5 md:px-8 py-4 md:py-5 glass flex items-center justify-between flex-shrink-0 border-b border-white/5">
             <div class="flex items-center gap-4">
                 <button onclick="window.closeHistorialMLPanel()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
@@ -747,7 +779,7 @@
     </div><!-- /historial-ml-panel -->
 
     <!-- Historial Pickit (despachos punto Pickit) -->
-    <div id="historial-pickit-panel" class="absolute inset-0 z-40 bg-[#0f1115] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+    <div id="historial-pickit-panel" class="absolute inset-0 z-40 bg-[#0a0a0a] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
         <header class="px-5 md:px-8 py-4 md:py-5 glass flex items-center justify-between flex-shrink-0 border-b border-white/5">
             <div class="flex items-center gap-4">
                 <button onclick="window.closeHistorialPickitPanel()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
@@ -5286,11 +5318,11 @@ function customConfirm(message, confirmLabel = 'Eliminar') {
     return new Promise(resolve => {
         const ov = document.createElement('div');
         ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);display:flex;align-items:flex-end;justify-content:center;padding-bottom:env(safe-area-inset-bottom,16px)';
-        ov.innerHTML = `<div style="background:#1e293b;border:1px solid rgba(255,255,255,0.1);border-radius:20px 20px 0 0;padding:24px 20px;width:100%;max-width:480px">
-            <p style="color:#f1f5f9;font-size:15px;font-weight:600;margin:0 0 18px;text-align:center">${message}</p>
+        ov.innerHTML = `<div style="background:#141414;border:1px solid #2a2a2a;border-radius:20px 20px 0 0;padding:24px 20px;width:100%;max-width:480px">
+            <p style="color:#fafafa;font-size:15px;font-weight:600;margin:0 0 18px;text-align:center">${message}</p>
             <div style="display:flex;gap:10px">
-                <button id="_cc_cancel" style="flex:1;padding:14px;border-radius:12px;background:rgba(255,255,255,0.07);color:#94a3b8;font-weight:700;font-size:14px;border:1px solid rgba(255,255,255,0.1);cursor:pointer">Cancelar</button>
-                <button id="_cc_ok" style="flex:1;padding:14px;border-radius:12px;background:#dc2626;color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer">${confirmLabel}</button>
+                <button id="_cc_cancel" style="flex:1;padding:14px;border-radius:12px;background:rgba(255,255,255,0.07);color:#a3a3a3;font-weight:700;font-size:14px;border:1px solid rgba(255,255,255,0.1);cursor:pointer">Cancelar</button>
+                <button id="_cc_ok" style="flex:1;padding:14px;border-radius:12px;background:#a84343;color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer">${confirmLabel}</button>
             </div></div>`;
         document.body.appendChild(ov);
         const done = r => { document.body.removeChild(ov); resolve(r); };
