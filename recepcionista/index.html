@@ -20,25 +20,34 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Paleta blanco y negro: los colores "de adorno" (cyan, violeta, ámbar, etc.) pasan a grises puros;
-        // solo verde (plata que entra) y rojo (plata que sale / errores) conservan color, apagados.
+        // Estética blanco y negro: la estructura (fondos, botones, bordes) es neutra y cada cosa
+        // conserva su color solo como acento (íconos, textos, borde de lo seleccionado, puntitos).
         (function () {
             const neutral = { 50:'#fafafa', 100:'#f5f5f5', 200:'#e5e5e5', 300:'#d4d4d4', 400:'#a3a3a3', 500:'#737373', 600:'#525252', 700:'#3a3a3a', 800:'#232323', 900:'#161616', 950:'#0a0a0a' };
-            const acento  = { ...neutral, 200:'#f5f5f5', 300:'#ededed', 400:'#d9d9d9' };
-            const verde   = { 50:'#f0f7f2', 100:'#dcede1', 200:'#b9dbc3', 300:'#8cc39f', 400:'#6aae80', 500:'#4f9466', 600:'#3d7a52', 700:'#326243', 800:'#294e37', 900:'#1f3b2a', 950:'#122219' };
-            const rojo    = { 50:'#fbf2f2', 100:'#f5e0e0', 200:'#ebc0c0', 300:'#dd9595', 400:'#d27272', 500:'#c25555', 600:'#a84343', 700:'#8a3737', 800:'#6e2e2e', 900:'#552525', 950:'#2e1313' };
-            const colors = { gray: neutral, slate: neutral, zinc: neutral, stone: neutral, neutral,
-                emerald: verde, green: verde, red: rojo, rose: rojo };
-            ['cyan','teal','sky','blue','indigo','violet','purple','fuchsia','pink','amber','yellow','orange','lime'].forEach(c => colors[c] = acento);
-            // Un tono de gris por barbero (claro → oscuro) para distinguirlos sin usar colores
-            [['fafafa','f0f0f0','8c8c8c','767676'], ['e0e0e0','d2d2d2','7a7a7a','666666'], ['c8c8c8','bababa','686868','575757'],
-             ['b0b0b0','a2a2a2','575757','484848'], ['9a9a9a','8c8c8c','484848','3a3a3a'], ['d8d8d8','c4c4c4','5f5f5f','4c4c4c']]
-                .forEach(([t3, t4, t5, t6], i) => colors['tono' + (i + 1)] = { ...neutral, 300:'#' + t3, 400:'#' + t4, 500:'#' + t5, 600:'#' + t6 });
             tailwind.config = { theme: { extend: {
-                colors,
+                colors: { gray: neutral, slate: neutral, zinc: neutral, stone: neutral },
                 fontFamily: { sans: ['Geist','system-ui','sans-serif'], mono: ['Geist Mono','ui-monospace','monospace'] },
                 borderRadius: { xl:'0.5rem', '2xl':'0.625rem', '3xl':'0.75rem' }
             } } };
+            const COLORES = ['red','orange','amber','yellow','lime','green','emerald','teal','cyan','sky','blue','indigo','violet','purple','fuchsia','pink','rose'];
+            const OPAC = [5,10,15,20,25,30,40,50,60,70,75,80,85,90];
+            const css = [];
+            COLORES.forEach(c => {
+                // Fondos teñidos (chips, tarjetas, botones secundarios) => gris neutro sutil
+                [500,600,700,800,900,950].forEach(n => OPAC.forEach(o => {
+                    css.push(`[class~="bg-${c}-${n}/${o}"]{background-color:rgba(255,255,255,${Math.min(0.12, o / 400 + 0.02).toFixed(3)})!important}`);
+                }));
+                // Bordes con transparencia => línea fina blanca; los bordes llenos (selección) quedan en color
+                [300,400,500,600,700,800,900].forEach(n => OPAC.forEach(o => {
+                    css.push(`[class~="border-${c}-${n}/${o}"]{border-color:rgba(255,255,255,${Math.min(0.16, o / 400 + 0.04).toFixed(3)})!important}`);
+                }));
+                // Botones de color lleno => blancos con texto negro (los rojos siguen rojos: borrar / salidas)
+                if (c !== 'red' && c !== 'rose') [600,700,800].forEach(n => {
+                    css.push(`[class~="bg-${c}-${n}"]{background-color:#f5f5f5!important;color:#0a0a0a!important}`);
+                    css.push(`[class~="bg-${c}-${n}"] [class*="text-"]{color:#0a0a0a!important}`);
+                });
+            });
+            const st = document.createElement('style'); st.textContent = css.join(''); document.head.appendChild(st);
         })();
     </script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
@@ -68,11 +77,11 @@
             background-image:none !important; background-color:#f5f5f5 !important; color:#0a0a0a !important;
         }
         [class*="bg-gradient-to-"][class*="from-red-"]:not(.bg-gradient-to-t),
-        [class*="bg-gradient-to-"][class*="from-rose-"]:not(.bg-gradient-to-t) { background-color:#a84343 !important; color:#fff !important; }
+        [class*="bg-gradient-to-"][class*="from-rose-"]:not(.bg-gradient-to-t) { background-color:#dc2626 !important; color:#fff !important; }
         [class*="bg-gradient-to-"]:not(.bg-gradient-to-t):not([class*="from-red-"]):not([class*="from-rose-"]) [class*="text-white"],
         [class*="bg-gradient-to-"]:not(.bg-gradient-to-t):not([class*="from-red-"]):not([class*="from-rose-"]) [class*="text-gray-"] { color:#0a0a0a !important; }
         .bg-clip-text { background:none !important; color:#fafafa !important; -webkit-text-fill-color:#fafafa; }
-        [class*="shadow-[0_0"] { box-shadow:none !important; }
+        [class*="shadow-[0_0"], [class*="shadow-"][class*="-900/"], [class*="shadow-"][class*="-500/"] { box-shadow:none !important; }
         [class*="backdrop-blur"] { backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
         .tracking-widest { letter-spacing:0.06em !important; }
         .font-mono, .js-money { font-family:'Geist Mono',ui-monospace,monospace; }
@@ -90,7 +99,7 @@
         #money-eye-btn:hover { color:#e5e7eb; }
         /* Ocultar cantidad de cortes (ojito aparte) */
         .cortes-hidden #stat-cuts-count { font-size:0 !important; }
-        .cortes-hidden #stat-cuts-count::after { content:"•••"; font-size:1.5rem; color:#d4d4d4; letter-spacing:0.05em; }
+        .cortes-hidden #stat-cuts-count::after { content:"•••"; font-size:1.5rem; color:#93c5fd; letter-spacing:0.05em; }
         /* Mobile tabs */
         .tab-content { display:none; }
         .tab-content.active { display:flex; flex-direction:column; }
@@ -1524,19 +1533,19 @@ const SERVICES = [
 let BARBERS = ['Tony', 'Stefa', 'Santi', 'SantiF'];
 const BARBER_COMISION = { Tony: 0.5, Stefa: 0.5, Santi: 0.5, SantiF: 0.4 };
 let BARBER_THEME = {
-    Tony:   { color:'tono1', text:'text-tono1-400', border:'border-tono1-500', bg:'bg-tono1-500', initial:'T' },
-    Maxi:   { color:'tono2', text:'text-tono2-400', border:'border-tono2-500', bg:'bg-tono2-500', initial:'M' },
-    Stefa:  { color:'tono3', text:'text-tono3-400', border:'border-tono3-500', bg:'bg-tono3-500', initial:'S' },
-    Santi:  { color:'tono4', text:'text-tono4-400', border:'border-tono4-500', bg:'bg-tono4-500', initial:'Sa' },
-    SantiF: { color:'tono5', text:'text-tono5-400', border:'border-tono5-500', bg:'bg-tono5-500', initial:'F' },
-    FEME:   { color:'tono6', text:'text-tono6-400', border:'border-tono6-500', bg:'bg-tono6-500', initial:'F' }
+    Tony:   { color:'blue',    text:'text-blue-400',    border:'border-blue-500',    bg:'bg-blue-500',    initial:'T' },
+    Maxi:   { color:'emerald', text:'text-emerald-400', border:'border-emerald-500', bg:'bg-emerald-500', initial:'M' },
+    Stefa:  { color:'purple',  text:'text-purple-400',  border:'border-purple-500',  bg:'bg-purple-500',  initial:'S' },
+    Santi:  { color:'orange',  text:'text-orange-400',  border:'border-orange-500',  bg:'bg-orange-500',  initial:'Sa' },
+    SantiF: { color:'pink',    text:'text-pink-400',    border:'border-pink-500',    bg:'bg-pink-500',    initial:'F' },
+    FEME:   { color:'cyan',    text:'text-cyan-400',    border:'border-cyan-500',    bg:'bg-cyan-500',    initial:'F' }
 };
 const BARBER_EXTRA_THEMES = [
-    { color:'tono4', text:'text-tono4-400', border:'border-tono4-500', bg:'bg-tono4-500' },
-    { color:'tono5', text:'text-tono5-400', border:'border-tono5-500', bg:'bg-tono5-500' },
-    { color:'tono6', text:'text-tono6-400', border:'border-tono6-500', bg:'bg-tono6-500' },
-    { color:'tono1', text:'text-tono1-400', border:'border-tono1-500', bg:'bg-tono1-500' },
-    { color:'tono2', text:'text-tono2-400', border:'border-tono2-500', bg:'bg-tono2-500' },
+    { color:'orange', text:'text-orange-400', border:'border-orange-500', bg:'bg-orange-500' },
+    { color:'pink',   text:'text-pink-400',   border:'border-pink-500',   bg:'bg-pink-500'   },
+    { color:'red',    text:'text-red-400',    border:'border-red-500',    bg:'bg-red-500'    },
+    { color:'indigo', text:'text-indigo-400', border:'border-indigo-500', bg:'bg-indigo-500' },
+    { color:'yellow', text:'text-yellow-400', border:'border-yellow-500', bg:'bg-yellow-500' },
 ];
 let extraThemeIdx = 0;
 
@@ -5328,7 +5337,7 @@ function customConfirm(message, confirmLabel = 'Eliminar') {
             <p style="color:#fafafa;font-size:15px;font-weight:600;margin:0 0 18px;text-align:center">${message}</p>
             <div style="display:flex;gap:10px">
                 <button id="_cc_cancel" style="flex:1;padding:14px;border-radius:12px;background:rgba(255,255,255,0.07);color:#a3a3a3;font-weight:700;font-size:14px;border:1px solid rgba(255,255,255,0.1);cursor:pointer">Cancelar</button>
-                <button id="_cc_ok" style="flex:1;padding:14px;border-radius:12px;background:#a84343;color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer">${confirmLabel}</button>
+                <button id="_cc_ok" style="flex:1;padding:14px;border-radius:12px;background:#dc2626;color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer">${confirmLabel}</button>
             </div></div>`;
         document.body.appendChild(ov);
         const done = r => { document.body.removeChild(ov); resolve(r); };
