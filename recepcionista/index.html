@@ -36,9 +36,12 @@
                 [500,600,700,800,900,950].forEach(n => OPAC.forEach(o => {
                     css.push(`[class~="bg-${c}-${n}/${o}"]{background-color:rgba(255,255,255,${Math.min(0.12, o / 400 + 0.02).toFixed(3)})!important}`);
                 }));
-                // Bordes con transparencia => línea fina blanca; los bordes llenos (selección) quedan en color
+                // Bordes con transparencia => línea fina blanca; los bordes llenos (selección) quedan en color.
+                // Los bordes bien marcados (60%+) son de lo seleccionado: borde blanco fuerte con resplandor.
                 [300,400,500,600,700,800,900].forEach(n => OPAC.forEach(o => {
-                    css.push(`[class~="border-${c}-${n}/${o}"]{border-color:rgba(255,255,255,${Math.min(0.16, o / 400 + 0.04).toFixed(3)})!important}`);
+                    css.push(o >= 60
+                        ? `[class~="border-${c}-${n}/${o}"]{border-color:rgba(255,255,255,0.9)!important;background-color:rgba(255,255,255,0.12)!important;box-shadow:0 0 18px rgba(255,255,255,0.22)!important}`
+                        : `[class~="border-${c}-${n}/${o}"]{border-color:rgba(255,255,255,${Math.min(0.16, o / 400 + 0.04).toFixed(3)})!important}`);
                 }));
                 // Botones de color lleno => blancos con texto negro (los rojos siguen rojos: borrar / salidas)
                 if (c !== 'red' && c !== 'rose') [600,700,800].forEach(n => {
