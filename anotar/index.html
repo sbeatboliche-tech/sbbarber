@@ -751,10 +751,9 @@
                     <div id="stock-comprador-wrap">
                     <div>
                         <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">¿Quién la compra?</label>
-                        <div class="grid grid-cols-3 gap-2 mt-1">
+                        <div class="grid grid-cols-2 gap-2 mt-1">
                             <button type="button" id="comp-cliente" onclick="window.setComprador('cliente')" class="p-3 rounded-xl border font-bold text-xs transition">👤 Cliente</button>
                             <button type="button" id="comp-barbero" onclick="window.setComprador('barbero')" class="p-3 rounded-xl border font-bold text-xs transition">✂️ Barbero</button>
-                            <button type="button" id="comp-feme" onclick="window.setComprador('feme')" class="p-3 rounded-xl border font-bold text-xs transition">🛎️ FEME</button>
                         </div>
                     </div>
                     <!-- Panel Cliente -->
@@ -775,13 +774,6 @@
                     <div id="venta-barbero-panel" class="hidden">
                         <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Barbero — se suma a sus retiros</label>
                         <div id="venta-barbero-list" class="grid grid-cols-2 gap-2 mt-1"></div>
-                    </div>
-                    <!-- Panel FEME -->
-                    <div id="venta-feme-panel" class="hidden">
-                        <div class="flex items-center gap-2 p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
-                            <span class="text-lg">🛎️</span>
-                            <span class="text-xs text-cyan-300">Se suma a los <b>retiros de FEME</b> (recepción · mensual).</span>
-                        </div>
                     </div>
                     </div><!-- /stock-comprador-wrap -->
                 </div>
@@ -1020,8 +1012,7 @@ let BARBER_THEME = {
     Maxi:   { color:'emerald',text:'text-emerald-400', border:'border-emerald-500', bg:'bg-emerald-500', initial:'M' },
     Stefa:  { color:'purple', text:'text-purple-400', border:'border-purple-500', bg:'bg-purple-500', initial:'S' },
     Santi:  { color:'orange', text:'text-orange-400', border:'border-orange-500', bg:'bg-orange-500', initial:'Sa' },
-    SantiF: { color:'pink',   text:'text-pink-400',   border:'border-pink-500',   bg:'bg-pink-500',   initial:'F' },
-    FEME:   { color:'cyan',   text:'text-cyan-400',   border:'border-cyan-500',   bg:'bg-cyan-500',   initial:'F' }
+    SantiF: { color:'pink',   text:'text-pink-400',   border:'border-pink-500',   bg:'bg-pink-500',   initial:'F' }
 };
 const BARBER_EXTRA_THEMES = [
     { color:'orange', text:'text-orange-400', border:'border-orange-500', bg:'bg-orange-500' },
@@ -1501,11 +1492,10 @@ window.openRetiroManualModal = () => {
     document.getElementById('retiro-manual-monto').value = '';
     document.getElementById('retiro-manual-motivo').value = '';
     document.getElementById('retiro-manual-no-caja').checked = false;
-    // Poblar barberos dinámicamente (incluye los agregados nuevos) + FEME
+    // Poblar barberos dinámicamente (incluye los agregados nuevos)
     document.getElementById('retiro-manual-barbero').innerHTML =
         '<option value="">Seleccioná un barbero</option>'
-        + BARBERS_LIST.map(b => `<option value="${b}">${b}</option>`).join('')
-        + '<option value="FEME">FEME</option>';
+        + BARBERS_LIST.map(b => `<option value="${b}">${b}</option>`).join('');
     showModal('retiro-manual-modal');
 };
 
@@ -2033,10 +2023,8 @@ window.setComprador = (t) => {
     ventaComprador = t;
     document.getElementById('comp-cliente').className = t === 'cliente' ? _btnOn : _btnOff;
     document.getElementById('comp-barbero').className = t === 'barbero' ? _btnOn : _btnOff;
-    document.getElementById('comp-feme').className = t === 'feme' ? _btnOn : _btnOff;
     document.getElementById('venta-cliente-panel').classList.toggle('hidden', t !== 'cliente');
     document.getElementById('venta-barbero-panel').classList.toggle('hidden', t !== 'barbero');
-    document.getElementById('venta-feme-panel').classList.toggle('hidden', t !== 'feme');
     if (t === 'barbero') renderVentaBarberos();
 };
 window.setVentaBarbero = (name) => {
@@ -2116,8 +2104,8 @@ document.getElementById('stock-item-form').addEventListener('submit', async e=>{
                 const precio=item?.price||0;
                 const total=precio*qty;
                 const hoy=new Date().toLocaleDateString('en-CA');
-                const esRetiro = ventaComprador==='barbero' || ventaComprador==='feme';
-                const persona = ventaComprador==='feme' ? 'FEME' : ventaBarbero;
+                const esRetiro = ventaComprador==='barbero';
+                const persona = ventaBarbero;
                 const cliente=(document.getElementById('stock-cliente').value||'').trim();
                 const retiroRef = esRetiro ? doc(collection(db,PATH_RETIROS)) : null;
                 batch.set(doc(collection(db,PATH_VENTAS)),{
@@ -2394,7 +2382,7 @@ const ALL_MODALS=['settings-modal','add-modal','expense-modal','date-search-moda
 
 // Si el retiro viene de una bebida (origen:'bebida'), hay que devolver la unidad al stock y
 // anular la venta vinculada; si no, se habría regalado la bebida y encima no se le descontaría
-// al barbero/FEME de lo que se le paga. Se borra con eliminado:true (no deleteDoc) para que quede
+// al barbero de lo que se le paga. Se borra con eliminado:true (no deleteDoc) para que quede
 // igual de auditable que cuando se borra desde recepcionista.
 window.deleteRetiro = async (id) => {
     const r = allRetiros.find(x => x.id === id);
@@ -3062,7 +3050,7 @@ function renderCierreDia() {
     const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today && c.createdAt.toDate() < todayEnd);
     const ventasHoy = allVentas.filter(v => v.fecha === hoy && !v.eliminado);
     // Cuenta como venta real (Productos + caja) solo lo vendido en el local a un cliente:
-    // se excluyen las ventas por canal ML y el consumo interno de barberos/FEME
+    // se excluyen las ventas por canal ML y el consumo interno de barberos
     // (esConsumoStaff — eso resta de lo que se le paga al barbero, no de la caja).
     const ventasProductos = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo);
 
