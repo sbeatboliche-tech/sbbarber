@@ -2032,7 +2032,7 @@ function renderCuts() {
                 <span class="font-bold text-gray-600 text-sm line-through">$${(c.price || 0).toLocaleString('es-AR')}</span>
             </div>`;
         }
-        const clientText = c.clientName ? `<span class="text-cyan-300"> (${c.clientName})</span>` : '';
+        const clientText = c.clientName ? `<span class="text-cyan-300"> (${escHtml(c.clientName)})</span>` : '';
         const deleteBtn = `<button class="btn-delete-cut text-gray-600 hover:text-red-400 transition ml-2" data-id="${c.id}"><i class="fas fa-trash text-xs"></i></button>`;
         const esTurno2 = corteMin !== null && cutMin(c) >= corteMin;
         const turnoDot = corteMin !== null ? `<span class="w-1.5 h-1.5 rounded-full ${esTurno2 ? 'bg-violet-400' : 'bg-amber-400'} flex-shrink-0" title="${esTurno2 ? 'Cierre 2' : 'Cierre 1'}"></span>` : '';
@@ -2116,10 +2116,10 @@ window.renderServices = (selectedBarber) => {
     document.getElementById('svc-price').value = '';
     const filtered = SERVICES.filter(s => ['Mechas','Global'].includes(s.name) ? selectedBarber === 'SantiF' : true);
     document.getElementById('services-grid').innerHTML = filtered.map((s, i) => `
-        <button type="button" onclick="window.selectSvc('${s.name}', ${s.price}, this)"
+        <button type="button" onclick="window.selectSvc('${jsAttr(s.name)}', ${s.price}, this)"
             class="svc-card svc-appear text-left p-4 bg-white/5 border-2 border-transparent rounded-2xl cursor-pointer transition-all duration-150 hover:bg-white/8 active:scale-[0.97]"
             style="animation-delay:${i * 35}ms">
-            <div class="font-bold text-sm text-gray-200 leading-tight">${s.name}</div>
+            <div class="font-bold text-sm text-gray-200 leading-tight">${escHtml(s.name)}</div>
             <div class="text-xs text-gray-500 mt-1 font-semibold">$${s.price.toLocaleString('es-AR')}</div>
         </button>`).join('');
     const sec = document.getElementById('services-section');
@@ -2243,8 +2243,8 @@ function renderStock() {
             const qtyColor = qty === 0 ? 'text-red-400' : isLow ? 'text-yellow-400' : 'text-cyan-300';
             const border = isLow ? 'border-red-500/40 stock-low' : 'border-cyan-500/10';
             const thumb = item.photoURL
-                ? `<img src="${item.photoURL}" class="w-9 h-9 rounded-lg object-cover flex-shrink-0 ${isAdmin ? 'cursor-pointer' : ''}" ${isAdmin ? `onclick="window.openEditPhoto('${item.id}','${item.name}')"` : ''}>`
-                : `<div class="w-9 h-9 rounded-lg bg-cyan-900/30 flex items-center justify-center flex-shrink-0 ${isAdmin ? 'cursor-pointer hover:bg-cyan-900/60 transition' : ''}" ${isAdmin ? `onclick="window.openEditPhoto('${item.id}','${item.name}')"` : ''}><i class="fas fa-wine-bottle text-cyan-600 text-xs"></i></div>`;
+                ? `<img src="${item.photoURL}" class="w-9 h-9 rounded-lg object-cover flex-shrink-0 ${isAdmin ? 'cursor-pointer' : ''}" ${isAdmin ? `onclick="window.openEditPhoto('${item.id}','${jsAttr(item.name)}')"` : ''}>`
+                : `<div class="w-9 h-9 rounded-lg bg-cyan-900/30 flex items-center justify-center flex-shrink-0 ${isAdmin ? 'cursor-pointer hover:bg-cyan-900/60 transition' : ''}" ${isAdmin ? `onclick="window.openEditPhoto('${item.id}','${jsAttr(item.name)}')"` : ''}><i class="fas fa-wine-bottle text-cyan-600 text-xs"></i></div>`;
             const deleteBtn = isAdmin
                 ? `<button onclick="window.deleteStockItem('${item.id}')" class="absolute top-1 right-1 w-6 h-6 rounded-md flex items-center justify-center text-gray-600 hover:text-red-400 transition"><i class="fas fa-trash text-[10px]"></i></button>`
                 : '';
@@ -2255,19 +2255,19 @@ function renderStock() {
                     <div class="drag-handle text-gray-600 hover:text-gray-400 transition select-none"><i class="fas fa-grip-vertical text-xs"></i></div>
                     ${thumb}
                     <div class="min-w-0">
-                        <div class="text-xs font-bold text-white leading-tight line-clamp-2">${item.name}</div>
+                        <div class="text-xs font-bold text-white leading-tight line-clamp-2">${escHtml(item.name)}</div>
                         ${item.price ? `<div class="text-[10px] text-gray-500">$${Number(item.price).toLocaleString('es-AR')}</div>` : ''}
                     </div>
                 </div>
                 <div class="flex items-center justify-between">
-                    <button onclick="window.openMovement('${item.id}','${item.name}','venta')" class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 hover:bg-red-600/40 transition">
+                    <button onclick="window.openMovement('${item.id}','${jsAttr(item.name)}','venta')" class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 hover:bg-red-600/40 transition">
                         <i class="fas fa-minus text-xs"></i>
                     </button>
                     <div class="text-center">
                         <div class="${qtyColor} font-bold text-xl leading-none">${qty}</div>
                         <div class="text-[9px] ${qty === 0 ? 'text-red-500 font-bold' : isLow ? 'text-yellow-500 font-bold' : 'text-gray-600'}">${qty === 0 ? 'sin stock' : isLow ? 'bajo' : 'unid.'}</div>
                     </div>
-                    <button onclick="window.openMovement('${item.id}','${item.name}','compra')" class="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 hover:bg-emerald-600/40 transition">
+                    <button onclick="window.openMovement('${item.id}','${jsAttr(item.name)}','compra')" class="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 hover:bg-emerald-600/40 transition">
                         <i class="fas fa-plus text-xs"></i>
                     </button>
                 </div>
@@ -2283,9 +2283,9 @@ function renderStock() {
         const border = isLow ? 'border-red-500/40 stock-low' : 'border-cyan-500/10';
         const thumb = item.photoURL
             ? `<img src="${item.photoURL}" class="w-11 h-11 rounded-lg object-cover flex-shrink-0">`
-            : `<div class="w-11 h-11 rounded-lg bg-cyan-900/30 flex items-center justify-center flex-shrink-0 ${isAdmin ? 'cursor-pointer hover:bg-cyan-900/60 transition' : ''}" ${isAdmin ? `onclick="window.openEditPhoto('${item.id}','${item.name}')"` : ''}><i class="fas fa-camera text-cyan-600 text-sm"></i></div>`;
+            : `<div class="w-11 h-11 rounded-lg bg-cyan-900/30 flex items-center justify-center flex-shrink-0 ${isAdmin ? 'cursor-pointer hover:bg-cyan-900/60 transition' : ''}" ${isAdmin ? `onclick="window.openEditPhoto('${item.id}','${jsAttr(item.name)}')"` : ''}><i class="fas fa-camera text-cyan-600 text-sm"></i></div>`;
         const photoBtn = isAdmin
-            ? `<button onclick="window.openEditPhoto('${item.id}','${item.name}')" class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-500 hover:text-cyan-400 transition"><i class="fas fa-camera text-xs"></i></button>`
+            ? `<button onclick="window.openEditPhoto('${item.id}','${jsAttr(item.name)}')" class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-500 hover:text-cyan-400 transition"><i class="fas fa-camera text-xs"></i></button>`
             : '';
         const deleteBtn = isAdmin
             ? `<button onclick="window.deleteStockItem('${item.id}')" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-600 hover:text-red-400 transition"><i class="fas fa-trash text-xs"></i></button>`
@@ -2298,7 +2298,7 @@ function renderStock() {
                 </div>
                 ${thumb}
                 <div>
-                    <div class="text-sm font-bold text-white">${item.name}</div>
+                    <div class="text-sm font-bold text-white">${escHtml(item.name)}</div>
                     ${item.price ? `<div class="text-[10px] text-gray-500">$${Number(item.price).toLocaleString('es-AR')} c/u</div>` : ''}
                     ${qty === 0 ? '<div class="text-[10px] text-red-500 font-bold">Sin stock</div>' : isLow ? '<div class="text-[10px] text-yellow-500 font-bold">Stock bajo</div>' : ''}
                 </div>
@@ -2308,10 +2308,10 @@ function renderStock() {
                     <div class="${qtyColor} font-bold text-xl leading-none">${qty}</div>
                     <div class="text-[9px] text-gray-600">unid.</div>
                 </div>
-                <button onclick="window.openMovement('${item.id}','${item.name}','compra')" class="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 hover:bg-emerald-600/40 transition">
+                <button onclick="window.openMovement('${item.id}','${jsAttr(item.name)}','compra')" class="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 hover:bg-emerald-600/40 transition">
                     <i class="fas fa-plus text-xs"></i>
                 </button>
-                <button onclick="window.openMovement('${item.id}','${item.name}','venta')" class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 hover:bg-red-600/40 transition">
+                <button onclick="window.openMovement('${item.id}','${jsAttr(item.name)}','venta')" class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 hover:bg-red-600/40 transition">
                     <i class="fas fa-minus text-xs"></i>
                 </button>
                 ${photoBtn}${deleteBtn}
@@ -2591,7 +2591,7 @@ window.openQuickSaleModal = () => {
         ? '<p class="text-xs text-gray-500 text-center py-4">Sin stock disponible</p>'
         : withStock.map(item => `
             <button onclick="window.quickSale('${item.id}')" class="w-full flex items-center justify-between bg-black/30 p-4 rounded-xl border border-cyan-500/10 hover:border-cyan-500/40 hover:bg-cyan-900/20 transition text-left">
-                <span class="font-bold text-white text-sm">${item.name}</span>
+                <span class="font-bold text-white text-sm">${escHtml(item.name)}</span>
                 <span class="text-cyan-300 font-bold text-lg">${item.quantity} <span class="text-[10px] text-gray-500 font-normal">unid.</span></span>
             </button>`).join('');
     showModal('quick-sale-modal');
@@ -2671,8 +2671,8 @@ function renderVentas() {
             <div class="flex items-center gap-2 flex-1 min-w-0">
                 <span class="text-base leading-none">${icon}</span>
                 <div class="min-w-0">
-                    <div class="text-xs font-bold text-white">${v.producto}${v.cantidad > 1 ? ` <span class="text-indigo-300">×${v.cantidad}</span>` : ''}${metodoTag}${regaloTag}</div>
-                    <div class="text-[10px] text-gray-500">${time}${v.esRegalo && v.motivo ? ` · ${v.motivo}` : ''}</div>
+                    <div class="text-xs font-bold text-white">${escHtml(v.producto)}${v.cantidad > 1 ? ` <span class="text-indigo-300">×${v.cantidad}</span>` : ''}${metodoTag}${regaloTag}</div>
+                    <div class="text-[10px] text-gray-500">${time}${v.esRegalo && v.motivo ? ` · ${escHtml(v.motivo)}` : ''}</div>
                 </div>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
@@ -2740,11 +2740,11 @@ function renderSalesHistory() {
             const cant = v.cantidad > 1 ? ` ×${v.cantidad}` : '';
             const valColor = v.tipo === 'bebida' ? 'text-cyan-300' : 'text-indigo-300';
             const metodoTag = v.metodoPago ? ` <span class="text-[10px] ${v.metodoPago==='transferencia'?'text-blue-400':'text-emerald-400'}">${v.metodoPago==='transferencia'?'📲':'💵'}</span>` : '';
-            const regaloTag = v.esRegalo ? ` <span class="text-[10px] text-pink-400">🎁${v.motivo ? ' ' + v.motivo : ''}</span>` : '';
+            const regaloTag = v.esRegalo ? ` <span class="text-[10px] text-pink-400">🎁${v.motivo ? ' ' + escHtml(v.motivo) : ''}</span>` : '';
             return `<div class="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
                 <div class="flex items-center gap-2">
                     <span class="text-sm leading-none">${icon}</span>
-                    <span class="text-xs text-gray-200">${v.producto}${cant}${metodoTag}${regaloTag}</span>
+                    <span class="text-xs text-gray-200">${escHtml(v.producto)}${cant}${metodoTag}${regaloTag}</span>
                 </div>
                 ${(v.total||0) > 0 ? `<span class="text-xs font-bold ${valColor}">$${v.total.toLocaleString('es-AR')}</span>` : ''}
             </div>`;
@@ -2861,7 +2861,7 @@ function renderProductosGrid() {
                     <i class="fas fa-trash" style="font-size:9px"></i>
                 </button>
             </div>
-            <span class="text-xs md:text-sm font-semibold text-gray-200 leading-tight line-clamp-2">${p.name}</span>
+            <span class="text-xs md:text-sm font-semibold text-gray-200 leading-tight line-clamp-2">${escHtml(p.name)}</span>
             <div class="flex justify-between items-center mt-auto pt-0.5">
                 <span class="${stockColor} text-[10px] font-bold">${sinStock ? 'Sin stock' : stock + ' u.'}</span>
                 ${p.precio > 0 ? `<span class="text-[10px] font-bold text-white/60">$${(p.precio/1000).toFixed(0)}k</span>` : ''}
@@ -2944,7 +2944,7 @@ function renderCarrito() {
     list.innerHTML = ventaCart.map(it => `
         <div class="flex items-center justify-between bg-black/30 rounded-xl px-3 py-2 gap-2">
             <div class="min-w-0 flex-1">
-                <p class="text-xs font-semibold text-gray-200 truncate">${it.name}</p>
+                <p class="text-xs font-semibold text-gray-200 truncate">${escHtml(it.name)}</p>
                 <p class="text-[10px] text-gray-500">$${it.precio.toLocaleString('es-AR')} c/u</p>
             </div>
             <div class="flex items-center gap-1.5 flex-shrink-0">
@@ -3115,9 +3115,15 @@ let mlItemsCache = null;      // publicaciones del vendedor (se piden al abrir e
 let mlLinkProductoId = null, mlLinkElegida = null;
 const _mlSyncTimers = {};
 
-const escHtml = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// Escape de texto cargado por usuarios antes de meterlo en HTML. Son declaraciones de función
+// (no const) para que existan desde que arranca el módulo, aunque se usen en funciones de más arriba.
+function escHtml(v) {
+    return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 // Texto como string dentro de onclick="fn('...')": se escapa para JS y después para HTML.
-const jsAttr = (v) => escHtml(String(v ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+function jsAttr(v) {
+    return escHtml(String(v ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+}
 
 async function mlApi(action, body) {
     const token = await auth.currentUser.getIdToken();
@@ -3969,7 +3975,7 @@ function renderCierreCaja() {
         ? '<p class="text-xs text-gray-600 text-center py-2">Sin ventas</p>'
         : list.map(v => {
             return row(
-                `${v.producto}${v.cantidad>1?` <span class="text-indigo-300">×${v.cantidad}</span>`:''}`,
+                `${escHtml(v.producto)}${v.cantidad>1?` <span class="text-indigo-300">×${v.cantidad}</span>`:''}`,
                 (v.total||0)>0 ? `$${v.total.toLocaleString('es-AR')}` : '—'
             );
         }).join('');
@@ -4062,7 +4068,7 @@ function renderCierreCaja() {
                         ? '<p class="text-xs text-gray-600 py-2 text-center">Sin gastos hoy</p>'
                         : gastosHoy.map(g => {
                             const cat = GASTOS_CATS.find(c => c.id === g.categoria) || GASTOS_CATS[4];
-                            return row(`${cat.icon} ${g.descripcion}`, `−$${(g.monto||0).toLocaleString('es-AR')}`, 'text-gray-400', 'text-rose-400');
+                            return row(`${cat.icon} ${escHtml(g.descripcion)}`, `−$${(g.monto||0).toLocaleString('es-AR')}`, 'text-gray-400', 'text-rose-400');
                           }).join(''),
                     totalGastos > 0 ? totalGastos : null
                 )}
@@ -4292,7 +4298,7 @@ function renderCierreCajaSemanal() {
                     return `<div class="flex items-center gap-2 text-xs">
                         <span class="text-gray-600 w-14 flex-shrink-0">${fechaLabel}</span>
                         <span class="text-base">${cat.icon}</span>
-                        <span class="text-gray-400 flex-1 truncate">${g.descripcion}</span>
+                        <span class="text-gray-400 flex-1 truncate">${escHtml(g.descripcion)}</span>
                         <span class="text-rose-400 font-bold whitespace-nowrap">−$${(g.monto||0).toLocaleString('es-AR')}</span>
                     </div>`;
                 }).join('')}
@@ -4411,7 +4417,7 @@ function renderPendingRetiros() {
                 const icoBg = item.tipo === 'retiro' ? 'bg-violet-600/20 text-violet-400' : 'bg-yellow-600/20 text-yellow-400';
                 const ico = item.tipo === 'retiro' ? 'fa-money-bill-wave' : 'fa-hand-holding-usd';
                 const metodoIco = item.tipo === 'retiro' ? (item.metodoPago === 'transferencia' ? ' 📲' : ' 💵') : '';
-                const lbl = item.tipo === 'retiro' ? `Retiro${metodoIco} · ${item.barbero}` : `Propina · ${item.barbero}${item.descripcion ? ' · '+item.descripcion : ''}`;
+                const lbl = item.tipo === 'retiro' ? `Retiro${metodoIco} · ${escHtml(item.barbero)}` : `Propina · ${escHtml(item.barbero)}${item.descripcion ? ' · '+escHtml(item.descripcion) : ''}`;
                 const f = item.creadoEn ? item.creadoEn.toDate().toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
                 return `<div class="bg-black/30 p-4 md:p-5 rounded-xl border border-white/5">
                     <div class="flex items-center justify-between mb-3">
@@ -4495,11 +4501,11 @@ function renderHistoryRec() {
         const barberCls = eliminado ? 'text-gray-600' : bt ? bt.text : 'text-gray-100';
         const textCls = eliminado ? 'line-through text-gray-600' : 'text-gray-100';
         const montoCls = eliminado ? 'line-through text-gray-600' : 'text-white';
-        const desc = item.descripcion ? ` · <span class="font-normal">${item.descripcion}</span>` : '';
+        const desc = item.descripcion ? ` · <span class="font-normal">${escHtml(item.descripcion)}</span>` : '';
         const metodoIco = item.tipo === 'retiro' ? (item.metodoPago === 'transferencia' ? ' 📲' : ' 💵') : '';
-        const lbl = item.tipo === 'retiro' ? `Retiro${metodoIco} · <span class="${barberCls}">${item.barbero}</span>${desc}` : `Propina · <span class="${barberCls}">${item.barbero}</span>${item.descripcion ? ' · '+item.descripcion : ''}`;
+        const lbl = item.tipo === 'retiro' ? `Retiro${metodoIco} · <span class="${barberCls}">${escHtml(item.barbero)}</span>${desc}` : `Propina · <span class="${barberCls}">${escHtml(item.barbero)}</span>${item.descripcion ? ' · '+escHtml(item.descripcion) : ''}`;
         const f = item.creadoEn ? item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) : '';
-        const notaBtn = (!eliminado && item.tipo === 'retiro') ? `<button onclick="window.openRetiroNotaRec('${item.id}','${(item.descripcion||'').replace(/'/g,"\\'")}',${item.monto},'${item.barbero}')" class="text-gray-600 hover:text-violet-400 transition ml-2"><i class="fas fa-pencil-alt text-xs"></i></button>` : '';
+        const notaBtn = (!eliminado && item.tipo === 'retiro') ? `<button onclick="window.openRetiroNotaRec('${item.id}','${jsAttr(item.descripcion||'')}',${item.monto},'${jsAttr(item.barbero)}')" class="text-gray-600 hover:text-violet-400 transition ml-2"><i class="fas fa-pencil-alt text-xs"></i></button>` : '';
         const delBtn = eliminado ? '' : item.tipo === 'retiro' ? `<button onclick="window.deleteRetiroRec('${item.id}')" class="text-gray-700 hover:text-red-400 transition ml-1"><i class="fas fa-trash text-xs"></i></button>` : `<button onclick="window.deletePropinaRec('${item.id}')" class="text-gray-700 hover:text-red-400 transition ml-1"><i class="fas fa-trash text-xs"></i></button>`;
         return `<div class="flex items-center justify-between bg-black/30 p-3 md:p-4 rounded-xl border ${bdr} ${eliminado ? 'opacity-50' : ''}">
             <div><div class="text-sm md:text-base font-bold ${textCls} flex items-center gap-1">${lbl}${notaBtn}${delBtn}</div><div class="text-xs text-gray-500 mt-0.5">${f}${eliminado ? ' · <span class="text-red-700 text-[10px]">eliminado</span>' : ''}</div></div>
@@ -4546,10 +4552,10 @@ function renderBarberDetail(name) {
             const bdr = eliminado ? 'border-gray-700/30' : item.tipo==='retiro' ? 'border-violet-500/20' : 'border-yellow-500/20';
             const textCls = eliminado ? 'line-through text-gray-600' : 'text-gray-100';
             const montoCls = eliminado ? 'line-through text-gray-600' : 'text-white';
-            const desc = item.descripcion ? ` · <span class="font-normal">${item.descripcion}</span>` : '';
+            const desc = item.descripcion ? ` · <span class="font-normal">${escHtml(item.descripcion)}</span>` : '';
             const metodoIco = item.tipo==='retiro' ? (item.metodoPago==='transferencia' ? ' 📲' : ' 💵') : '';
-            const lbl = item.tipo==='retiro' ? `Retiro${metodoIco}${desc}` : `Propina${item.descripcion?' · '+item.descripcion:''}`;
-            const notaBtn = (!eliminado && item.tipo==='retiro') ? `<button onclick="window.openRetiroNotaRec('${item.id}','${(item.descripcion||'').replace(/'/g,"\\'")}',${item.monto},'${name}')" class="ml-2 text-gray-600 hover:text-violet-400 transition"><i class="fas fa-pencil-alt text-xs"></i></button>` : '';
+            const lbl = item.tipo==='retiro' ? `Retiro${metodoIco}${desc}` : `Propina${item.descripcion?' · '+escHtml(item.descripcion):''}`;
+            const notaBtn = (!eliminado && item.tipo==='retiro') ? `<button onclick="window.openRetiroNotaRec('${item.id}','${jsAttr(item.descripcion||'')}',${item.monto},'${name}')" class="ml-2 text-gray-600 hover:text-violet-400 transition"><i class="fas fa-pencil-alt text-xs"></i></button>` : '';
             const delBtn = eliminado ? '' : item.tipo==='retiro' ? `<button onclick="window.deleteRetiroRec('${item.id}')" class="ml-1 text-gray-700 hover:text-red-400 transition"><i class="fas fa-trash text-xs"></i></button>` : `<button onclick="window.deletePropinaRec('${item.id}')" class="ml-1 text-gray-700 hover:text-red-400 transition"><i class="fas fa-trash text-xs"></i></button>`;
             const f = item.creadoEn ? item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) : '';
             return `<div class="flex items-center justify-between bg-black/30 p-3 md:p-4 rounded-xl border ${bdr} ${eliminado ? 'opacity-50' : ''}">
@@ -4759,7 +4765,7 @@ window.openConteoStock = () => {
     document.getElementById('conteo-stock-list').innerHTML = allStock.map(item => `
         <div class="flex items-center justify-between gap-3 bg-black/30 p-3 rounded-xl border border-white/5">
             <div class="min-w-0">
-                <div class="text-sm font-bold text-white truncate">${item.name}</div>
+                <div class="text-sm font-bold text-white truncate">${escHtml(item.name)}</div>
                 <div class="text-[10px] text-gray-500">Sistema: <span class="text-cyan-300 font-bold">${item.quantity || 0}</span><span data-conteo-diff="${item.id}"></span></div>
             </div>
             <input type="number" min="0" inputmode="numeric" data-conteo-id="${item.id}" oninput="window.updateConteoDiff()" placeholder="—" class="w-20 p-2 text-center bg-black/40 rounded-lg border border-gray-700 focus:border-amber-500 outline-none text-white font-bold">
@@ -4833,7 +4839,7 @@ const MOV_TIPO = {
 
 window.openHistorialStock = async () => {
     const sel = document.getElementById('historial-stock-filtro');
-    sel.innerHTML = '<option value="">Todas las bebidas</option>' + allStock.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+    sel.innerHTML = '<option value="">Todas las bebidas</option>' + allStock.map(i => `<option value="${i.id}">${escHtml(i.name)}</option>`).join('');
     const body = document.getElementById('historial-stock-body');
     body.innerHTML = '<p class="text-xs text-gray-500 text-center py-6"><i class="fas fa-spinner fa-spin mr-1.5"></i>Cargando...</p>';
     showModal('historial-stock-modal');
@@ -5140,7 +5146,7 @@ function renderGastosPanel() {
                     return `<div class="flex items-center gap-3 bg-black/20 rounded-xl px-3 py-2.5">
                         <span class="text-base">${cat.icon}</span>
                         <div class="flex-1 min-w-0">
-                            <div class="text-sm text-white truncate">${g.descripcion}</div>
+                            <div class="text-sm text-white truncate">${escHtml(g.descripcion)}</div>
                             <div class="text-[10px] text-gray-500">${cat.label} · ${metodoIcon} ${metodoLabel}</div>
                         </div>
                         <span class="text-sm font-bold text-rose-400 whitespace-nowrap">−$${(g.monto||0).toLocaleString('es-AR')}</span>
@@ -5591,8 +5597,8 @@ function renderTurnosList() {
             </div>
             ${barberAvatar(t.barbero, 9)}
             <div class="flex-1 min-w-0">
-                <div class="font-bold text-white text-sm truncate">${t.clientName || 'Sin nombre'}</div>
-                <div class="text-[10px] text-gray-500 mt-0.5">${t.barbero || ''}${t.servicio ? ' · ' + t.servicio : ''}</div>
+                <div class="font-bold text-white text-sm truncate">${escHtml(t.clientName || 'Sin nombre')}</div>
+                <div class="text-[10px] text-gray-500 mt-0.5">${escHtml(t.barbero || '')}${t.servicio ? ' · ' + escHtml(t.servicio) : ''}</div>
                 <div class="text-[9px] text-gray-700 mt-0.5">anotado por ${anotadoPor}</div>
             </div>
             ${actions}
@@ -5815,7 +5821,7 @@ window.openPreciosModal = () => {
     cont.innerHTML = SERVICES.map((s, i) => `
         <div class="precio-row flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl p-2.5" data-name="${s.name.replace(/"/g,'&quot;')}">
             <span class="precio-drag-handle cursor-grab text-gray-600 hover:text-gray-400 select-none text-base flex-shrink-0 px-1">⠿</span>
-            <span class="flex-1 text-sm font-semibold text-gray-100 min-w-0 truncate">${s.name}</span>
+            <span class="flex-1 text-sm font-semibold text-gray-100 min-w-0 truncate">${escHtml(s.name)}</span>
             <div class="flex items-center bg-black/40 border border-gray-700 rounded-lg px-2 focus-within:border-amber-500 flex-shrink-0">
                 <span class="text-gray-500 text-sm">$</span>
                 <input type="number" inputmode="numeric" id="precio-serv-${i}" value="${s.price}" min="0"
