@@ -105,7 +105,7 @@
         #money-eye-btn:hover { color:#e5e7eb; }
         /* Ocultar cantidad de cortes (ojito aparte) */
         .cortes-hidden #stat-cuts-count { font-size:0 !important; }
-        .cortes-hidden #stat-cuts-count::after { content:"•••"; font-size:1.5rem; color:#93c5fd; letter-spacing:0.05em; }
+        .cortes-hidden #stat-cuts-count::after { content:"•••"; font-size:0.875rem; color:#e5e5e5; letter-spacing:0.05em; }
         /* Mobile tabs */
         .tab-content { display:none; }
         .tab-content.active { display:flex; flex-direction:column; }
@@ -121,6 +121,23 @@
             .tab-content { display:flex !important; flex-direction:column; height:100%; overflow-y:auto; }
             #content-grid { display:grid !important; grid-template-columns:1fr 1fr; height:100%; }
         }
+        /* ===== Pulido: menos brillo compitiendo, jerarquía más clara ===== */
+        /* El resplandor fuerte queda solo para lo seleccionado; los botones principales brillan apenas */
+        [class*="bg-gradient-to-"]:not(.bg-gradient-to-t):not(.bg-clip-text):not([class*="from-red-"]):not([class*="from-rose-"]) {
+            box-shadow:0 0 16px rgba(255,255,255,0.16), 0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 #fff !important;
+        }
+        [class*="shadow-[0_0"]:not([class*="drop-shadow"]) { box-shadow:0 0 22px rgba(255,255,255,0.22), 0 6px 18px rgba(0,0,0,0.6) !important; }
+        .glass-card { background:linear-gradient(160deg,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.015) 100%); border-color:rgba(255,255,255,0.09); box-shadow:0 10px 30px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08); }
+        .glass-card h3 { letter-spacing:-0.01em; }
+        /* Número principal del día */
+        .stat-hero { font-size:2.5rem; line-height:1; font-weight:800; letter-spacing:-0.03em; }
+        .money-hidden #stat-cuts-billing::after { font-size:2rem; }
+        /* Foco visible al navegar con teclado (sin afectar el toque) */
+        button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline:2px solid rgba(255,255,255,0.7); outline-offset:2px; }
+        @media (prefers-reduced-motion: reduce) {
+            .stock-low, .ml-pending, .pickit-pending, .animate-pulse { animation:none !important; }
+            .animate-enter, .svc-appear { animation:none !important; }
+        }
     </style>
     <link rel="stylesheet" href="../assets/sb-motion.css">
 </head>
@@ -130,7 +147,7 @@
     <!-- Loading -->
     <div id="loading-view" class="absolute inset-0 z-50 bg-[#0a0a0a] flex flex-col justify-center items-center transition-opacity duration-500">
         <img src="https://i.imgur.com/xyjMT6X.png" alt="SB BARBER" class="h-24 mb-6 animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-        <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-500"></div>
+        <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white/80"></div>
     </div>
 
     <!-- Password Gate -->
@@ -167,9 +184,9 @@
         <header class="px-5 py-4 glass sticky top-0 z-20 flex justify-between items-center flex-shrink-0">
             <div class="flex items-center gap-3">
                 <img src="https://i.imgur.com/xyjMT6X.png" alt="Logo" class="h-9 w-auto object-contain">
-                <div>
+                <div class="hidden sm:block">
                     <h1 class="text-sm font-bold text-white leading-none tracking-wider">SB BARBER</h1>
-                    <span class="text-[10px] text-cyan-400 font-medium">Recepción</span>
+                    <span class="text-[10px] text-gray-400 font-medium">Recepción</span>
                 </div>
                 <!-- Botón precios de servicios -->
                 <button onclick="window.openPreciosModal()" class="flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 text-amber-300 px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-amber-500/25 transition ml-1">
@@ -248,23 +265,23 @@
         <!-- Tab nav: solo en mobile -->
         <div class="md:hidden bg-[#0a0a0a] sticky top-[73px] z-10 py-3 px-4 border-b border-gray-800/50 flex-shrink-0">
             <nav class="flex bg-gray-900/80 p-1 rounded-xl border border-gray-800">
-                <button onclick="window.switchTab('cortes', this)" id="tab-btn-cortes" class="tab-btn flex-1 py-2 rounded-lg text-[11px] font-bold text-white bg-gradient-to-r from-cyan-600 to-teal-600 shadow-md transition-all flex items-center justify-center gap-1.5">
-                    <i class="fas fa-cut text-[9px]"></i> CORTES
+                <button onclick="window.switchTab('cortes', this)" id="tab-btn-cortes" class="tab-btn flex-1 py-2.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-cyan-600 to-teal-600 shadow-md transition-all flex items-center justify-center gap-1.5">
+                    <i class="fas fa-cut text-[10px]"></i> CORTES
                 </button>
-                <button onclick="window.switchTab('stock', this)" id="tab-btn-stock" class="tab-btn flex-1 py-2 rounded-lg text-[11px] font-medium text-gray-500 hover:text-gray-300 transition-all flex items-center justify-center gap-1.5">
-                    <i class="fas fa-shopping-bag text-[9px]"></i> VENTAS
+                <button onclick="window.switchTab('stock', this)" id="tab-btn-stock" class="tab-btn flex-1 py-2.5 rounded-lg text-xs font-medium text-gray-500 hover:text-gray-300 transition-all flex items-center justify-center gap-1.5">
+                    <i class="fas fa-shopping-bag text-[10px]"></i> VENTAS
                 </button>
-                <button onclick="window.openTurnosPanel()" id="tab-btn-turnos" class="tab-btn flex-1 py-2 rounded-lg text-[11px] font-medium text-gray-500 hover:text-gray-300 transition-all flex items-center justify-center gap-1.5">
-                    <i class="fas fa-calendar-alt text-[9px]"></i> TURNOS
+                <button onclick="window.openTurnosPanel()" id="tab-btn-turnos" class="tab-btn flex-1 py-2.5 rounded-lg text-xs font-medium text-gray-500 hover:text-gray-300 transition-all flex items-center justify-center gap-1.5">
+                    <i class="fas fa-calendar-alt text-[10px]"></i> TURNOS
                 </button>
             </nav>
         </div>
 
         <!-- Navegación por fecha: Hoy / Ayer / buscar fecha -->
         <div class="bg-[#0a0a0a] px-4 md:px-6 py-2 border-b border-gray-800/50 flex items-center gap-2 flex-shrink-0">
-            <button onclick="window.setDashboardFechaHoy()" id="dash-fecha-hoy-btn" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-cyan-600/20 border border-cyan-500 text-cyan-300 transition">HOY</button>
-            <button onclick="window.setDashboardFechaAyer()" id="dash-fecha-ayer-btn" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition">AYER</button>
-            <input type="date" id="dash-fecha-input" onchange="window.setDashboardFecha(this.value)" class="flex-1 min-w-0 max-w-[170px] bg-black/30 border border-gray-700 rounded-lg px-2 py-1.5 text-[11px] text-gray-300 focus:border-cyan-500 outline-none">
+            <button onclick="window.setDashboardFechaHoy()" id="dash-fecha-hoy-btn" class="px-4 py-2 rounded-lg text-[11px] font-bold bg-cyan-600/20 border border-cyan-500 text-cyan-300 transition">HOY</button>
+            <button onclick="window.setDashboardFechaAyer()" id="dash-fecha-ayer-btn" class="px-4 py-2 rounded-lg text-[11px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition">AYER</button>
+            <input type="date" id="dash-fecha-input" onchange="window.setDashboardFecha(this.value)" class="flex-1 min-w-0 max-w-[170px] bg-black/30 border border-gray-700 rounded-lg px-2 py-2 text-xs text-gray-300 focus:border-cyan-500 outline-none">
         </div>
 
         <!-- Títulos de columna: solo en desktop -->
@@ -291,8 +308,8 @@
                             <span id="checklist-progreso" class="normal-case tracking-normal text-gray-500 font-semibold"></span>
                             <i id="checklist-chevron" class="fas fa-chevron-down text-[9px] text-gray-500 ml-auto mr-2 transition-transform"></i>
                         </button>
-                        <button id="btn-edit-checklist" onclick="window.openChecklistEditor()" class="hidden w-5 h-5 rounded-md bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition">
-                            <i class="fas fa-pen text-[9px]"></i>
+                        <button id="btn-edit-checklist" onclick="window.openChecklistEditor()" class="hidden w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition">
+                            <i class="fas fa-pen text-[10px]"></i>
                         </button>
                     </div>
                     <div id="checklist-list" class="space-y-1 max-h-40 overflow-y-auto pr-1 mt-1.5">
@@ -302,33 +319,27 @@
 
                 <!-- Resumen del día -->
                 <div class="glass-card rounded-2xl p-5 animate-enter">
-                    <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center justify-between mb-2">
                         <span class="text-gray-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                            <i class="fas fa-calendar-day text-cyan-400"></i> <span id="dash-fecha-label">Hoy</span>
+                            <i class="fas fa-calendar-day text-gray-500"></i> <span id="dash-fecha-label">Hoy</span>
                         </span>
                         <button id="money-eye-btn" type="button" onclick="window.toggleMoneyVisibility()" title="Mostrar/ocultar saldo" aria-label="Mostrar u ocultar saldo" class="w-8 h-8 flex items-center justify-center rounded-lg">
                             <i id="money-eye-icon" class="fas fa-eye text-sm"></i>
                         </button>
                     </div>
-                    <div class="grid grid-cols-3 gap-3">
-                        <div class="bg-black/30 rounded-xl p-3 text-center col-span-1">
-                            <div id="stat-cuts-count" class="text-2xl font-extrabold text-blue-300">0</div>
-                            <div class="text-[10px] text-gray-500 mt-0.5 flex items-center justify-center gap-1">
-                                cortes
-                                <button id="cortes-eye-btn" type="button" onclick="window.toggleCortesVisibility()" title="Mostrar/ocultar cortes" aria-label="Mostrar u ocultar cortes" class="w-3.5 h-3.5 flex items-center justify-center text-gray-500 hover:text-blue-300 transition">
-                                    <i id="cortes-eye-icon" class="fas fa-eye text-[9px]"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="bg-black/30 rounded-xl p-3 text-center col-span-2">
-                            <div class="flex items-baseline justify-center gap-1">
-                                <span class="text-gray-500 text-sm">$</span>
-                                <span id="stat-cuts-billing" class="js-money text-2xl font-extrabold text-white">0</span>
-                            </div>
-                            <div class="text-[10px] text-gray-500 mt-0.5">facturado</div>
-                        </div>
+                    <!-- Lo facturado es el número grande; la cantidad de cortes va abajo, más chica -->
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-gray-500 text-xl font-bold">$</span>
+                        <span id="stat-cuts-billing" class="js-money stat-hero text-white">0</span>
                     </div>
-                    <div id="stat-ventas-row" class="hidden mt-3 pt-3 border-t border-white/5 justify-between items-center">
+                    <div class="flex items-center gap-1 mt-2 text-xs text-gray-400">
+                        <span id="stat-cuts-count" class="font-bold text-white text-sm">0</span>
+                        <span>cortes</span>
+                        <button id="cortes-eye-btn" type="button" onclick="window.toggleCortesVisibility()" title="Mostrar/ocultar cortes" aria-label="Mostrar u ocultar cortes" class="w-7 h-7 -my-1 flex items-center justify-center rounded-lg text-gray-500 hover:text-white transition">
+                            <i id="cortes-eye-icon" class="fas fa-eye text-[11px]"></i>
+                        </button>
+                    </div>
+                    <div id="stat-ventas-row" class="hidden mt-4 pt-3 border-t border-white/10 justify-between items-center">
                         <span class="text-[10px] text-gray-500">+ Ventas de productos</span>
                         <span id="stat-ventas-billing" class="js-money text-sm font-bold text-indigo-300">$0</span>
                     </div>
@@ -508,9 +519,9 @@
 
         <!-- Navegación por fecha (solo pestaña diario) -->
         <div id="cc-fecha-nav" class="hidden px-4 md:px-8 pt-3 pb-1 flex items-center gap-2 flex-shrink-0 max-w-4xl md:mx-auto w-full">
-            <button onclick="window.setCierreCajaFechaHoy()" id="cc-fecha-hoy-btn" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-600/20 border border-emerald-500 text-emerald-300 transition">HOY</button>
-            <button onclick="window.setCierreCajaFechaAyer()" id="cc-fecha-ayer-btn" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition">AYER</button>
-            <input type="date" id="cc-fecha-input" onchange="window.setCierreCajaFecha(this.value)" class="flex-1 min-w-0 max-w-[170px] bg-black/30 border border-gray-700 rounded-lg px-2 py-1.5 text-[11px] text-gray-300 focus:border-emerald-500 outline-none">
+            <button onclick="window.setCierreCajaFechaHoy()" id="cc-fecha-hoy-btn" class="px-4 py-2 rounded-lg text-[11px] font-bold bg-emerald-600/20 border border-emerald-500 text-emerald-300 transition">HOY</button>
+            <button onclick="window.setCierreCajaFechaAyer()" id="cc-fecha-ayer-btn" class="px-4 py-2 rounded-lg text-[11px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition">AYER</button>
+            <input type="date" id="cc-fecha-input" onchange="window.setCierreCajaFecha(this.value)" class="flex-1 min-w-0 max-w-[170px] bg-black/30 border border-gray-700 rounded-lg px-2 py-2 text-xs text-gray-300 focus:border-emerald-500 outline-none">
         </div>
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-10 max-w-4xl md:mx-auto w-full" id="cierre-caja-content">
@@ -1781,9 +1792,9 @@ window.switchTab = (tab, el) => {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.getElementById(`tab-${tab}`).classList.add('active');
     document.querySelectorAll('.tab-btn').forEach(b => {
-        b.className = 'tab-btn flex-1 py-2 rounded-lg text-[11px] font-medium text-gray-500 hover:text-gray-300 transition-all flex items-center justify-center gap-1.5';
+        b.className = 'tab-btn flex-1 py-2.5 rounded-lg text-xs font-medium text-gray-500 hover:text-gray-300 transition-all flex items-center justify-center gap-1.5';
     });
-    el.className = 'tab-btn flex-1 py-2 rounded-lg text-[11px] font-bold text-white bg-gradient-to-r from-cyan-600 to-teal-600 shadow-md transition-all flex items-center justify-center gap-1.5';
+    el.className = 'tab-btn flex-1 py-2.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-cyan-600 to-teal-600 shadow-md transition-all flex items-center justify-center gap-1.5';
     // FABs mobile
     document.getElementById('fab-cortes').classList.toggle('hidden', tab !== 'cortes');
     const fabV = document.getElementById('fab-venta');
@@ -1846,8 +1857,8 @@ function getDashFecha() {
     const todayEnd = new Date(today); todayEnd.setDate(todayEnd.getDate() + 1);
     return { hoy, today, todayEnd };
 }
-const _dashFechaBtnOn = 'px-3 py-1.5 rounded-lg text-[10px] font-bold bg-cyan-600/20 border border-cyan-500 text-cyan-300 transition';
-const _dashFechaBtnOff = 'px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition';
+const _dashFechaBtnOn = 'px-4 py-2 rounded-lg text-[11px] font-bold bg-cyan-600/20 border border-cyan-500 text-cyan-300 transition';
+const _dashFechaBtnOff = 'px-4 py-2 rounded-lg text-[11px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition';
 function updateDashFechaUI() {
     const hoyStr = new Date().toLocaleDateString('en-CA');
     const ayerStr = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
@@ -3237,8 +3248,8 @@ window.logout = () => signOut(auth);
 let cierreCajaTab = 'diario';
 let cierreCajaFechaSel = null; // null = hoy; si no, 'YYYY-MM-DD'
 
-const _ccFechaBtnOn = 'px-3 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-600/20 border border-emerald-500 text-emerald-300 transition';
-const _ccFechaBtnOff = 'px-3 py-1.5 rounded-lg text-[10px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition';
+const _ccFechaBtnOn = 'px-4 py-2 rounded-lg text-[11px] font-bold bg-emerald-600/20 border border-emerald-500 text-emerald-300 transition';
+const _ccFechaBtnOff = 'px-4 py-2 rounded-lg text-[11px] font-bold bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500 transition';
 function updateCierreCajaFechaUI() {
     const hoyStr = new Date().toLocaleDateString('en-CA');
     const ayerStr = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
