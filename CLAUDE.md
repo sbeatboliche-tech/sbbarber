@@ -13,7 +13,7 @@ Ecosistema web de la barbería SB Barber. No hay build, bundler, linter ni tests
 
 `electron-app/` es solo un wrapper (`main.js`) que abre la URL de GitHub Pages de `recepcionista/` en una ventana. Único lugar con comandos: `cd electron-app && npm start` (dev) / `npm run dist` (portable Windows).
 
-Dependencias de las funciones serverless: `tienda/api/package.json` (`nodemailer`, `firebase-admin`).
+Dependencias de las funciones serverless: `tienda/package.json` (`nodemailer`, `firebase-admin`, `@vercel/functions`). Tiene que estar en `tienda/` y no en `tienda/api/`: `tienda/lib/*.js` también importa paquetes y desde ahí no se ve `api/node_modules` (eso tuvo caído el webhook de MP del 2026-09-08 al 2026-10-08).
 
 ## Dos proyectos Firebase
 
