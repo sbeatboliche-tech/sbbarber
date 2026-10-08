@@ -35,12 +35,15 @@ export default async function handler(req, res) {
             }
             case 'connect': {
                 if (!OWNERS.includes(user.email)) return res.status(403).json({ error: 'Solo los dueños pueden conectar la cuenta' });
-                const state = crypto.randomBytes(24).toString('hex');
-                await barberDb().doc(`ml_oauth_state/${state}`).set({ email: user.email, expira: Date.now() + 10 * 60 * 1000 });
+                const state = firmarState(user.email);
                 const url = `${ML_AUTH_URL}?${new URLSearchParams({ response_type: 'code', client_id: process.env.ML_CLIENT_ID, redirect_uri: redirectUri(), state })}`;
                 return res.json({ url });
             }
             case 'items':
+                // Enlazar productos: dueños o la sesión de recepción (anónima con la clave del local), no barberos.
+                if (!OWNERS.includes(user.email) && user.firebase?.sign_in_provider !== 'anonymous') {
+                    return res.status(403).json({ error: 'Solo recepción o los dueños pueden enlazar productos' });
+                }
                 return res.json({ items: await listarPublicaciones() });
             case 'sync': {
                 if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -61,12 +64,10 @@ async function callback(req, res) {
     const { code, state, error } = req.query;
     if (error) return volver('cancelado');
     try {
-        const ref = barberDb().doc(`ml_oauth_state/${state}`);
-        const snap = state ? await ref.get() : null;
-        if (!snap?.exists || snap.data().expira < Date.now()) return volver('vencido');
-        await ref.delete();
+        const email = verificarState(state);
+        if (!email) return volver('vencido');
         const t = await exchangeCode(code);
-        await saveTokens(t, { conectadoPor: snap.data().email, conectadoEn: new Date() });
+        await saveTokens(t, { conectadoPor: email, conectadoEn: new Date() });
         try {
             const me = await mlFetch('/users/me');
             await barberDb().doc(CONFIG_DOC).set({ nickname: me.nickname || null }, { merge: true });
@@ -76,4 +77,25 @@ async function callback(req, res) {
         console.error('ML callback:', e);
         return volver('error');
     }
+}
+
+// El "state" de OAuth va firmado con HMAC (clave derivada de ML_CLIENT_SECRET) en vez de guardarse en
+// Firestore: las reglas dejan crear docs a cualquier logueado, así que alguien podía fabricarse un state
+// válido y conectar SU cuenta de ML en lugar de la del local.
+function hmac(txt) {
+    return crypto.createHmac('sha256', 'sb-ml-state:' + process.env.ML_CLIENT_SECRET).update(txt).digest('base64url');
+}
+function firmarState(email) {
+    const payload = Buffer.from(JSON.stringify({ email, exp: Date.now() + 10 * 60 * 1000, n: crypto.randomBytes(8).toString('hex') })).toString('base64url');
+    return `${payload}.${hmac(payload)}`;
+}
+function verificarState(state) {
+    const [payload, firma] = String(state || '').split('.');
+    if (!payload || !firma) return null;
+    const esperada = hmac(payload);
+    if (firma.length !== esperada.length || !crypto.timingSafeEqual(Buffer.from(firma), Buffer.from(esperada))) return null;
+    try {
+        const { email, exp } = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+        return exp > Date.now() && OWNERS.includes(email) ? email : null;
+    } catch { return null; }
 }
