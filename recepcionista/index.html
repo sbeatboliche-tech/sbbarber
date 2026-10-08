@@ -1878,7 +1878,10 @@ function listenToCuts() {
             mergeCuts();
             renderCuts();
             renderChallengeSummary();
-            if (!document.getElementById('cierre-caja-view').classList.contains('hidden')) renderCierreCaja();
+            if (!document.getElementById('cierre-caja-view').classList.contains('hidden')) {
+                if (cierreCajaTab === 'semanal') renderCierreCajaSemanal();
+                else if (cierreCajaTab === 'diario') renderCierreCaja();
+            }
             document.getElementById('loading-view').classList.add('opacity-0', 'pointer-events-none');
         }
     );
@@ -4106,6 +4109,60 @@ function cardMensual({ titulo, color, items, nombreDe, vacio }) {
         </div>`;
 }
 
+// Resumen del mes por barbero, con los mismos criterios que el semanal (comisión, retiros confirmados
+// sin los de atajo, propinas confirmadas). Los ajustes de los atajos Ctrl+Shift se restan en silencio
+// (los de las semanas que arrancan en este mes), igual que en el semanal.
+function barberosMensualHTML(mes, cortes, retiros, propinas) {
+    const by = {};
+    BARBERS.forEach(b => { by[b] = { n: 0, facturado: 0, retiros: 0, propinas: 0, ajustes: 0 }; });
+    cortes.filter(c => !c.eliminado).forEach(c => { if (by[c.barber]) { by[c.barber].n++; by[c.barber].facturado += c.price || 0; } });
+    retiros.filter(r => !r.eliminado && r.estado === 'confirmado' && r.origen !== 'atajo')
+        .forEach(r => { if (by[r.barbero]) by[r.barbero].retiros += r.monto || 0; });
+    propinas.filter(p => !p.eliminado && p.estado === 'confirmado')
+        .forEach(p => { if (by[p.barbero]) by[p.barbero].propinas += p.monto || 0; });
+    Object.entries(allAjustes).forEach(([id, a]) => {
+        const [semana, b] = id.split('_');
+        if (by[b] && (semana || '').slice(0, 7) === mes) by[b].ajustes += a.monto || 0;
+    });
+    if (mes === '2026-09') { by.Tony && (by.Tony.ajustes += 7000); by.Stefa && (by.Stefa.ajustes += 7000); } // = _ajusteSemana del semanal
+
+    const totN = BARBERS.reduce((s, b) => s + by[b].n, 0), totF = BARBERS.reduce((s, b) => s + by[b].facturado, 0);
+    const fila = (label, valor, color = 'text-white') => `<div class="flex justify-between text-xs md:text-sm">
+        <span class="text-gray-400">${label}</span><span class="font-bold ${color}">${valor}</span></div>`;
+    const cards = BARBERS.map(b => {
+        const d = by[b];
+        const ganancia = Math.round(d.facturado * (BARBER_COMISION[b] ?? 0.5));
+        const neto = ganancia - d.retiros + d.propinas - d.ajustes;
+        return `
+        <div class="glass-card rounded-2xl p-5 md:p-6">
+            <div class="flex items-center gap-3 mb-4">
+                ${barberAvatar(b, 10)}
+                <span class="font-extrabold text-white text-base md:text-lg flex-1 min-w-0 truncate">${b}</span>
+                <span class="text-xs text-gray-400 whitespace-nowrap"><span class="font-bold text-white">${d.n}</span> corte${d.n !== 1 ? 's' : ''}</span>
+            </div>
+            <div class="space-y-2">
+                ${fila('Facturado', `$${d.facturado.toLocaleString('es-AR')}`, 'text-gray-300')}
+                ${fila('Ganancia', `$${ganancia.toLocaleString('es-AR')}`)}
+                ${d.propinas > 0 ? fila('Propinas', `+$${d.propinas.toLocaleString('es-AR')}`, 'text-violet-400') : ''}
+                ${d.retiros > 0 ? fila('Retiros', `−$${d.retiros.toLocaleString('es-AR')}`, 'text-red-400') : ''}
+                <div class="flex justify-between text-sm md:text-base pt-2 mt-1 border-t border-white/10">
+                    <span class="font-bold text-gray-300 uppercase tracking-wide text-xs md:text-sm">Total del mes</span>
+                    <span class="font-extrabold ${neto >= 0 ? 'text-emerald-400' : 'text-red-400'}">$${neto.toLocaleString('es-AR')}</span>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+    return `
+        <div class="glass-card rounded-2xl p-5 md:p-6 mb-4">
+            <div class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest">Barbería en el mes</div>
+            <div class="flex items-baseline gap-2 mt-1">
+                <span class="text-2xl md:text-3xl font-extrabold text-white">$${totF.toLocaleString('es-AR')}</span>
+                <span class="text-xs text-gray-400">facturado en ${totN} corte${totN !== 1 ? 's' : ''}</span>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">${cards}</div>`;
+}
+
 async function renderCierreCajaMensual() {
     if (!cierreMesSel) cierreMesSel = mesKey(new Date());
     const [y, m] = cierreMesSel.split('-').map(Number);
@@ -4123,14 +4180,21 @@ async function renderCierreCajaMensual() {
 
     const req = ++_mensualReq;
     const ini = `${cierreMesSel}-01`, fin = `${cierreMesSel}-31`;
-    let ventas, perdidos;
+    const desde = new Date(y, m - 1, 1), hasta = new Date(y, m, 1);
+    let ventas, perdidos, cortes, retiros, propinas;
     try {
-        const [sv, sp] = await Promise.all([
+        const [sv, sp, sc, sr, spr] = await Promise.all([
             getDocs(query(collection(db, PATH_VENTAS), where('fecha', '>=', ini), where('fecha', '<=', fin))),
-            getDocs(query(collection(db, PATH_PERDIDOS), where('fecha', '>=', ini), where('fecha', '<=', fin)))
+            getDocs(query(collection(db, PATH_PERDIDOS), where('fecha', '>=', ini), where('fecha', '<=', fin))),
+            getDocs(query(collection(db, PATH_CUTS), where('createdAt', '>=', desde), where('createdAt', '<', hasta))),
+            getDocs(query(collection(db, PATH_RETIROS), where('fecha', '>=', ini), where('fecha', '<=', fin))),
+            getDocs(query(collection(db, PATH_PROPINAS), where('fecha', '>=', ini), where('fecha', '<=', fin)))
         ]);
         ventas = sv.docs.map(d => d.data());
         perdidos = sp.docs.map(d => d.data());
+        cortes = sc.docs.map(d => d.data());
+        retiros = sr.docs.map(d => d.data());
+        propinas = spr.docs.map(d => d.data());
     } catch (e) {
         console.error('cierre mensual:', e);
         if (req === _mensualReq) cont.innerHTML = nav + '<p class="text-xs text-red-400 text-center py-6">No se pudo cargar el mes. Probá de nuevo.</p>';
@@ -4141,7 +4205,7 @@ async function renderCierreCajaMensual() {
 
     const regalos = ventas.filter(v => v.esRegalo && !v.eliminado);
     perdidos = perdidos.filter(p => !p.eliminado);
-    cont.innerHTML = nav +
+    cont.innerHTML = nav + barberosMensualHTML(cierreMesSel, cortes, retiros, propinas) +
         cardMensual({ titulo: '🎁 Bebidas regaladas', color: { border: 'border-pink-500/20', text: 'text-pink-400', total: 'text-pink-300' },
             items: regalos, nombreDe: v => v.producto || '—', vacio: 'No se regalaron bebidas este mes' }) +
         cardMensual({ titulo: '📉 Perdidos', color: { border: 'border-red-500/20', text: 'text-red-400', total: 'text-red-300' },
