@@ -11,7 +11,8 @@ desktop.ini
 .idea/
 
 # Claude Code
-.claude/
+.claude/*
+!.claude/settings.json
 
 # Node (por si se agrega en el futuro)
 node_modules/
