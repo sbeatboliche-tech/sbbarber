@@ -64,8 +64,12 @@ async function callback(req, res) {
     const { code, state, error } = req.query;
     if (error) return volver('cancelado');
     try {
-        const email = verificarState(state);
-        if (!email) return volver('vencido');
+        const st = verificarState(state);
+        if (!st) return volver('vencido');
+        const email = st.email;
+        // Un solo uso: create() falla si ese state ya se usó (ml_config solo lo escribe el servidor).
+        try { await barberDb().doc(`ml_config/state-${st.n}`).create({ usadoEn: new Date(), email }); }
+        catch { return volver('vencido'); }
         const t = await exchangeCode(code);
         await saveTokens(t, { conectadoPor: email, conectadoEn: new Date() });
         try {
@@ -95,7 +99,7 @@ function verificarState(state) {
     const esperada = hmac(payload);
     if (firma.length !== esperada.length || !crypto.timingSafeEqual(Buffer.from(firma), Buffer.from(esperada))) return null;
     try {
-        const { email, exp } = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-        return exp > Date.now() && OWNERS.includes(email) ? email : null;
+        const { email, exp, n } = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+        return exp > Date.now() && OWNERS.includes(email) && /^[0-9a-f]{16}$/.test(n || '') ? { email, n } : null;
     } catch { return null; }
 }
