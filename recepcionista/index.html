@@ -2832,8 +2832,8 @@ function renderProductosGrid() {
         const stock = (productoStock[p.id]?.stock) || 0;
         const sinStock = stock === 0;
         const stockColor = sinStock ? 'text-red-400' : stock <= 3 ? 'text-yellow-400' : 'text-gray-500';
-        const safeId = p.id.replace(/'/g, "\\'");
-        const safeName = p.name.replace(/'/g, "\\'");
+        const safeId = jsAttr(p.id);
+        const safeName = jsAttr(p.name);
         const enCarrito = ventaCart.find(it => it.id === p.id);
         const cantEnCarrito = enCarrito ? enCarrito.cantidad : 0;
         const alTope = !sinStock && cantEnCarrito >= Math.min(20, stock);
@@ -3116,6 +3116,8 @@ let mlLinkProductoId = null, mlLinkElegida = null;
 const _mlSyncTimers = {};
 
 const escHtml = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// Texto como string dentro de onclick="fn('...')": se escapa para JS y después para HTML.
+const jsAttr = (v) => escHtml(String(v ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
 
 async function mlApi(action, body) {
     const token = await auth.currentUser.getIdToken();
@@ -3173,7 +3175,7 @@ function mlLinkLine(p, data, safeName) {
         return `<div class="text-[10px] mt-0.5 flex items-center gap-1.5 flex-wrap">
             <i class="fas fa-link text-gray-500"></i>${estado}
             ${isAdmin ? `<button onclick="window.openMLLink('${p.id}')" class="text-gray-400 underline hover:text-white">cambiar</button>
-            <button onclick="window.unlinkML('${p.id}','${safeName}')" class="text-gray-400 underline hover:text-red-400">quitar</button>` : ''}
+            <button onclick="window.unlinkML('${p.id}')" class="text-gray-400 underline hover:text-red-400">quitar</button>` : ''}
         </div>`;
     }
     return isAdmin ? `<button onclick="window.openMLLink('${p.id}')" class="mt-1 text-[10px] font-bold text-white/80 border border-white/15 rounded-md px-2 py-1 hover:bg-white/10 transition"><i class="fas fa-link mr-1"></i>Enlazar con ML</button>` : '';
@@ -3281,7 +3283,8 @@ window.confirmMLLink = async (fuente) => {
     } catch (e) { alert('Error al enlazar: ' + e.message); }
 };
 
-window.unlinkML = async (id, name) => {
+window.unlinkML = async (id) => {
+    const name = PRODUCTOS_BARBER.find(p => p.id === id)?.name || 'este producto';
     if (!await customConfirm(`¿Desenlazar "${name}" de MercadoLibre? El stock deja de sincronizarse.`, 'Desenlazar')) return;
     try { await updateDoc(doc(db, PATH_PRODUCTOS, id), { mlItemId: null, mlVariationId: null, mlTitulo: null, mlSync: null }); }
     catch (e) { alert('Error al desenlazar'); }
@@ -3346,7 +3349,7 @@ function renderProductoStock() {
             ? '<div class="text-[10px] text-red-500 font-bold">Sin stock</div>'
             : isLow ? '<div class="text-[10px] text-yellow-500 font-bold">Stock bajo</div>' : '';
         const precioLabel = p.precio > 0 ? `$${p.precio.toLocaleString('es-AR')} c/u` : (p.isML ? '🛒 ML' : '');
-        const safeName = p.name.replace(/'/g,"\\'");
+        const safeName = jsAttr(p.name);
         const thumb = data.photoURL
             ? `<img src="${data.photoURL}" onclick="window.openEditProductoPhoto('${p.id}','${safeName}')" class="w-11 h-11 rounded-lg object-cover flex-shrink-0 cursor-pointer">`
             : `<div onclick="window.openEditProductoPhoto('${p.id}','${safeName}')" class="w-11 h-11 rounded-lg bg-indigo-900/30 flex items-center justify-center flex-shrink-0 cursor-pointer hover:bg-indigo-900/60 transition"><i class="fas fa-camera text-indigo-600 text-sm"></i></div>`;
@@ -3354,7 +3357,7 @@ function renderProductoStock() {
             <span class="prod-drag-handle cursor-grab text-gray-600 hover:text-gray-400 select-none text-base flex-shrink-0">⠿</span>
             ${thumb}
             <div class="flex-1 min-w-0">
-                <div class="text-sm font-bold text-white truncate">${p.name}</div>
+                <div class="text-sm font-bold text-white truncate">${escHtml(p.name)}</div>
                 <div class="text-[10px] text-gray-500">${precioLabel}</div>
                 ${badge}
                 ${p.isML ? mlLinkLine(p, data, safeName) : ''}
@@ -4882,7 +4885,7 @@ window.renderHistorialStock = () => {
                     return `<div class="flex justify-between items-center bg-black/20 px-3 py-2 rounded-lg">
                         <div class="min-w-0">
                             <div class="text-xs text-white"><span class="mr-1">${t.icon}</span><b>${m.itemName}</b> <span class="text-gray-500">· ${t.label}</span></div>
-                            <div class="text-[10px] text-gray-600 truncate">${hora(m.creadoEn)}${m.detalle ? ` · ${m.detalle}` : ''}</div>
+                            <div class="text-[10px] text-gray-600 truncate">${hora(m.creadoEn)}${m.detalle ? ` · ${escHtml(m.detalle)}` : ''}</div>
                         </div>
                         <span class="text-sm font-bold flex-shrink-0 ml-2 ${m.cantidad > 0 ? 'text-emerald-400' : 'text-red-400'}">${signo(m.cantidad)}</span>
                     </div>`;
