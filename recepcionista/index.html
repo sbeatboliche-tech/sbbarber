@@ -2990,7 +2990,16 @@ window.submitVenta = async () => {
             });
             await updateDoc(doc(db, PATH_PRODUCTOS, it.id), { stock: increment(-it.cantidad) });
         }
-        closeModals();
+        // Queda en la pantalla de venta (no se cierra) para poder cargar la siguiente: se vacía el carrito
+        // y el botón confirma un momento. Canal y método de pago se mantienen.
+        ventaCart = [];
+        ventaSearchQuery = '';
+        document.getElementById('venta-producto-search').value = '';
+        renderProductosGrid();
+        renderCarrito();
+        btn.innerHTML = '<i class="fas fa-check mr-1"></i> Venta registrada';
+        setTimeout(() => { btn.innerHTML = 'Registrar venta'; }, 1800);
+        return;
     } catch(e) { alert('Error al guardar'); }
     btn.disabled = false; btn.innerHTML = 'Registrar venta';
 };
