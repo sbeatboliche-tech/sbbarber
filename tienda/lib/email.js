@@ -1,4 +1,9 @@
 // Piezas compartidas por los mails de la tienda (webhook.js y notify-transfer.js).
+// Escapa texto que manda el comprador (nombre, dirección, productos) antes de meterlo en el HTML del mail.
+export function esc(v) {
+    return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 export function orderLabel(orderId) {
     return orderId?.startsWith('SBB-') ? '#' + orderId.slice(4) : orderId;
 }
@@ -23,9 +28,9 @@ export function emailShell(bodyHtml, { eyebrow = 'TIENDA', title } = {}) {
 
 export function itemRows(items, { withPrices = true } = {}) {
     return (items || []).map(i => {
-        const lineTotal = (i.price || 0) * (i.quantity || 1);
+        const lineTotal = (Number(i.price) || 0) * (Number(i.quantity) || 1);
         return `<tr>
-            <td style="padding:5px 0;color:#18181b;font-size:13px;">${i.quantity}× ${i.name}</td>
+            <td style="padding:5px 0;color:#18181b;font-size:13px;">${esc(i.quantity)}× ${esc(i.name)}</td>
             ${withPrices ? `<td style="padding:5px 0;color:#18181b;font-size:13px;text-align:right;white-space:nowrap;">$${lineTotal.toLocaleString('es-AR')}</td>` : ''}
         </tr>`;
     }).join('');

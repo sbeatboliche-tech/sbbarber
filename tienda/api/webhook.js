@@ -1,20 +1,20 @@
 import nodemailer from 'nodemailer';
 import { getAdminDb } from '../lib/firebaseAdmin.js';
-import { orderLabel, emailShell, itemRows } from '../lib/email.js';
+import { orderLabel, emailShell, itemRows, esc } from '../lib/email.js';
 
 export default async function handler(req, res) {
-    // Respond immediately — MP requires fast response
-    res.status(200).end();
-
+    // Se responde al FINAL, no al principio: en Vercel la función se congela apenas se
+    // manda la respuesta, así que todo lo que venga después (marcar el pedido pagado,
+    // los mails) puede no ejecutarse nunca. MP espera varios segundos, alcanza de sobra.
     const { type, data } = req.body || {};
-    if (type !== 'payment' || !data?.id) return;
+    if (type !== 'payment' || !data?.id) return res.status(200).end();
 
     try {
         const payRes = await fetch(`https://api.mercadopago.com/v1/payments/${data.id}`, {
             headers: { 'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}` }
         });
         const payment = await payRes.json();
-        if (payment.status !== 'approved') return;
+        if (payment.status !== 'approved') return res.status(200).end();
 
         const prefRes = await fetch(`https://api.mercadopago.com/checkout/preferences/${payment.preference_id}`, {
             headers: { 'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}` }
@@ -64,14 +64,15 @@ export default async function handler(req, res) {
     } catch (e) {
         console.error('Webhook error:', e);
     }
+    res.status(200).end();
 }
 
 function sellerHtml(name, email, items, total, orderId, shipping) {
-    const entrega = shipping.mode === 'delivery' ? `Envío — ${shipping.address}` : 'Retiro en local';
+    const entrega = shipping.mode === 'delivery' ? `Envío — ${esc(shipping.address)}` : 'Retiro en local';
     const body = `
     <table style="width:100%;border-collapse:collapse;">
-      <tr><td style="padding:5px 0;color:#71717a;font-size:12px;width:38%;">Cliente</td><td style="padding:5px 0;color:#18181b;font-weight:700;text-align:right;">${name}</td></tr>
-      <tr><td style="padding:5px 0;color:#71717a;font-size:12px;">Email</td><td style="padding:5px 0;color:#18181b;text-align:right;">${email || '—'}</td></tr>
+      <tr><td style="padding:5px 0;color:#71717a;font-size:12px;width:38%;">Cliente</td><td style="padding:5px 0;color:#18181b;font-weight:700;text-align:right;">${esc(name)}</td></tr>
+      <tr><td style="padding:5px 0;color:#71717a;font-size:12px;">Email</td><td style="padding:5px 0;color:#18181b;text-align:right;">${esc(email) || '—'}</td></tr>
       ${itemRows(items)}
       <tr><td style="padding:5px 0;color:#71717a;font-size:12px;">Entrega</td><td style="padding:5px 0;color:#18181b;text-align:right;">${entrega}</td></tr>
     </table>
@@ -85,10 +86,10 @@ function sellerHtml(name, email, items, total, orderId, shipping) {
 
 function buyerHtml(name, items, total, orderId, shipping) {
     const entrega = shipping.mode === 'delivery'
-        ? `Envío a: ${shipping.address}`
+        ? `Envío a: ${esc(shipping.address)}`
         : 'Retiro en local · Dávila 951, CABA · Lun–Sáb 12–19:30';
     const body = `
-    <p style="color:#18181b;margin:0 0 16px;font-size:15px;font-weight:700;">¡Listo, ${name}! Pago confirmado.</p>
+    <p style="color:#18181b;margin:0 0 16px;font-size:15px;font-weight:700;">¡Listo, ${esc(name)}! Pago confirmado.</p>
     <table style="width:100%;border-collapse:collapse;">${itemRows(items)}</table>
     <div style="display:flex;justify-content:space-between;border-top:2px solid #18181b;padding-top:12px;margin-top:12px;">
       <span style="color:#18181b;font-weight:800;">Total pagado</span>

@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import { writeFirestoreDoc } from '../lib/firestore.js';
-import { orderLabel, emailShell, itemRows } from '../lib/email.js';
+import { orderLabel, emailShell, itemRows, esc } from '../lib/email.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -56,13 +56,13 @@ function sellerHtml(name, email, items, total, discount, orderId, ship) {
         ? `<tr><td style="padding:5px 0;color:#71717a;font-size:12px;">Descuento 10%</td><td style="padding:5px 0;color:#18181b;text-align:right;">− $${Number(discount).toLocaleString('es-AR')}</td></tr>`
         : '';
     const entrega = ship.mode === 'delivery'
-        ? `${ship.address}${ship.postalCode ? ' (CP ' + ship.postalCode + ')' : ''} — ${ship.carrierLabel || 'a definir'}`
+        ? `${esc(ship.address)}${ship.postalCode ? ' (CP ' + esc(ship.postalCode) + ')' : ''} — ${esc(ship.carrierLabel || 'a definir')}`
         : 'Retiro en local';
 
     const body = `
     <table style="width:100%;border-collapse:collapse;">
-      <tr><td style="padding:5px 0;color:#71717a;font-size:12px;width:38%;">Cliente</td><td style="padding:5px 0;color:#18181b;font-weight:700;text-align:right;">${name}</td></tr>
-      <tr><td style="padding:5px 0;color:#71717a;font-size:12px;">Email</td><td style="padding:5px 0;color:#18181b;text-align:right;">${email || '—'}</td></tr>
+      <tr><td style="padding:5px 0;color:#71717a;font-size:12px;width:38%;">Cliente</td><td style="padding:5px 0;color:#18181b;font-weight:700;text-align:right;">${esc(name)}</td></tr>
+      <tr><td style="padding:5px 0;color:#71717a;font-size:12px;">Email</td><td style="padding:5px 0;color:#18181b;text-align:right;">${esc(email) || '—'}</td></tr>
       ${itemRows(items)}
       <tr><td style="padding:5px 0;color:#71717a;font-size:12px;">Entrega</td><td style="padding:5px 0;color:#18181b;text-align:right;">${entrega}</td></tr>
       ${discountRow}
@@ -80,12 +80,12 @@ function buyerHtml(name, items, total, discount, orderId, ship) {
     const discountLine = discount > 0
         ? `<p style="color:#16a34a;font-size:12px;font-weight:700;margin:6px 0 0;">Descuento 10% transferencia: − $${Number(discount).toLocaleString('es-AR')}</p>`
         : '';
-    const entrega = ship.mode === 'delivery' ? `Envío a: ${ship.address || ''}` : 'Retiro en local · Dávila 951, CABA';
+    const entrega = ship.mode === 'delivery' ? `Envío a: ${esc(ship.address)}` : 'Retiro en local · Dávila 951, CABA';
     const waMsg = encodeURIComponent(`Hola! Te paso la captura de mi pago. Pedido: ${orderLabel(orderId)}`);
     const waLink = `https://wa.me/541170583352?text=${waMsg}`;
 
     const body = `
-    <p style="color:#18181b;margin:0 0 16px;font-size:15px;font-weight:700;">¡Pedido reservado, ${name}!</p>
+    <p style="color:#18181b;margin:0 0 16px;font-size:15px;font-weight:700;">¡Pedido reservado, ${esc(name)}!</p>
     <table style="width:100%;border-collapse:collapse;">${itemRows(items)}</table>
     ${discountLine}
     <div style="display:flex;justify-content:space-between;border-top:2px solid #18181b;padding-top:12px;margin-top:12px;">

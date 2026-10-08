@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { orderLabel, emailShell, itemRows } from '../lib/email.js';
+import { orderLabel, emailShell, itemRows, esc } from '../lib/email.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -29,12 +29,12 @@ export default async function handler(req, res) {
 }
 
 function reminderHtml(name, items, total, orderId, ship) {
-    const entrega = ship.mode === 'delivery' ? `Envío a: ${ship.address || ''}` : 'Retiro en local · Dávila 951, CABA';
+    const entrega = ship.mode === 'delivery' ? `Envío a: ${esc(ship.address)}` : 'Retiro en local · Dávila 951, CABA';
     const waMsg = encodeURIComponent(`Hola! Te paso la captura de mi pago. Pedido: ${orderLabel(orderId)}`);
     const waLink = `https://wa.me/541170583352?text=${waMsg}`;
 
     const body = `
-    <p style="color:#18181b;margin:0 0 16px;font-size:15px;font-weight:700;">¡Hola ${name}! Tu pedido sigue reservado 🖤</p>
+    <p style="color:#18181b;margin:0 0 16px;font-size:15px;font-weight:700;">¡Hola ${esc(name)}! Tu pedido sigue reservado 🖤</p>
     <p style="color:#52525b;font-size:13px;margin:0 0 16px;">Todavía no nos llegó tu transferencia. Te dejamos de nuevo los datos para que puedas completarla.</p>
     <table style="width:100%;border-collapse:collapse;">${itemRows(items)}</table>
     <div style="display:flex;justify-content:space-between;border-top:2px solid #18181b;padding-top:12px;margin-top:12px;">
