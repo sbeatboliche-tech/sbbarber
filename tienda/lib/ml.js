@@ -11,6 +11,7 @@ export const ML_API = 'https://api.mercadolibre.com';
 export const ML_AUTH_URL = 'https://auth.mercadolibre.com.ar/authorization';
 export const CONFIG_DOC = 'ml_config/cuenta';
 export const PRODUCTOS = 'productos_barber';
+const ITEM_ID_RE = /^ML[A-Z]{1,2}\d+$/; // IDs de publicación de ML, ej. MLA123456789
 
 export function redirectUri() {
     return `${process.env.STORE_URL || 'https://tienda.sbbarber.com.ar'}/api/ml`;
@@ -143,7 +144,14 @@ export async function sincronizarStock(ids = null) {
     } else {
         docs = (await db.collection(PRODUCTOS).where('mlItemId', '!=', null).get()).docs;
     }
-    const enlazados = docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.mlItemId && !p.oculto);
+    // mlItemId/mlVariationId los escribe el cliente (cualquier usuario logueado puede), así que se
+    // validan antes de meterlos en una URL que se llama con el token del vendedor.
+    const valido = p => ITEM_ID_RE.test(p.mlItemId || '') && (!p.mlVariationId || /^\d+$/.test(String(p.mlVariationId)));
+    const todos = docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.mlItemId && !p.oculto);
+    const enlazados = todos.filter(valido);
+    for (const p of todos.filter(p => !valido(p))) {
+        await db.doc(`${PRODUCTOS}/${p.id}`).set({ mlSync: { ok: false, error: 'Enlace inválido: volvé a enlazar el producto', en: new Date() } }, { merge: true });
+    }
 
     // Agrupar por publicación: con variantes, ML borra las que no se mandan en el PUT, así que
     // hay que mandar todas las variantes de la publicación (cambiando solo las enlazadas).
@@ -156,14 +164,14 @@ export async function sincronizarStock(ids = null) {
         try {
             const conVariante = prods.filter(p => p.mlVariationId);
             if (conVariante.length) {
-                const item = await mlFetch(`/items/${itemId}?attributes=variations`);
+                const item = await mlFetch(`/items/${encodeURIComponent(itemId)}?attributes=variations`);
                 const variations = (item.variations || []).map(v => {
                     const p = conVariante.find(x => String(x.mlVariationId) === String(v.id));
                     return { id: v.id, available_quantity: p ? qtyDe(p) : v.available_quantity };
                 });
-                await mlFetch(`/items/${itemId}`, { method: 'PUT', body: { variations } });
+                await mlFetch(`/items/${encodeURIComponent(itemId)}`, { method: 'PUT', body: { variations } });
             } else {
-                await mlFetch(`/items/${itemId}`, { method: 'PUT', body: { available_quantity: qtyDe(prods[0]) } });
+                await mlFetch(`/items/${encodeURIComponent(itemId)}`, { method: 'PUT', body: { available_quantity: qtyDe(prods[0]) } });
             }
             for (const p of prods) {
                 await db.doc(`${PRODUCTOS}/${p.id}`).set({ mlSync: { ok: true, stock: qtyDe(p), en: new Date() } }, { merge: true });
