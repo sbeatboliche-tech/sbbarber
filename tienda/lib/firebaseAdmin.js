@@ -12,7 +12,9 @@ export function getAdminDb() {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (!raw) throw new Error('Falta la env var FIREBASE_SERVICE_ACCOUNT en Vercel');
     const serviceAccount = JSON.parse(raw);
-    const app = getApps()[0] || initializeApp({ credential: cert(serviceAccount) });
+    // Buscar la app por defecto por nombre: lib/barberAdmin.js crea otra app ('barber') y
+    // getApps()[0] podría devolver esa (otro proyecto).
+    const app = getApps().find(a => a.name === '[DEFAULT]') || initializeApp({ credential: cert(serviceAccount) });
     db = getFirestore(app);
     return db;
 }

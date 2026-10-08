@@ -30,7 +30,15 @@ Dependencias de las funciones serverless: `tienda/api/package.json` (`nodemailer
 - **Checkout**: `api/checkout.js` (MercadoPago, crea preferencia y escribe el pedido server-side como respaldo) y `api/notify-transfer.js` (transferencia, 10% de descuento, aviso por mail con nodemailer). El precio cobrado se resuelve en el servidor (`resolveRealPrice`: Firestore custom/kits, si no `BASE_PRICES` de `checkout.js`); no confiar en el precio que manda el cliente. Al cambiar un precio base hay que tocarlo en `PRODUCTS` de `index.html` y en `BASE_PRICES`. `api/webhook.js` marca el pedido pagado con `lib/firebaseAdmin.js` (bypassa reglas). Estado inicial `pendiente_pago` hasta que el webhook lo aprueba.
 - **Envío**: tarifas por zona en `ZONE_RATES` y umbral `FREE_SHIP_THRESHOLD` (envío gratis) en `index.html`, sobreescribibles desde `tienda_config/envios`; retiro en local gratis. `api/correo-rates.js` cotiza Correo Argentino.
 - **`lib/firestore.js`**: acceso REST a Firestore con la API key pública (sin cuenta de servicio) para lecturas/escrituras públicas; `lib/firebaseAdmin.js` es para lo privilegiado y requiere la env var `FIREBASE_SERVICE_ACCOUNT`.
-- Env vars en Vercel (no hay `.env` en el repo): `MP_ACCESS_TOKEN`, `FIREBASE_SERVICE_ACCOUNT`, `GMAIL_APP_PASSWORD`, `WHATSAPP_*`, `CORREO_*`, `STORE_URL`, `ETHEREAL_*`.
+- Env vars en Vercel (no hay `.env` en el repo): `MP_ACCESS_TOKEN`, `FIREBASE_SERVICE_ACCOUNT`, `GMAIL_APP_PASSWORD`, `WHATSAPP_*`, `CORREO_*`, `STORE_URL`, `ETHEREAL_*`, `ML_CLIENT_ID`, `ML_CLIENT_SECRET`, `FIREBASE_SERVICE_ACCOUNT_BARBER`.
+
+## Stock de MercadoLibre enlazado
+
+Los productos de `productos_barber` (proyecto `sb-barber-6dc16`) se pueden enlazar a una publicación/variante de ML (`mlItemId`, `mlVariationId`). Corre en Vercel aunque recepcionista y anotar estén en GitHub Pages:
+- `tienda/api/ml.js`: conectar la cuenta (OAuth, solo dueños), listar publicaciones y `sync` (copia a ML el stock de Firestore; siempre "pisa con el valor actual", así que repetirlo no hace daño). Recepcionista y anotar llaman a `sync` desde el `onSnapshot` de productos cuando **ese** dispositivo cambió el stock (`hasPendingWrites`).
+- `tienda/api/ml-webhook.js` (topic `orders_v2`): venta pagada → descuenta stock y crea `ventas_productos/ml-{orden}-{i}` con canal `ml` (fuera de la caja); cancelada → devuelve stock y borra esas ventas. Idempotente vía `ml_ordenes/{orden}`.
+- Tokens cifrados en `ml_config/cuenta` (las reglas dejan leer todo a cualquier logueado). Env vars: `ML_CLIENT_ID`, `ML_CLIENT_SECRET`, `FIREBASE_SERVICE_ACCOUNT_BARBER` (cuenta de servicio de `sb-barber-6dc16`, distinta de `FIREBASE_SERVICE_ACCOUNT`).
+- Registrar a mano una venta canal ML de un producto enlazado está bloqueado (se descontaría dos veces).
 
 ## Recepcionista (cierre de caja)
 

@@ -588,12 +588,37 @@
         </header>
         <div class="flex-1 overflow-y-auto p-4 pb-10">
             <div class="glass-card rounded-2xl p-5">
+                <div id="ml-status-bar" class="mb-4"></div>
                 <div id="productos-stock-list" class="space-y-2">
                     <p class="text-xs text-gray-600 text-center py-2">Cargando...</p>
                 </div>
             </div>
         </div>
     </div><!-- /stock-productos-panel -->
+
+    <!-- Enlazar producto con publicación de MercadoLibre -->
+    <div id="ml-link-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex-col justify-end md:justify-center">
+        <div class="glass-modal rounded-t-3xl md:rounded-3xl md:max-w-lg md:mx-auto w-full max-h-[85vh] flex flex-col overflow-hidden">
+            <div class="flex justify-between items-start p-5 pb-3 flex-shrink-0">
+                <div class="min-w-0">
+                    <h2 class="text-lg font-bold text-white">Enlazar con MercadoLibre</h2>
+                    <p id="ml-link-producto" class="text-xs text-gray-400 truncate"></p>
+                </div>
+                <button onclick="window.closeMLLink()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:bg-white/20 transition flex-shrink-0"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="ml-link-elegir" class="flex-1 flex flex-col overflow-hidden px-5 pb-5">
+                <input type="text" id="ml-link-search" oninput="window.renderMLLinkList()" placeholder="Buscar publicación..." class="w-full px-3 py-2.5 mb-3 bg-black/30 rounded-xl border border-white/10 focus:border-white/30 outline-none text-white placeholder-gray-500 text-sm">
+                <div id="ml-link-list" class="flex-1 overflow-y-auto space-y-2"></div>
+            </div>
+            <div id="ml-link-confirmar" class="hidden px-5 pb-5 space-y-3">
+                <p id="ml-link-elegida" class="text-sm text-white font-semibold"></p>
+                <p class="text-xs text-gray-400">¿Qué stock queda? Desde ahora los dos van a ser siempre iguales.</p>
+                <button onclick="window.confirmMLLink('app')" id="ml-link-btn-app" class="w-full p-3.5 rounded-xl bg-white/5 border border-white/15 text-white font-bold text-sm hover:bg-white/10 transition"></button>
+                <button onclick="window.confirmMLLink('ml')" id="ml-link-btn-ml" class="w-full p-3.5 rounded-xl bg-white/5 border border-white/15 text-white font-bold text-sm hover:bg-white/10 transition"></button>
+                <button onclick="window.backMLLink()" class="w-full p-2 text-xs text-gray-400 hover:text-white transition">← Elegir otra publicación</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ============================================================
          PANEL STOCK DE BEBIDAS
@@ -2967,6 +2992,10 @@ window.submitVenta = async () => {
         const stockActual = (productoStock[it.id]?.stock) || 0;
         if (it.cantidad > stockActual) return alert(`No podés vender esa cantidad de ${it.name}. Disponible: ${stockActual}`);
     }
+    if ((document.getElementById('venta-canal').value || 'local') === 'ml') {
+        const enlazados = ventaCart.filter(it => productoStock[it.id]?.mlItemId);
+        if (enlazados.length) return alert(`${enlazados.map(it => it.name).join(', ')} ${enlazados.length > 1 ? 'están enlazados' : 'está enlazado'} con MercadoLibre: las ventas de ML se cargan y descuentan solas. No hace falta registrarla acá.`);
+    }
     const btn = document.getElementById('btn-submit-venta');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
@@ -3024,6 +3053,14 @@ async function listenToProductos() {
     }));
     const baseIds = new Set(PRODUCTOS_BARBER_BASE.map(p => p.id));
     onSnapshot(collection(db, PATH_PRODUCTOS), snap => {
+        // Solo cambios hechos desde este dispositivo (hasPendingWrites): así cada cambio de stock
+        // se manda a ML una vez, desde quien lo hizo. Los que vienen del servidor (ventas de ML) no.
+        const prevStock = productoStock;
+        snap.docChanges().forEach(ch => {
+            if (ch.type === 'removed' || !ch.doc.metadata.hasPendingWrites) return;
+            const d = ch.doc.data();
+            if (d.mlItemId && prevStock[ch.doc.id]?.stock !== d.stock) queueMLSync(ch.doc.id);
+        });
         productoStock = {};
         const customProds = [];
         const ocultos = new Set();
@@ -3041,6 +3078,202 @@ async function listenToProductos() {
         if (!document.getElementById('ventas-modal').classList.contains('hidden')) renderProductosGrid();
     });
 }
+
+// ---- MERCADOLIBRE: stock enlazado (servidor en tienda/api/ml.js y ml-webhook.js) ----
+// App → ML: cuando este dispositivo cambia el stock de un producto enlazado, el servidor copia ese número a ML.
+// ML → app: las ventas pagadas en ML las descuenta el webhook y quedan como venta canal 'ml' (no van a la caja).
+const ML_API_URL = 'https://tienda.sbbarber.com.ar/api/ml';
+let mlCuenta = null;          // { conectado, nickname } — se lee de ml_config/cuenta
+let mlItemsCache = null;      // publicaciones del vendedor (se piden al abrir el enlace)
+let mlLinkProductoId = null, mlLinkElegida = null;
+const _mlSyncTimers = {};
+
+const escHtml = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+async function mlApi(action, body) {
+    const token = await auth.currentUser.getIdToken();
+    const r = await fetch(`${ML_API_URL}?action=${action}`, {
+        method: body ? 'POST' : 'GET',
+        headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+        body: body ? JSON.stringify(body) : undefined
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || `Error ${r.status}`);
+    return j;
+}
+
+// Espera un toque (varias ventas seguidas = un solo envío) y le pide al servidor que copie el stock a ML.
+function queueMLSync(productoId) {
+    clearTimeout(_mlSyncTimers[productoId]);
+    _mlSyncTimers[productoId] = setTimeout(() => {
+        delete _mlSyncTimers[productoId];
+        mlApi('sync', { ids: [productoId] }).catch(e => console.warn('ML sync:', e.message));
+    }, 1500);
+}
+
+async function loadMLCuenta() {
+    try {
+        const snap = await getDoc(doc(db, 'ml_config', 'cuenta'));
+        const d = snap.exists() ? snap.data() : null;
+        mlCuenta = { conectado: !!d?.tokens, nickname: d?.nickname || null };
+    } catch (e) { mlCuenta = { conectado: false, nickname: null }; }
+    renderMLStatusBar();
+}
+
+function renderMLStatusBar() {
+    const el = document.getElementById('ml-status-bar');
+    if (!el) return;
+    if (!mlCuenta) { el.innerHTML = ''; return; }
+    if (!mlCuenta.conectado) {
+        el.innerHTML = `<div class="flex items-center justify-between gap-3 bg-black/30 border border-white/10 rounded-xl px-4 py-3">
+            <div class="text-xs text-gray-400"><span class="font-bold text-white">MercadoLibre</span> · sin conectar</div>
+            ${isOwner ? `<button onclick="window.connectML()" class="text-xs font-bold px-3 py-2 rounded-lg bg-white text-black hover:bg-gray-200 transition">Conectar</button>` : '<span class="text-[10px] text-gray-500">Lo conecta un dueño</span>'}
+        </div>`;
+        return;
+    }
+    el.innerHTML = `<div class="flex items-center justify-between gap-3 bg-black/30 border border-white/10 rounded-xl px-4 py-3">
+        <div class="text-xs text-gray-400 min-w-0 truncate"><i class="fas fa-link text-emerald-400 mr-1"></i><span class="font-bold text-white">MercadoLibre</span> · ${escHtml(mlCuenta.nickname || 'conectado')}</div>
+        ${isAdmin ? `<button id="btn-ml-sync-all" onclick="window.syncAllML()" class="text-xs font-bold px-3 py-2 rounded-lg bg-white/10 border border-white/15 text-white hover:bg-white/20 transition flex-shrink-0">Sincronizar todo</button>` : ''}
+    </div>`;
+}
+
+function mlLinkLine(p, data, safeName) {
+    if (data.mlItemId) {
+        const sync = data.mlSync;
+        const estado = sync?.ok === false
+            ? `<span class="text-red-400" title="${escHtml(sync.error || '')}">⚠ no se pudo sincronizar</span>`
+            : sync?.ok ? '<span class="text-emerald-400">✓ sincronizado con ML</span>' : '<span class="text-gray-500">enlazado con ML</span>';
+        return `<div class="text-[10px] mt-0.5 flex items-center gap-1.5 flex-wrap">
+            <i class="fas fa-link text-gray-500"></i>${estado}
+            ${isAdmin ? `<button onclick="window.openMLLink('${p.id}')" class="text-gray-400 underline hover:text-white">cambiar</button>
+            <button onclick="window.unlinkML('${p.id}','${safeName}')" class="text-gray-400 underline hover:text-red-400">quitar</button>` : ''}
+        </div>`;
+    }
+    return isAdmin ? `<button onclick="window.openMLLink('${p.id}')" class="mt-1 text-[10px] font-bold text-white/80 border border-white/15 rounded-md px-2 py-1 hover:bg-white/10 transition"><i class="fas fa-link mr-1"></i>Enlazar con ML</button>` : '';
+}
+
+window.connectML = async () => {
+    try {
+        const { url } = await mlApi('connect', {});
+        window.location.href = url;
+    } catch (e) { alert('No se pudo conectar con MercadoLibre: ' + e.message); }
+};
+
+window.syncAllML = async () => {
+    const btn = document.getElementById('btn-ml-sync-all');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+    try {
+        const { resultados } = await mlApi('sync', {});
+        const errores = resultados.filter(r => !r.ok);
+        if (!resultados.length) alert('No hay productos enlazados con MercadoLibre todavía.');
+        else if (errores.length) alert(`Se sincronizaron ${resultados.length - errores.length} de ${resultados.length}. Los que fallaron quedan marcados en rojo.`);
+    } catch (e) { alert('Error al sincronizar: ' + e.message); }
+    if (btn) { btn.disabled = false; btn.textContent = 'Sincronizar todo'; }
+};
+
+window.openMLLink = async (productoId) => {
+    if (!mlCuenta?.conectado) return alert('Primero hay que conectar la cuenta de MercadoLibre (arriba de la lista).');
+    mlLinkProductoId = productoId;
+    const prod = PRODUCTOS_BARBER.find(p => p.id === productoId);
+    document.getElementById('ml-link-producto').textContent = prod?.name || '';
+    document.getElementById('ml-link-search').value = '';
+    window.backMLLink();
+    const m = document.getElementById('ml-link-modal');
+    m.classList.remove('hidden'); m.classList.add('flex');
+    if (!mlItemsCache) {
+        document.getElementById('ml-link-list').innerHTML = '<p class="text-xs text-gray-500 text-center py-6"><i class="fas fa-spinner fa-spin mr-1"></i> Cargando publicaciones...</p>';
+        try { mlItemsCache = (await mlApi('items')).items; }
+        catch (e) {
+            document.getElementById('ml-link-list').innerHTML = `<p class="text-xs text-red-400 text-center py-6">${escHtml(e.message)}</p>`;
+            return;
+        }
+    }
+    window.renderMLLinkList();
+};
+
+window.closeMLLink = () => {
+    const m = document.getElementById('ml-link-modal');
+    m.classList.add('hidden'); m.classList.remove('flex');
+};
+
+window.backMLLink = () => {
+    mlLinkElegida = null;
+    const elegir = document.getElementById('ml-link-elegir');
+    elegir.classList.remove('hidden'); elegir.classList.add('flex');
+    document.getElementById('ml-link-confirmar').classList.add('hidden');
+};
+
+window.renderMLLinkList = () => {
+    const list = document.getElementById('ml-link-list');
+    if (!mlItemsCache) return;
+    const q = normalizarTexto(document.getElementById('ml-link-search').value);
+    const filas = mlItemsCache.map((it, i) => ({ it, i }))
+        .filter(({ it }) => !q || normalizarTexto(`${it.title} ${it.variacion} ${it.itemId}`).includes(q));
+    if (!filas.length) { list.innerHTML = '<p class="text-xs text-gray-500 text-center py-6">No hay publicaciones que coincidan</p>'; return; }
+    list.innerHTML = filas.map(({ it, i }) => {
+        const yaEnlazado = PRODUCTOS_BARBER.find(p => p.id !== mlLinkProductoId && productoStock[p.id]?.mlItemId === it.itemId &&
+            String(productoStock[p.id]?.mlVariationId || '') === String(it.variationId || ''));
+        return `<button onclick="window.pickMLItem(${i})" class="w-full flex items-center gap-3 bg-black/30 border border-white/10 rounded-xl p-2.5 text-left hover:bg-white/5 transition">
+            ${it.thumbnail ? `<img src="${escHtml(it.thumbnail.replace('http://', 'https://'))}" alt="" class="w-11 h-11 rounded-lg object-cover flex-shrink-0 bg-white">` : '<div class="w-11 h-11 rounded-lg bg-white/5 flex-shrink-0"></div>'}
+            <div class="min-w-0 flex-1">
+                <p class="text-xs font-semibold text-white line-clamp-2">${escHtml(it.title)}</p>
+                <p class="text-[10px] text-gray-500">${it.variacion ? escHtml(it.variacion) + ' · ' : ''}${escHtml(it.itemId)}${it.status === 'paused' ? ' · pausada' : ''}${yaEnlazado ? ` · <span class="text-amber-400">ya enlazada a ${escHtml(yaEnlazado.name)}</span>` : ''}</p>
+            </div>
+            <div class="text-right flex-shrink-0"><div class="text-sm font-bold text-white">${Number(it.stock) || 0}</div><div class="text-[9px] text-gray-500">en ML</div></div>
+        </button>`;
+    }).join('');
+};
+
+window.pickMLItem = (i) => {
+    mlLinkElegida = mlItemsCache[i];
+    const appStock = Number(productoStock[mlLinkProductoId]?.stock) || 0;
+    document.getElementById('ml-link-elegida').textContent = mlLinkElegida.title + (mlLinkElegida.variacion ? ` — ${mlLinkElegida.variacion}` : '');
+    document.getElementById('ml-link-btn-app').textContent = `Usar el de la app: ${appStock} unid.`;
+    document.getElementById('ml-link-btn-ml').textContent = `Usar el de MercadoLibre: ${Number(mlLinkElegida.stock) || 0} unid.`;
+    const elegir = document.getElementById('ml-link-elegir');
+    elegir.classList.add('hidden'); elegir.classList.remove('flex');
+    document.getElementById('ml-link-confirmar').classList.remove('hidden');
+};
+
+window.confirmMLLink = async (fuente) => {
+    const it = mlLinkElegida, id = mlLinkProductoId;
+    if (!it || !id) return;
+    const data = {
+        mlItemId: it.itemId,
+        mlVariationId: it.variationId ? String(it.variationId) : null,
+        mlTitulo: it.title + (it.variacion ? ` — ${it.variacion}` : ''),
+        mlSync: null
+    };
+    if (fuente === 'ml') data.stock = Math.max(0, Number(it.stock) || 0);
+    try {
+        await updateDoc(doc(db, PATH_PRODUCTOS, id), data);
+        window.closeMLLink();
+        mlItemsCache = null; // el stock de ML puede cambiar: la próxima vez se vuelve a pedir
+        // Con el stock de la app hay que mandarlo a ML; con el de ML ya coinciden, igual se confirma.
+        await mlApi('sync', { ids: [id] });
+    } catch (e) { alert('Error al enlazar: ' + e.message); }
+};
+
+window.unlinkML = async (id, name) => {
+    if (!await customConfirm(`¿Desenlazar "${name}" de MercadoLibre? El stock deja de sincronizarse.`, 'Desenlazar')) return;
+    try { await updateDoc(doc(db, PATH_PRODUCTOS, id), { mlItemId: null, mlVariationId: null, mlTitulo: null, mlSync: null }); }
+    catch (e) { alert('Error al desenlazar'); }
+};
+
+// Vuelta de la autorización de ML (tienda/api/ml.js redirige con #ml=...)
+(() => {
+    const m = /#ml=([a-z]+)/.exec(location.hash);
+    if (!m) return;
+    history.replaceState(null, '', location.pathname + location.search);
+    const msg = {
+        ok: '¡Listo! MercadoLibre quedó conectado. Ahora enlazá cada producto desde Stock de productos.',
+        cancelado: 'Se canceló la conexión con MercadoLibre.',
+        vencido: 'El enlace de conexión venció, probá de nuevo.',
+        error: 'No se pudo conectar MercadoLibre. Probá de nuevo.'
+    }[m[1]];
+    if (msg) setTimeout(() => alert(msg), 800);
+})();
+
 
 window.eliminarProductoCatalogo = async (id, name) => {
     if (!await customConfirm(`¿Eliminar "${name}" del catálogo? Ya no vas a poder venderlo ni verlo en stock.`)) return;
@@ -3097,6 +3330,7 @@ function renderProductoStock() {
                 <div class="text-sm font-bold text-white truncate">${p.name}</div>
                 <div class="text-[10px] text-gray-500">${precioLabel}</div>
                 ${badge}
+                ${p.isML ? mlLinkLine(p, data, safeName) : ''}
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
                 <div class="text-center mr-1">
@@ -4317,6 +4551,7 @@ window.saveRetiroNotaRec = async () => {
 window.openStockProductosPanel = () => {
     const p = document.getElementById('stock-productos-panel');
     p.classList.remove('hidden'); p.classList.add('flex', 'flex-col');
+    loadMLCuenta();
 };
 window.closeStockProductosPanel = () => {
     const p = document.getElementById('stock-productos-panel');

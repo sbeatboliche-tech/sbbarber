@@ -2511,8 +2511,29 @@ let stockProductosData = {};
 let stockProductosLoaded = false;
 let currentStockMov = null;
 
+// MercadoLibre: si este dispositivo cambia el stock de un producto enlazado, el servidor lo copia a ML
+// (mismo mecanismo que recepcionista; ver tienda/api/ml.js).
+const ML_API_URL = 'https://tienda.sbbarber.com.ar/api/ml';
+const _mlSyncTimers = {};
+function queueMLSync(productoId) {
+    clearTimeout(_mlSyncTimers[productoId]);
+    _mlSyncTimers[productoId] = setTimeout(async () => {
+        delete _mlSyncTimers[productoId];
+        try {
+            const token = await auth.currentUser.getIdToken();
+            await fetch(`${ML_API_URL}?action=sync`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: [productoId] }) });
+        } catch (e) { console.warn('ML sync:', e.message); }
+    }, 1500);
+}
+
 function listenToStockProductos() {
     onSnapshot(collection(db, PATH_PRODUCTOS), snap => {
+        const prevStock = stockProductosData;
+        snap.docChanges().forEach(ch => {
+            if (ch.type === 'removed' || !ch.doc.metadata.hasPendingWrites) return;
+            const d = ch.doc.data();
+            if (d.mlItemId && prevStock[ch.doc.id]?.stock !== d.stock) queueMLSync(ch.doc.id);
+        });
         stockProductosData = {};
         snap.docs.forEach(d => { stockProductosData[d.id] = { id: d.id, ...d.data() }; });
         stockProductosLoaded = true;
@@ -2873,6 +2894,10 @@ window.submitVenta = async () => {
     for (const it of ventaCart) {
         const stockActual = (stockProductosData[it.id]?.stock) || 0;
         if (it.cantidad > stockActual) return alert(`No podés vender esa cantidad de ${it.name}. Disponible: ${stockActual}`);
+    }
+    if ((document.getElementById('venta-canal').value || 'local') === 'ml') {
+        const enlazados = ventaCart.filter(it => stockProductosData[it.id]?.mlItemId);
+        if (enlazados.length) return alert(`${enlazados.map(it => it.name).join(', ')} ${enlazados.length > 1 ? 'están enlazados' : 'está enlazado'} con MercadoLibre: las ventas de ML se cargan y descuentan solas. No hace falta registrarla acá.`);
     }
     const btn = document.getElementById('btn-submit-venta');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
