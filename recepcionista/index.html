@@ -990,13 +990,16 @@
             <form id="movement-form" class="space-y-4">
                 <!-- Selector cobrado/regalo (solo salidas) -->
                 <div id="mv-tipo-wrap" class="hidden">
-                    <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-2">¿Se cobró?</p>
-                    <div class="grid grid-cols-2 gap-2">
+                    <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-2">¿Qué pasó?</p>
+                    <div class="grid grid-cols-3 gap-2">
                         <button type="button" id="mv-tipo-venta" onclick="window.setDrinkSalidaTipo('venta')" class="p-3 rounded-xl border text-sm font-bold transition bg-emerald-600/20 border-emerald-500 text-emerald-300">
-                            💰 Sí, es una venta
+                            💰 Venta
                         </button>
                         <button type="button" id="mv-tipo-regalo" onclick="window.setDrinkSalidaTipo('regalo')" class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
-                            🎁 No (regalo / uso)
+                            🎁 Regalo / uso
+                        </button>
+                        <button type="button" id="mv-tipo-perdido" onclick="window.setDrinkSalidaTipo('perdido')" class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
+                            📉 Perdido
                         </button>
                     </div>
                 </div>
@@ -1040,7 +1043,7 @@
                 </div>
                 <!-- Motivo del regalo (solo cuando no es venta) -->
                 <div id="mv-motivo-wrap" class="hidden">
-                    <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">¿Por qué es un regalo? (opcional)</label>
+                    <label id="mv-motivo-label" class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">¿Por qué es un regalo? (opcional)</label>
                     <input type="text" id="mv-motivo" placeholder="Ej: cliente frecuente, cumpleaños..." class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-indigo-500 outline-none transition text-white placeholder-gray-500 mt-1">
                 </div>
                 <div>
@@ -1063,13 +1066,16 @@
             <form id="producto-movement-form" class="space-y-4">
                 <!-- Selector cobrado/sin cargo (solo salidas) -->
                 <div id="pm-tipo-wrap" class="hidden">
-                    <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-2">¿Se cobró?</p>
-                    <div class="grid grid-cols-2 gap-2">
+                    <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-2">¿Qué pasó?</p>
+                    <div class="grid grid-cols-3 gap-2">
                         <button type="button" id="pm-tipo-venta" onclick="window.setSalidaTipo('venta')" class="p-3 rounded-xl border text-sm font-bold transition bg-emerald-600/20 border-emerald-500 text-emerald-300">
-                            💰 Sí, es una venta
+                            💰 Venta
                         </button>
                         <button type="button" id="pm-tipo-regalo" onclick="window.setSalidaTipo('regalo')" class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
-                            🎁 No (regalo / uso)
+                            🎁 Regalo / uso
+                        </button>
+                        <button type="button" id="pm-tipo-perdido" onclick="window.setSalidaTipo('perdido')" class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
+                            📉 Perdido
                         </button>
                     </div>
                     <p id="pm-tipo-desc" class="text-[10px] text-emerald-400 mt-2 ml-1">Se va a registrar como ingreso en el cierre de caja.</p>
@@ -1078,7 +1084,10 @@
                     <label id="pm-qty-label" class="text-[10px] font-bold text-gray-500 uppercase ml-1">Cantidad</label>
                     <input type="number" id="pm-qty" placeholder="0" min="1" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-indigo-500 outline-none transition text-white placeholder-gray-500 mt-1">
                 </div>
-                <input type="hidden" id="pm-motivo">
+                <div id="pm-motivo-wrap" class="hidden">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">¿Qué pasó? (opcional)</label>
+                    <input type="text" id="pm-motivo" placeholder="Ej: se rompió, venció, faltante en el conteo..." class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-red-500 outline-none transition text-white placeholder-gray-500 mt-1">
+                </div>
                 <button type="submit" id="btn-submit-pm" class="w-full text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest bg-gradient-to-r from-red-600 to-rose-600">Confirmar salida</button>
             </form>
         </div>
@@ -1554,6 +1563,7 @@ const PATH_CUTS = `artifacts/sb-barber-6dc16/public/data/all_cuts`;
 const PATH_STOCK   = `stock_items`;
 // Historial de bebidas: cada entrada/salida deja un movimiento; los conteos físicos van aparte
 const PATH_STOCK_MOV     = 'stock_movimientos';
+const PATH_PERDIDOS      = 'perdidos';
 const PATH_STOCK_CONTEOS = 'stock_conteos';
 const PATH_VENTAS    = `ventas_productos`;
 const PATH_PRODUCTOS = `productos_barber`;
@@ -2311,9 +2321,12 @@ window.setDrinkSalidaTipo = (tipo) => {
     drinkSalidaTipo = tipo;
     const esVenta = tipo === 'venta';
     document.getElementById('mv-tipo-venta').className = `p-3 rounded-xl border text-sm font-bold transition ${esVenta ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
-    document.getElementById('mv-tipo-regalo').className = `p-3 rounded-xl border text-sm font-bold transition ${!esVenta ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    document.getElementById('mv-tipo-regalo').className = `p-3 rounded-xl border text-sm font-bold transition ${tipo === 'regalo' ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    document.getElementById('mv-tipo-perdido').className = `p-3 rounded-xl border text-sm font-bold transition ${tipo === 'perdido' ? 'bg-red-600/20 border-red-500 text-red-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
     document.getElementById('mv-comprador-wrap').classList.toggle('hidden', !esVenta);
     document.getElementById('mv-motivo-wrap').classList.toggle('hidden', esVenta);
+    document.getElementById('mv-motivo-label').textContent = tipo === 'perdido' ? '¿Qué pasó? (opcional)' : '¿Por qué es un regalo? (opcional)';
+    document.getElementById('mv-motivo').placeholder = tipo === 'perdido' ? 'Ej: se rompió, venció, faltante en el conteo...' : 'Ej: cliente frecuente, cumpleaños...';
     if (esVenta) { window.setDrinkComprador('cliente', document.getElementById('mv-comp-cliente')); }
 };
 
@@ -2403,6 +2416,16 @@ document.getElementById('movement-form').addEventListener('submit', async e => {
                 });
             }
             addStockMov(batch, { itemId, itemName, tipo: 'venta', cantidad: -qty, detalle: comprador === 'cliente' ? 'Cliente' : comprador });
+        } else if (drinkSalidaTipo === 'perdido') {
+            // Perdido: no es venta ni regalo, va a su propia colección (estadísticas → perdidos)
+            const motivo = document.getElementById('mv-motivo').value.trim();
+            batch.set(doc(collection(db, PATH_PERDIDOS)), {
+                tipo: 'bebida', itemId, producto: itemName,
+                precio, cantidad: qty, motivo: motivo || null,
+                userEmail: currentUser.email,
+                fecha: hoy, creadoEn: serverTimestamp()
+            });
+            addStockMov(batch, { itemId, itemName, tipo: 'perdido', cantidad: -qty, detalle: motivo || null });
         } else {
             const motivo = document.getElementById('mv-motivo').value.trim();
             batch.set(doc(collection(db, PATH_VENTAS)), {
@@ -3363,11 +3386,16 @@ window.setSalidaTipo = (tipo) => {
     salidaTipo = tipo;
     const esVenta = tipo === 'venta';
     document.getElementById('pm-tipo-venta').className = `p-3 rounded-xl border text-sm font-bold transition ${esVenta ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
-    document.getElementById('pm-tipo-regalo').className = `p-3 rounded-xl border text-sm font-bold transition ${!esVenta ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    document.getElementById('pm-tipo-regalo').className = `p-3 rounded-xl border text-sm font-bold transition ${tipo === 'regalo' ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    document.getElementById('pm-tipo-perdido').className = `p-3 rounded-xl border text-sm font-bold transition ${tipo === 'perdido' ? 'bg-red-600/20 border-red-500 text-red-300' : 'bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500'}`;
+    document.getElementById('pm-motivo-wrap').classList.toggle('hidden', tipo !== 'perdido');
     const desc = document.getElementById('pm-tipo-desc');
     if (esVenta) {
         desc.textContent = 'Se va a registrar como ingreso en el cierre de caja.';
         desc.className = 'text-[10px] text-emerald-400 mt-2 ml-1';
+    } else if (tipo === 'perdido') {
+        desc.textContent = 'Descuenta el stock y queda en las estadísticas de perdidos. No es ingreso.';
+        desc.className = 'text-[10px] text-red-400 mt-2 ml-1';
     } else {
         desc.textContent = 'Solo descuenta el stock. No aparece como ingreso.';
         desc.className = 'text-[10px] text-gray-500 mt-2 ml-1';
@@ -3418,10 +3446,19 @@ document.getElementById('producto-movement-form').addEventListener('submit', asy
         } else {
             await addDoc(collection(db, 'productos_movimientos'), {
                 productoId, producto: productoName, tipo,
+                ...(tipo === 'salida' ? { salidaTipo } : {}),
                 cantidad: qty, motivo: motivo || null,
                 userEmail: currentUser.email, fecha: hoy,
                 creadoEn: serverTimestamp()
             });
+            if (tipo === 'salida' && salidaTipo === 'perdido') {
+                const prod = PRODUCTOS_BARBER.find(p => p.id === productoId);
+                await addDoc(collection(db, PATH_PERDIDOS), {
+                    tipo: 'producto', itemId: productoId, producto: productoName,
+                    precio: prod?.precio || 0, cantidad: qty, motivo: motivo || null,
+                    userEmail: currentUser.email, fecha: hoy, creadoEn: serverTimestamp()
+                });
+            }
         }
         closeModals();
     } catch { alert('Error al guardar'); }
@@ -4657,6 +4694,7 @@ const MOV_TIPO = {
     compra:     { label: 'Compra',          icon: '📦' },
     venta:      { label: 'Venta',           icon: '🥤' },
     regalo:     { label: 'Regalo / uso',    icon: '🎁' },
+    perdido:    { label: 'Perdido',         icon: '📉' },
     devolucion: { label: 'Venta eliminada', icon: '↩️' },
     ajuste:     { label: 'Ajuste conteo',   icon: '📋' }
 };

@@ -302,6 +302,10 @@
                 <div class="card-h"><div><h2>Bebidas más vendidas</h2><div class="sub">Unidades vendidas (sin regalos)</div></div><button class="tbl-btn">Ver tabla</button></div>
                 <div class="chart"></div>
             </div>
+            <div class="card" id="c-perdidos">
+                <div class="card-h"><div><h2>Productos y bebidas perdidos</h2><div class="sub">Unidades perdidas (rotas, vencidas, faltantes) y lo que valían a precio de venta</div></div><button class="tbl-btn">Ver tabla</button></div>
+                <div class="chart"></div>
+            </div>
             <div class="card" id="c-pagos">
                 <div class="card-h"><div><h2>Cómo pagan los cortes</h2><div class="sub">Facturación de cortes por método de pago</div></div><button class="tbl-btn">Ver tabla</button></div>
                 <div class="chart"></div>
@@ -383,6 +387,12 @@ const normVenta = (id, x) => {
         total: Number(x.total) || 0, tipo: x.tipo === 'bebida' ? 'bebida' : 'producto', canal: x.canal === 'ml' ? 'ml' : 'local',
         metodo: x.metodoPago || '', barbero: x.barbero || '', regalo: !!x.esRegalo, precio: Number(x.precio) || 0, eliminado: !!x.eliminado };
 };
+// Perdidos: salidas de stock marcadas como "Perdido" en recepción/anotar (colección perdidos)
+const normPerdido = (id, x) => {
+    const t = tsMs(x.creadoEn);
+    return { id, _ts: t, fecha: x.fecha || fechaDe(t), producto: String(x.producto || '—').trim(), cantidad: Number(x.cantidad) || 1,
+        precio: Number(x.precio) || 0, tipo: x.tipo === 'bebida' ? 'bebida' : 'producto', motivo: x.motivo || '', eliminado: !!x.eliminado };
+};
 const normGasto = (id, x) => {
     const t = tsMs(x.creadoEn);
     return { id, _ts: t, fecha: x.fecha || fechaDe(t), monto: Number(x.monto) || 0, categoria: x.categoria || 'otro',
@@ -404,6 +414,7 @@ const FUENTES = [
     { key:'cuts',       path:'artifacts/sb-barber-6dc16/public/data/all_cuts', tf:'createdAt', norm:normCut,     label:'cortes' },
     { key:'cutsLegacy', path:'barbershop',                                     tf:'createdAt', norm:normCut,     label:'cortes viejos' },
     { key:'ventas',     path:'ventas_productos',                               tf:'creadoEn',  norm:normVenta,   label:'ventas' },
+    { key:'perdidos',   path:'perdidos',                                       tf:'creadoEn',  norm:normPerdido, label:'perdidos' },
     { key:'gastos',     path:'gastos',                                         tf:'creadoEn',  norm:normGasto,   label:'gastos' },
     { key:'propinas',   path:'propinas',                                       tf:'creadoEn',  norm:normPropina, label:'propinas' },
     // creadoEn de turnos mezcla Timestamp y texto: se trae completo (son pocos)
@@ -452,7 +463,7 @@ async function syncFuente(f, forzarTodo) {
     return docs;
 }
 
-const D = { cuts: [], ventas: [], gastos: [], propinas: [], turnos: [], clientes: [] };
+const D = { cuts: [], ventas: [], perdidos: [], gastos: [], propinas: [], turnos: [], clientes: [] };
 let primeraFecha = { };
 let INICIO = 0; // día en que arrancó la app (ver calcularInicio)
 
@@ -480,6 +491,7 @@ async function cargarTodo(forzarTodo = false) {
     [...res.cutsLegacy, ...res.cuts].forEach(c => map.set(c.id, c));
     D.cuts = [...map.values()].filter(c => !c.eliminado && c.t);
     D.ventas = res.ventas.filter(v => !v.eliminado && v.fecha);
+    D.perdidos = res.perdidos.filter(x => !x.eliminado && x.fecha);
     D.gastos = res.gastos.filter(g => !g.eliminado && g.fecha);
     D.propinas = res.propinas.filter(p => !p.eliminado && p.fecha && p.estado !== 'rechazado');
     D.turnos = res.turnos.filter(t => t.fecha && !t.eliminado);
@@ -602,6 +614,7 @@ function filtrar(from, to) {
     return {
         cuts: D.cuts.filter(c => enR(c.t) && (b === 'todos' || c.barber === b)),
         ventas: D.ventas.filter(v => enR(dayMs(v.fecha))),
+        perdidos: D.perdidos.filter(x => enR(dayMs(x.fecha))),
         gastos: D.gastos.filter(g => enR(dayMs(g.fecha))),
         propinas: D.propinas.filter(p => enR(dayMs(p.fecha)) && (b === 'todos' || p.barbero === b)),
         turnos: D.turnos.filter(t => enR(dayMs(t.fecha)) && (b === 'todos' || t.barbero === b)),
@@ -1087,6 +1100,15 @@ function renderProductos(F) {
     barrasH($('c-bebidas').querySelector('.chart'), b, { fmt: v => num(v) + ' u.', extra: r => money(r.extraVal), color: 'var(--s3)' });
     setTabla('c-bebidas', [{ t: 'Bebida' }, { t: 'Unidades', num: 1 }, { t: 'Facturación', num: 1 }],
         b.sort((a, b2) => b2.value - a.value).map(r => [r.label, num(r.value), money(r.extraVal)]));
+
+    const per = agrupar(F.perdidos, x => `${x.tipo === 'bebida' ? '🥤' : '💈'} ${x.producto}`, x => x.cantidad, x => x.precio * x.cantidad);
+    const uPer = F.perdidos.reduce((s, x) => s + x.cantidad, 0), valPer = F.perdidos.reduce((s, x) => s + x.precio * x.cantidad, 0);
+    $('c-perdidos').querySelector('.sub').textContent = uPer
+        ? `${num(uPer)} unidades perdidas en el período · valían ${money(valPer)} a precio de venta`
+        : 'Unidades perdidas (rotas, vencidas, faltantes) y lo que valían a precio de venta';
+    barrasH($('c-perdidos').querySelector('.chart'), per, { fmt: v => num(v) + ' u.', extra: r => money(r.extraVal), color: 'var(--s8)' });
+    setTabla('c-perdidos', [{ t: 'Producto' }, { t: 'Unidades', num: 1 }, { t: 'Valor perdido', num: 1 }],
+        per.sort((a, b2) => b2.value - a.value).map(r => [r.label, num(r.value), money(r.extraVal)]));
 
     const pagos = agrupar(F.cuts, c => METODO[c.metodo] || c.metodo, c => c.price, () => 1);
     const totalCortes = F.cuts.reduce((s, c) => s + c.price, 0);

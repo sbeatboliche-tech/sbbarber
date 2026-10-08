@@ -737,15 +737,16 @@
                 <!-- Solo en venta de bebida -->
                 <div id="stock-venta-group" class="hidden space-y-4">
                     <div>
-                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">¿Se cobró?</label>
-                        <div class="grid grid-cols-2 gap-2 mt-1">
-                            <button type="button" id="stock-tipo-venta" onclick="window.setStockSalidaTipo('venta')" class="p-3 rounded-xl border font-bold text-xs transition">💰 Sí, es una venta</button>
-                            <button type="button" id="stock-tipo-regalo" onclick="window.setStockSalidaTipo('regalo')" class="p-3 rounded-xl border font-bold text-xs transition">🎁 No (regalo / uso)</button>
+                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">¿Qué pasó?</label>
+                        <div class="grid grid-cols-3 gap-2 mt-1">
+                            <button type="button" id="stock-tipo-venta" onclick="window.setStockSalidaTipo('venta')" class="p-3 rounded-xl border font-bold text-xs transition">💰 Venta</button>
+                            <button type="button" id="stock-tipo-regalo" onclick="window.setStockSalidaTipo('regalo')" class="p-3 rounded-xl border font-bold text-xs transition">🎁 Regalo / uso</button>
+                            <button type="button" id="stock-tipo-perdido" onclick="window.setStockSalidaTipo('perdido')" class="p-3 rounded-xl border font-bold text-xs transition">📉 Perdido</button>
                         </div>
                     </div>
                     <!-- Motivo del regalo -->
                     <div id="stock-motivo-wrap" class="hidden">
-                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">¿Por qué es un regalo? (opcional)</label>
+                        <label id="stock-motivo-label" class="text-[10px] font-bold text-gray-500 uppercase ml-1">¿Por qué es un regalo? (opcional)</label>
                         <input type="text" id="stock-motivo" placeholder="Ej: cliente frecuente, cumpleaños..." class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none transition text-white placeholder-gray-500 mt-1">
                     </div>
                     <div id="stock-comprador-wrap">
@@ -2015,9 +2016,12 @@ window.setStockSalidaTipo = (t) => {
     stockSalidaTipo = t;
     const esVenta = t === 'venta';
     document.getElementById('stock-tipo-venta').className = esVenta ? _btnOn : _btnOff;
-    document.getElementById('stock-tipo-regalo').className = !esVenta ? _btnOn : _btnOff;
+    document.getElementById('stock-tipo-regalo').className = t === 'regalo' ? _btnOn : _btnOff;
+    document.getElementById('stock-tipo-perdido').className = t === 'perdido' ? _btnOn : _btnOff;
     document.getElementById('stock-comprador-wrap').classList.toggle('hidden', !esVenta);
     document.getElementById('stock-motivo-wrap').classList.toggle('hidden', esVenta);
+    document.getElementById('stock-motivo-label').textContent = t === 'perdido' ? '¿Qué pasó? (opcional)' : '¿Por qué es un regalo? (opcional)';
+    document.getElementById('stock-motivo').placeholder = t === 'perdido' ? 'Ej: se rompió, venció, faltante en el conteo...' : 'Ej: cliente frecuente, cumpleaños...';
 };
 window.setComprador = (t) => {
     ventaComprador = t;
@@ -2086,6 +2090,17 @@ document.getElementById('stock-item-form').addEventListener('submit', async e=>{
             batch.update(doc(db,PATH_STOCK,itemId),{quantity:increment(delta)});
             if(currentStockAction.type==='compra'){
                 mov(itemId,itemName,'compra',qty);
+            } else if(stockSalidaTipo==='perdido'){
+                // Perdido: no es venta ni regalo, va a su propia colección (estadísticas → perdidos)
+                const item=allStock.find(i=>i.id===itemId);
+                const motivo=(document.getElementById('stock-motivo').value||'').trim();
+                batch.set(doc(collection(db,'perdidos')),{
+                    tipo:'bebida', itemId, producto:itemName,
+                    precio:item?.price||0, cantidad:qty, motivo:motivo||null,
+                    userEmail:currentUser.email,
+                    fecha:new Date().toLocaleDateString('en-CA'), creadoEn:serverTimestamp()
+                });
+                mov(itemId,itemName,'perdido',-qty,motivo||null);
             } else if(stockSalidaTipo==='regalo'){
                 const item=allStock.find(i=>i.id===itemId);
                 const precio=item?.price||0;
