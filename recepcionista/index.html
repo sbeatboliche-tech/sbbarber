@@ -514,6 +514,7 @@
             <div class="flex bg-gray-900/80 p-1 rounded-xl border border-gray-800 text-[11px] font-bold">
                 <button id="cc-tab-diario" onclick="window.setCierreCajaTab('diario')" class="px-3 py-1.5 rounded-lg text-white bg-gradient-to-r from-emerald-600 to-green-600 shadow transition">Diario</button>
                 <button id="cc-tab-semanal" onclick="window.setCierreCajaTab('semanal')" class="px-3 py-1.5 rounded-lg text-gray-500 hover:text-gray-300 transition">Semanal</button>
+                <button id="cc-tab-mensual" onclick="window.setCierreCajaTab('mensual')" class="px-3 py-1.5 rounded-lg text-gray-500 hover:text-gray-300 transition">Mensual</button>
             </div>
         </header>
 
@@ -2639,7 +2640,7 @@ function listenToVentas() {
             renderSalesHistory();
             if (!document.getElementById('cierre-caja-view').classList.contains('hidden')) {
                 if (cierreCajaTab === 'semanal') renderCierreCajaSemanal();
-                else renderCierreCaja();
+                else if (cierreCajaTab === 'diario') renderCierreCaja();
             }
         }
     );
@@ -3586,9 +3587,11 @@ window.setCierreCajaTab = (tab) => {
     const inactive = 'px-3 py-1.5 rounded-lg text-gray-500 hover:text-gray-300 transition';
     document.getElementById('cc-tab-diario').className = tab === 'diario' ? active : inactive;
     document.getElementById('cc-tab-semanal').className = tab === 'semanal' ? active : inactive;
+    document.getElementById('cc-tab-mensual').className = tab === 'mensual' ? active : inactive;
     document.getElementById('cc-fecha-nav').classList.toggle('hidden', tab !== 'diario');
     if (tab === 'diario') { updateCierreCajaFechaUI(); renderCierreCaja(); }
-    else renderCierreCajaSemanal();
+    else if (tab === 'semanal') renderCierreCajaSemanal();
+    else renderCierreCajaMensual();
 };
 
 /* ============================================================
@@ -4058,28 +4061,91 @@ function renderCierreCaja() {
                     totalGastos > 0 ? totalGastos : null
                 )}
             </div>
-        </div>
-        ${regalosBebidasMesCard()}`;
+        </div>`;
 
     document.getElementById('cierre-caja-content').innerHTML = html;
 }
 
-// Cuenta aparte: valor de bebidas regaladas en el mes en curso.
-// No forma parte de ninguna suma del cierre (totalGeneral, netoReal, etc).
-function regalosBebidasMesCard() {
-    const mesActual = new Date().toLocaleDateString('en-CA').slice(0, 7); // YYYY-MM
-    const regalosMes = allVentas.filter(v => v.esRegalo && !v.eliminado && (v.fecha || '').slice(0, 7) === mesActual);
-    if (regalosMes.length === 0) return '';
-    const totalRegalosMes = regalosMes.reduce((s, v) => s + (v.precio || 0) * (v.cantidad || 1), 0);
-    const nombreMes = new Date().toLocaleDateString('es-AR', { month: 'long' });
+// ---- CIERRE MENSUAL: bebidas regaladas y perdidos del mes ----
+// Cuentas aparte: no forman parte de ninguna suma del cierre. Se piden a Firestore por mes
+// (allVentas solo tiene las últimas 1200 ventas, no alcanza para meses viejos).
+let cierreMesSel = null; // 'YYYY-MM'
+let _mensualReq = 0;
+const mesKey = d => d.toLocaleDateString('en-CA').slice(0, 7);
+
+window.cambiarMesCierre = (delta) => {
+    const [y, m] = cierreMesSel.split('-').map(Number);
+    const k = mesKey(new Date(y, m - 1 + delta, 1));
+    if (k > mesKey(new Date())) return;
+    cierreMesSel = k;
+    renderCierreCajaMensual();
+};
+
+function cardMensual({ titulo, color, items, nombreDe, vacio }) {
+    const grupos = {};
+    items.forEach(x => {
+        const k = nombreDe(x);
+        const g = grupos[k] ||= { u: 0, v: 0 };
+        const cant = Number(x.cantidad) || 1;
+        g.u += cant; g.v += (Number(x.precio) || 0) * cant;
+    });
+    const filas = Object.entries(grupos).sort((a, b) => b[1].v - a[1].v || b[1].u - a[1].u);
+    const totU = filas.reduce((s, [, g]) => s + g.u, 0), totV = filas.reduce((s, [, g]) => s + g.v, 0);
     return `
-        <div class="glass-card rounded-2xl p-5 md:p-6 border border-pink-500/20 mt-4">
+        <div class="glass-card rounded-2xl p-5 md:p-6 mb-4 border ${color.border}">
             <div class="flex justify-between items-center gap-3">
-                <div class="text-[10px] md:text-xs font-bold text-pink-400 uppercase tracking-widest flex items-center gap-2">🎁 Bebidas regaladas · ${nombreMes}</div>
-                <span class="text-lg md:text-2xl font-extrabold text-pink-300 whitespace-nowrap">$${totalRegalosMes.toLocaleString('es-AR')}</span>
+                <div class="text-[10px] md:text-xs font-bold ${color.text} uppercase tracking-widest">${titulo}</div>
+                <span class="text-lg md:text-2xl font-extrabold ${color.total} whitespace-nowrap">$${totV.toLocaleString('es-AR')}</span>
             </div>
-            <p class="text-[10px] text-gray-500 mt-1">${regalosMes.length} bebida${regalosMes.length !== 1 ? 's' : ''} regalada${regalosMes.length !== 1 ? 's' : ''} este mes · cuenta aparte, no afecta el cierre de caja</p>
+            <p class="text-[10px] text-gray-500 mt-1 mb-3">${totU} unidad${totU !== 1 ? 'es' : ''} · valor a precio de venta · no afecta la caja</p>
+            ${filas.length === 0 ? `<p class="text-xs text-gray-600 text-center py-2">${vacio}</p>` : filas.map(([nombre, g]) => `
+                <div class="flex justify-between items-center py-1.5 border-t border-white/5 text-xs">
+                    <span class="text-gray-300 min-w-0 truncate">${escHtml(nombre)} <span class="text-gray-500">×${g.u}</span></span>
+                    <span class="text-gray-400 whitespace-nowrap ml-3">$${g.v.toLocaleString('es-AR')}</span>
+                </div>`).join('')}
         </div>`;
+}
+
+async function renderCierreCajaMensual() {
+    if (!cierreMesSel) cierreMesSel = mesKey(new Date());
+    const [y, m] = cierreMesSel.split('-').map(Number);
+    const nombreMes = new Date(y, m - 1, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+    document.getElementById('cierre-caja-fecha').textContent = nombreMes;
+    const esActual = cierreMesSel === mesKey(new Date());
+    const navBtn = 'w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:bg-white/10 transition disabled:opacity-30';
+    const nav = `<div class="flex items-center justify-between mb-4">
+        <button onclick="window.cambiarMesCierre(-1)" class="${navBtn}" aria-label="Mes anterior"><i class="fas fa-chevron-left text-xs"></i></button>
+        <span class="text-sm font-bold text-white capitalize">${nombreMes}</span>
+        <button onclick="window.cambiarMesCierre(1)" class="${navBtn}" aria-label="Mes siguiente" ${esActual ? 'disabled' : ''}><i class="fas fa-chevron-right text-xs"></i></button>
+    </div>`;
+    const cont = document.getElementById('cierre-caja-content');
+    cont.innerHTML = nav + '<p class="text-xs text-gray-600 text-center py-6"><i class="fas fa-spinner fa-spin mr-1.5"></i>Cargando...</p>';
+
+    const req = ++_mensualReq;
+    const ini = `${cierreMesSel}-01`, fin = `${cierreMesSel}-31`;
+    let ventas, perdidos;
+    try {
+        const [sv, sp] = await Promise.all([
+            getDocs(query(collection(db, PATH_VENTAS), where('fecha', '>=', ini), where('fecha', '<=', fin))),
+            getDocs(query(collection(db, PATH_PERDIDOS), where('fecha', '>=', ini), where('fecha', '<=', fin)))
+        ]);
+        ventas = sv.docs.map(d => d.data());
+        perdidos = sp.docs.map(d => d.data());
+    } catch (e) {
+        console.error('cierre mensual:', e);
+        if (req === _mensualReq) cont.innerHTML = nav + '<p class="text-xs text-red-400 text-center py-6">No se pudo cargar el mes. Probá de nuevo.</p>';
+        return;
+    }
+    // Si mientras cargaba se cambió de mes o de pestaña, no pisar lo que se ve ahora
+    if (req !== _mensualReq || cierreCajaTab !== 'mensual') return;
+
+    const regalos = ventas.filter(v => v.esRegalo && !v.eliminado);
+    perdidos = perdidos.filter(p => !p.eliminado);
+    cont.innerHTML = nav +
+        cardMensual({ titulo: '🎁 Bebidas regaladas', color: { border: 'border-pink-500/20', text: 'text-pink-400', total: 'text-pink-300' },
+            items: regalos, nombreDe: v => v.producto || '—', vacio: 'No se regalaron bebidas este mes' }) +
+        cardMensual({ titulo: '📉 Perdidos', color: { border: 'border-red-500/20', text: 'text-red-400', total: 'text-red-300' },
+            items: perdidos, nombreDe: x => `${x.tipo === 'bebida' ? '🥤' : '💈'} ${x.producto || '—'}`, vacio: 'No se perdió nada este mes' });
 }
 
 function renderCierreCajaSemanal() {
@@ -4173,7 +4239,6 @@ function renderCierreCajaSemanal() {
     const html = `
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">${barberCards}</div>
         ${gastosCard ? `<div class="mt-4">${gastosCard}</div>` : ''}
-        ${regalosBebidasMesCard()}
     `;
 
     document.getElementById('cierre-caja-content').innerHTML = html;
@@ -4780,7 +4845,7 @@ function listenToGastos() {
             if (!document.getElementById('gastos-panel').classList.contains('hidden')) renderGastosPanel();
             if (!document.getElementById('cierre-caja-view').classList.contains('hidden')) {
                 if (cierreCajaTab === 'semanal') renderCierreCajaSemanal();
-                else renderCierreCaja();
+                else if (cierreCajaTab === 'diario') renderCierreCaja();
             }
         }
     );
@@ -5028,7 +5093,7 @@ window.deleteGasto = async (id) => {
     renderGastosPanel();
     if (!document.getElementById('cierre-caja-view').classList.contains('hidden')) {
         if (cierreCajaTab === 'semanal') renderCierreCajaSemanal();
-        else renderCierreCaja();
+        else if (cierreCajaTab === 'diario') renderCierreCaja();
     }
     try { await updateDoc(doc(db, PATH_GASTOS, id), { eliminado: true }); } catch { alert('Error'); }
 };
