@@ -1,6 +1,7 @@
 {
   "version": 2,
   "framework": null,
+  "installCommand": "npm install",
   "cleanUrls": true,
   "rewrites": [
     { "source": "/p/:id", "destination": "/api/producto?id=:id" }
