@@ -1241,6 +1241,7 @@ function renderBalanceCard(barberName) {
     const ws=new Date(today); if(wd!==1) ws.setDate(today.getDate()-(wd-1)); ws.setHours(0,0,0,0);
     const weekStartStr=ws.toLocaleDateString('en-CA');
     const totalRetiros=allRetiros.filter(r=>!r.eliminado&&r.fecha>=weekStartStr&&r.estado==='confirmado').reduce((s,r)=>s+r.monto,0);
+    const totalPropinas=allPropinas.filter(p=>!p.eliminado&&p.fecha>=weekStartStr&&p.estado==='confirmado').reduce((s,p)=>s+p.monto,0);
     const pendRetiros=allRetiros.filter(r=>!r.eliminado&&r.fecha>=weekStartStr&&r.estado==='pendiente').reduce((s,r)=>s+r.monto,0);
     const pendPropinas=allPropinas.filter(p=>!p.eliminado&&p.fecha>=weekStartStr&&p.estado==='pendiente').reduce((s,p)=>s+p.monto,0);
     const el=document.getElementById('retiros-balance');
@@ -1248,9 +1249,17 @@ function renderBalanceCard(barberName) {
         <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
             <i class="fas fa-wallet text-violet-400"></i> Mi Balance
         </div>
-        <div class="bg-black/30 rounded-xl p-4 text-center mb-3">
-            <div class="text-2xl font-extrabold text-violet-300">$${totalRetiros.toLocaleString('es-AR')}</div>
-            <div class="text-[10px] text-gray-500 mt-0.5">retirado lunes a domingo</div>
+        <div class="grid grid-cols-2 gap-2 mb-3">
+            <div class="bg-violet-500/10 border border-violet-500/30 rounded-xl p-3 text-center">
+                <div class="text-[10px] font-extrabold text-violet-300 uppercase tracking-wider mb-1"><i class="fas fa-hand-holding-usd mr-1"></i>Retirado</div>
+                <div class="text-xl font-extrabold text-violet-200">$${totalRetiros.toLocaleString('es-AR')}</div>
+                <div class="text-[10px] text-gray-500 mt-0.5">lunes a domingo</div>
+            </div>
+            <div class="bg-amber-400/10 border border-amber-400/30 rounded-xl p-3 text-center">
+                <div class="text-[10px] font-extrabold text-amber-300 uppercase tracking-wider mb-1"><i class="fas fa-coins mr-1"></i>Propinas</div>
+                <div class="text-xl font-extrabold text-amber-200">$${totalPropinas.toLocaleString('es-AR')}</div>
+                <div class="text-[10px] text-gray-500 mt-0.5">generadas esta semana</div>
+            </div>
         </div>
         ${(pendRetiros+pendPropinas)>0?`
         <div class="bg-yellow-900/20 border border-yellow-500/20 rounded-xl p-3 flex justify-between items-center">
@@ -1259,6 +1268,16 @@ function renderBalanceCard(barberName) {
         </div>`:''}`;
     el.classList.remove('hidden');
     document.getElementById('retiros-actions').classList.remove('hidden');
+}
+
+// Retiro = violeta (sale plata de la caja), propina = ámbar (plata que generó el barbero)
+const TIPO_UI = {
+    retiro:  { chip: 'bg-violet-500/20 text-violet-300', icon: 'fa-hand-holding-usd', nombre: 'Retiro',  barra: 'border-l-violet-500', monto: 'text-violet-300', signo: '−' },
+    propina: { chip: 'bg-amber-400/20 text-amber-300',   icon: 'fa-coins',            nombre: 'Propina', barra: 'border-l-amber-400',  monto: 'text-amber-300',  signo: '+' }
+};
+function tipoChip(tipo) {
+    const u = TIPO_UI[tipo];
+    return `<span class="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-md ${u.chip}"><i class="fas ${u.icon} text-[9px]"></i>${u.nombre}</span>`;
 }
 
 function renderHistoryBarber(barberName) {
@@ -1274,14 +1293,14 @@ function renderHistoryBarber(barberName) {
     list.innerHTML=combined.map(item=>{
         const ec=item.estado==='confirmado'?'text-emerald-400':item.estado==='rechazado'?'text-red-400':'text-yellow-400';
         const ei=item.estado==='confirmado'?'✓':item.estado==='rechazado'?'✗':'⏳';
-        const bdr=item.tipo==='retiro'?'border-violet-500/20':'border-yellow-500/20';
+        const u=TIPO_UI[item.tipo];
         const metodoIco=item.tipo==='retiro'?(item.metodoPago==='transferencia'?' 📲':' 💵'):'';
-        const lbl=item.tipo==='retiro'?`Retiro${metodoIco}`:`Propina${item.descripcion?' · '+item.descripcion:''}`;
+        const lbl=`${tipoChip(item.tipo)}<span class="font-semibold text-gray-300">${item.tipo==='retiro'?metodoIco:(item.descripcion?item.descripcion:'')}</span>`;
         const f=item.creadoEn?item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
         const delBtn=item.tipo==='retiro' ? '' : `<button class="btn-delete-action text-gray-600 hover:text-red-400 transition" data-path="${PATH_PROPINAS}/${item.id}" title="Eliminar"><i class="fas fa-trash-alt text-[10px]"></i></button>`;
-        return `<div class="flex items-center justify-between gap-3 bg-black/30 p-3 rounded-xl border ${bdr}">
-            <div class="min-w-0 flex-1"><div class="text-xs font-bold text-gray-200 break-words">${lbl}</div><div class="text-[10px] text-gray-500 mt-0.5">${f}</div></div>
-            <div class="flex items-center gap-2 shrink-0"><span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span>${delBtn}</div>
+        return `<div class="flex items-center justify-between gap-3 bg-black/30 p-3 rounded-xl border border-white/5 border-l-4 ${u.barra}">
+            <div class="min-w-0 flex-1"><div class="text-xs flex items-center flex-wrap gap-1.5 break-words">${lbl}</div><div class="text-[10px] text-gray-500 mt-1">${f}</div></div>
+            <div class="flex items-center gap-2 shrink-0"><span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-extrabold ${u.monto}">${u.signo}$${item.monto.toLocaleString('es-AR')}</span>${delBtn}</div>
         </div>`;
     }).join('');
 }
@@ -1300,17 +1319,17 @@ function renderHistoryAdmin() {
         const bt=BARBER_THEME[item.barbero];
         const ec=item.estado==='confirmado'?'text-emerald-400':'text-red-400';
         const ei=item.estado==='confirmado'?'✓':'✗';
-        const bdr=bt?`${bt.border}/40`:item.tipo==='retiro'?'border-violet-500/20':'border-yellow-500/20';
+        const u=TIPO_UI[item.tipo];
         const barberCls=bt?bt.text:'text-gray-200';
         const desc=item.descripcion?`<span class="text-gray-500"> · ${item.descripcion}</span>`:'';
         const metodoIco=item.tipo==='retiro'?(item.metodoPago==='transferencia'?' 📲':' 💵'):'';
-        const lbl=item.tipo==='retiro'?`Retiro${metodoIco} · <span class="${barberCls}">${item.barbero}</span>${desc}`:`Propina · <span class="${barberCls}">${item.barbero}</span>${item.descripcion?' · '+item.descripcion:''}`;
+        const lbl=`${tipoChip(item.tipo)}${metodoIco}<span class="${barberCls} font-bold">${item.barbero}</span>${desc}`;
         const f=item.creadoEn?item.creadoEn.toDate().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
         const notaBtn=item.tipo==='retiro'?`<button onclick="window.openRetiroNota('${item.id}','${item.descripcion||''}',${item.monto},'${item.barbero}')" class="text-gray-600 hover:text-violet-400 transition ml-1" title="Agregar nota"><i class="fas fa-pencil-alt text-[10px]"></i></button>`:'';
         const delBtn=item.tipo==='retiro'?`<button onclick="window.deleteRetiro('${item.id}')" class="text-gray-700 hover:text-red-400 transition" title="Eliminar retiro"><i class="fas fa-trash text-[10px]"></i></button>`:`<button onclick="window.deletePropina('${item.id}')" class="text-gray-700 hover:text-red-400 transition" title="Eliminar propina"><i class="fas fa-trash text-[10px]"></i></button>`;
-        return `<div class="flex items-center justify-between gap-3 bg-black/30 p-3 rounded-xl border ${bdr}">
-            <div class="min-w-0 flex-1"><div class="text-xs font-bold text-gray-200 flex items-center flex-wrap gap-1">${lbl}${notaBtn}</div><div class="text-[10px] text-gray-500 mt-0.5">${f}</div></div>
-            <div class="flex items-center gap-2 shrink-0">${delBtn}<span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-bold text-white">$${item.monto.toLocaleString('es-AR')}</span></div>
+        return `<div class="flex items-center justify-between gap-3 bg-black/30 p-3 rounded-xl border border-white/5 border-l-4 ${u.barra}">
+            <div class="min-w-0 flex-1"><div class="text-xs flex items-center flex-wrap gap-1.5">${lbl}${notaBtn}</div><div class="text-[10px] text-gray-500 mt-1">${f}</div></div>
+            <div class="flex items-center gap-2 shrink-0">${delBtn}<span class="${ec} text-sm font-bold">${ei}</span><span class="text-sm font-extrabold ${u.monto}">${u.signo}$${item.monto.toLocaleString('es-AR')}</span></div>
         </div>`;
     }).join('');
 }
