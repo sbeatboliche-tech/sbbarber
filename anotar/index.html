@@ -968,7 +968,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc, deleteDoc, collection, query, onSnapshot, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment, where, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, deleteDoc, collection, query, onSnapshot, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment, where, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { initClientes, pickerCliente, resolverCliente, limpiarCliente } from "../assets/clientes.js";
 
 const firebaseConfig = {
@@ -1089,7 +1089,9 @@ let currentStockAction=null;
 // ---- INIT ----
 function init() {
     app=initializeApp(firebaseConfig);
-    auth=getAuth(app); db=getFirestore(app);
+    auth=getAuth(app);
+    // Caché local: al reabrir la app Firestore solo cobra lecturas por los docs que cambiaron
+    db=initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
     // Set persistence but don't block auth listener on it — if it fails the app still works
     setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Persistence unavailable:', e));
 
