@@ -1,48 +1,60 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Tienda y menú: lectura pública, escritura solo logueado (admin)
-    match /tienda_productos/{d}        { allow read: if true; allow write: if request.auth != null; }
-    match /tienda_productos_custom/{d} { allow read: if true; allow write: if request.auth != null; }
-    match /tienda_kits_custom/{d}      { allow read: if true; allow write: if request.auth != null; }
-    match /tienda_cursos/{d}           { allow read: if true; allow write: if request.auth != null; }
-    match /tienda_config/{d}           { allow read: if true; allow write: if request.auth != null; }
-    match /menu_bebidas/{d}            { allow read: if true; allow write: if request.auth != null; }
+    // Funciones de ayuda. Los emails son los mismos de ADMINS / BARBER_EMAIL_MAP en las apps.
+    // Con "crear usuarios" deshabilitado en Firebase Auth, solo estas cuentas pueden existir.
+    function esDueno() {
+      return request.auth != null && request.auth.token.email in ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
+    }
+    function esStaff() {
+      return esDueno() || (request.auth != null && request.auth.token.email in [
+        'ap1773508@gmail.com', 'stefanoacostasla@gmail.com',
+        'rodriguezsantiagoet5@gmail.com', 'santiagofl551@gmail.com'
+      ]);
+    }
+
+    // Tienda y menú: lectura pública, escritura solo dueños (el admin de tienda y de menú)
+    match /tienda_productos/{d}        { allow read: if true; allow write: if esDueno(); }
+    match /tienda_productos_custom/{d} { allow read: if true; allow write: if esDueno(); }
+    match /tienda_kits_custom/{d}      { allow read: if true; allow write: if esDueno(); }
+    match /tienda_cursos/{d}           { allow read: if true; allow write: if esDueno(); }
+    match /tienda_config/{d}           { allow read: if true; allow write: if esDueno(); }
+    match /menu_bebidas/{d}            { allow read: if true; allow write: if esDueno(); }
 
     // Pedidos: el comprador (sin login) necesita poder crear/actualizar su propio pedido
-    // al pagar, pero no puede aprobarlo/marcarlo enviado o retirado — eso es solo admin.
+    // al pagar, pero no puede aprobarlo/marcarlo enviado o retirado — eso es solo admin
+    // (ni al crearlo ni después).
     match /tienda_pedidos/{d} {
-      allow read: if request.auth != null;
-      allow create: if true;
-      allow update: if request.auth != null || (
+      allow read: if esDueno();
+      allow create: if esDueno() || (
+        (!('aprobado' in request.resource.data) || request.resource.data.aprobado == false) &&
+        (!('enviado' in request.resource.data) || request.resource.data.enviado == false) &&
+        (!('retirado' in request.resource.data) || request.resource.data.retirado == false)
+      );
+      allow update: if esDueno() || (
         (!('aprobado' in request.resource.data) || request.resource.data.aprobado == resource.data.aprobado) &&
         (!('enviado' in request.resource.data) || request.resource.data.enviado == resource.data.enviado) &&
         (!('retirado' in request.resource.data) || request.resource.data.retirado == resource.data.retirado)
       );
-      allow delete: if request.auth != null;
+      allow delete: if esDueno();
     }
 
-    // Visitas: analítica de tráfico, sin datos sensibles — escritura pública, lectura solo admin.
+    // Visitas: analítica de tráfico, sin datos sensibles — escritura pública, lectura solo dueños.
     match /tienda_visitas/{d} {
-      allow read: if request.auth != null;
+      allow read: if esDueno();
       allow write: if true;
     }
 
-    // Resto (recepción / anotar, uso interno): requiere estar autenticado.
-    // Eliminar documentos queda reservado a admin (mismo criterio que ADMINS/isAdmin en el
-    // cliente: email en la lista, o sesión anónima de recepcionista vía clave "femesb" — la
-    // única función de la app que crea usuarios anónimos). Evita que un barbero logueado en
-    // "anotar" borre sus propios retiros/ventas/etc. por consola, no solo desde la UI.
+    // Resto (recepción / anotar, uso interno): solo dueños y barberos. Eliminar documentos
+    // queda reservado a los dueños, así un barbero logueado en "anotar" no puede borrar sus
+    // propios retiros/ventas/etc. por consola, no solo desde la UI.
     // Las colecciones de MercadoLibre (ml_config: tokens cifrados de la cuenta; ml_ordenes: qué ventas de
     // ML ya se descontaron) las escribe solo el servidor (tienda/api, con cuenta de servicio). Si un cliente
     // pudiera tocarlas, podría saltear descuentos o "devolver" stock inventado.
     match /{coleccion}/{document=**} {
-      allow read: if request.auth != null && coleccion != 'ml_ordenes';
-      allow create, update: if request.auth != null && !(coleccion in ['ml_config', 'ml_ordenes']);
-      allow delete: if request.auth != null && !(coleccion in ['ml_config', 'ml_ordenes']) && (
-        request.auth.token.email in ['abalo7272@gmail.com', 'carusomanu21@gmail.com'] ||
-        request.auth.token.firebase.sign_in_provider == 'anonymous'
-      );
+      allow read: if (esStaff() && !(coleccion in ['ml_config', 'ml_ordenes'])) || (esDueno() && coleccion == 'ml_config');
+      allow create, update: if esStaff() && !(coleccion in ['ml_config', 'ml_ordenes']);
+      allow delete: if esDueno() && !(coleccion in ['ml_config', 'ml_ordenes']);
     }
   }
 }
