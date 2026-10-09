@@ -364,7 +364,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, serverTimestamp, getDocs, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -380,12 +380,12 @@
 
         // Precios de cursos desde Firestore
         const cursoMap = { 'curso-completo':'cp-curso-completo' };
-        onSnapshot(collection(db, 'tienda_cursos'), snap => {
+        getDocs(collection(db, 'tienda_cursos')).then(snap => {
             snap.forEach(d => {
                 const el = document.getElementById(cursoMap[d.id]);
                 if (el && d.data().price) el.textContent = '$' + Number(d.data().price).toLocaleString('es-AR');
             });
-        });
+        }).catch(e => console.error(e));
 
         document.getElementById('form-inscripcion').addEventListener('submit', async e => {
             e.preventDefault();

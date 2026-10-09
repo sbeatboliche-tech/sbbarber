@@ -5446,8 +5446,10 @@ function getDayLabel(offset) {
 }
 
 function listenToTurnos() {
+    // Solo desde hace una semana: sin esto cada turno histórico se re-leía en cada apertura (crece sin parar)
+    const desdeISO = (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toLocaleDateString('en-CA'); })();
     onSnapshot(
-        query(collection(db, PATH_TURNOS), orderBy('fecha')),
+        query(collection(db, PATH_TURNOS), where('fecha', '>=', desdeISO), orderBy('fecha')),
         snap => {
             allTurnos = snap.docs.map(d => ({ ...d.data(), id: d.id }));
             if (!document.getElementById('turnos-panel').classList.contains('hidden')) renderTurnosPanel();

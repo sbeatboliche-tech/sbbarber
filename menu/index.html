@@ -301,7 +301,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -348,14 +348,21 @@
 
         const money = n => '$' + Number(n || 0).toLocaleString('es-AR');
 
-        // ---- Suscripciones en vivo ----
-        onSnapshot(collection(db, 'tienda_productos'), snap => {
-            productConfig = {};
-            snap.forEach(d => { productConfig[d.id] = d.data(); });
-            renderProductos();
-        });
+        // ---- Lecturas únicas (antes eran listeners en vivo: cada visitante abría 2 conexiones y
+        // cada cambio se re-leía en todos los celulares, lo que gastaba la cuota de Firestore) ----
+        async function cargarProductos() {
+            try {
+                const snap = await getDocs(collection(db, 'tienda_productos'));
+                productConfig = {};
+                snap.forEach(d => { productConfig[d.id] = d.data(); });
+                renderProductos();
+            } catch (e) { console.error(e); }
+        }
+        cargarProductos();
 
-        onSnapshot(collection(db, 'menu_bebidas'), snap => {
+        async function cargarBebidas() {
+            let snap;
+            try { snap = await getDocs(collection(db, 'menu_bebidas')); } catch (e) { console.error(e); return; }
             if (snap.empty) {
                 bebidas = DEFAULT_BEBIDAS.map(b => ({ ...b }));
                 bebidasEsDefault = true;
@@ -367,7 +374,8 @@
             }
             renderBebidas();
             if (isAdmin) renderEditor();
-        });
+        }
+        cargarBebidas();
 
         function renderBebidas() {
             const cont = document.getElementById('bebidas-list');
@@ -448,6 +456,7 @@
                         if (!currentIds.has(id)) { try { await deleteDoc(doc(db, 'menu_bebidas', id)); } catch (e) {} }
                     }
                 }
+                await cargarBebidas();
                 btn.textContent = '✓ Guardado';
                 setTimeout(() => { btn.disabled = false; btn.textContent = 'Guardar cambios'; }, 1500);
             } catch (e) {
