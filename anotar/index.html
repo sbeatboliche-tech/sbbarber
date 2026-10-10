@@ -968,7 +968,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, deleteDoc, collection, query, onSnapshot, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment, where, writeBatch, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, deleteDoc, collection, query, onSnapshot, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment, where, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { initClientes, pickerCliente, resolverCliente, limpiarCliente } from "../assets/clientes.js";
 
 const firebaseConfig = {
@@ -1235,22 +1235,12 @@ function renderRetirosView() {
     }
 }
 
-// Ajuste semanal silencioso (atajos de teclado de recepcionista): se resta del "A cobrar" sin mostrar fila ni aviso.
-const ajusteSemanal={ clave:null, monto:0 };
-function cargarAjusteSemanal(clave) {
-    if(ajusteSemanal.clave===clave) return;
-    ajusteSemanal.clave=clave; ajusteSemanal.monto=0;
-    getDoc(doc(db,'ajustes_semanales',clave)).then(d=>{
-        if(d.exists()&&ajusteSemanal.clave===clave){ ajusteSemanal.monto=Number(d.data().monto)||0; renderRetirosView(); }
-    }).catch(()=>{});
-}
-
 function renderBalanceCard(barberName) {
     const hoy=new Date().toLocaleDateString('en-CA');
     const today=new Date(); const wd=today.getDay()||7;
     const ws=new Date(today); if(wd!==1) ws.setDate(today.getDate()-(wd-1)); ws.setHours(0,0,0,0);
     const weekStartStr=ws.toLocaleDateString('en-CA');
-    const totalRetiros=allRetiros.filter(r=>!r.eliminado&&r.origen!=='atajo'&&r.fecha>=weekStartStr&&r.estado==='confirmado').reduce((s,r)=>s+r.monto,0);
+    const totalRetiros=allRetiros.filter(r=>!r.eliminado&&r.fecha>=weekStartStr&&r.estado==='confirmado').reduce((s,r)=>s+r.monto,0);
     const totalPropinas=allPropinas.filter(p=>!p.eliminado&&p.fecha>=weekStartStr&&p.estado==='confirmado').reduce((s,p)=>s+p.monto,0);
     const pendRetiros=allRetiros.filter(r=>!r.eliminado&&r.fecha>=weekStartStr&&r.estado==='pendiente').reduce((s,r)=>s+r.monto,0);
     const pendPropinas=allPropinas.filter(p=>!p.eliminado&&p.fecha>=weekStartStr&&p.estado==='pendiente').reduce((s,p)=>s+p.monto,0);
@@ -1258,9 +1248,7 @@ function renderBalanceCard(barberName) {
     const cortesSemana=allCuts.filter(c=>!c.eliminado&&c.barber===barberName&&c.createdAt&&c.createdAt.toDate()>=ws);
     const nCortes=cortesSemana.length;
     const ganancia=Math.round(cortesSemana.reduce((s,c)=>s+(c.price||0)*(barberCommissions[barberName]||0.5),0));
-    const claveAjuste=`${weekStartStr}_${barberName}`;
-    cargarAjusteSemanal(claveAjuste);
-    const aCobrar=ganancia+totalPropinas-totalRetiros-(ajusteSemanal.clave===claveAjuste?ajusteSemanal.monto:0);
+    const aCobrar=ganancia+totalPropinas-totalRetiros;
     const nPropinas=allPropinas.filter(p=>!p.eliminado&&p.fecha>=weekStartStr&&p.estado==='confirmado').length;
     const fmt=n=>'$'+Math.round(n).toLocaleString('es-AR');
     const fila=(color,icono,titulo,detalle,monto,signo)=>`
@@ -1308,7 +1296,7 @@ function renderHistoryBarber(barberName) {
     const ws=new Date(today); if(wd!==1) ws.setDate(today.getDate()-(wd-1)); ws.setHours(0,0,0,0);
     const weekStartStr=ws.toLocaleDateString('en-CA');
     const combined=[
-        ...allRetiros.filter(r=>!r.eliminado&&r.origen!=='atajo'&&r.fecha>=weekStartStr).map(r=>({...r,tipo:'retiro'})),
+        ...allRetiros.filter(r=>!r.eliminado&&r.fecha>=weekStartStr).map(r=>({...r,tipo:'retiro'})),
         ...allPropinas.filter(p=>!p.eliminado&&p.fecha>=weekStartStr).map(p=>({...p,tipo:'propina'}))
     ].sort((a,b)=>(b.creadoEn?.seconds||0)-(a.creadoEn?.seconds||0));
     const list=document.getElementById('retiros-history');
