@@ -350,17 +350,17 @@
             <!-- Botones acción (barbero) -->
             <div id="retiros-actions" class="hidden grid grid-cols-2 gap-3">
                 <button onclick="window.openRetiroModal()" class="bg-violet-600/20 border border-violet-500/30 text-violet-300 p-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-violet-600/30 transition active:scale-95">
-                    <i class="fas fa-money-bill-wave"></i> Pedir Retiro
+                    <i class="fas fa-hand-holding-usd"></i> Pedir un retiro
                 </button>
-                <button onclick="window.openPropinaModal()" class="bg-yellow-600/20 border border-yellow-500/30 text-yellow-300 p-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-yellow-600/30 transition active:scale-95">
-                    <i class="fas fa-hand-holding-usd"></i> Anotar Propina
+                <button onclick="window.openPropinaModal()" class="bg-amber-500/20 border border-amber-400/40 text-amber-300 p-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-amber-500/30 transition active:scale-95">
+                    <i class="fas fa-coins"></i> Anotar una propina
                 </button>
             </div>
 
             <!-- Historial -->
             <div class="glass-card rounded-2xl p-5">
                 <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <i class="fas fa-clock text-violet-400"></i> Historial
+                    <i class="fas fa-list text-cyan-400"></i> Movimientos de la semana
                 </h3>
                 <div id="retiros-history" class="space-y-2">
                     <p class="text-xs text-gray-600 text-center py-3">Cargando...</p>
@@ -1244,27 +1244,33 @@ function renderBalanceCard(barberName) {
     const totalPropinas=allPropinas.filter(p=>!p.eliminado&&p.fecha>=weekStartStr&&p.estado==='confirmado').reduce((s,p)=>s+p.monto,0);
     const pendRetiros=allRetiros.filter(r=>!r.eliminado&&r.fecha>=weekStartStr&&r.estado==='pendiente').reduce((s,r)=>s+r.monto,0);
     const pendPropinas=allPropinas.filter(p=>!p.eliminado&&p.fecha>=weekStartStr&&p.estado==='pendiente').reduce((s,p)=>s+p.monto,0);
+    // Lo que generó en cortes esta semana (su parte según la comisión), para ver las propinas al lado
+    const cortesSemana=allCuts.filter(c=>!c.eliminado&&c.barber===barberName&&c.createdAt&&c.createdAt.toDate()>=ws);
+    const nCortes=cortesSemana.length;
+    const ganancia=Math.round(cortesSemana.reduce((s,c)=>s+(c.price||0)*(barberCommissions[barberName]||0.5),0));
+    const nPropinas=allPropinas.filter(p=>!p.eliminado&&p.fecha>=weekStartStr&&p.estado==='confirmado').length;
+    const fmt=n=>'$'+Math.round(n).toLocaleString('es-AR');
+    const fila=(color,icono,titulo,detalle,monto,signo)=>`
+        <div class="flex items-center gap-3 bg-${color}-500/10 border border-${color}-500/30 rounded-xl p-3">
+            <div class="w-10 h-10 rounded-xl bg-${color}-500/20 text-${color}-300 flex items-center justify-center shrink-0"><i class="fas ${icono}"></i></div>
+            <div class="min-w-0 flex-1"><div class="text-sm font-extrabold text-${color}-200">${titulo}</div><div class="text-[11px] text-gray-500">${detalle}</div></div>
+            <div class="text-xl font-extrabold text-${color}-200 shrink-0">${signo}${fmt(monto)}</div>
+        </div>`;
     const el=document.getElementById('retiros-balance');
     el.innerHTML=`
-        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-            <i class="fas fa-wallet text-violet-400"></i> Mi Balance
+        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-2">
+            <i class="fas fa-calendar-week text-cyan-400"></i> Mi semana
         </div>
-        <div class="grid grid-cols-2 gap-2 mb-3">
-            <div class="bg-violet-500/10 border border-violet-500/30 rounded-xl p-3 text-center">
-                <div class="text-[10px] font-extrabold text-violet-300 uppercase tracking-wider mb-1"><i class="fas fa-hand-holding-usd mr-1"></i>Retirado</div>
-                <div class="text-xl font-extrabold text-violet-200">$${totalRetiros.toLocaleString('es-AR')}</div>
-                <div class="text-[10px] text-gray-500 mt-0.5">lunes a domingo</div>
-            </div>
-            <div class="bg-amber-400/10 border border-amber-400/30 rounded-xl p-3 text-center">
-                <div class="text-[10px] font-extrabold text-amber-300 uppercase tracking-wider mb-1"><i class="fas fa-coins mr-1"></i>Propinas</div>
-                <div class="text-xl font-extrabold text-amber-200">$${totalPropinas.toLocaleString('es-AR')}</div>
-                <div class="text-[10px] text-gray-500 mt-0.5">generadas esta semana</div>
-            </div>
+        <p class="text-[11px] text-gray-500 mb-4">De lunes a domingo. Se reinicia cada lunes.</p>
+        <div class="space-y-2 mb-3">
+            ${fila('cyan','fa-scissors','Lo que generaste',`${nCortes} ${nCortes===1?'corte':'cortes'} · tu parte`,ganancia,'')}
+            ${fila('amber','fa-coins','Propinas',`${nPropinas} ${nPropinas===1?'propina':'propinas'} · son tuyas`,totalPropinas,'+')}
+            ${fila('violet','fa-hand-holding-usd','Retiros',`plata que ya sacaste`,totalRetiros,'−')}
         </div>
         ${(pendRetiros+pendPropinas)>0?`
         <div class="bg-yellow-900/20 border border-yellow-500/20 rounded-xl p-3 flex justify-between items-center">
-            <span class="text-xs text-yellow-400 flex items-center gap-2"><i class="fas fa-clock text-xs"></i> Pendiente confirmación</span>
-            <span class="text-sm font-bold text-yellow-300">$${(pendRetiros+pendPropinas).toLocaleString('es-AR')}</span>
+            <span class="text-xs text-yellow-400 flex items-center gap-2"><i class="fas fa-clock text-xs"></i> Esperando que lo confirme recepción</span>
+            <span class="text-sm font-bold text-yellow-300">${fmt(pendRetiros+pendPropinas)}</span>
         </div>`:''}`;
     el.classList.remove('hidden');
     document.getElementById('retiros-actions').classList.remove('hidden');
@@ -2185,6 +2191,7 @@ function startDualSync() {
         const map=new Map(); [...d1,...d2].forEach(c=>map.set(c.id,c));
         allCuts=Array.from(map.values()).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
         render(); renderWeeklyProfit();
+        if(!document.getElementById('retiros-view').classList.contains('hidden')) renderRetirosView();
         document.getElementById('loading-view').classList.add('hidden');
     };
     onSnapshot(query(collection(db,PATH_MAIN),orderBy('createdAt','desc'),limit(500)),s=>{ d1=s.docs.map(d=>({...d.data(),id:d.id,_ref:d.ref.path})); upd(); });
