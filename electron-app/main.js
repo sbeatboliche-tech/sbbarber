@@ -1,4 +1,6 @@
 const { app, BrowserWindow, shell } = require('electron')
+const path = require('path')
+const fs = require('fs')
 
 const APP_URL = 'https://sbeatboliche-tech.github.io/sbbarber/recepcionista/'
 
@@ -27,6 +29,16 @@ function createWindow() {
     win.webContents.setWindowOpenHandler(({ url }) => {
         shell.openExternal(url)
         return { action: 'deny' }
+    })
+
+    // Las descargas (ej. foto de los perdidos) se guardan directo en el Escritorio, sin preguntar
+    win.webContents.session.on('will-download', (_e, item) => {
+        const ext = path.extname(item.getFilename())
+        const base = path.basename(item.getFilename(), ext)
+        let destino = path.join(app.getPath('desktop'), base + ext)
+        for (let i = 1; fs.existsSync(destino); i++) destino = path.join(app.getPath('desktop'), `${base} (${i})${ext}`)
+        item.setSavePath(destino)
+        item.once('done', (_ev, state) => { if (state === 'completed') shell.showItemInFolder(destino) })
     })
 
     win.webContents.on('did-fail-load', () => {

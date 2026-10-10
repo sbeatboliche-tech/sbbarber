@@ -4017,6 +4017,96 @@ function cardMensual({ titulo, color, items, nombreDe, vacio }) {
         </div>`;
 }
 
+// Perdidos del mes separados por día (más nuevo arriba), con botón para sacarle una foto a la tarjeta
+function perdidosMensualHTML(perdidos) {
+    const dias = {};
+    perdidos.forEach(x => {
+        const d = dias[x.fecha || '—'] ||= { u: 0, v: 0, prods: {} };
+        const cant = Number(x.cantidad) || 1, val = (Number(x.precio) || 0) * cant;
+        const nombre = `${x.tipo === 'bebida' ? '🥤' : '💈'} ${x.producto || '—'}`;
+        const p = d.prods[nombre] ||= { u: 0, v: 0 };
+        p.u += cant; p.v += val; d.u += cant; d.v += val;
+    });
+    const orden = Object.entries(dias).sort((a, b) => b[0].localeCompare(a[0]));
+    const totU = orden.reduce((s, [, d]) => s + d.u, 0), totV = orden.reduce((s, [, d]) => s + d.v, 0);
+    const nombreDia = f => {
+        const [y, m, d] = f.split('-').map(Number);
+        return y ? new Date(y, m - 1, d).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'numeric' }) : f;
+    };
+    return `
+        <div id="perdidos-mensual-card" class="glass-card rounded-2xl p-5 md:p-6 mb-4 border border-red-500/20">
+            <div class="flex justify-between items-center gap-3">
+                <div class="text-[10px] md:text-xs font-bold text-red-400 uppercase tracking-widest">📉 Perdidos</div>
+                <div class="flex items-center gap-2">
+                    <span class="text-lg md:text-2xl font-extrabold text-red-300 whitespace-nowrap">$${totV.toLocaleString('es-AR')}</span>
+                    ${orden.length ? `<button type="button" data-nofoto onclick="window.fotoPerdidos(this)" class="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:bg-white/10 transition" aria-label="Sacar foto de los perdidos"><i class="fas fa-camera text-xs"></i></button>` : ''}
+                </div>
+            </div>
+            <p class="text-[10px] text-gray-500 mt-1 mb-3">${totU} unidad${totU !== 1 ? 'es' : ''} · valor a precio de venta · no afecta la caja</p>
+            ${orden.length === 0 ? '<p class="text-xs text-gray-600 text-center py-2">No se perdió nada este mes</p>' : orden.map(([f, d]) => `
+                <div class="mt-3 first:mt-0">
+                    <div class="flex justify-between items-center py-1.5 border-t border-red-500/20 text-[11px] font-bold">
+                        <span class="text-red-300 capitalize">${nombreDia(f)}</span>
+                        <span class="text-red-300 whitespace-nowrap ml-3">$${d.v.toLocaleString('es-AR')}</span>
+                    </div>
+                    ${Object.entries(d.prods).sort((a, b) => b[1].v - a[1].v).map(([nombre, p]) => `
+                    <div class="flex justify-between items-center py-1 pl-2 text-xs">
+                        <span class="text-gray-300 min-w-0 truncate">${escHtml(nombre)} <span class="text-gray-500">×${p.u}</span></span>
+                        <span class="text-gray-400 whitespace-nowrap ml-3">$${p.v.toLocaleString('es-AR')}</span>
+                    </div>`).join('')}
+                </div>`).join('')}
+        </div>`;
+}
+
+// Foto de la tarjeta de perdidos: en el celu abre compartir (WhatsApp, etc.), si no la descarga
+let _html2canvasP = null;
+window.fotoPerdidos = async (btn) => {
+    const card = document.getElementById('perdidos-mensual-card');
+    if (!card) return;
+    const icon = btn.querySelector('i');
+    icon.className = 'fas fa-spinner fa-spin text-xs';
+    try {
+        _html2canvasP ||= new Promise((ok, err) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            s.onload = () => ok(window.html2canvas);
+            s.onerror = () => { _html2canvasP = null; err(new Error('no cargó html2canvas')); };
+            document.head.appendChild(s);
+        });
+        const html2canvas = await _html2canvasP;
+        const canvas = await html2canvas(card, {
+            backgroundColor: '#0a0a0a', scale: Math.min(3, (window.devicePixelRatio || 1) * 1.5),
+            ignoreElements: el => el.hasAttribute && el.hasAttribute('data-nofoto')
+        });
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+        const nombre = `perdidos-${cierreMesSel}.png`;
+        const file = new File([blob], nombre, { type: 'image/png' });
+        const esElectron = /Electron/i.test(navigator.userAgent);
+        const esCelu = matchMedia('(pointer: coarse)').matches;
+        if (esCelu && navigator.canShare && navigator.canShare({ files: [file] })) {
+            try { await navigator.share({ files: [file], title: 'Perdidos ' + cierreMesSel }); } catch (_) { /* canceló */ }
+        } else if (!esElectron && !esCelu && window.showSaveFilePicker) {
+            // PC en Chrome/Edge: el diálogo de guardar arranca en el Escritorio
+            try {
+                const h = await window.showSaveFilePicker({ suggestedName: nombre, startIn: 'desktop',
+                    types: [{ description: 'Imagen PNG', accept: { 'image/png': ['.png'] } }] });
+                const w = await h.createWritable(); await w.write(blob); await w.close();
+            } catch (e) { if (e.name !== 'AbortError') throw e; }
+        } else {
+            // En la app de escritorio (Electron) la descarga va directo al Escritorio (ver electron-app/main.js)
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob); a.download = nombre;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+        }
+    } catch (e) {
+        console.error('foto perdidos:', e);
+        alert('No se pudo sacar la foto. Probá de nuevo.');
+    } finally {
+        icon.className = 'fas fa-camera text-xs';
+    }
+};
+
 // Resumen del mes por barbero, con los mismos criterios que el semanal (comisión, retiros confirmados
 // sin los de atajo, propinas confirmadas). Los ajustes de los atajos Ctrl+Shift se restan en silencio
 // (los de las semanas que arrancan en este mes), igual que en el semanal.
@@ -4116,8 +4206,7 @@ async function renderCierreCajaMensual() {
     cont.innerHTML = nav + barberosMensualHTML(cierreMesSel, cortes, retiros, propinas) +
         cardMensual({ titulo: '🎁 Bebidas regaladas', color: { border: 'border-pink-500/20', text: 'text-pink-400', total: 'text-pink-300' },
             items: regalos, nombreDe: v => v.producto || '—', vacio: 'No se regalaron bebidas este mes' }) +
-        cardMensual({ titulo: '📉 Perdidos', color: { border: 'border-red-500/20', text: 'text-red-400', total: 'text-red-300' },
-            items: perdidos, nombreDe: x => `${x.tipo === 'bebida' ? '🥤' : '💈'} ${x.producto || '—'}`, vacio: 'No se perdió nada este mes' });
+        perdidosMensualHTML(perdidos);
 }
 
 function renderCierreCajaSemanal() {
