@@ -2614,7 +2614,11 @@ window.setStockFiltro = (f) => { stockFiltro = f; renderStockProductos(); };
 
 function renderStockProductos() {
     const list = document.getElementById('stock-productos-list');
-    const all = Object.values(stockProductosData).sort((a, b) => (a.position ?? 999) - (b.position ?? 999));
+    // Mismo catálogo que recepcionista (PRODUCTOS_BARBER: base + custom, sin ocultos), con el stock,
+    // la foto y el orden de productos_barber. Así no aparecen productos borrados en recepcionista.
+    const all = PRODUCTOS_BARBER
+        .map(p => ({ ...stockProductosData[p.id], id: p.id, name: p.name, precio: p.precio, isML: !!p.isML }))
+        .sort((a, b) => (a.position ?? 999) - (b.position ?? 999));
     const nSin  = all.filter(p => (p.stock || 0) <= 0).length;
     const nBajo = all.filter(p => (p.stock || 0) > 0 && (p.stock || 0) <= STOCK_BAJO).length;
     const chip = (key, label, n, color) => `<button onclick="window.setStockFiltro('${key}')" class="px-3 py-1.5 rounded-lg text-[11px] font-bold border transition ${stockFiltro === key ? `${color} text-white` : 'border-white/10 text-gray-400 bg-white/5'}">${label} <span class="opacity-70">${n}</span></button>`;
