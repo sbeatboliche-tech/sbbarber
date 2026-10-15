@@ -299,10 +299,17 @@
                 </button>
                 <div>
                     <h1 class="text-sm font-bold text-white leading-none">STOCK DE PRODUCTOS</h1>
-                    <span class="text-[10px] text-indigo-400 font-medium">Inventario y movimientos</span>
+                    <span class="text-[10px] text-indigo-400 font-medium">+ / − suman o restan 1 · tocá el número para fijarlo</span>
                 </div>
             </div>
         </header>
+        <div class="px-4 pt-3 pb-2 space-y-2 border-b border-white/5">
+            <div class="relative">
+                <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+                <input id="stock-search" type="search" placeholder="Buscar producto..." oninput="window.setStockSearch(this.value)" autocomplete="off" class="w-full pl-9 pr-3 py-2.5 bg-black/40 rounded-xl border border-gray-700 focus:border-indigo-500 outline-none transition text-white placeholder-gray-500 text-sm">
+            </div>
+            <div id="stock-filtros" class="flex gap-2"></div>
+        </div>
         <div class="flex-1 overflow-y-auto p-4 pb-10">
             <div id="stock-productos-list" class="space-y-2"></div>
         </div>
@@ -316,7 +323,7 @@
                 <button onclick="window.closeStockMovModal()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
             </div>
             <p id="spm-product" class="text-sm text-gray-400 mb-5"></p>
-            <input type="number" id="spm-qty" placeholder="Cantidad" min="1" class="w-full px-4 py-4 bg-black/40 rounded-xl border border-gray-700 focus:border-indigo-500 outline-none transition text-white placeholder-gray-500 text-lg mb-5">
+            <input type="number" id="spm-qty" placeholder="Cantidad" min="0" inputmode="numeric" onkeydown="if(event.key==='Enter')window.submitStockMov()" class="w-full px-4 py-4 bg-black/40 rounded-xl border border-gray-700 focus:border-indigo-500 outline-none transition text-white placeholder-gray-500 text-lg mb-5">
             <button onclick="window.submitStockMov()" id="btn-submit-spm" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest">Confirmar</button>
         </div>
     </div>
@@ -2592,33 +2599,66 @@ function listenToStockProductos() {
     });
 }
 
+// Stock rápido: +/− suman o restan 1 al toque (increment atómico; el snapshot local lo pinta
+// al instante y el sync a ML ya viene con debounce). Tocar el número abre el modal para fijarlo.
+let stockSearch = '';
+let stockFiltro = 'todos'; // todos | bajo | sin
+const STOCK_BAJO = 3;
+
+function escStock(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+window.setStockSearch = (v) => { stockSearch = v; renderStockProductos(); };
+window.setStockFiltro = (f) => { stockFiltro = f; renderStockProductos(); };
+
 function renderStockProductos() {
     const list = document.getElementById('stock-productos-list');
-    const prods = Object.values(stockProductosData).sort((a, b) => (a.position ?? 999) - (b.position ?? 999));
-    if (prods.length === 0) {
+    const all = Object.values(stockProductosData).sort((a, b) => (a.position ?? 999) - (b.position ?? 999));
+    const nSin  = all.filter(p => (p.stock || 0) <= 0).length;
+    const nBajo = all.filter(p => (p.stock || 0) > 0 && (p.stock || 0) <= STOCK_BAJO).length;
+    const chip = (key, label, n, color) => `<button onclick="window.setStockFiltro('${key}')" class="px-3 py-1.5 rounded-lg text-[11px] font-bold border transition ${stockFiltro === key ? `${color} text-white` : 'border-white/10 text-gray-400 bg-white/5'}">${label} <span class="opacity-70">${n}</span></button>`;
+    document.getElementById('stock-filtros').innerHTML =
+        chip('todos', 'Todos', all.length, 'bg-indigo-600/40 border-indigo-500/50') +
+        chip('bajo', 'Bajo', nBajo, 'bg-yellow-600/40 border-yellow-500/50') +
+        chip('sin', 'Sin stock', nSin, 'bg-red-600/40 border-red-500/50');
+
+    if (all.length === 0) {
         list.innerHTML = '<p class="text-xs text-gray-500 text-center py-8">Sin productos en stock</p>';
+        return;
+    }
+    const q = normalizarTexto(stockSearch.trim());
+    const prods = all.filter(p => {
+        const qty = p.stock || 0;
+        if (stockFiltro === 'sin' && qty > 0) return false;
+        if (stockFiltro === 'bajo' && (qty <= 0 || qty > STOCK_BAJO)) return false;
+        return !q || normalizarTexto(p.name || p.id).includes(q);
+    });
+    if (prods.length === 0) {
+        list.innerHTML = '<p class="text-xs text-gray-500 text-center py-8">Ningún producto coincide</p>';
         return;
     }
     const local = prods.filter(p => !p.isML);
     const ml    = prods.filter(p =>  p.isML);
     const row = (p) => {
         const qty = p.stock || 0;
-        const qtyColor = qty === 0 ? 'text-red-400' : qty <= 3 ? 'text-yellow-400' : 'text-indigo-300';
-        return `<div class="flex items-center gap-3 bg-black/30 p-3 rounded-xl border ${qty===0?'border-red-500/30':qty<=3?'border-yellow-500/20':'border-white/5'}">
+        const qtyColor = qty <= 0 ? 'text-red-400' : qty <= STOCK_BAJO ? 'text-yellow-400' : 'text-indigo-300';
+        const id = escStock(p.id);
+        return `<div class="flex items-center gap-2 bg-black/30 p-2.5 pl-3 rounded-xl border ${qty<=0?'border-red-500/30':qty<=STOCK_BAJO?'border-yellow-500/20':'border-white/5'}">
             <div class="flex-1 min-w-0">
-                <div class="text-sm font-bold text-white truncate">${p.name||p.id}</div>
+                <div class="text-sm font-bold text-white truncate">${escStock(p.name || p.id)}</div>
                 ${p.precio>0 ? `<div class="text-[10px] text-gray-500">$${p.precio.toLocaleString('es-AR')}</div>` : ''}
             </div>
-            <div class="flex items-center gap-2 flex-shrink-0">
-                <div class="text-center w-9">
-                    <div class="${qtyColor} font-bold text-xl leading-none">${qty}</div>
-                    <div class="text-[9px] text-gray-600">u.</div>
-                </div>
-                <button onclick="window.openStockMov('${p.id}','${(p.name||p.id).replace(/'/g,"\\'")}','entrada')" class="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 hover:bg-emerald-600/40 transition">
-                    <i class="fas fa-plus text-xs"></i>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+                <button data-id="${id}" onclick="window.quickStock(this.dataset.id,-1)" class="w-11 h-11 rounded-xl bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 active:scale-90 active:bg-red-600/50 transition disabled:opacity-30" ${qty<=0?'disabled':''}>
+                    <i class="fas fa-minus text-sm"></i>
                 </button>
-                <button onclick="window.openStockMov('${p.id}','${(p.name||p.id).replace(/'/g,"\\'")}','salida')" class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 hover:bg-red-600/40 transition" ${qty===0?'disabled':''}>
-                    <i class="fas fa-minus text-xs"></i>
+                <button data-id="${id}" onclick="window.openStockMov(this.dataset.id)" class="w-12 h-11 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center justify-center active:scale-95 transition">
+                    <span class="${qtyColor} font-bold text-lg leading-none">${qty}</span>
+                    <span class="text-[8px] text-gray-600 leading-none mt-0.5">u.</span>
+                </button>
+                <button data-id="${id}" onclick="window.quickStock(this.dataset.id,1)" class="w-11 h-11 rounded-xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 active:scale-90 active:bg-emerald-600/50 transition">
+                    <i class="fas fa-plus text-sm"></i>
                 </button>
             </div>
         </div>`;
@@ -2638,28 +2678,45 @@ window.closeStockProductos = () => {
     const v = document.getElementById('stock-productos-view');
     v.classList.add('hidden'); v.classList.remove('flex');
 };
-window.openStockMov = (id, name, tipo) => {
-    currentStockMov = { id, name, tipo };
+window.quickStock = async (id, delta) => {
+    const p = stockProductosData[id];
+    if (!p || (delta < 0 && (p.stock || 0) <= 0)) return;
+    if (navigator.vibrate) navigator.vibrate(10);
+    try {
+        await updateDoc(doc(db, PATH_PRODUCTOS, id), { stock: increment(delta) });
+    } catch (e) { alert('Error al guardar el stock'); }
+};
+
+// Modal de stock. tipo 'entrada' (botón + de la grilla de ventas): suma unidades.
+// Sin tipo (tocar el número en stock rápido): fija el stock exacto, para un conteo físico.
+window.openStockMov = (id, name, tipo = 'fijar') => {
+    const p = stockProductosData[id];
+    const actual = p?.stock || 0;
+    currentStockMov = { id, tipo };
     const isEntrada = tipo === 'entrada';
-    document.getElementById('spm-title').textContent = isEntrada ? `Entrada — ${name}` : `Salida — ${name}`;
-    document.getElementById('spm-product').textContent = isEntrada ? 'Unidades que ingresaron al stock' : 'Unidades que salen del stock';
-    document.getElementById('spm-qty').value = '';
-    document.getElementById('btn-submit-spm').className = `w-full text-white p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest bg-gradient-to-r ${isEntrada ? 'from-emerald-600 to-teal-600' : 'from-red-600 to-rose-600'}`;
+    document.getElementById('spm-title').textContent = isEntrada ? `Entrada — ${name || p?.name || id}` : (p?.name || name || id);
+    document.getElementById('spm-product').textContent = isEntrada
+        ? 'Unidades que ingresaron al stock'
+        : `Stock actual: ${actual} u. Escribí cuántas hay realmente.`;
+    const input = document.getElementById('spm-qty');
+    input.value = isEntrada ? '' : actual;
     document.getElementById('stock-mov-modal').classList.remove('hidden');
     document.getElementById('stock-mov-modal').classList.add('flex');
+    setTimeout(() => { input.focus(); input.select(); }, 50);
 };
 window.closeStockMovModal = () => {
     document.getElementById('stock-mov-modal').classList.add('hidden');
     document.getElementById('stock-mov-modal').classList.remove('flex');
 };
 window.submitStockMov = async () => {
-    const qty = Number(document.getElementById('spm-qty').value);
-    if (!qty || qty < 1) return alert('Ingresá una cantidad válida');
+    const raw = document.getElementById('spm-qty').value;
+    const qty = Number(raw);
+    const isEntrada = currentStockMov.tipo === 'entrada';
+    if (raw === '' || !Number.isInteger(qty) || qty < (isEntrada ? 1 : 0)) return alert('Ingresá una cantidad válida');
     const btn = document.getElementById('btn-submit-spm');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
-        const delta = currentStockMov.tipo === 'entrada' ? qty : -qty;
-        await updateDoc(doc(db, PATH_PRODUCTOS, currentStockMov.id), { stock: increment(delta) });
+        await updateDoc(doc(db, PATH_PRODUCTOS, currentStockMov.id), { stock: isEntrada ? increment(qty) : qty });
         window.closeStockMovModal();
     } catch(e) { alert('Error al guardar'); }
     btn.disabled = false; btn.innerHTML = 'Confirmar';
