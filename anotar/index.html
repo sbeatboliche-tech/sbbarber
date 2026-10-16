@@ -2729,7 +2729,10 @@ function rebuildProductosBarber() {
     const customProds = Object.values(stockProductosData)
         .filter(d => !d.oculto && !baseIds.has(d.id) && d.custom)
         .map(d => ({ id: d.id, name: d.name, precio: d.precio || 0, custom: true }));
-    PRODUCTOS_BARBER = [...PRODUCTOS_BARBER_BASE.filter(p => !ocultos.has(p.id)), ...customProds];
+    // Si el precio se cambió desde recepcionista (precioEditado), manda sobre el del código.
+    const baseProds = PRODUCTOS_BARBER_BASE.filter(p => !ocultos.has(p.id)).map(p =>
+        stockProductosData[p.id]?.precioEditado ? { ...p, precio: Number(stockProductosData[p.id].precio) || 0 } : p);
+    PRODUCTOS_BARBER = [...baseProds, ...customProds];
     if (!document.getElementById('ventas-modal').classList.contains('hidden')) renderProductosGrid();
 }
 

@@ -40,6 +40,7 @@ Los productos de `productos_barber` (proyecto `sb-barber-6dc16`) se pueden enlaz
 - Tokens cifrados en `ml_config/cuenta` (las reglas dejan leer todo a cualquier logueado). Env vars: `ML_CLIENT_ID`, `ML_CLIENT_SECRET`, `FIREBASE_SERVICE_ACCOUNT_BARBER` (cuenta de servicio de `sb-barber-6dc16`, distinta de `FIREBASE_SERVICE_ACCOUNT`).
 - La venta manual (recepcionista y anotar) ya no tiene selector de canal: siempre es `local`. Las ventas de ML entran solas por el webhook; un producto que se vende en ML tiene que estar enlazado.
 - El stock es uno solo por producto (no hay lista "Local" vs "MercadoLibre"): cualquier producto se puede enlazar y las ventas del local y de ML descuentan del mismo número. El flag viejo `isML` ya no se usa.
+- Precio de productos: en Stock de productos (recepcionista) se toca el precio y se guarda en `productos_barber/{id}.precio` con `precioEditado: true`; para los productos base hardcodeados (`PRODUCTOS_BARBER_BASE`) ese precio manda sobre el del código, en recepcionista y anotar.
 
 ## Recepcionista (cierre de caja)
 

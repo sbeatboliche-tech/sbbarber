@@ -2984,7 +2984,10 @@ async function listenToProductos() {
                 customProds.push({ id: d.id, name: data.name, precio: data.precio || 0, custom: true });
             }
         });
-        PRODUCTOS_BARBER = [...PRODUCTOS_BARBER_BASE.filter(p => !ocultos.has(p.id)), ...customProds];
+        // Si el precio se cambió desde la app (precioEditado), manda sobre el del código.
+        const baseProds = PRODUCTOS_BARBER_BASE.filter(p => !ocultos.has(p.id)).map(p =>
+            productoStock[p.id]?.precioEditado ? { ...p, precio: Number(productoStock[p.id].precio) || 0 } : p);
+        PRODUCTOS_BARBER = [...baseProds, ...customProds];
         productosCargados = true;
         renderProductoStock();
         if (!document.getElementById('ventas-modal').classList.contains('hidden')) renderProductosGrid();
@@ -3196,6 +3199,14 @@ window.unlinkML = async (id) => {
 })();
 
 
+window.editarPrecioProducto = async (id, name) => {
+    const actual = PRODUCTOS_BARBER.find(p => p.id === id)?.precio || 0;
+    const precio = await customPromptNumero(`Precio de "${escHtml(name)}"`, actual);
+    if (precio == null || precio === actual) return;
+    try { await updateDoc(doc(db, PATH_PRODUCTOS, id), { precio, precioEditado: true }); }
+    catch (e) { alert('No se pudo guardar el precio'); }
+};
+
 window.eliminarProductoCatalogo = async (id, name) => {
     if (!await customConfirm(`¿Eliminar "${name}" del catálogo? Ya no vas a poder venderlo ni verlo en stock.`)) return;
     try { await updateDoc(doc(db, PATH_PRODUCTOS, id), { oculto: true }); }
@@ -3236,7 +3247,7 @@ function renderProductoStock() {
         const badge = qty === 0
             ? '<div class="text-[10px] text-red-500 font-bold">Sin stock</div>'
             : isLow ? '<div class="text-[10px] text-yellow-500 font-bold">Stock bajo</div>' : '';
-        const precioLabel = p.precio > 0 ? `$${p.precio.toLocaleString('es-AR')} c/u` : '';
+        const precioLabel = `<button onclick="window.editarPrecioProducto('${p.id}','${jsAttr(p.name)}')" class="hover:text-white transition">${p.precio > 0 ? `$${p.precio.toLocaleString('es-AR')} c/u` : 'Sin precio'} <i class="fas fa-pen ml-0.5" style="font-size:8px"></i></button>`;
         const safeName = jsAttr(p.name);
         const thumb = data.photoURL
             ? `<img src="${data.photoURL}" onclick="window.openEditProductoPhoto('${p.id}','${safeName}')" class="w-11 h-11 rounded-lg object-cover flex-shrink-0 cursor-pointer">`
@@ -5717,6 +5728,31 @@ function customConfirm(message, confirmLabel = 'Eliminar') {
         ov.querySelector('#_cc_ok').onclick = () => done(true);
         ov.querySelector('#_cc_cancel').onclick = () => done(false);
         ov.onclick = e => { if (e.target === ov) done(false); };
+    });
+}
+
+// Pide un número con el mismo estilo que customConfirm. Devuelve null si se cancela.
+function customPromptNumero(titulo, valor = 0) {
+    return new Promise(resolve => {
+        const ov = document.createElement('div');
+        ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);display:flex;align-items:flex-end;justify-content:center;padding-bottom:env(safe-area-inset-bottom,16px)';
+        ov.innerHTML = `<form style="background:#141414;border:1px solid #2a2a2a;border-radius:20px 20px 0 0;padding:24px 20px;width:100%;max-width:480px">
+            <p style="color:#fafafa;font-size:15px;font-weight:600;margin:0 0 14px;text-align:center">${titulo}</p>
+            <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:0 14px;margin-bottom:16px">
+                <span style="color:#737373;font-weight:700">$</span>
+                <input id="_cp_val" type="number" inputmode="numeric" min="0" step="1" value="${Number(valor) || ''}" placeholder="0" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:#fff;font-size:18px;font-weight:700;padding:14px 0">
+            </div>
+            <div style="display:flex;gap:10px">
+                <button type="button" id="_cp_cancel" style="flex:1;padding:14px;border-radius:12px;background:rgba(255,255,255,0.07);color:#a3a3a3;font-weight:700;font-size:14px;border:1px solid rgba(255,255,255,0.1);cursor:pointer">Cancelar</button>
+                <button type="submit" style="flex:1;padding:14px;border-radius:12px;background:#fafafa;color:#000;font-weight:700;font-size:14px;border:none;cursor:pointer">Guardar</button>
+            </div></form>`;
+        document.body.appendChild(ov);
+        const input = ov.querySelector('#_cp_val');
+        setTimeout(() => { input.focus(); input.select(); }, 50);
+        const done = r => { document.body.removeChild(ov); resolve(r); };
+        ov.querySelector('form').onsubmit = e => { e.preventDefault(); done(Math.max(0, Math.round(Number(input.value) || 0))); };
+        ov.querySelector('#_cp_cancel').onclick = () => done(null);
+        ov.onclick = e => { if (e.target === ov) done(null); };
     });
 }
 
