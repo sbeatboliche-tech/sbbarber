@@ -39,6 +39,7 @@ Los productos de `productos_barber` (proyecto `sb-barber-6dc16`) se pueden enlaz
 - `tienda/api/ml-webhook.js` (topic `orders_v2`): venta pagada → descuenta stock y crea `ventas_productos/ml-{orden}-{i}` con canal `ml` (fuera de la caja); cancelada → devuelve stock y borra esas ventas. Idempotente vía `ml_ordenes/{orden}`.
 - Tokens cifrados en `ml_config/cuenta` (las reglas dejan leer todo a cualquier logueado). Env vars: `ML_CLIENT_ID`, `ML_CLIENT_SECRET`, `FIREBASE_SERVICE_ACCOUNT_BARBER` (cuenta de servicio de `sb-barber-6dc16`, distinta de `FIREBASE_SERVICE_ACCOUNT`).
 - Registrar a mano una venta canal ML de un producto enlazado está bloqueado (se descontaría dos veces).
+- El stock es uno solo por producto (no hay lista "Local" vs "MercadoLibre"): cualquier producto se puede enlazar y las ventas del local y de ML descuentan del mismo número. El flag viejo `isML` ya no se usa.
 
 ## Recepcionista (cierre de caja)
 

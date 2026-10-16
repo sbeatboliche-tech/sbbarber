@@ -557,20 +557,6 @@
                     <input type="number" id="np-stock" placeholder="0" min="0" value="1" required
                         class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-indigo-500/60 focus:bg-indigo-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
                 </div>
-                <div>
-                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-3">Canal</p>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button type="button" id="np-canal-local" onclick="window.setNpCanal('local')"
-                            class="py-3.5 rounded-2xl font-bold text-sm transition-all bg-indigo-500/15 border border-indigo-500/60 text-indigo-300 active:scale-95">
-                            🏪 Local
-                        </button>
-                        <button type="button" id="np-canal-ml" onclick="window.setNpCanal('ml')"
-                            class="py-3.5 rounded-2xl font-bold text-sm transition-all bg-white/5 border border-white/10 text-gray-500 hover:border-white/20 active:scale-95">
-                            🛒 MercadoLibre
-                        </button>
-                    </div>
-                    <input type="hidden" id="np-canal" value="local">
-                </div>
                 <button type="submit" id="btn-submit-np"
                     class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white py-4 rounded-2xl font-extrabold text-base shadow-lg shadow-indigo-900/40 uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all">
                     Agregar producto
@@ -1068,17 +1054,17 @@ const PRODUCTOS_BARBER_BASE = [
     { id:'ml-aftershave-celeste',     name:'Aftershave celeste',           precio:10000 },
     { id:'ml-aftershave-verde',       name:'Aftershave verde',             precio:10000 },
     { id:'ml-aftershave-violeta',     name:'Aftershave violeta',           precio:10000 },
-    { id:'ml-papel-cuello',           name:'Papel cuello 5 capas Everest', precio:0, isML:true },
-    { id:'ml-peine-largo',            name:'Peine largo',                  precio:0, isML:true },
-    { id:'ml-cepillito-colores',      name:'Cepillito varios colores',     precio:0, isML:true },
-    { id:'ml-alfombra-everest',       name:'Alfombra Everest',             precio:0, isML:true },
-    { id:'ml-tijera-entresacar',      name:'Tijera entresacar Everest',    precio:0, isML:true },
-    { id:'ml-portanavaja',            name:'Portanavaja',                  precio:0, isML:true },
-    { id:'ml-quitapelo',              name:'Quitapelo',                    precio:0, isML:true },
-    { id:'ml-cepillito-violeta',      name:'Cepillito violeta',            precio:0, isML:true },
-    { id:'ml-cepillo-naranja',        name:'Cepillo naranja',              precio:0, isML:true },
-    { id:'ml-clipper-spray',          name:'Clipper spray desinfectante',  precio:0, isML:true },
-    { id:'ml-polvo-black-80g',        name:'Polvo texturizador Black 80g', precio:0, isML:true },
+    { id:'ml-papel-cuello',           name:'Papel cuello 5 capas Everest', precio:0 },
+    { id:'ml-peine-largo',            name:'Peine largo',                  precio:0 },
+    { id:'ml-cepillito-colores',      name:'Cepillito varios colores',     precio:0 },
+    { id:'ml-alfombra-everest',       name:'Alfombra Everest',             precio:0 },
+    { id:'ml-tijera-entresacar',      name:'Tijera entresacar Everest',    precio:0 },
+    { id:'ml-portanavaja',            name:'Portanavaja',                  precio:0 },
+    { id:'ml-quitapelo',              name:'Quitapelo',                    precio:0 },
+    { id:'ml-cepillito-violeta',      name:'Cepillito violeta',            precio:0 },
+    { id:'ml-cepillo-naranja',        name:'Cepillo naranja',              precio:0 },
+    { id:'ml-clipper-spray',          name:'Clipper spray desinfectante',  precio:0 },
+    { id:'ml-polvo-black-80g',        name:'Polvo texturizador Black 80g', precio:0 },
 ];
 
 let app, auth, db, currentUser;
@@ -2617,7 +2603,7 @@ function renderStockProductos() {
     // Mismo catálogo que recepcionista (PRODUCTOS_BARBER: base + custom, sin ocultos), con el stock,
     // la foto y el orden de productos_barber. Así no aparecen productos borrados en recepcionista.
     const all = PRODUCTOS_BARBER
-        .map(p => ({ ...stockProductosData[p.id], id: p.id, name: p.name, precio: p.precio, isML: !!p.isML }))
+        .map(p => ({ ...stockProductosData[p.id], id: p.id, name: p.name, precio: p.precio }))
         .sort((a, b) => (a.position ?? 999) - (b.position ?? 999));
     const nSin  = all.filter(p => (p.stock || 0) <= 0).length;
     const nBajo = all.filter(p => (p.stock || 0) > 0 && (p.stock || 0) <= STOCK_BAJO).length;
@@ -2642,8 +2628,6 @@ function renderStockProductos() {
         list.innerHTML = '<p class="text-xs text-gray-500 text-center py-8">Ningún producto coincide</p>';
         return;
     }
-    const local = prods.filter(p => !p.isML);
-    const ml    = prods.filter(p =>  p.isML);
     const row = (p) => {
         const qty = p.stock || 0;
         const qtyColor = qty <= 0 ? 'text-red-400' : qty <= STOCK_BAJO ? 'text-yellow-400' : 'text-indigo-300';
@@ -2671,10 +2655,7 @@ function renderStockProductos() {
             </div>
         </div>`;
     };
-    const sectionHeader = (label) => `<div class="text-[10px] font-bold text-gray-500 uppercase tracking-wider ml-1 mb-2 mt-3">${label}</div>`;
-    list.innerHTML =
-        (local.length ? sectionHeader('🏪 Local') + local.map(row).join('') : '') +
-        (ml.length ? sectionHeader('🛒 MercadoLibre') + ml.map(row).join('') : '');
+    list.innerHTML = prods.map(row).join('');
 }
 
 window.openStockProductos = () => {
@@ -2755,7 +2736,7 @@ function rebuildProductosBarber() {
     const ocultos = new Set(Object.values(stockProductosData).filter(d => d.oculto).map(d => d.id));
     const customProds = Object.values(stockProductosData)
         .filter(d => !d.oculto && !baseIds.has(d.id) && d.custom)
-        .map(d => ({ id: d.id, name: d.name, precio: d.precio || 0, isML: !!d.isML, custom: true }));
+        .map(d => ({ id: d.id, name: d.name, precio: d.precio || 0, custom: true }));
     PRODUCTOS_BARBER = [...PRODUCTOS_BARBER_BASE.filter(p => !ocultos.has(p.id)), ...customProds];
     if (!document.getElementById('ventas-modal').classList.contains('hidden')) renderProductosGrid();
 }
@@ -2812,8 +2793,6 @@ function renderProductosGrid() {
     }
     const q = normalizarTexto(ventaSearchQuery.trim());
     const matches = q ? PRODUCTOS_BARBER.filter(p => normalizarTexto(p.name).includes(q)) : PRODUCTOS_BARBER;
-    const localProds = matches.filter(p => !p.isML);
-    const mlProds    = matches.filter(p =>  p.isML);
 
     const itemHtml = (p, i) => {
         const stock = (stockProductosData[p.id]?.stock) || 0;
@@ -2856,16 +2835,12 @@ function renderProductosGrid() {
         </div>`;
     };
 
-    const header = (label) =>
-        `<div class="col-span-full text-[10px] font-bold text-gray-600 uppercase tracking-wider pt-1">${label}</div>`;
-
     if (matches.length === 0) {
         grid.innerHTML = '<div class="col-span-full text-xs text-gray-600 text-center py-8"><i class="fas fa-search mr-1.5"></i>No hay productos que coincidan con la búsqueda</div>';
         return;
     }
     grid.innerHTML =
-        (localProds.length ? header('🏪 Local') + localProds.map((p) => itemHtml(p, PRODUCTOS_BARBER.indexOf(p))).join('') : '') +
-        (mlProds.length ? header('🛒 MercadoLibre') + mlProds.map((p) => itemHtml(p, PRODUCTOS_BARBER.indexOf(p))).join('') : '');
+        matches.map((p) => itemHtml(p, PRODUCTOS_BARBER.indexOf(p))).join('');
 }
 
 window.openVentaModal = () => {
@@ -2949,17 +2924,9 @@ window.eliminarProductoCatalogo = async (id, name) => {
     catch (e) { alert('Error al eliminar'); }
 };
 
-window.setNpCanal = (canal) => {
-    document.getElementById('np-canal').value = canal;
-    const esML = canal === 'ml';
-    document.getElementById('np-canal-local').className = `py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95 ${!esML ? 'bg-indigo-500/15 border border-indigo-500/60 text-indigo-300' : 'bg-white/5 border border-white/10 text-gray-500 hover:border-white/20'}`;
-    document.getElementById('np-canal-ml').className = `py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95 ${esML ? 'bg-yellow-500/15 border border-yellow-500/60 text-yellow-300' : 'bg-white/5 border border-white/10 text-gray-500 hover:border-white/20'}`;
-};
-
 window.openNuevoProductoModal = () => {
     document.getElementById('nuevo-producto-form').reset();
     document.getElementById('np-stock').value = 1;
-    window.setNpCanal('local');
     newProductoPhoto = null;
     document.getElementById('np-photo-preview').innerHTML = '<i class="fas fa-camera text-gray-500 text-xl"></i>';
     showModal('nuevo-producto-modal');
@@ -2983,19 +2950,18 @@ document.getElementById('nuevo-producto-form').addEventListener('submit', async 
     const nombre = document.getElementById('np-nombre').value.trim();
     const precio = Math.max(0, Number(document.getElementById('np-precio').value) || 0);
     const stock = Math.max(0, Number(document.getElementById('np-stock').value) || 0);
-    const isML = document.getElementById('np-canal').value === 'ml';
     if (!nombre) return;
     const slug = normalizarTexto(nombre).replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const id = `custom-${slug || 'producto'}-${Date.now().toString(36)}`;
     const btn = document.getElementById('btn-submit-np');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
-        const data = { name: nombre, precio, stock, isML, custom: true };
+        const data = { name: nombre, precio, stock, custom: true };
         if (newProductoPhoto) data.photoURL = newProductoPhoto;
         await setDoc(doc(db, PATH_PRODUCTOS, id), data);
         window.closeNuevoProductoModal();
         stockProductosData[id] = { id, ...data };
-        if (!PRODUCTOS_BARBER.find(p => p.id === id)) PRODUCTOS_BARBER.push({ id, name: nombre, precio, isML, custom: true });
+        if (!PRODUCTOS_BARBER.find(p => p.id === id)) PRODUCTOS_BARBER.push({ id, name: nombre, precio, custom: true });
         renderProductosGrid();
         window.selectProductoVenta(PRODUCTOS_BARBER.findIndex(p => p.id === id));
     } catch (err) { alert('Error al crear el producto'); }
