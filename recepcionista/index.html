@@ -1449,14 +1449,6 @@
                         <span class="text-sm text-gray-300 font-medium">Total</span>
                         <span id="venta-carrito-total" class="text-lg font-bold text-indigo-300">$0</span>
                     </div>
-                    <div>
-                        <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-1.5">Canal de venta</p>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button type="button" id="venta-canal-local" onclick="window.setVentaCanal('local')" class="p-2.5 bg-indigo-600/20 border border-indigo-500 rounded-xl font-bold text-sm text-indigo-300 transition">🏪 Local</button>
-                            <button type="button" id="venta-canal-ml" onclick="window.setVentaCanal('ml')" class="p-2.5 bg-black/30 border border-gray-700 rounded-xl font-bold text-sm text-gray-400 hover:border-gray-500 transition">🛒 MercadoLibre</button>
-                        </div>
-                        <input type="hidden" id="venta-canal" value="local">
-                    </div>
                     <div id="venta-metodo-wrap">
                         <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-1.5">Método de pago</p>
                         <div class="grid grid-cols-2 gap-2">
@@ -2689,14 +2681,6 @@ function renderSalesHistory() {
     }).join('');
 }
 
-window.setVentaCanal = (canal) => {
-    document.getElementById('venta-canal').value = canal;
-    const esML = canal === 'ml';
-    document.getElementById('venta-canal-local').className = `p-3 rounded-xl font-bold text-sm transition ${!esML ? 'bg-indigo-600/20 border border-indigo-500 text-indigo-300' : 'bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500'}`;
-    document.getElementById('venta-canal-ml').className = `p-3 rounded-xl font-bold text-sm transition ${esML ? 'bg-yellow-600/20 border border-yellow-500 text-yellow-300' : 'bg-black/30 border border-gray-700 text-gray-400 hover:border-gray-500'}`;
-    document.getElementById('venta-metodo-wrap').classList.toggle('hidden', esML);
-};
-
 window.setVentaMetodo = (m) => {
     document.getElementById('venta-metodo-pago').value = m;
     const efBtn = document.getElementById('venta-mp-efectivo');
@@ -2809,7 +2793,6 @@ window.openVentaModal = () => {
     ventaCart = [];
     ventaSearchQuery = '';
     document.getElementById('venta-producto-search').value = '';
-    window.setVentaCanal('local');
     window.setVentaMetodo('efectivo');
     renderProductosGrid();
     renderCarrito();
@@ -2933,15 +2916,10 @@ window.submitVenta = async () => {
         const stockActual = (productoStock[it.id]?.stock) || 0;
         if (it.cantidad > stockActual) return alert(`No podés vender esa cantidad de ${it.name}. Disponible: ${stockActual}`);
     }
-    if ((document.getElementById('venta-canal').value || 'local') === 'ml') {
-        const enlazados = ventaCart.filter(it => productoStock[it.id]?.mlItemId);
-        if (enlazados.length) return alert(`${enlazados.map(it => it.name).join(', ')} ${enlazados.length > 1 ? 'están enlazados' : 'está enlazado'} con MercadoLibre: las ventas de ML se cargan y descuentan solas. No hace falta registrarla acá.`);
-    }
     const btn = document.getElementById('btn-submit-venta');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
         const hoy = new Date().toLocaleDateString('en-CA');
-        const canal = document.getElementById('venta-canal').value || 'local';
         const grupoVenta = `${Date.now()}`;
         for (const it of ventaCart) {
             await addDoc(collection(db, PATH_VENTAS), {
@@ -2950,8 +2928,8 @@ window.submitVenta = async () => {
                 cantidad: it.cantidad,
                 total: it.precio * it.cantidad,
                 tipo: 'producto',
-                canal,
-                ...(canal !== 'ml' ? { metodoPago: document.getElementById('venta-metodo-pago').value } : {}),
+                canal: 'local',
+                metodoPago: document.getElementById('venta-metodo-pago').value,
                 barbero: 'Recepción',
                 userEmail: currentUser?.email || null,
                 fecha: hoy,
@@ -2961,7 +2939,7 @@ window.submitVenta = async () => {
             await updateDoc(doc(db, PATH_PRODUCTOS, it.id), { stock: increment(-it.cantidad) });
         }
         // Queda en la pantalla de venta (no se cierra) para poder cargar la siguiente: se vacía el carrito
-        // y el botón confirma un momento. Canal y método de pago se mantienen.
+        // y el botón confirma un momento. El método de pago se mantiene.
         ventaCart = [];
         ventaSearchQuery = '';
         document.getElementById('venta-producto-search').value = '';
