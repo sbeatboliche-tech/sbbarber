@@ -1635,7 +1635,7 @@ function barberosConDatos(data) {
 }
 const exTag = b => BARBERS.includes(b) ? '' : ' <span class="text-[9px] font-semibold text-gray-600">(ex)</span>';
 function temaBarbero(b) {
-    return BARBER_THEME[b] || { color:'gray', text:'text-gray-400', border:'border-gray-600', bg:'bg-gray-600', initial: String(b || '?').charAt(0).toUpperCase() };
+    return BARBER_THEME[b] || { color:'gray', text:'text-gray-400', border:'border-gray-600', bg:'bg-gray-600', initial: escHtml(String(b || "?").charAt(0).toUpperCase()) };
 }
 const BARBER_COMISION = { Tony: 0.5, Stefa: 0.5, Santi: 0.5, SantiF: 0.4 };
 let BARBER_THEME = {
@@ -2008,7 +2008,7 @@ function renderCuts() {
             <div class="flex items-center justify-between bg-black/20 p-3 rounded-lg border border-white/5 gap-2">
                 <div class="flex items-center gap-2 min-w-0">
                     <div class="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">${barberAvatar(b, 7)}</div>
-                    <span class="text-xs font-bold ${t.text} flex-shrink-0">${b}${exTag(b)}</span>
+                    <span class="text-xs font-bold ${t.text} flex-shrink-0">${escHtml(b)}${exTag(b)}</span>
                     ${tags ? `<div class="flex flex-wrap gap-1 min-w-0">${tags}</div>` : ''}
                 </div>
                 <span class="text-sm font-bold text-white flex-shrink-0">${d.count} corte${d.count !== 1 ? 's' : ''}</span>
@@ -4252,7 +4252,7 @@ function renderCierreCaja() {
             d.transferencia > 0 ? `📲 $${d.transferencia.toLocaleString('es-AR')}` : ''
         ].filter(Boolean).join(' · ');
         return row(
-            `<span class="font-bold ${t.text}">${b}${exTag(b)}</span>`,
+            `<span class="font-bold ${t.text}">${escHtml(b)}${exTag(b)}</span>`,
             `$${d.total.toLocaleString('es-AR')}`
         );
     }).join('');
