@@ -302,6 +302,9 @@
                     <span class="text-[10px] text-indigo-400 font-medium">+ / − suman o restan 1 · tocá el número para fijarlo</span>
                 </div>
             </div>
+            <button onclick="window.iniciarScanCarga()" class="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl bg-white text-black active:scale-95 transition flex-shrink-0">
+                <i class="fas fa-barcode"></i> Escanear
+            </button>
         </header>
         <div class="px-4 pt-3 pb-2 space-y-2 border-b border-white/5">
             <div class="relative">
@@ -311,6 +314,29 @@
             <div id="stock-filtros" class="flex gap-2"></div>
         </div>
         <div class="flex-1 overflow-y-auto p-4 pb-10">
+            <!-- Carga de stock escaneando con la cámara -->
+            <div id="scan-carga-box" class="hidden bg-white/[0.03] border border-white/10 rounded-2xl p-4 mb-4">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fas fa-barcode text-xs"></i> Carga escaneando</h3>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Cada código que leés suma 1 unidad.</p>
+                    </div>
+                    <button onclick="window.cancelarScanCarga()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400 flex-shrink-0"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <button type="button" id="scan-modo-sumar" onclick="window.setScanCargaModo('sumar')" class="p-2.5 rounded-xl border text-xs font-bold transition">Sumar al stock</button>
+                    <button type="button" id="scan-modo-contar" onclick="window.setScanCargaModo('contar')" class="p-2.5 rounded-xl border text-xs font-bold transition">Contar todo</button>
+                </div>
+                <p id="scan-carga-desc" class="text-[10px] text-gray-500 mb-3 ml-1"></p>
+                <button type="button" onclick="window.abrirCamaraScan()" class="w-full mb-3 p-3 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-white active:scale-[0.98] transition">
+                    <i class="fas fa-camera mr-1.5"></i> Seguir escaneando
+                </button>
+                <div id="scan-carga-list" class="space-y-1.5"></div>
+                <div class="flex gap-2 mt-3">
+                    <button type="button" onclick="window.cancelarScanCarga()" class="flex-1 p-3 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-gray-400">Cancelar</button>
+                    <button type="button" id="btn-scan-carga-ok" onclick="window.confirmarScanCarga()" class="flex-1 p-3 rounded-xl bg-white text-black text-sm font-bold disabled:opacity-40">Confirmar</button>
+                </div>
+            </div>
             <div id="stock-productos-list" class="space-y-2"></div>
         </div>
     </div><!-- /stock-productos-view -->
@@ -484,7 +510,10 @@
                 <div class="relative mb-3">
                     <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
                     <input type="text" id="venta-producto-search" oninput="window.filterProductosGrid(this.value)" placeholder="Buscar producto..."
-                        class="w-full pl-9 pr-3 py-2.5 bg-black/30 rounded-xl border border-white/10 focus:border-indigo-500/60 outline-none transition text-white placeholder-gray-600 text-sm">
+                        class="w-full pl-9 pr-24 py-2.5 bg-black/30 rounded-xl border border-white/10 focus:border-indigo-500/60 outline-none transition text-white placeholder-gray-600 text-sm">
+                    <button type="button" onclick="window.abrirCamaraScan()" class="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 px-3 rounded-lg bg-white text-black text-xs font-bold flex items-center gap-1.5 active:scale-95 transition">
+                        <i class="fas fa-barcode"></i> Escanear
+                    </button>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3 mb-4" id="productos-grid"></div>
                 </div><!-- /scroll -->
@@ -492,7 +521,7 @@
                     <div>
                         <p class="text-[10px] font-bold text-gray-500 uppercase ml-1 mb-1.5">Carrito</p>
                         <div id="venta-carrito-list" class="space-y-1.5 max-h-36 md:max-h-64 overflow-y-auto pr-0.5">
-                            <p class="text-xs text-gray-600 text-center py-3">Tocá un producto para agregarlo</p>
+                            <p class="text-xs text-gray-600 text-center py-3">Tocá o escaneá un producto para agregarlo</p>
                         </div>
                     </div>
                     <div id="venta-carrito-total-row" class="hidden justify-between items-center bg-black/30 rounded-xl px-4 py-2.5">
@@ -549,11 +578,61 @@
                     <input type="number" id="np-stock" placeholder="0" min="0" value="1" required
                         class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-indigo-500/60 focus:bg-indigo-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
                 </div>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-2">Código de barras (opcional)</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="np-codigo" inputmode="numeric" autocomplete="off" onkeydown="if(event.key==='Enter')event.preventDefault()" placeholder="Escaneá o escribí el código"
+                            class="flex-1 min-w-0 px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-indigo-500/60 focus:bg-indigo-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
+                        <button type="button" onclick="window.abrirCamaraScan(c => { document.getElementById('np-codigo').value = c; })" class="w-14 rounded-2xl bg-white/10 border border-white/10 text-white flex-shrink-0"><i class="fas fa-camera"></i></button>
+                    </div>
+                </div>
                 <button type="submit" id="btn-submit-np"
                     class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white py-4 rounded-2xl font-extrabold text-base shadow-lg shadow-indigo-900/40 uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all">
                     Agregar producto
                 </button>
             </form>
+        </div>
+    </div>
+
+    <!-- Códigos de barras de un producto -->
+    <div id="codigo-producto-modal" class="hidden fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex-col justify-end sm:justify-center">
+        <form id="codigo-producto-form" class="glass-modal rounded-t-3xl sm:rounded-3xl sm:max-w-md sm:mx-auto w-full p-5 pb-8 space-y-4">
+            <div class="flex justify-between items-start">
+                <div class="min-w-0">
+                    <h2 class="text-lg font-bold text-white">Código de barras</h2>
+                    <p id="cp-producto" class="text-xs text-gray-400 truncate"></p>
+                </div>
+                <button type="button" onclick="window.closeCodigoProducto()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400 flex-shrink-0"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="cp-lista" class="flex flex-wrap gap-1.5"></div>
+            <button type="button" onclick="window.abrirCamaraScan(c => { const i = document.getElementById('cp-codigo'); i.value = c; i.form.requestSubmit(); })" class="w-full p-3.5 rounded-xl bg-white text-black text-sm font-bold active:scale-[0.98] transition">
+                <i class="fas fa-camera mr-1.5"></i> Escanear código
+            </button>
+            <div class="flex gap-2">
+                <input type="text" id="cp-codigo" inputmode="numeric" autocomplete="off" placeholder="O escribilo acá"
+                    class="flex-1 min-w-0 px-4 py-3 bg-white/5 rounded-xl border border-white/10 focus:border-white/30 outline-none transition text-white placeholder-gray-600 text-sm font-bold tracking-wider">
+                <button type="submit" class="px-4 rounded-xl bg-white/10 border border-white/10 text-white text-sm font-bold flex-shrink-0">Agregar</button>
+            </div>
+            <p class="text-[10px] text-gray-500">Si tiene variantes con códigos distintos (colores, tamaños), agregá todos.</p>
+        </form>
+    </div>
+
+    <!-- Se escaneó un código que no tiene producto: elegir de cuál es -->
+    <div id="codigo-desconocido-modal" class="hidden fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex-col justify-end sm:justify-center">
+        <div class="glass-modal rounded-t-3xl sm:rounded-3xl sm:max-w-lg sm:mx-auto w-full max-h-[85vh] flex flex-col overflow-hidden">
+            <div class="flex justify-between items-start p-5 pb-3 flex-shrink-0">
+                <div class="min-w-0">
+                    <h2 class="text-lg font-bold text-white">Código nuevo</h2>
+                    <p class="text-xs text-gray-400"><i class="fas fa-barcode mr-1"></i><span id="cd-codigo" class="font-bold tracking-wider text-white"></span></p>
+                    <p class="text-[10px] text-gray-500 mt-1">¿De qué producto es? Queda guardado para la próxima vez.</p>
+                </div>
+                <button onclick="window.closeCodigoDesconocido()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400 flex-shrink-0"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="flex-1 flex flex-col overflow-hidden px-5 pb-5">
+                <input type="text" id="cd-search" oninput="window.renderCodigoDesconocido()" placeholder="Buscar producto..." class="w-full px-3 py-2.5 mb-3 bg-black/30 rounded-xl border border-white/10 focus:border-white/30 outline-none text-white placeholder-gray-500 text-sm">
+                <div id="cd-list" class="flex-1 overflow-y-auto space-y-2"></div>
+                <button onclick="window.crearProductoDesdeCodigo()" class="w-full mt-3 p-3 rounded-xl bg-white text-black text-sm font-bold flex-shrink-0"><i class="fas fa-plus mr-1.5"></i>Es un producto nuevo</button>
+            </div>
         </div>
     </div>
 
@@ -953,8 +1032,9 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, deleteDoc, collection, query, onSnapshot, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment, where, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, deleteDoc, collection, query, onSnapshot, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment, where, writeBatch, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { initClientes, pickerCliente, resolverCliente, limpiarCliente } from "../assets/clientes.js";
+import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -2574,6 +2654,8 @@ function listenToStockProductos() {
         if (!document.getElementById('stock-productos-view').classList.contains('hidden')) {
             renderStockProductos();
         }
+        if (esVisible('codigo-producto-modal')) renderCodigosProducto();
+        if (scanCarga) renderScanCarga();
     });
 }
 
@@ -2632,6 +2714,9 @@ function renderStockProductos() {
             <div class="flex-1 min-w-0">
                 <div class="text-sm font-bold text-white truncate">${escStock(p.name || p.id)}</div>
                 ${p.precio>0 ? `<div class="text-[10px] text-gray-500">$${p.precio.toLocaleString('es-AR')}</div>` : ''}
+                <button data-id="${id}" onclick="window.openCodigoProducto(this.dataset.id)" class="text-[10px] ${(p.codigos || []).length ? 'text-gray-400' : 'text-gray-600'} py-0.5">
+                    <i class="fas fa-barcode mr-0.5"></i>${(p.codigos || []).length ? escStock(p.codigos[0]) + (p.codigos.length > 1 ? ` +${p.codigos.length - 1}` : '') : 'Asignar código'}
+                </button>
             </div>
             <div class="flex items-center gap-1.5 flex-shrink-0">
                 <button data-id="${id}" onclick="window.quickStock(this.dataset.id,-1)" class="w-11 h-11 rounded-xl bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 active:scale-90 active:bg-red-600/50 transition disabled:opacity-30" ${qty<=0?'disabled':''}>
@@ -2914,6 +2999,7 @@ window.openNuevoProductoModal = () => {
     document.getElementById('nuevo-producto-form').reset();
     document.getElementById('np-stock').value = 1;
     newProductoPhoto = null;
+    npDespuesDeCrear = null;
     document.getElementById('np-photo-preview').innerHTML = '<i class="fas fa-camera text-gray-500 text-xl"></i>';
     showModal('nuevo-producto-modal');
 };
@@ -2936,7 +3022,10 @@ document.getElementById('nuevo-producto-form').addEventListener('submit', async 
     const nombre = document.getElementById('np-nombre').value.trim();
     const precio = Math.max(0, Number(document.getElementById('np-precio').value) || 0);
     const stock = Math.max(0, Number(document.getElementById('np-stock').value) || 0);
+    const codigo = normCodigo(document.getElementById('np-codigo').value);
     if (!nombre) return;
+    const duenioCodigo = codigo && productoPorCodigo(codigo);
+    if (duenioCodigo) return alert(`Ese código ya es de "${PRODUCTOS_BARBER.find(p => p.id === duenioCodigo)?.name}".`);
     const slug = normalizarTexto(nombre).replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const id = `custom-${slug || 'producto'}-${Date.now().toString(36)}`;
     const btn = document.getElementById('btn-submit-np');
@@ -2944,12 +3033,15 @@ document.getElementById('nuevo-producto-form').addEventListener('submit', async 
     try {
         const data = { name: nombre, precio, stock, custom: true };
         if (newProductoPhoto) data.photoURL = newProductoPhoto;
+        if (codigo) data.codigos = [codigo];
         await setDoc(doc(db, PATH_PRODUCTOS, id), data);
         window.closeNuevoProductoModal();
         stockProductosData[id] = { id, ...data };
         if (!PRODUCTOS_BARBER.find(p => p.id === id)) PRODUCTOS_BARBER.push({ id, name: nombre, precio, custom: true });
         renderProductosGrid();
-        window.selectProductoVenta(PRODUCTOS_BARBER.findIndex(p => p.id === id));
+        // Si se creó desde un código escaneado, sigue lo que se estaba haciendo (venta o carga).
+        if (npDespuesDeCrear) { const fn = npDespuesDeCrear; npDespuesDeCrear = null; fn(id); }
+        else window.selectProductoVenta(PRODUCTOS_BARBER.findIndex(p => p.id === id));
     } catch (err) { alert('Error al crear el producto'); }
     btn.disabled = false; btn.innerHTML = 'Agregar producto';
 });
@@ -2986,6 +3078,283 @@ window.submitVenta = async () => {
         window.closeModals();
     } catch(e) { alert('Error al guardar'); }
     btn.disabled = false; btn.innerHTML = 'Registrar venta';
+};
+
+// ---- ESCÁNER DE CÓDIGOS (cámara, assets/escaner.js) ----
+// Mismo sistema que recepcionista pero solo con la cámara del celu. Los códigos viven en
+// productos_barber/{id}.codigos. Venta abierta → al carrito; Stock de productos → carga (sumar o contar).
+let npDespuesDeCrear = null;
+let scanCarga = null;            // { modo: 'sumar' | 'contar', items: { [productoId]: cantidad } }
+let cpProductoId = null, cdCodigo = null;
+
+function productoPorCodigo(codigo) {
+    if (!codigo) return null;
+    return PRODUCTOS_BARBER.find(p => (stockProductosData[p.id]?.codigos || []).includes(codigo))?.id || null;
+}
+
+function esVisible(id) {
+    const el = document.getElementById(id);
+    return !!el && !el.classList.contains('hidden');
+}
+
+// Sin callback lee seguido y cada código va a handleScan. Con callback lee uno y cierra.
+window.abrirCamaraScan = (callback = null) => typeof callback === 'function'
+    ? abrirCamara(callback, { unaVez: true })
+    : abrirCamara(handleScan);
+
+function handleScan(codigo) {
+    if (codigo.length < 3) return;
+    const id = productoPorCodigo(codigo);
+    if (!id) { scanBeep(false); abrirCodigoDesconocido(codigo); return; }
+    if (esVisible('ventas-modal')) return agregarAVentaPorScan(id);
+    if (esVisible('stock-productos-view')) {
+        if (!scanCarga) { scanCarga = { modo: 'sumar', items: {} }; renderScanCarga(); }
+        return sumarAScanCarga(id);
+    }
+}
+
+function agregarAVentaPorScan(id) {
+    const i = PRODUCTOS_BARBER.findIndex(p => p.id === id);
+    const p = PRODUCTOS_BARBER[i];
+    const stock = Number(stockProductosData[id]?.stock) || 0;
+    const enCarrito = ventaCart.find(it => it.id === id)?.cantidad || 0;
+    if (enCarrito >= Math.min(20, stock)) {
+        scanBeep(false);
+        return scanToast(stock ? `No hay más stock de ${p.name} (${stock})` : `${p.name}: sin stock`, false);
+    }
+    window.selectProductoVenta(i);
+    scanBeep(true);
+    scanToast(`+1 ${p.name}`);
+}
+
+// --- Carga de stock escaneando ---
+const SCAN_MODO_DESC = {
+    sumar: 'Lo que escanees se suma al stock que ya hay (mercadería que llegó).',
+    contar: 'Escaneá todas las unidades que hay: cada producto escaneado queda con lo que contaste. Los que no escanees no se tocan.'
+};
+
+window.iniciarScanCarga = () => {
+    if (!scanCarga) scanCarga = { modo: 'sumar', items: {} };
+    renderScanCarga();
+    window.abrirCamaraScan();
+};
+
+window.setScanCargaModo = (modo) => {
+    if (!scanCarga) return;
+    scanCarga.modo = modo;
+    renderScanCarga();
+};
+
+function sumarAScanCarga(id) {
+    const n = (scanCarga.items[id] || 0) + 1;
+    delete scanCarga.items[id]; // se reinserta al final: la lista muestra arriba lo último escaneado
+    scanCarga.items[id] = n;
+    scanBeep(true);
+    scanToast(`+1 ${PRODUCTOS_BARBER.find(p => p.id === id)?.name || ''} (${n})`);
+    renderScanCarga();
+}
+
+window.cambiarScanCarga = (id, d) => {
+    if (!scanCarga) return;
+    const n = Math.max(0, (scanCarga.items[id] || 0) + d);
+    if (n) scanCarga.items[id] = n; else delete scanCarga.items[id];
+    renderScanCarga();
+};
+
+function renderScanCarga() {
+    const box = document.getElementById('scan-carga-box');
+    if (!scanCarga) { box.classList.add('hidden'); return; }
+    box.classList.remove('hidden');
+    const sel = 'bg-white text-black border-white', off = 'bg-black/30 border-white/10 text-gray-400';
+    document.getElementById('scan-modo-sumar').className = `p-2.5 rounded-xl border text-xs font-bold transition ${scanCarga.modo === 'sumar' ? sel : off}`;
+    document.getElementById('scan-modo-contar').className = `p-2.5 rounded-xl border text-xs font-bold transition ${scanCarga.modo === 'contar' ? sel : off}`;
+    document.getElementById('scan-carga-desc').textContent = SCAN_MODO_DESC[scanCarga.modo];
+    const ids = Object.keys(scanCarga.items).reverse();
+    const list = document.getElementById('scan-carga-list');
+    const btn = document.getElementById('btn-scan-carga-ok');
+    btn.disabled = !ids.length;
+    if (!ids.length) {
+        btn.textContent = 'Confirmar';
+        list.innerHTML = '<p class="text-xs text-gray-600 text-center py-4"><i class="fas fa-barcode mr-1"></i>Todavía no escaneaste nada</p>';
+        return;
+    }
+    const total = ids.reduce((s, id) => s + scanCarga.items[id], 0);
+    btn.textContent = `Confirmar (${total} unid.)`;
+    list.innerHTML = ids.map(id => {
+        const n = scanCarga.items[id];
+        const actual = Number(stockProductosData[id]?.stock) || 0;
+        const queda = scanCarga.modo === 'sumar' ? actual + n : n;
+        const safeId = escStock(id);
+        return `<div class="flex items-center justify-between bg-black/30 rounded-xl px-3 py-2 gap-2">
+            <div class="min-w-0 flex-1">
+                <p class="text-xs font-semibold text-gray-200 truncate">${escStock(PRODUCTOS_BARBER.find(p => p.id === id)?.name || id)}</p>
+                <p class="text-[10px] text-gray-500">Stock ${actual} → <span class="text-white font-bold">${queda}</span></p>
+            </div>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+                <button data-id="${safeId}" onclick="window.cambiarScanCarga(this.dataset.id,-1)" class="w-10 h-10 rounded-full bg-white/10 text-white text-base font-bold flex items-center justify-center active:scale-90 transition">−</button>
+                <span class="text-base font-bold text-white w-7 text-center">${n}</span>
+                <button data-id="${safeId}" onclick="window.cambiarScanCarga(this.dataset.id,1)" class="w-10 h-10 rounded-full bg-white/10 text-white text-base font-bold flex items-center justify-center active:scale-90 transition">+</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+window.cancelarScanCarga = () => {
+    if (scanCarga && Object.keys(scanCarga.items).length && !confirm('¿Descartar lo escaneado? No se guarda nada.')) return;
+    scanCarga = null;
+    renderScanCarga();
+};
+
+window.confirmarScanCarga = async () => {
+    if (!scanCarga) return;
+    const { modo, items } = scanCarga;
+    const ids = Object.keys(items);
+    if (!ids.length) return;
+    const btn = document.getElementById('btn-scan-carga-ok');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        const batch = writeBatch(db);
+        const hoy = new Date().toLocaleDateString('en-CA');
+        ids.forEach(id => {
+            const n = items[id];
+            const antes = Number(stockProductosData[id]?.stock) || 0;
+            batch.update(doc(db, PATH_PRODUCTOS, id), { stock: modo === 'sumar' ? increment(n) : n });
+            batch.set(doc(collection(db, 'productos_movimientos')), {
+                productoId: id, producto: PRODUCTOS_BARBER.find(p => p.id === id)?.name || id,
+                tipo: modo === 'sumar' ? 'entrada' : 'conteo',
+                cantidad: modo === 'sumar' ? n : n - antes,
+                ...(modo === 'contar' ? { stockAnterior: antes, stockContado: n } : {}),
+                motivo: 'Carga escaneando (anotar)',
+                userEmail: currentUser.email, fecha: hoy,
+                creadoEn: serverTimestamp()
+            });
+        });
+        await batch.commit();
+        scanCarga = null;
+        renderScanCarga();
+        scanToast(modo === 'sumar' ? 'Stock cargado' : 'Conteo guardado');
+    } catch (e) {
+        alert('No se pudo guardar la carga');
+        renderScanCarga();
+    }
+};
+
+// --- Códigos de un producto ---
+async function asignarCodigo(id, codigo) {
+    const otro = productoPorCodigo(codigo);
+    if (otro === id) return true;
+    if (otro) {
+        const nombre = PRODUCTOS_BARBER.find(p => p.id === otro)?.name || 'otro producto';
+        if (!confirm(`Ese código ya es de "${nombre}". ¿Pasarlo a este producto?`)) return false;
+    }
+    try {
+        const batch = writeBatch(db);
+        if (otro) batch.update(doc(db, PATH_PRODUCTOS, otro), { codigos: arrayRemove(codigo) });
+        batch.update(doc(db, PATH_PRODUCTOS, id), { codigos: arrayUnion(codigo) });
+        // Se aplica ya en memoria para que la lectura siguiente lo encuentre sin esperar al snapshot.
+        if (otro && stockProductosData[otro]) stockProductosData[otro].codigos = (stockProductosData[otro].codigos || []).filter(c => c !== codigo);
+        stockProductosData[id] = stockProductosData[id] || { id };
+        stockProductosData[id].codigos = [...new Set([...(stockProductosData[id].codigos || []), codigo])];
+        await batch.commit();
+        return true;
+    } catch (e) { alert('No se pudo guardar el código'); return false; }
+}
+
+window.openCodigoProducto = (id) => {
+    cpProductoId = id;
+    document.getElementById('cp-producto').textContent = PRODUCTOS_BARBER.find(p => p.id === id)?.name || '';
+    document.getElementById('cp-codigo').value = '';
+    renderCodigosProducto();
+    const m = document.getElementById('codigo-producto-modal');
+    m.classList.remove('hidden'); m.classList.add('flex');
+};
+
+window.closeCodigoProducto = () => {
+    const m = document.getElementById('codigo-producto-modal');
+    m.classList.add('hidden'); m.classList.remove('flex');
+    cpProductoId = null;
+};
+
+function renderCodigosProducto() {
+    const cods = stockProductosData[cpProductoId]?.codigos || [];
+    document.getElementById('cp-lista').innerHTML = cods.length
+        ? cods.map(c => `<span class="inline-flex items-center gap-1 bg-white/10 border border-white/10 rounded-lg pl-2.5 pr-1 py-1 text-xs font-bold text-white tracking-wider">
+            <i class="fas fa-barcode text-gray-500 mr-0.5"></i>${escStock(c)}
+            <button type="button" data-c="${escStock(c)}" onclick="window.quitarCodigoProducto(this.dataset.c)" class="w-7 h-7 rounded-md text-gray-400 active:bg-red-600/30"><i class="fas fa-times" style="font-size:10px"></i></button>
+        </span>`).join('')
+        : '<p class="text-[11px] text-gray-600">Todavía no tiene códigos.</p>';
+}
+
+document.getElementById('codigo-producto-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const id = cpProductoId;
+    const input = document.getElementById('cp-codigo');
+    const codigo = normCodigo(input.value);
+    if (!id || !codigo) return;
+    if (await asignarCodigo(id, codigo)) {
+        input.value = '';
+        renderCodigosProducto();
+        scanToast('Código guardado');
+    }
+});
+
+window.quitarCodigoProducto = async (codigo) => {
+    const id = cpProductoId;
+    if (!id) return;
+    try {
+        await updateDoc(doc(db, PATH_PRODUCTOS, id), { codigos: arrayRemove(codigo) });
+        if (stockProductosData[id]) stockProductosData[id].codigos = (stockProductosData[id].codigos || []).filter(c => c !== codigo);
+        renderCodigosProducto();
+    } catch (e) { alert('No se pudo quitar el código'); }
+};
+
+// --- Código escaneado que no es de ningún producto ---
+function abrirCodigoDesconocido(codigo) {
+    cerrarCamara();
+    cdCodigo = codigo;
+    document.getElementById('cd-codigo').textContent = codigo;
+    document.getElementById('cd-search').value = '';
+    window.renderCodigoDesconocido();
+    const m = document.getElementById('codigo-desconocido-modal');
+    m.classList.remove('hidden'); m.classList.add('flex');
+}
+
+window.closeCodigoDesconocido = () => {
+    const m = document.getElementById('codigo-desconocido-modal');
+    m.classList.add('hidden'); m.classList.remove('flex');
+};
+
+window.renderCodigoDesconocido = () => {
+    const q = normalizarTexto(document.getElementById('cd-search').value);
+    const prods = PRODUCTOS_BARBER.filter(p => !q || normalizarTexto(p.name).includes(q));
+    document.getElementById('cd-list').innerHTML = prods.length ? prods.map(p => {
+        const d = stockProductosData[p.id] || {};
+        const nCods = (d.codigos || []).length;
+        return `<button data-id="${escStock(p.id)}" onclick="window.elegirProductoCodigo(this.dataset.id)" class="w-full flex items-center gap-3 bg-black/30 border border-white/10 rounded-xl p-2.5 text-left active:bg-white/5 transition">
+            ${d.photoURL ? `<img src="${escStock(d.photoURL)}" alt="" class="w-10 h-10 rounded-lg object-cover flex-shrink-0">` : '<div class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0"><i class="fas fa-box text-gray-600 text-xs"></i></div>'}
+            <div class="min-w-0 flex-1">
+                <p class="text-xs font-semibold text-white truncate">${escStock(p.name)}</p>
+                <p class="text-[10px] text-gray-500">${nCods ? `Ya tiene ${nCods} código${nCods > 1 ? 's' : ''} · se agrega este` : 'Sin código'} · ${Number(d.stock) || 0} unid.</p>
+            </div>
+        </button>`;
+    }).join('') : '<p class="text-xs text-gray-500 text-center py-6">No hay productos que coincidan</p>';
+};
+
+window.elegirProductoCodigo = async (id) => {
+    const codigo = cdCodigo;
+    if (!codigo || !await asignarCodigo(id, codigo)) return;
+    window.closeCodigoDesconocido();
+    handleScan(codigo); // ahora sí lo encuentra: sigue con la venta o la carga
+};
+
+window.crearProductoDesdeCodigo = () => {
+    const codigo = cdCodigo;
+    const enCarga = !!scanCarga && esVisible('stock-productos-view');
+    window.closeCodigoDesconocido();
+    window.openNuevoProductoModal();
+    document.getElementById('np-codigo').value = codigo;
+    if (enCarga) document.getElementById('np-stock').value = 0; // la unidad la suma la carga
+    npDespuesDeCrear = () => handleScan(codigo);
 };
 
 function renderVentasCard(ventasFiltradas) {
