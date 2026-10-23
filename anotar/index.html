@@ -1106,6 +1106,17 @@ const PATH_PROPINAS = `propinas`;
 const PATH_VENTAS   = `ventas_productos`;
 const PATH_TURNOS   = `turnos`;
 let BARBERS_LIST  = ['Tony', 'Stefa', 'Santi', 'SantiF'];
+// Barberos con datos en lo que se está mirando: primero los actuales y después los que ya no están
+// (Maxi, Diego, Bauti...), para que sus cortes viejos sigan apareciendo en estadísticas y cierres.
+function barberosConDatos(data) {
+    const ex = Object.keys(data).filter(b => b && b !== '—' && !BARBERS_LIST.includes(b));
+    return [...BARBERS_LIST.filter(b => data[b]), ...ex];
+}
+const esExBarbero = b => !BARBERS_LIST.includes(b);
+const exTag = b => esExBarbero(b) ? ' <span class="text-[9px] font-semibold text-gray-600 normal-case">(ex)</span>' : '';
+function temaBarbero(b) {
+    return BARBER_THEME[b] || { color:'gray', text:'text-gray-400', border:'border-gray-600', bg:'bg-gray-600', initial: String(b || '?').charAt(0).toUpperCase() };
+}
 const PATH_GASTOS = 'gastos';
 const PATH_CONTEOS = 'conteos_caja';
 const GASTOS_CATS = [
@@ -2335,9 +2346,11 @@ function render() {
         const totalBilling=globals.reduce((s,c)=>s+c.price,0);
         const totalComm=globals.reduce((s,c)=>s+c.price*(barberCommissions[c.barber]||0.5),0);
         const bizProfit=totalBilling-totalComm;
-        const barberRows=BARBERS_LIST.map(b=>`
+        // Los actuales siempre (aunque estén en $0); los que ya no están, solo si tienen cortes en el período.
+        const exConCortes=Object.keys(revs).filter(b=>b&&b!=='—'&&esExBarbero(b));
+        const barberRows=[...BARBERS_LIST,...exConCortes].map(b=>`
             <div class="flex items-center justify-between bg-black/20 p-3 rounded-lg border border-white/5 no-select">
-                <span class="text-xs font-bold ${BARBER_THEME[b].text}">${b}</span>
+                <span class="text-xs font-bold ${temaBarbero(b).text}">${b}${exTag(b)}</span>
                 <span class="text-sm font-mono font-bold text-emerald-400">$${(revs[b]||0).toLocaleString('es-AR')}</span>
             </div>`).join('');
         const summaryRows=customDateFilter?`
@@ -2410,8 +2423,8 @@ function renderServiceStats(filtered) {
     const container=document.getElementById('service-stats-container'); container.innerHTML='';
     const stats={};
     filtered.forEach(c=>{ if(!stats[c.barber])stats[c.barber]={}; if(!stats[c.barber][c.service])stats[c.barber][c.service]=0; stats[c.barber][c.service]++; });
-    BARBERS_LIST.filter(b=>stats[b]).forEach(b=>{
-        let h=`<div class="bg-[#1a1d24]/80 rounded-xl p-3 border border-gray-800 mb-2 no-select"><div class="flex justify-between items-center mb-2 pb-2 border-b border-gray-700/50"><span class="font-bold uppercase text-[10px] ${BARBER_THEME[b].text}">${b}</span></div><div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">`;
+    barberosConDatos(stats).forEach(b=>{
+        let h=`<div class="bg-[#1a1d24]/80 rounded-xl p-3 border border-gray-800 mb-2 no-select"><div class="flex justify-between items-center mb-2 pb-2 border-b border-gray-700/50"><span class="font-bold uppercase text-[10px] ${temaBarbero(b).text}">${b}${exTag(b)}</span></div><div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">`;
         Object.keys(stats[b]).forEach(s=>h+=`<div class="flex justify-between py-0.5"><span class="text-gray-400 truncate">${s}</span><span class="text-white font-bold bg-white/5 px-1.5 rounded">${stats[b][s]}</span></div>`);
         container.innerHTML+=h+`</div></div>`;
     });
@@ -3454,14 +3467,14 @@ function renderCierreView() {
 
 function buildBarberRows(barberData) {
     let html = '';
-    BARBERS_LIST.filter(b => barberData[b]).forEach(b => {
-        const d = barberData[b], t = BARBER_THEME[b];
+    barberosConDatos(barberData).forEach(b => {
+        const d = barberData[b], t = temaBarbero(b);
         const av = barberProfilesData[b]
             ? `<img src="${barberProfilesData[b]}" class="w-8 h-8 rounded-full object-cover">`
             : `<div class="w-8 h-8 rounded-full ${t.bg} flex items-center justify-center text-white font-bold text-sm">${t.initial}</div>`;
         html += `<div class="flex items-center justify-between bg-black/30 p-3 rounded-xl border ${t.border}/20">
             <div class="flex items-center gap-3">${av}<div>
-                <div class="text-xs font-bold ${t.text}">${b}</div>
+                <div class="text-xs font-bold ${t.text}">${b}${exTag(b)}</div>
                 <div class="text-[10px] text-gray-500">${d.cuts} corte${d.cuts!==1?'s':''} · $${d.billing.toLocaleString('es-AR')}</div>
             </div></div>
             <div class="text-right">
@@ -3601,7 +3614,7 @@ function renderCierreDia() {
             <div class="flex items-center gap-3 px-3 pt-3 pb-2">
                 ${av}
                 <div class="flex-1 min-w-0">
-                    <div class="text-sm font-bold ${t.text}">${b}</div>
+                    <div class="text-sm font-bold ${t.text}">${b}${exTag(b)}</div>
                     <div class="text-[10px] text-gray-500">${d.count} corte${d.count!==1?'s':''} · facturó $${d.total.toLocaleString('es-AR')}</div>
                 </div>
             </div>
@@ -3617,7 +3630,7 @@ function renderCierreDia() {
         </div>`;
     };
 
-    const barberRows = BARBERS_LIST.filter(b => byBarber[b]).map(barberCard).join('') || '<p class="text-xs text-gray-600 text-center py-2">Sin cortes hoy</p>';
+    const barberRows = barberosConDatos(byBarber).map(barberCard).join('') || '<p class="text-xs text-gray-600 text-center py-2">Sin cortes hoy</p>';
 
     const makeVentaRows = list => list.length === 0
         ? '<p class="text-xs text-gray-600 text-center py-2">Sin ventas</p>'
@@ -3799,7 +3812,7 @@ function renderCierreSemana() {
             <div class="flex items-center gap-3 px-3 pt-3 pb-2">
                 ${av}
                 <div class="flex-1 min-w-0">
-                    <div class="text-sm font-bold ${t.text}">${b}</div>
+                    <div class="text-sm font-bold ${t.text}">${b}${exTag(b)}</div>
                     <div class="text-[10px] text-gray-500">${d.cuts} corte${d.cuts!==1?'s':''} · facturó $${d.billing.toLocaleString('es-AR')}</div>
                 </div>
             </div>
@@ -3815,7 +3828,7 @@ function renderCierreSemana() {
         </div>`;
     };
 
-    const barberRows = BARBERS_LIST.filter(b => barberData[b]).map(barberCard).join('')
+    const barberRows = barberosConDatos(barberData).map(barberCard).join('')
         || '<p class="text-xs text-gray-600 text-center py-2">Sin cortes</p>';
 
     const makeVentaRows = list => list.length === 0

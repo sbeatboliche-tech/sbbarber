@@ -1627,6 +1627,16 @@ const SERVICES = [
 ];
 
 let BARBERS = ['Tony', 'Stefa', 'Santi', 'SantiF'];
+// Barberos con datos en lo que se está mirando: primero los actuales y después los que ya no están
+// (Maxi, Diego, Bauti...), para que sus cortes viejos sigan apareciendo al ver días pasados.
+function barberosConDatos(data) {
+    const ex = Object.keys(data).filter(b => b && b !== '—' && !BARBERS.includes(b));
+    return [...BARBERS.filter(b => data[b]), ...ex];
+}
+const exTag = b => BARBERS.includes(b) ? '' : ' <span class="text-[9px] font-semibold text-gray-600">(ex)</span>';
+function temaBarbero(b) {
+    return BARBER_THEME[b] || { color:'gray', text:'text-gray-400', border:'border-gray-600', bg:'bg-gray-600', initial: String(b || '?').charAt(0).toUpperCase() };
+}
 const BARBER_COMISION = { Tony: 0.5, Stefa: 0.5, Santi: 0.5, SantiF: 0.4 };
 let BARBER_THEME = {
     Tony:   { color:'blue',    text:'text-blue-400',    border:'border-blue-500',    bg:'bg-blue-500',    initial:'T' },
@@ -1984,11 +1994,11 @@ function renderCuts() {
     });
     const barberSummary = document.getElementById('barber-summary');
     const barberList = document.getElementById('barber-summary-list');
-    const activeBarbers = BARBERS.filter(b => byBarber[b]);
+    const activeBarbers = barberosConDatos(byBarber);
     if (activeBarbers.length > 0) {
         barberSummary.classList.remove('hidden');
         barberList.innerHTML = activeBarbers.map(b => {
-            const d = byBarber[b], t = BARBER_THEME[b];
+            const d = byBarber[b], t = temaBarbero(b);
             const tags = [
                 d.ybarba > 0 ? `<span class="bg-white/5 px-2 py-0.5 rounded-full text-[10px] text-gray-400">Corte y Barba ×${d.ybarba}</span>` : '',
                 d.largo > 0  ? `<span class="bg-white/5 px-2 py-0.5 rounded-full text-[10px] text-gray-400">Pelo largo ×${d.largo}</span>` : '',
@@ -1998,7 +2008,7 @@ function renderCuts() {
             <div class="flex items-center justify-between bg-black/20 p-3 rounded-lg border border-white/5 gap-2">
                 <div class="flex items-center gap-2 min-w-0">
                     <div class="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">${barberAvatar(b, 7)}</div>
-                    <span class="text-xs font-bold ${t.text} flex-shrink-0">${b}</span>
+                    <span class="text-xs font-bold ${t.text} flex-shrink-0">${b}${exTag(b)}</span>
                     ${tags ? `<div class="flex flex-wrap gap-1 min-w-0">${tags}</div>` : ''}
                 </div>
                 <span class="text-sm font-bold text-white flex-shrink-0">${d.count} corte${d.count !== 1 ? 's' : ''}</span>
@@ -4235,14 +4245,14 @@ function renderCierreCaja() {
             <span class="text-xs md:text-sm font-bold ${valCls} whitespace-nowrap">${value}</span>
         </div>`;
 
-    const barberRows = BARBERS.filter(b => byBarber[b]).map(b => {
-        const d = byBarber[b], t = BARBER_THEME[b];
+    const barberRows = barberosConDatos(byBarber).map(b => {
+        const d = byBarber[b], t = temaBarbero(b);
         const detail = [
             d.efectivo > 0 ? `💵 $${d.efectivo.toLocaleString('es-AR')}` : '',
             d.transferencia > 0 ? `📲 $${d.transferencia.toLocaleString('es-AR')}` : ''
         ].filter(Boolean).join(' · ');
         return row(
-            `<span class="font-bold ${t.text}">${b}</span>`,
+            `<span class="font-bold ${t.text}">${b}${exTag(b)}</span>`,
             `$${d.total.toLocaleString('es-AR')}`
         );
     }).join('');
@@ -4705,7 +4715,7 @@ function listenToProfiles() {
 }
 
 function barberAvatar(name, size = 10) {
-    const t = BARBER_THEME[name];
+    const t = temaBarbero(name);
     const px = `w-${size} h-${size}`;
     return barberProfilesData[name]
         ? `<img src="${barberProfilesData[name]}" class="${px} rounded-full object-cover">`
