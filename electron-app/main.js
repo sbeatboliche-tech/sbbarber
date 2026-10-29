@@ -21,7 +21,9 @@ function createWindow() {
     })
 
     win.setMenuBarVisibility(false)
-    win.loadURL(APP_URL)
+    // Borra la caché HTTP (no los datos ni la sesión) antes de cargar: si no, después de un push
+    // la app seguía mostrando la versión vieja de recepcionista
+    win.webContents.session.clearCache().finally(() => win.loadURL(APP_URL))
 
     win.once('ready-to-show', () => win.show())
 
