@@ -52,14 +52,15 @@ export function initRetirosSocios(opciones) {
     <div id="rs-clave-modal" class="absolute inset-0 bg-black/90 backdrop-blur-sm z-[60] hidden flex-col justify-end md:justify-center animate-enter">
         <div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 p-6 shadow-2xl rounded-t-3xl">
             <div class="flex justify-between items-center mb-5">
-                <h2 class="text-xl font-bold text-white flex items-center gap-2"><i class="fas fa-lock text-base text-gray-400"></i> Retiros</h2>
+                <h2 class="text-xl font-bold text-white flex items-center gap-2"><i class="fas fa-lock text-base text-gray-400"></i> <span id="rs-clave-titulo">Retiros</span></h2>
                 <button type="button" data-rs="cerrar-clave" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
             </div>
             <form id="rs-clave-form" class="space-y-4" autocomplete="off">
                 <div>
                     <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Contraseña</label>
-                    <input type="password" id="rs-clave-input" data-scan="nativo" autocomplete="off" autocapitalize="none" spellcheck="false" class="${INPUT}">
-                    <p id="rs-clave-error" class="hidden text-xs text-red-400 font-semibold ml-1 mt-2">Contraseña incorrecta</p>
+                    <!-- type="text" con puntitos por CSS: con type="password" Chrome metía la clave guardada del login -->
+                    <input type="text" id="rs-clave-input" name="rs-pin" data-scan="nativo" autocomplete="one-time-code" autocapitalize="none" autocorrect="off" spellcheck="false" style="-webkit-text-security:disc" class="${INPUT}">
+                    <p id="rs-clave-error" class="hidden text-sm text-red-300 font-bold mt-3 p-3 rounded-xl bg-red-500/15 border border-red-500/40 text-center">Contraseña incorrecta, probá de nuevo</p>
                 </div>
                 <button type="submit" class="w-full bg-white text-black p-4 rounded-xl font-bold text-lg shadow-lg uppercase tracking-widest active:scale-[0.98] transition">Entrar</button>
             </form>
@@ -157,7 +158,7 @@ export function initRetirosSocios(opciones) {
     $('rs-clave-form').addEventListener('submit', e => {
         e.preventDefault();
         const input = $('rs-clave-input');
-        const clave = input.value.trim();
+        const clave = input.value.replace(/\s+/g, '').toLowerCase();
         if (clave === CLAVE_RETIROS) { ocultar($('rs-clave-modal')); cfg.abrirRetiros(); }
         else if (clave === CLAVE_SOCIOS) { ocultar($('rs-clave-modal')); abrirPanel(); }
         else {
@@ -194,7 +195,14 @@ export function initRetirosSocios(opciones) {
     });
 }
 
+// Botón "Socios" dentro de Retiros: mismo cartel (con "sbsb2004" abre la sección de los socios)
+export function pedirClaveSocios() {
+    pedirClaveRetiros();
+    $('rs-clave-titulo').textContent = 'Socios';
+}
+
 export function pedirClaveRetiros() {
+    $('rs-clave-titulo').textContent = 'Retiros';
     $('rs-clave-input').value = '';
     $('rs-clave-error').classList.add('hidden');
     mostrar($('rs-clave-modal'));

@@ -363,10 +363,13 @@
             <button onclick="window.closeRetirosView()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition">
                 <i class="fas fa-arrow-left text-sm"></i>
             </button>
-            <div>
+            <div class="flex-1">
                 <h1 class="text-sm font-bold text-white leading-none">RETIROS Y PROPINAS</h1>
                 <span id="retiros-header-sub" class="text-[10px] text-violet-400 font-medium">Mi cuenta</span>
             </div>
+            <button id="btn-socios" onclick="window.pedirClaveSocios()" class="hidden items-center gap-2 bg-white/10 border border-white/20 text-white font-bold px-3 py-2 rounded-xl text-xs active:scale-95 transition">
+                <i class="fas fa-user-lock text-[10px]"></i> Socios
+            </button>
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 space-y-4 pb-10">
@@ -1035,7 +1038,7 @@ import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPe
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, deleteDoc, collection, query, onSnapshot, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment, where, writeBatch, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { initClientes, pickerCliente, resolverCliente, limpiarCliente } from "../assets/clientes.js";
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
-import { initRetirosSocios, pedirClaveRetiros } from "../assets/retiros-socios.js";
+import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -1246,6 +1249,9 @@ function init() {
 window.openRetirosView = () => {
     const v=document.getElementById('retiros-view');
     v.classList.remove('hidden'); v.classList.add('flex','flex-col');
+    // El botón de Socios (Agus y Manu) solo para los dueños
+    const bs=document.getElementById('btn-socios'), esDueno=ADMINS.includes(currentUser?.email);
+    bs.classList.toggle('hidden', !esDueno); bs.classList.toggle('flex', esDueno);
     renderRetirosView();
 };
 window.closeRetirosView = () => {
@@ -1259,6 +1265,7 @@ initRetirosSocios({
     abrirRetiros: window.openRetirosView, fondo: '#0f1115'
 });
 window.pedirClaveRetiros = pedirClaveRetiros;
+window.pedirClaveSocios = pedirClaveSocios;
 
 function listenToRetiros() {
     const isAdmin=ADMINS.includes(currentUser.email);

@@ -665,10 +665,16 @@
                     <span class="text-[10px] md:text-xs text-violet-400 font-medium">Semana actual</span>
                 </div>
             </div>
-            <button onclick="window.openRetiroManualModal()" class="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white font-bold px-4 py-2 rounded-xl text-xs md:text-sm transition shadow-lg shadow-violet-900/40">
-                <i class="fas fa-plus text-[10px] md:text-xs"></i>
-                <span>Retiro manual</span>
-            </button>
+            <div class="flex items-center gap-2">
+                <button onclick="window.pedirClaveSocios()" class="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold px-4 py-2 rounded-xl text-xs md:text-sm transition">
+                    <i class="fas fa-user-lock text-[10px] md:text-xs"></i>
+                    <span>Socios</span>
+                </button>
+                <button onclick="window.openRetiroManualModal()" class="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white font-bold px-4 py-2 rounded-xl text-xs md:text-sm transition shadow-lg shadow-violet-900/40">
+                    <i class="fas fa-plus text-[10px] md:text-xs"></i>
+                    <span>Retiro manual</span>
+                </button>
+            </div>
         </header>
 
         <!-- Contenido -->
@@ -1592,7 +1598,7 @@ import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPe
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, orderBy, where, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, getDoc, doc, increment, serverTimestamp, limit, writeBatch, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { initClientes, pickerCliente, resolverCliente, limpiarCliente } from "../assets/clientes.js";
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
-import { initRetirosSocios, pedirClaveRetiros } from "../assets/retiros-socios.js";
+import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -4778,6 +4784,7 @@ initRetirosSocios({
     abrirRetiros: window.openRetirosPanel, confirmar: (msg, lbl) => customConfirm(msg, lbl), fondo: '#0a0a0a'
 });
 window.pedirClaveRetiros = pedirClaveRetiros;
+window.pedirClaveSocios = pedirClaveSocios;
 
 function renderRetirosPanel() {
     renderPendingRetiros();
