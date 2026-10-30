@@ -1,0 +1,17 @@
+{
+  "name": "sbbarber-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "App de iOS y Android de SB Barber (Capacitor)",
+  "scripts": {
+    "sync": "cap sync",
+    "android": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/core": "^8.6.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.0"
+  }
+}

@@ -23,3 +23,9 @@ electron-app/rcedit.exe
 
 # Dependencias
 node_modules/
+
+# App móvil (Capacitor): lo que se regenera al compilar
+app-movil/android/app/build/
+app-movil/android/build/
+app-movil/android/.gradle/
+app-movil/android/local.properties

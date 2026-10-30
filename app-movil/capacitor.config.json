@@ -1,0 +1,12 @@
+{
+  "appId": "com.sbbarber.app",
+  "appName": "SB Barber",
+  "webDir": "www",
+  "server": {
+    "url": "https://sbbarber.com.ar/panel/",
+    "errorPath": "offline.html"
+  },
+  "android": {
+    "backgroundColor": "#000000"
+  }
+}

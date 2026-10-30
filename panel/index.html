@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#000000">
+<title>SB Barber</title>
+<style>
+    * { box-sizing:border-box; margin:0; }
+    html, body { height:100%; }
+    body { background:#000; color:#fff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; display:flex; align-items:center; justify-content:center; padding:24px; }
+    main { width:100%; max-width:360px; text-align:center; }
+    img { height:128px; margin-bottom:32px; }
+    input, button { width:100%; padding:16px; border-radius:12px; font-size:16px; margin-bottom:12px; }
+    input { background:#121212; color:#fff; border:1px solid #27272a; outline:none; }
+    input:focus { border-color:#fff; }
+    button { background:#fff; color:#000; border:0; font-weight:700; }
+    button:disabled { opacity:.5; }
+    #error { color:#f87171; font-size:14px; min-height:20px; }
+    .hidden { display:none; }
+</style>
+</head>
+<body>
+<main>
+    <img src="https://i.imgur.com/xyjMT6X.png" alt="SB BARBER">
+    <form id="login-form" class="hidden">
+        <input type="email" id="login-email" placeholder="Correo electrónico" autocomplete="username" required>
+        <input type="password" id="login-password" placeholder="Contraseña" autocomplete="current-password" required>
+        <button type="submit" id="login-btn">Entrar</button>
+        <p id="error" role="alert"></p>
+    </form>
+</main>
+<script type="module">
+// Entrada de la app del celu: el login decide a dónde va cada uno. Comparte la sesión con
+// recepcionista y anotar porque están en el mismo dominio y usan el mismo proyecto de Firebase.
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
+    authDomain: "sb-barber-6dc16.firebaseapp.com",
+    projectId: "sb-barber-6dc16",
+    storageBucket: "sb-barber-6dc16.firebasestorage.app",
+    messagingSenderId: "213501157745",
+    appId: "1:213501157745:web:09fd59996cf1d72b6696d0"
+};
+// Los mismos de ADMINS en recepcionista y anotar
+const ADMINS = ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
+
+const auth = getAuth(initializeApp(firebaseConfig));
+await setPersistence(auth, browserLocalPersistence);
+
+onAuthStateChanged(auth, user => {
+    if (user && !user.isAnonymous) {
+        location.replace(ADMINS.includes(user.email) ? '../recepcionista/' : '../anotar/');
+        return;
+    }
+    document.getElementById('login-form').classList.remove('hidden');
+});
+
+document.getElementById('login-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    const error = document.getElementById('error');
+    btn.disabled = true;
+    error.textContent = '';
+    try {
+        await signInWithEmailAndPassword(auth, document.getElementById('login-email').value.trim(), document.getElementById('login-password').value);
+    } catch (err) {
+        error.textContent = err.code === 'auth/network-request-failed' ? 'Sin conexión. Probá de nuevo.' : 'Correo o contraseña incorrectos.';
+        btn.disabled = false;
+    }
+});
+</script>
+</body>
+</html>
