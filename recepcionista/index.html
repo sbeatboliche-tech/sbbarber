@@ -358,7 +358,7 @@
                     <span class="text-amber-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2 mb-1">
                         <i class="fas fa-trophy"></i> Desafío semanal
                     </span>
-                    <p class="text-[10px] text-gray-500 mb-3">35 cortes en la semana = $25.000 extra · 🧪 modo prueba</p>
+                    <p class="text-[10px] text-gray-500 mb-3">35 cortes en la semana = $25.000 extra</p>
                     <div id="challenge-summary-list" class="space-y-3"></div>
                 </div>
 
@@ -1939,8 +1939,9 @@ window.setDashboardFecha = (value) => {
 
 // Desafío semanal (mismo de "anotar"): 35 cortes en la semana en curso = $25.000 extra.
 // Siempre lunes-a-hoy, sin importar qué fecha esté eligiendo la recepción arriba.
+// El premio se suma solo al "A cobrar" del cierre semanal (renderCierreCajaSemanal).
+const CHALLENGE_GOAL = 35, CHALLENGE_REWARD = 25000;
 function renderChallengeSummary() {
-    const CHALLENGE_GOAL = 35, CHALLENGE_REWARD = 25000;
     const today = new Date(); const wd = today.getDay() || 7;
     const weekStart = new Date(today); if (wd !== 1) weekStart.setDate(today.getDate() - (wd - 1));
     weekStart.setHours(0, 0, 0, 0);
@@ -4630,7 +4631,8 @@ function renderCierreCajaSemanal() {
     const barberCards = BARBERS.map(b => {
         const d = byBarber[b], t = BARBER_THEME[b];
         const suParte = Math.round(d.cortes * (BARBER_COMISION[b] ?? 0.5));
-        const neto = suParte - d.retiros + d.propinas - (_ajusteSemana[b] || 0) - ((allAjustes[`${weekStartStr}_${b}`] || {}).monto || 0);
+        const bonus = cortesW.filter(c => c.barber === b).length >= CHALLENGE_GOAL ? CHALLENGE_REWARD : 0;
+        const neto = suParte + bonus - d.retiros + d.propinas - (_ajusteSemana[b] || 0) - ((allAjustes[`${weekStartStr}_${b}`] || {}).monto || 0);
         const netoColor = neto >= 0 ? 'text-emerald-400' : 'text-red-400';
         const pagado = !!(allPagosSemanales[`${weekStartStr}_${b}`] || {}).pagado;
         return `
@@ -4649,6 +4651,10 @@ function renderCierreCajaSemanal() {
                     <span class="text-gray-400">Ganancia</span>
                     <span class="font-bold text-white">$${suParte.toLocaleString('es-AR')}</span>
                 </div>
+                ${bonus > 0 ? `<div class="flex justify-between text-xs md:text-sm">
+                    <span class="text-gray-400">Bonus</span>
+                    <span class="font-bold text-amber-400">+$${bonus.toLocaleString('es-AR')}</span>
+                </div>` : ''}
                 ${d.retiros > 0 ? `<div class="flex justify-between text-xs md:text-sm">
                     <span class="text-gray-400">Retiros</span>
                     <span class="font-bold text-red-400">−$${d.retiros.toLocaleString('es-AR')}</span>
