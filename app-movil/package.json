@@ -5,13 +5,15 @@
   "description": "App de iOS y Android de SB Barber (Capacitor)",
   "scripts": {
     "sync": "cap sync",
-    "android": "cap open android"
+    "android": "cap open android",
+    "icons": "capacitor-assets generate --android --iconBackgroundColor '#000000' --iconBackgroundColorDark '#000000' --splashBackgroundColor '#000000' --splashBackgroundColorDark '#000000'"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.0",
     "@capacitor/core": "^8.6.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.6.0"
   }
 }
