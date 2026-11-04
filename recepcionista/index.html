@@ -168,8 +168,8 @@
     <div id="dashboard-view" class="flex-1 flex flex-col hidden h-full overflow-hidden">
 
         <!-- Header -->
-        <header class="px-5 py-4 glass sticky top-0 z-20 flex justify-between items-center flex-shrink-0">
-            <div class="flex items-center gap-3">
+        <header class="px-3 md:px-5 py-4 glass sticky top-0 z-20 flex justify-between items-center flex-shrink-0">
+            <div class="flex items-center gap-2 md:gap-3">
                 <img src="https://i.imgur.com/xyjMT6X.png" alt="Logo" class="h-9 w-auto object-contain">
                 <div class="hidden sm:block">
                     <h1 class="text-sm font-bold text-white leading-none tracking-wider">SB BARBER</h1>
@@ -188,7 +188,7 @@
                     <span class="md:hidden">ML</span>
                 </button>
                 <!-- Botón historial Pickit -->
-                <button id="btn-historial-pickit" title="Historial Pickit" onclick="window.openHistorialPickitPanel()" class="flex items-center gap-1.5 bg-white/10 border border-white/20 text-white px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/20 transition">
+                <button id="btn-historial-pickit" title="Historial Pickit" onclick="window.openHistorialPickitPanel()" class="hidden md:flex items-center gap-1.5 bg-white/10 border border-white/20 text-white px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/20 transition">
                     <i class="fas fa-box-open text-xs"></i>
                     <span class="hidden md:inline">HISTORIAL PICKIT</span>
                 </button>
@@ -211,8 +211,8 @@
                 <button onclick="window.openTurnosPanel()" class="hidden md:flex items-center gap-2 bg-amber-600/20 border border-amber-500/40 text-amber-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-amber-600/40 transition">
                     <i class="fas fa-calendar-alt text-xs"></i> Turnos
                 </button>
-                <!-- Botón gastos -->
-                <button onclick="window.openGastosPanel()" class="flex items-center gap-1.5 bg-rose-600/20 border border-rose-500/40 text-rose-300 px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-rose-600/40 transition">
+                <!-- Botón gastos: en el celu va en el menú ⋮ -->
+                <button onclick="window.openGastosPanel()" class="hidden md:flex items-center gap-1.5 bg-rose-600/20 border border-rose-500/40 text-rose-300 px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-rose-600/40 transition">
                     <i class="fas fa-receipt text-xs"></i>
                     <span class="hidden md:inline">Gastos</span>
                 </button>
@@ -228,6 +228,13 @@
                         <i class="fas fa-ellipsis-vertical text-sm"></i>
                     </button>
                     <div id="mas-menu" class="hidden absolute right-0 top-full mt-2 w-60 bg-[#141414] border border-white/10 rounded-2xl p-2 shadow-2xl z-50 flex-col gap-1">
+                        <!-- Solo celu: en la barra no entran -->
+                        <button type="button" onclick="window.closeMasMenu(); window.openGastosPanel()" class="flex md:hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
+                            <i class="fas fa-receipt w-4 text-center text-gray-400"></i> Gastos
+                        </button>
+                        <button id="btn-historial-pickit-menu" type="button" onclick="window.closeMasMenu(); window.openHistorialPickitPanel()" class="flex md:hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
+                            <i class="fas fa-box-open w-4 text-center text-gray-400"></i> Historial Pickit
+                        </button>
                         <button type="button" onclick="window.closeMasMenu(); window.openMenuEditor()" class="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-list-ul w-4 text-center text-gray-400"></i> Modificar menú
                         </button>
@@ -241,9 +248,12 @@
                         <button id="btn-dispositivos" type="button" onclick="window.closeMasMenu(); window.openDispositivosPanel()" class="hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-mobile-screen-button w-4 text-center text-gray-400"></i> Dispositivos
                         </button>
+                        <button type="button" onclick="window.closeMasMenu(); window.logout()" class="flex md:hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-red-400 hover:bg-white/10 active:bg-white/15 transition text-left">
+                            <i class="fas fa-power-off w-4 text-center"></i> Cerrar sesión
+                        </button>
                     </div>
                 </div>
-                <button onclick="window.logout()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-red-400 transition">
+                <button onclick="window.logout()" class="hidden md:flex w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-red-400 transition">
                     <i class="fas fa-power-off text-xs"></i>
                 </button>
             </div>
@@ -5758,7 +5768,12 @@ function updateHistorialPickitBadge() {
     const hoy = now.toLocaleDateString('en-CA');
     const yaCargadoHoy = allPickitDespachos.some(m => m.fecha === hoy);
     const despuesDe1230 = now.getHours() * 60 + now.getMinutes() >= 12 * 60 + 30;
-    btn.classList.toggle('pickit-pending', despuesDe1230 && !yaCargadoHoy);
+    const pendiente = despuesDe1230 && !yaCargadoHoy;
+    btn.classList.toggle('pickit-pending', pendiente);
+    // En el celu el botón va dentro del menú ⋮: avisa el ⋮ y el ítem del menú
+    const celu = window.matchMedia('(max-width: 767px)').matches;
+    document.getElementById('btn-mas')?.classList.toggle('pickit-pending', pendiente && celu);
+    document.getElementById('btn-historial-pickit-menu')?.classList.toggle('pickit-pending', pendiente);
 }
 setInterval(updateHistorialPickitBadge, 60000);
 
