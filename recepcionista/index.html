@@ -2844,15 +2844,28 @@ window.deleteVenta = async (id) => {
     const esBebida = v.tipo === 'bebida' && !v.stockDevuelto;
     const item = esBebida ? (allStock.find(i => i.id === v.stockItemId) || allStock.find(i => i.name === v.producto)) : null;
     const retiro = esBebida ? findRetiroDeVenta(v) : null;
+    // Producto vendido en el local: al borrar la venta las unidades vuelven al stock (las de ML no:
+    // esas las maneja el webhook cuando se cancela la orden). Las ventas viejas no tienen productoId: van por nombre.
+    const esProducto = v.tipo === 'producto' && v.canal !== 'ml' && !v.stockDevuelto;
+    const prod = esProducto ? (PRODUCTOS_BARBER.find(p => p.id === v.productoId) || PRODUCTOS_BARBER.find(p => p.name === v.producto)) : null;
     let msg = '¿Eliminar esta venta?';
     if (item) msg += ` Vuelve ${v.cantidad || 1} ${item.name} al stock.`;
+    if (prod) msg += ` Vuelve ${v.cantidad || 1} ${prod.name} al stock.`;
     if (retiro) msg += ` Se anula el retiro de ${retiro.barbero || (v.compradorTipo ? v.comprador : v.barbero)}.`;
     if (!await customConfirm(msg)) return;
     allVentas = allVentas.map(x => x.id === id ? {...x, eliminado: true} : x);
     renderVentas(); renderSalesHistory();
     try {
         const batch = writeBatch(db);
-        batch.update(doc(db, PATH_VENTAS, id), { eliminado: true, ...(esBebida ? { stockDevuelto: !!item } : {}) });
+        batch.update(doc(db, PATH_VENTAS, id), { eliminado: true, ...(esBebida ? { stockDevuelto: !!item } : {}), ...(prod ? { stockDevuelto: true } : {}) });
+        if (prod) {
+            batch.update(doc(db, PATH_PRODUCTOS, prod.id), { stock: increment(v.cantidad || 1) });
+            batch.set(doc(collection(db, 'productos_movimientos')), {
+                productoId: prod.id, producto: prod.name, tipo: 'entrada', cantidad: v.cantidad || 1,
+                motivo: 'Venta eliminada', userEmail: currentUser?.email || null,
+                fecha: new Date().toLocaleDateString('en-CA'), creadoEn: serverTimestamp()
+            });
+        }
         if (item) {
             batch.update(doc(db, PATH_STOCK, item.id), { quantity: increment(v.cantidad || 1) });
             addStockMov(batch, { itemId: item.id, itemName: item.name, tipo: 'devolucion', cantidad: v.cantidad || 1, detalle: 'Venta eliminada' });
@@ -3068,6 +3081,7 @@ window.submitVenta = async () => {
         for (const it of ventaCart) {
             await addDoc(collection(db, PATH_VENTAS), {
                 producto: it.name,
+                productoId: it.id,
                 precio: it.precio,
                 cantidad: it.cantidad,
                 total: it.precio * it.cantidad,

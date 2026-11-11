@@ -3224,6 +3224,7 @@ window.submitVenta = async () => {
         for (const it of ventaCart) {
             await addDoc(collection(db, PATH_VENTAS), {
                 producto: it.name,
+                productoId: it.id,
                 precio: it.precio,
                 cantidad: it.cantidad,
                 total: it.precio * it.cantidad,
