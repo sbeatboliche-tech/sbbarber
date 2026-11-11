@@ -1161,7 +1161,17 @@ let anotarTurnosDay=0, anotarTurnoModalDay=0, anotarTurnoModalBarber='', anotarT
 let anotarTurnosCustomDate=null, anotarTurnoModalCustomDate=null;
 let activePeriod='dia', customDateFilter=null;
 let barberProfilesData={}, currentBase64Image=null;
-let barberCommissions={ Tony:0.5, Maxi:0.5, Stefa:0.5, Santi:0.5, SantiF:0.4 };
+let barberCommissions={ Tony:0.5, Maxi:0.5, Stefa:0.5, Santi:0.5, SantiF:0.5 };
+// Comisión de un corte puntual. Santi F, desde el 11/11/2026: Mechas, Global y Color 40% para él (60% la barber),
+// el resto según su comisión general. Sus cortes de antes de esa fecha quedan al 40% de todo, como se pagaban.
+const SANTIF_REGLA_DESDE = new Date(2026, 10, 11);
+function comisionCorte(c) {
+    const base = barberCommissions[c.barber] || 0.5;
+    if (c.barber !== "SantiF") return base;
+    const fecha = c.createdAt && c.createdAt.toDate ? c.createdAt.toDate() : new Date();
+    if (fecha < SANTIF_REGLA_DESDE) return 0.4;
+    return /mechas|global|color/i.test(c.service || "") ? 0.4 : base;
+}
 let fixedExpenses={};
 let expensePeriod='semanal';
 let currentStockAction=null;
@@ -1338,7 +1348,7 @@ function renderBalanceCard(barberName) {
     // Lo que generó en cortes esta semana (su parte según la comisión), para ver las propinas al lado
     const cortesSemana=allCuts.filter(c=>!c.eliminado&&c.barber===barberName&&c.createdAt&&c.createdAt.toDate()>=ws);
     const nCortes=cortesSemana.length;
-    const ganancia=Math.round(cortesSemana.reduce((s,c)=>s+(c.price||0)*(barberCommissions[barberName]||0.5),0));
+    const ganancia=Math.round(cortesSemana.reduce((s,c)=>s+(c.price||0)*comisionCorte(c),0));
     const aCobrar=ganancia+totalPropinas-totalRetiros;
     const nPropinas=allPropinas.filter(p=>!p.eliminado&&p.fecha>=weekStartStr&&p.estado==='confirmado').length;
     const fmt=n=>'$'+Math.round(n).toLocaleString('es-AR');
@@ -2038,7 +2048,7 @@ function renderWeeklyProfit() {
 
     const weekCuts=allCuts.filter(c=>!c.eliminado&&c.createdAt&&c.createdAt.toDate()>=weekStart);
     const totalBilling=weekCuts.filter(c=>c.afectaCaja!==false).reduce((s,c)=>s+c.price,0);   // los regalados por SB no entran
-    const totalCommissions=weekCuts.reduce((s,c)=>s+(c.price*(barberCommissions[c.barber]||0.5)),0);
+    const totalCommissions=weekCuts.reduce((s,c)=>s+(c.price*comisionCorte(c)),0);
     const ownerGross=totalBilling-totalCommissions;
     const weekExp=allExpenses.filter(e=>e.createdAt&&e.createdAt.toDate()>=weekStart);
     const totalVarExp=weekExp.reduce((s,e)=>s+Number(e.amount),0);
@@ -2313,7 +2323,7 @@ function render() {
     };
     const globals=allCuts.filter(c=>!c.eliminado&&match(c));
     const revs={};
-    globals.forEach(c=>{ revs[c.barber]=(revs[c.barber]||0)+c.price*(barberCommissions[c.barber]||0.5); });
+    globals.forEach(c=>{ revs[c.barber]=(revs[c.barber]||0)+c.price*comisionCorte(c); });
     const counts={};
     globals.forEach(c=>{ counts[c.barber]=(counts[c.barber]||0)+1; });
 
@@ -2359,7 +2369,7 @@ function render() {
             h3.innerHTML=`<i class="fas fa-chart-line"></i> Ganancias Netas (Semana)`;
         }
         const totalBilling=globals.reduce((s,c)=>s+c.price,0);
-        const totalComm=globals.reduce((s,c)=>s+c.price*(barberCommissions[c.barber]||0.5),0);
+        const totalComm=globals.reduce((s,c)=>s+c.price*comisionCorte(c),0);
         const bizProfit=totalBilling-totalComm;
         // Los actuales siempre (aunque estén en $0); los que ya no están, solo si tienen cortes en el período.
         const exConCortes=Object.keys(revs).filter(b=>b&&b!=='—'&&esExBarbero(b));
@@ -2379,7 +2389,7 @@ function render() {
 
     const personal=globals.filter(c=>isAdmin||(myName?c.barber===myName:c.userEmail===currentUser.email));
     // El admin es el dueño: su ganancia es lo que queda después de la comisión del barbero (ej. 40% barbero → 60% admin).
-    let earnings=0; personal.forEach(c=>{ const comm=barberCommissions[c.barber]||0.5; earnings+=c.price*(isAdmin?1-comm:comm); });
+    let earnings=0; personal.forEach(c=>{ const comm=comisionCorte(c); earnings+=c.price*(isAdmin?1-comm:comm); });
     document.getElementById('total-revenue').textContent=earnings.toLocaleString('es-AR');
     document.getElementById('total-revenue-full').textContent=`$${personal.reduce((s,c)=>s+c.price,0).toLocaleString('es-AR')}`;
     document.getElementById('total-services-count').textContent=personal.length;
@@ -3572,7 +3582,7 @@ function renderCierreDia() {
         // Barbero: vista simple de sus propios cortes
         const myCuts = cuts.filter(c => myName ? c.barber === myName : c.userEmail === currentUser.email);
         const myBilling = myCuts.reduce((s,c) => s + c.price, 0);
-        const myEarnings = myCuts.reduce((s,c) => s + c.price*(barberCommissions[c.barber]||0.5), 0);
+        const myEarnings = myCuts.reduce((s,c) => s + c.price*comisionCorte(c), 0);
         let rows = myCuts.map(c => {
             const t = BARBER_THEME[c.barber]||{border:'border-gray-600'};
             const time = c.createdAt ? c.createdAt.toDate().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
@@ -3602,7 +3612,7 @@ function renderCierreDia() {
         if (!byBarber[c.barber]) byBarber[c.barber] = { count:0, total:0, earnings:0, efectivo:0, transferencia:0 };
         byBarber[c.barber].count++;
         byBarber[c.barber].total += c.price || 0;
-        byBarber[c.barber].earnings += (c.price || 0) * (barberCommissions[c.barber] || 0.5);
+        byBarber[c.barber].earnings += (c.price || 0) * comisionCorte(c);
         byBarber[c.barber].transferencia += cutTransferAmount(c);
         byBarber[c.barber].efectivo += cutCashAmount(c);
     });
@@ -3761,7 +3771,7 @@ function renderCierreSemana() {
     const ventasProductos = ventasSemana.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo);
 
     const totalCortes    = cuts.filter(c => c.afectaCaja !== false).reduce((s, c) => s + (c.price || 0), 0);
-    const totalComm      = cuts.reduce((s, c) => s + c.price*(barberCommissions[c.barber]||0.5), 0);
+    const totalComm      = cuts.reduce((s, c) => s + c.price*comisionCorte(c), 0);
     const bizNet         = totalCortes - totalComm;
     const totalProductos = ventasProductos.reduce((s, v) => s + (v.total || 0), 0);
     const totalGeneral   = totalCortes + totalProductos;
@@ -3779,7 +3789,7 @@ function renderCierreSemana() {
     if (!isAdmin) {
         const myCuts = cuts.filter(c => myName ? c.barber === myName : c.userEmail === currentUser.email);
         const myBilling = myCuts.reduce((s,c) => s + c.price, 0);
-        const myEarnings = myCuts.reduce((s,c) => s + c.price*(barberCommissions[c.barber]||0.5), 0);
+        const myEarnings = myCuts.reduce((s,c) => s + c.price*comisionCorte(c), 0);
         document.getElementById('cierre-content').innerHTML = `
             <div class="glass-card rounded-2xl p-5">
                 <div class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3">${weekLabel}</div>
@@ -3801,7 +3811,7 @@ function renderCierreSemana() {
         if (!barberData[c.barber]) barberData[c.barber] = { cuts:0, billing:0, earnings:0, efectivo:0, transferencia:0 };
         barberData[c.barber].cuts++;
         barberData[c.barber].billing += c.price || 0;
-        barberData[c.barber].earnings += (c.price || 0) * (barberCommissions[c.barber] || 0.5);
+        barberData[c.barber].earnings += (c.price || 0) * comisionCorte(c);
         barberData[c.barber].transferencia += cutTransferAmount(c);
         barberData[c.barber].efectivo += cutCashAmount(c);
     });
