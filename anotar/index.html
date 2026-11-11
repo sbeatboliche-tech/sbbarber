@@ -312,6 +312,7 @@
                 <input id="stock-search" type="search" placeholder="Buscar producto..." oninput="window.setStockSearch(this.value)" autocomplete="off" class="w-full pl-9 pr-3 py-2.5 bg-black/40 rounded-xl border border-gray-700 focus:border-indigo-500 outline-none transition text-white placeholder-gray-500 text-sm">
             </div>
             <div id="stock-filtros" class="flex gap-2"></div>
+            <div id="stock-cat-filtros" class="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1"></div>
         </div>
         <div class="flex-1 overflow-y-auto p-4 pb-10">
             <!-- Carga de stock escaneando con la cámara -->
@@ -518,6 +519,7 @@
                         <i class="fas fa-barcode"></i> Escanear
                     </button>
                 </div>
+                <div id="venta-cat-filtros" class="flex gap-2 overflow-x-auto pb-1 mb-3 -mx-1 px-1"></div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 md:gap-3 mb-4" id="productos-grid"></div>
                 </div><!-- /scroll -->
                 <div class="px-5 pb-5 pt-3 md:pt-5 flex-shrink-0 border-t md:border-t-0 md:border-l border-white/5 space-y-3 md:w-72 flex flex-col md:overflow-hidden">
@@ -588,6 +590,14 @@
                             class="flex-1 min-w-0 px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-indigo-500/60 focus:bg-indigo-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
                         <button type="button" onclick="window.abrirCamaraScan(c => { document.getElementById('np-codigo').value = c; })" class="w-14 rounded-2xl bg-white/10 border border-white/10 text-white flex-shrink-0"><i class="fas fa-camera"></i></button>
                     </div>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-2">Categoría</p>
+                    <button type="button" onclick="window.elegirCategoriaNP()" class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 hover:border-white/25 transition text-left text-sm flex justify-between items-center">
+                        <span id="np-categoria-label" class="text-gray-600">Elegir categoría</span>
+                        <i class="fas fa-chevron-down text-gray-500 text-xs"></i>
+                    </button>
+                    <input type="hidden" id="np-categoria" value="">
                 </div>
                 <button type="submit" id="btn-submit-np"
                     class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white py-4 rounded-2xl font-extrabold text-base shadow-lg shadow-indigo-900/40 uppercase tracking-widest hover:brightness-110 active:scale-[0.98] transition-all">
@@ -2697,6 +2707,105 @@ function listenToStockProductos() {
     });
 }
 
+// ---- CATEGORÍAS DE PRODUCTOS ----
+// Cada producto de productos_barber puede tener `categoria` (texto). Los base del código traen una por defecto
+// (CATEGORIA_BASE_POR_ID) hasta que alguien la cambie. Se usan para agrupar el stock y filtrar la venta.
+const CATEGORIAS_BASE = ['Styling', 'Cuidado', 'Herramientas', 'Insumos'];
+const SIN_CATEGORIA = 'Sin categoría';
+const CATEGORIA_BASE_POR_ID = {
+    'pomada-mate': 'Styling', 'pomada-brillosa': 'Styling', 'polvo-texturizador': 'Styling',
+    'polvo-texturizador-opcion': 'Styling', 'ml-polvo-black-80g': 'Styling',
+    'matizador-violeta': 'Cuidado', 'ml-aftershave-celeste': 'Cuidado', 'ml-aftershave-verde': 'Cuidado', 'ml-aftershave-violeta': 'Cuidado',
+    'ml-peine-largo': 'Herramientas', 'ml-cepillito-colores': 'Herramientas', 'ml-tijera-entresacar': 'Herramientas',
+    'ml-portanavaja': 'Herramientas', 'ml-quitapelo': 'Herramientas', 'ml-cepillito-violeta': 'Herramientas', 'ml-cepillo-naranja': 'Herramientas',
+    'pack-rollos-viggo': 'Insumos', 'ml-papel-cuello': 'Insumos', 'ml-alfombra-everest': 'Insumos', 'ml-clipper-spray': 'Insumos'
+};
+function categoriaDe(id) {
+    return String(stockProductosData[id]?.categoria || '').trim() || CATEGORIA_BASE_POR_ID[id] || SIN_CATEGORIA;
+}
+function ordenarCategorias(cats) {
+    const base = CATEGORIAS_BASE.filter(c => cats.includes(c));
+    const otras = cats.filter(c => !CATEGORIAS_BASE.includes(c) && c !== SIN_CATEGORIA).sort((a, b) => a.localeCompare(b, 'es'));
+    return [...base, ...otras, ...(cats.includes(SIN_CATEGORIA) ? [SIN_CATEGORIA] : [])];
+}
+function categoriasDisponibles() {
+    const usadas = Object.keys(stockProductosData).filter(id => !stockProductosData[id]?.oculto).map(categoriaDe);
+    return ordenarCategorias([...new Set([...CATEGORIAS_BASE, ...usadas])]).filter(c => c !== SIN_CATEGORIA);
+}
+// Chips "Todas · Styling · Cuidado..." con la cantidad de productos de cada una. onclickFn recibe la categoría ('' = todas).
+function chipsCategoriasHTML(prods, activa, onclickFn) {
+    const cuenta = {};
+    prods.forEach(p => { const c = categoriaDe(p.id); cuenta[c] = (cuenta[c] || 0) + 1; });
+    const orden = ordenarCategorias(Object.keys(cuenta));
+    if (orden.length < 2 && !activa) return '';
+    const chip = (key, label, n) => `<button type="button" data-cat="${escStock(key)}" onclick="${onclickFn}(this.dataset.cat)" class="px-3 py-1.5 rounded-lg text-[11px] font-bold border whitespace-nowrap flex-shrink-0 transition active:scale-95 ${activa === key ? 'bg-white text-black border-white' : 'border-white/10 text-gray-400 bg-white/5 hover:text-white'}">${escStock(label)} <span class="opacity-60">${n}</span></button>`;
+    return chip('', 'Todas', prods.length) + orden.map(c => chip(c, c, cuenta[c] || 0)).join('');
+}
+// Encabezado de cada grupo en las listas de stock.
+function tituloCategoriaHTML(cat, n) {
+    return `<div class="flex items-center gap-2 pt-3 pb-1 px-1">
+        <span class="text-[10px] font-bold text-gray-300 uppercase tracking-widest">${escStock(cat)}</span>
+        <span class="text-[10px] text-gray-600">${n}</span>
+        <div class="flex-1 h-px bg-gradient-to-r from-white/15 to-transparent"></div>
+    </div>`;
+}
+// Selector de categoría (elegir una existente o crear una nueva). Devuelve la elegida o null si se cancela.
+function elegirCategoria(actual) {
+    return new Promise(resolve => {
+        const cats = categoriasDisponibles();
+        const ov = document.createElement('div');
+        ov.className = 'fixed inset-0 bg-black/75 backdrop-blur-md z-[90] flex flex-col justify-end md:justify-center';
+        ov.innerHTML = `<div class="glass-modal md:rounded-3xl md:max-w-sm md:mx-auto w-full border-t md:border border-white/10 p-5 pb-8 rounded-t-3xl shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-base font-extrabold text-white"><i class="fas fa-tag text-xs mr-1.5 text-gray-400"></i>Categoría</h3>
+                <button type="button" data-cerrar class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:bg-white/20 transition"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="flex flex-wrap gap-2 mb-4">${cats.map(c => `<button type="button" data-cat="${escStock(c)}" class="px-3.5 py-2.5 rounded-xl text-sm font-bold border transition active:scale-95 ${c === actual ? 'bg-white text-black border-white' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'}">${escStock(c)}</button>`).join('')}</div>
+            <div class="flex gap-2">
+                <input data-nueva data-scan="nativo" type="text" maxlength="24" autocomplete="off" placeholder="Nueva categoría" class="flex-1 min-w-0 px-4 py-3 bg-white/5 rounded-xl border border-white/10 focus:border-white/40 outline-none text-white placeholder-gray-600 text-sm">
+                <button type="button" data-crear class="px-4 rounded-xl bg-white text-black text-sm font-bold hover:bg-gray-200 transition">Crear</button>
+            </div>
+        </div>`;
+        const fin = v => { ov.remove(); resolve(v); };
+        ov.addEventListener('click', e => {
+            if (e.target === ov || e.target.closest('[data-cerrar]')) return fin(null);
+            const b = e.target.closest('[data-cat]');
+            if (b) return fin(b.dataset.cat);
+            if (e.target.closest('[data-crear]')) {
+                const v = ov.querySelector('[data-nueva]').value.trim().replace(/\s+/g, ' ');
+                if (!v) return;
+                // Si ya existe con otras mayúsculas, usa la existente (no duplica "styling" y "Styling").
+                const igual = cats.find(c => c.toLowerCase() === v.toLowerCase());
+                fin(igual || v.charAt(0).toUpperCase() + v.slice(1));
+            }
+        });
+        ov.querySelector('[data-nueva]').addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); ov.querySelector('[data-crear]').click(); }
+        });
+        document.body.appendChild(ov);
+    });
+}
+window.cambiarCategoriaProducto = async (id) => {
+    const actual = categoriaDe(id);
+    const cat = await elegirCategoria(actual);
+    if (!cat || cat === actual) return;
+    try { await updateDoc(doc(db, PATH_PRODUCTOS, id), { categoria: cat }); }
+    catch (e) { alert('No se pudo guardar la categoría'); }
+};
+// Categoría del formulario de "Nuevo producto".
+function setNPCategoria(cat) {
+    document.getElementById('np-categoria').value = cat || '';
+    const lbl = document.getElementById('np-categoria-label');
+    lbl.textContent = cat || 'Elegir categoría';
+    lbl.className = cat ? 'text-white' : 'text-gray-600';
+}
+window.elegirCategoriaNP = async () => {
+    const cat = await elegirCategoria(document.getElementById('np-categoria').value);
+    if (cat) setNPCategoria(cat);
+};
+let ventaCategoria = '';
+window.setVentaCategoria = (c) => { ventaCategoria = c; renderProductosGrid(); };
+
 // Stock rápido: +/− suman o restan 1 al toque (increment atómico; el snapshot local lo pinta
 // al instante y el sync a ML ya viene con debounce). Tocar el número abre el modal para fijarlo.
 let stockSearch = '';
@@ -2709,6 +2818,8 @@ function escStock(s) {
 
 window.setStockSearch = (v) => { stockSearch = v; renderStockProductos(); };
 window.setStockFiltro = (f) => { stockFiltro = f; renderStockProductos(); };
+let stockCategoria = '';
+window.setStockCategoria = (c) => { stockCategoria = c; renderStockProductos(); };
 
 function renderStockProductos() {
     const list = document.getElementById('stock-productos-list');
@@ -2724,6 +2835,7 @@ function renderStockProductos() {
         chip('todos', 'Todos', all.length, 'bg-indigo-600/40 border-indigo-500/50') +
         chip('bajo', 'Bajo', nBajo, 'bg-yellow-600/40 border-yellow-500/50') +
         chip('sin', 'Sin stock', nSin, 'bg-red-600/40 border-red-500/50');
+    document.getElementById('stock-cat-filtros').innerHTML = chipsCategoriasHTML(all, stockCategoria, 'window.setStockCategoria');
 
     if (all.length === 0) {
         list.innerHTML = '<p class="text-xs text-gray-500 text-center py-8">Sin productos en stock</p>';
@@ -2734,6 +2846,7 @@ function renderStockProductos() {
         const qty = p.stock || 0;
         if (stockFiltro === 'sin' && qty > 0) return false;
         if (stockFiltro === 'bajo' && (qty <= 0 || qty > STOCK_BAJO)) return false;
+        if (stockCategoria && categoriaDe(p.id) !== stockCategoria) return false;
         return !q || normalizarTexto(p.name || p.id).includes(q);
     });
     if (prods.length === 0) {
@@ -2752,6 +2865,7 @@ function renderStockProductos() {
             <div class="flex-1 min-w-0">
                 <div class="text-sm font-bold text-white truncate">${escStock(p.name || p.id)}</div>
                 ${p.precio>0 ? `<div class="text-[10px] text-gray-500">$${p.precio.toLocaleString('es-AR')}</div>` : ''}
+                <button data-id="${id}" onclick="window.cambiarCategoriaProducto(this.dataset.id)" class="text-[10px] text-gray-500 py-0.5 mr-2"><i class="fas fa-tag mr-0.5"></i>${escStock(categoriaDe(p.id))}</button>
                 <button data-id="${id}" onclick="window.openCodigoProducto(this.dataset.id)" class="text-[10px] ${(p.codigos || []).length ? 'text-gray-400' : 'text-gray-600'} py-0.5">
                     <i class="fas fa-barcode mr-0.5"></i>${(p.codigos || []).length ? escStock(p.codigos[0]) + (p.codigos.length > 1 ? ` +${p.codigos.length - 1}` : '') : 'Asignar código'}
                 </button>
@@ -2770,7 +2884,12 @@ function renderStockProductos() {
             </div>
         </div>`;
     };
-    list.innerHTML = prods.map(row).join('');
+    // Agrupado por categoría
+    const grupos = ordenarCategorias([...new Set(prods.map(p => categoriaDe(p.id)))]);
+    list.innerHTML = grupos.map(c => {
+        const items = prods.filter(p => categoriaDe(p.id) === c);
+        return `<div>${tituloCategoriaHTML(c, items.length)}<div class="space-y-2">${items.map(row).join('')}</div></div>`;
+    }).join('');
 }
 
 window.openStockProductos = () => {
@@ -2902,7 +3021,9 @@ function renderProductosGrid() {
         return;
     }
     const q = normalizarTexto(ventaSearchQuery.trim());
-    const matches = q ? PRODUCTOS_BARBER.filter(p => normalizarTexto(p.name).includes(q)) : PRODUCTOS_BARBER;
+    const matches = q ? PRODUCTOS_BARBER.filter(p => normalizarTexto(p.name).includes(q))
+        : PRODUCTOS_BARBER.filter(p => !ventaCategoria || categoriaDe(p.id) === ventaCategoria);
+    document.getElementById('venta-cat-filtros').innerHTML = q ? '' : chipsCategoriasHTML(PRODUCTOS_BARBER, ventaCategoria, 'window.setVentaCategoria');
 
     const itemHtml = (p, i) => {
         const stock = (stockProductosData[p.id]?.stock) || 0;
@@ -2954,6 +3075,7 @@ function renderProductosGrid() {
 }
 
 window.openVentaModal = () => {
+    ventaCategoria = '';
     ventaCart = [];
     ventaSearchQuery = '';
     document.getElementById('venta-producto-search').value = '';
@@ -3039,6 +3161,7 @@ window.openNuevoProductoModal = () => {
     newProductoPhoto = null;
     npDespuesDeCrear = null;
     document.getElementById('np-photo-preview').innerHTML = '<i class="fas fa-camera text-gray-500 text-xl"></i>';
+    setNPCategoria(esVisible('ventas-modal') ? ventaCategoria : stockCategoria);
     showModal('nuevo-producto-modal');
 };
 
@@ -3070,6 +3193,8 @@ document.getElementById('nuevo-producto-form').addEventListener('submit', async 
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
         const data = { name: nombre, precio, stock, custom: true };
+        const categoria = document.getElementById('np-categoria').value;
+        if (categoria) data.categoria = categoria;
         if (newProductoPhoto) data.photoURL = newProductoPhoto;
         if (codigo) data.codigos = [codigo];
         await setDoc(doc(db, PATH_PRODUCTOS, id), data);
