@@ -1287,12 +1287,24 @@ initRetirosSocios({
 window.pedirClaveRetiros = pedirClaveRetiros;
 window.pedirClaveSocios = pedirClaveSocios;
 
-function listenToRetiros() {
+// Barbero: solo filtro por `barbero` (sin orderBy). where + orderBy en otro campo pide un índice compuesto
+// que no existe en Firestore: la consulta fallaba y los barberos no veían sus retiros/propinas.
+// Se ordena acá. Si el mail todavía no está en BARBER_EMAIL_MAP (barbero creado desde "Crear barbero"),
+// espera a que cargue la colección barberos.
+function cuandoHayaNombre(fn) {
+    if (ADMINS.includes(currentUser.email) || BARBER_EMAIL_MAP[currentUser.email]) return fn();
+    const unsub = onSnapshot(collection(db, 'barberos'), snap => {
+        const d = snap.docs.map(x => x.data()).find(x => x.email === currentUser.email && x.name);
+        if (d) { BARBER_EMAIL_MAP[currentUser.email] = d.name; unsub(); fn(); }
+    });
+}
+function listenToRetiros() { cuandoHayaNombre(_listenToRetiros); }
+function _listenToRetiros() {
     const isAdmin=ADMINS.includes(currentUser.email);
     const myName=BARBER_EMAIL_MAP[currentUser.email];
     const q=isAdmin
         ? query(collection(db,PATH_RETIROS), orderBy('creadoEn','desc'), limit(800))
-        : query(collection(db,PATH_RETIROS), where('barbero','==',myName), orderBy('creadoEn','desc'), limit(250));
+        : query(collection(db,PATH_RETIROS), where('barbero','==',myName));
     onSnapshot(q, snap => {
         const docs=snap.docs.map(d=>({...d.data(),id:d.id}));
         allRetiros=isAdmin ? docs : docs.sort((a,b)=>(b.creadoEn?.seconds||0)-(a.creadoEn?.seconds||0));
@@ -1300,15 +1312,16 @@ function listenToRetiros() {
         if(!document.getElementById('retiros-view').classList.contains('hidden')) renderRetirosView();
         const dp = document.getElementById('barber-detail-panel');
         if(!dp.classList.contains('hidden')) renderBarberDetail(document.getElementById('barber-detail-name').textContent);
-    });
+    }, err => console.error('retiros:', err));
 }
 
-function listenToPropinas() {
+function listenToPropinas() { cuandoHayaNombre(_listenToPropinas); }
+function _listenToPropinas() {
     const isAdmin=ADMINS.includes(currentUser.email);
     const myName=BARBER_EMAIL_MAP[currentUser.email];
     const q=isAdmin
         ? query(collection(db,PATH_PROPINAS), orderBy('creadoEn','desc'), limit(800))
-        : query(collection(db,PATH_PROPINAS), where('barbero','==',myName), orderBy('creadoEn','desc'), limit(250));
+        : query(collection(db,PATH_PROPINAS), where('barbero','==',myName));
     onSnapshot(q, snap => {
         const docs=snap.docs.map(d=>({...d.data(),id:d.id}));
         allPropinas=isAdmin ? docs : docs.sort((a,b)=>(b.creadoEn?.seconds||0)-(a.creadoEn?.seconds||0));
@@ -1316,7 +1329,7 @@ function listenToPropinas() {
         if(!document.getElementById('retiros-view').classList.contains('hidden')) renderRetirosView();
         const dp = document.getElementById('barber-detail-panel');
         if(!dp.classList.contains('hidden')) renderBarberDetail(document.getElementById('barber-detail-name').textContent);
-    });
+    }, err => console.error('propinas:', err));
 }
 
 function updateRetirosBadge() {
