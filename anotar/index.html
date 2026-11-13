@@ -1049,6 +1049,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { initClientes, pickerCliente, resolverCliente, limpiarCliente } from "../assets/clientes.js";
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
 import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
+import { registrarPush, avisarTurnoNuevo } from "../assets/push.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -1218,6 +1219,11 @@ function init() {
             document.getElementById('login-view').classList.add('hidden');
             const bName=BARBER_EMAIL_MAP[user.email];
             if(bName){ document.getElementById('settings-btn').classList.remove('hidden'); document.getElementById('settings-user-name').textContent=bName; }
+            // App del celu: el barbero recibe sus turnos nuevos; los dueños, lo de admins.
+            registrarPush((token, plataforma) => setDoc(doc(db, 'push_tokens', token), {
+                email: user.email, barbero: BARBER_EMAIL_MAP[user.email] || null,
+                admin: ADMINS.includes(user.email), plataforma, actualizado: serverTimestamp()
+            }));
             checkUpdatesBadge();
             if(ADMINS.includes(user.email)){
                 document.getElementById('admin-settings-btn').classList.remove('hidden');
@@ -4327,12 +4333,13 @@ document.getElementById('nuevo-turno-form').addEventListener('submit', async e =
     const btn = document.getElementById('btn-submit-anotar-turno');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
-        await addDoc(collection(db, PATH_TURNOS), {
+        const turnoRef = await addDoc(collection(db, PATH_TURNOS), {
             barbero, clientName: clientName||null, servicio: servicio||null,
             fecha, hora, estado: 'pendiente',
             anotadoPor: BARBER_EMAIL_MAP[currentUser.email] || 'Barbero',
             userEmail: currentUser.email, creadoEn: serverTimestamp()
         });
+        avisarTurnoNuevo(currentUser, turnoRef.id);
         window.closeModals();
         if (!document.getElementById('turnos-view').classList.contains('hidden')) {
             anotarTurnosDay = anotarTurnoModalDay;

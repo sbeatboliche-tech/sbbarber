@@ -9,7 +9,7 @@ import { getAuth } from 'firebase-admin/auth';
 const APP_NAME = 'barber';
 export const OWNERS = ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
 
-function barberApp() {
+export function barberApp() {
     const existing = getApps().find(a => a.name === APP_NAME);
     if (existing) return existing;
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT_BARBER;

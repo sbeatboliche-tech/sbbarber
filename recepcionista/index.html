@@ -1624,6 +1624,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { initClientes, pickerCliente, resolverCliente, limpiarCliente } from "../assets/clientes.js";
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
 import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
+import { registrarPush, avisarTurnoNuevo } from "../assets/push.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -1802,6 +1803,10 @@ async function init() {
             document.getElementById('dashboard-view').classList.remove('hidden');
             document.getElementById('login-view').classList.add('hidden');
             window.dispatchEvent(new Event('sb-dashboard-ready'));
+            // App del celu: este token recibe los avisos de dueños (ventas de ML, etc.).
+            registrarPush((token, plataforma) => setDoc(doc(db, 'push_tokens', token), {
+                email: user.email, barbero: null, admin: true, plataforma, actualizado: serverTimestamp()
+            }));
             if (isAdmin) {
                 document.getElementById('btn-add-stock-item').classList.remove('hidden');
                 ['btn-conteo-stock', 'btn-historial-stock'].forEach(id => {
@@ -6309,12 +6314,13 @@ document.getElementById('nuevo-turno-form').addEventListener('submit', async e =
     const btn = document.getElementById('btn-submit-turno');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
-        await addDoc(collection(db, PATH_TURNOS), {
+        const turnoRef = await addDoc(collection(db, PATH_TURNOS), {
             barbero, clientName: clientName || null, servicio: servicio || null,
             fecha, hora, estado: 'pendiente',
             anotadoPor: 'Recepción',
             userEmail: currentUser?.email || null, creadoEn: serverTimestamp()
         });
+        avisarTurnoNuevo(currentUser, turnoRef.id);
         closeModals();
         if (!document.getElementById('turnos-panel').classList.contains('hidden')) {
             turnosSelectedDay = turnoModalSelectedDay;

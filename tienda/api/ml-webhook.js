@@ -12,6 +12,7 @@ import { waitUntil } from '@vercel/functions';
 import { FieldValue } from 'firebase-admin/firestore';
 import { barberDb } from '../lib/barberAdmin.js';
 import { mlFetch, getCuenta, PRODUCTOS } from '../lib/ml.js';
+import { enviarPush } from '../lib/push.js';
 
 const PATH_VENTAS = 'ventas_productos';
 
@@ -51,11 +52,14 @@ async function procesarOrden(orderId, userId) {
         .toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
     const marcaRef = db.doc(`ml_ordenes/${orderId}`);
 
+    let ventaNueva = false;
     await db.runTransaction(async tx => {
+        ventaNueva = false; // la transacción se puede reintentar: vale lo de la última pasada
         const marca = await tx.get(marcaRef);
         const estado = marca.exists ? marca.data().estado : null;
 
         if (pagada && !estado) {
+            ventaNueva = true;
             const enlazadas = lineas.map((l, i) => ({ ...l, i, prod: productoDe(l) })).filter(l => l.prod);
             // En una transacción todas las lecturas van antes que las escrituras.
             const refs = enlazadas.map(l => db.doc(`${PRODUCTOS}/${l.prod.id}`));
@@ -100,4 +104,13 @@ async function procesarOrden(orderId, userId) {
             tx.update(marcaRef, { estado: 'devuelto', devueltoEn: FieldValue.serverTimestamp() });
         }
     });
+
+    // Aviso a los dueños en la app (solo la primera vez que entra la venta). Si falla, la venta ya quedó guardada.
+    if (ventaNueva) {
+        const total = lineas.reduce((t, l) => t + l.precio * l.cantidad, 0);
+        const cuerpo = lineas.map(l => `${l.cantidad > 1 ? l.cantidad + '× ' : ''}${productoDe(l)?.name || l.titulo}`).join(', ')
+            + ` · $${total.toLocaleString('es-AR')}`;
+        await enviarPush({ admins: true }, { titulo: '🛒 Venta en MercadoLibre', cuerpo, datos: { tipo: 'ml', orderId } })
+            .catch(e => console.error('ML webhook push:', orderId, e));
+    }
 }
