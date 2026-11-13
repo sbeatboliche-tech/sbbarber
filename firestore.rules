@@ -45,6 +45,14 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // Tokens de la app del celu (assets/push.js): cada uno guarda el suyo y solo con su propio email,
+    // así nadie se anota para recibir los avisos de otro (el servidor elige destinatarios por email).
+    match /push_tokens/{t} {
+      allow read: if esDueno();
+      allow create, update: if esStaff() && request.resource.data.email == request.auth.token.email;
+      allow delete: if esDueno();
+    }
+
     // Resto (recepción / anotar, uso interno): solo dueños y barberos. Eliminar documentos
     // queda reservado a los dueños, así un barbero logueado en "anotar" no puede borrar sus
     // propios retiros/ventas/etc. por consola, no solo desde la UI.

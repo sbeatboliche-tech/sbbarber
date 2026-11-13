@@ -1,19 +1,30 @@
 // Notificaciones push de la app (Android/iOS, Capacitor) vía Firebase Cloud Messaging del proyecto
 // sb-barber-6dc16. Cada celu con la app guarda su token en push_tokens/{token} al loguearse
-// (assets/push.js): { email, barbero, admin, plataforma }.
+// (assets/push.js): { email, plataforma, ... }.
+// A quién le llega se decide acá por el email (dueños fijos y la colección barberos), nunca por los
+// campos admin/barbero que escribe el celu: cualquier logueado puede escribir en push_tokens.
 import { getMessaging } from 'firebase-admin/messaging';
-import { barberApp, barberDb } from './barberAdmin.js';
+import { barberApp, barberDb, OWNERS } from './barberAdmin.js';
 
 const TOKENS = 'push_tokens';
 const TOKEN_MUERTO = ['messaging/registration-token-not-registered', 'messaging/invalid-registration-token', 'messaging/invalid-argument'];
+// Los mismos de BARBER_EMAIL_MAP en anotar; los barberos nuevos salen de la colección barberos.
+const BARBEROS_BASE = { 'ap1773508@gmail.com': 'Tony', 'stefanoacostasla@gmail.com': 'Stefa', 'rodriguezsantiagoet5@gmail.com': 'Santi', 'santiagofl551@gmail.com': 'SantiF' };
+
+async function emailsDeBarbero(db, nombre) {
+    const emails = new Set(Object.entries(BARBEROS_BASE).filter(([, n]) => n === nombre).map(([e]) => e));
+    const snap = await db.collection('barberos').where('name', '==', nombre).get();
+    snap.docs.forEach(d => { if (d.data().email) emails.add(d.data().email); });
+    return [...emails];
+}
 
 // para: { barbero: 'Santi' } | { admins: true }. excluirEmail: no avisarle a quien hizo la acción.
 export async function enviarPush(para, { titulo, cuerpo, datos = {} }, { excluirEmail } = {}) {
     const db = barberDb();
-    let q = db.collection(TOKENS);
-    q = para.admins ? q.where('admin', '==', true) : q.where('barbero', '==', para.barbero);
-    const snap = await q.get();
-    const tokens = snap.docs.filter(d => !excluirEmail || d.data().email !== excluirEmail).map(d => d.id);
+    const emails = (para.admins ? OWNERS : await emailsDeBarbero(db, para.barbero)).filter(e => e !== excluirEmail);
+    if (!emails.length) return 0;
+    const snap = await db.collection(TOKENS).where('email', 'in', emails.slice(0, 30)).get();
+    const tokens = snap.docs.map(d => d.id);
     if (!tokens.length) return 0;
 
     const r = await getMessaging(barberApp()).sendEachForMulticast({
