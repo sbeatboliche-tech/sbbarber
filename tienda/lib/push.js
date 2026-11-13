@@ -8,14 +8,13 @@ import { barberApp, barberDb, OWNERS } from './barberAdmin.js';
 
 const TOKENS = 'push_tokens';
 const TOKEN_MUERTO = ['messaging/registration-token-not-registered', 'messaging/invalid-registration-token', 'messaging/invalid-argument'];
-// Los mismos de BARBER_EMAIL_MAP en anotar; los barberos nuevos salen de la colección barberos.
+// Respaldo si no se puede leer la config de la barbería (barberias/sb-barber, assets/config-barberia.js).
 const BARBEROS_BASE = { 'ap1773508@gmail.com': 'Tony', 'stefanoacostasla@gmail.com': 'Stefa', 'rodriguezsantiagoet5@gmail.com': 'Santi', 'santiagofl551@gmail.com': 'SantiF' };
 
 async function emailsDeBarbero(db, nombre) {
-    const emails = new Set(Object.entries(BARBEROS_BASE).filter(([, n]) => n === nombre).map(([e]) => e));
-    const snap = await db.collection('barberos').where('name', '==', nombre).get();
-    snap.docs.forEach(d => { if (d.data().email) emails.add(d.data().email); });
-    return [...emails];
+    const cfg = (await db.doc('barberias/sb-barber').get().catch(() => null))?.data();
+    if (Array.isArray(cfg?.barberos)) return cfg.barberos.filter(b => b.nombre === nombre && b.email).map(b => b.email);
+    return Object.entries(BARBEROS_BASE).filter(([, n]) => n === nombre).map(([e]) => e);
 }
 
 // para: { barbero: 'Santi' } | { admins: true }. excluirEmail: no avisarle a quien hizo la acción.

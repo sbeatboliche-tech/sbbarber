@@ -918,10 +918,7 @@
                     <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Barbero</label>
                     <select id="retiro-manual-barbero" required class="w-full p-4 bg-black/40 rounded-xl border border-gray-700 focus:border-violet-500 outline-none transition text-white mt-1">
                         <option value="">Seleccioná un barbero</option>
-                        <option value="Tony">Tony</option>
-                        <option value="Stefa">Stefa</option>
-                        <option value="Santi">Santi</option>
-                        <option value="SantiF">Santi F</option>
+                        <!-- un <option> por barbero: aplicarConfig() -->
                     </select>
                 </div>
                 <div>
@@ -1050,6 +1047,7 @@ import { initClientes, pickerCliente, resolverCliente, limpiarCliente } from "..
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
 import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
 import { registrarPush, avisarTurnoNuevo } from "../assets/push.js";
+import { BARBERIA_ID, configInicial, escucharConfig, barberosActivos, etiquetaBarbero, mapaEmails, temaDe, comisionesBase, comisionConReglas, servicioDisponible, moduloActivo } from "../assets/config-barberia.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -1086,15 +1084,12 @@ const FIXED_CATEGORIES = [
     { key:'otros',     label:'Otros',                icon:'fa-ellipsis-h' }
 ];
 
-const ADMINS = ['abalo7272@gmail.com','carusomanu21@gmail.com'];
-let BARBER_EMAIL_MAP = { 'ap1773508@gmail.com':'Tony', 'stefanoacostasla@gmail.com':'Stefa', 'rodriguezsantiagoet5@gmail.com':'Santi', 'santiagofl551@gmail.com':'SantiF' };
-let BARBER_THEME = {
-    Tony:   { color:'blue',   text:'text-blue-400',   border:'border-blue-500',   bg:'bg-blue-500',   initial:'T' },
-    Maxi:   { color:'emerald',text:'text-emerald-400', border:'border-emerald-500', bg:'bg-emerald-500', initial:'M' },
-    Stefa:  { color:'purple', text:'text-purple-400', border:'border-purple-500', bg:'bg-purple-500', initial:'S' },
-    Santi:  { color:'orange', text:'text-orange-400', border:'border-orange-500', bg:'bg-orange-500', initial:'Sa' },
-    SantiF: { color:'pink',   text:'text-pink-400',   border:'border-pink-500',   bg:'bg-pink-500',   initial:'F' }
-};
+// Barberos, admins, comisiones, colores y módulos: assets/config-barberia.js (doc barberias/{id}).
+let CFG = configInicial();
+const ADMINS = [...CFG.admins];
+let BARBER_EMAIL_MAP = mapaEmails(CFG);
+const temasDeConfig = () => Object.fromEntries(CFG.barberos.map(b => [b.nombre, temaDe(b)]).filter(([, t]) => t));
+let BARBER_THEME = temasDeConfig();
 const BARBER_EXTRA_THEMES = [
     { color:'orange', text:'text-orange-400', border:'border-orange-500', bg:'bg-orange-500' },
     { color:'pink',   text:'text-pink-400',   border:'border-pink-500',   bg:'bg-pink-500'   },
@@ -1120,7 +1115,7 @@ const PATH_RETIROS  = `retiros`;
 const PATH_PROPINAS = `propinas`;
 const PATH_VENTAS   = `ventas_productos`;
 const PATH_TURNOS   = `turnos`;
-let BARBERS_LIST  = ['Tony', 'Stefa', 'Santi', 'SantiF'];
+let BARBERS_LIST  = barberosActivos(CFG);
 // Barberos con datos en lo que se está mirando: primero los actuales y después los que ya no están
 // (Maxi, Diego, Bauti...), para que sus cortes viejos sigan apareciendo en estadísticas y cierres.
 function barberosConDatos(data) {
@@ -1172,16 +1167,11 @@ let anotarTurnosDay=0, anotarTurnoModalDay=0, anotarTurnoModalBarber='', anotarT
 let anotarTurnosCustomDate=null, anotarTurnoModalCustomDate=null;
 let activePeriod='dia', customDateFilter=null;
 let barberProfilesData={}, currentBase64Image=null;
-let barberCommissions={ Tony:0.5, Maxi:0.5, Stefa:0.5, Santi:0.5, SantiF:0.5 };
-// Comisión de un corte puntual. Santi F, desde el 11/11/2026: Mechas, Global y Color 40% para él (60% la barber),
-// el resto según su comisión general. Sus cortes de antes de esa fecha quedan al 40% de todo, como se pagaban.
-const SANTIF_REGLA_DESDE = new Date(2026, 10, 11);
+let barberCommissions = comisionesBase(CFG);
+// Comisión de un corte puntual: la base del barbero o una regla especial suya de la config
+// (hoy Santi F: Mechas, Global y Color al 40% desde el 11/11/2026, y todo al 40% antes).
 function comisionCorte(c) {
-    const base = barberCommissions[c.barber] || 0.5;
-    if (c.barber !== "SantiF") return base;
-    const fecha = c.createdAt && c.createdAt.toDate ? c.createdAt.toDate() : new Date();
-    if (fecha < SANTIF_REGLA_DESDE) return 0.4;
-    return /mechas|global|color/i.test(c.service || "") ? 0.4 : base;
+    return comisionConReglas(CFG, c, barberCommissions[c.barber] || 0.5);
 }
 let fixedExpenses={};
 let expensePeriod='semanal';
@@ -1245,7 +1235,6 @@ function init() {
                 listenToBarberProfiles();
                 listenToSettings();
                 listenToPrecios();
-                listenToBarberos();
                 if(ADMINS.includes(user.email)){
                     listenToStockProductos();
                     listenToGastos();
@@ -1295,14 +1284,12 @@ window.pedirClaveSocios = pedirClaveSocios;
 
 // Barbero: solo filtro por `barbero` (sin orderBy). where + orderBy en otro campo pide un índice compuesto
 // que no existe en Firestore: la consulta fallaba y los barberos no veían sus retiros/propinas.
-// Se ordena acá. Si el mail todavía no está en BARBER_EMAIL_MAP (barbero creado desde "Crear barbero"),
-// espera a que cargue la colección barberos.
+// Se ordena acá. Si el mail todavía no está en BARBER_EMAIL_MAP (barbero creado desde "Crear barbero"
+// y config del dispositivo vieja), espera a que llegue la config de la barbería.
+const _esperandoNombre = [];
 function cuandoHayaNombre(fn) {
     if (ADMINS.includes(currentUser.email) || BARBER_EMAIL_MAP[currentUser.email]) return fn();
-    const unsub = onSnapshot(collection(db, 'barberos'), snap => {
-        const d = snap.docs.map(x => x.data()).find(x => x.email === currentUser.email && x.name);
-        if (d) { BARBER_EMAIL_MAP[currentUser.email] = d.name; unsub(); fn(); }
-    });
+    _esperandoNombre.push(fn);
 }
 function listenToRetiros() { cuandoHayaNombre(_listenToRetiros); }
 function _listenToRetiros() {
@@ -1839,10 +1826,33 @@ function listenToPrecios() {
     });
 }
 
-// ---- COMISIONES ----
+// ---- CONFIG DE LA BARBERÍA (barberos, admins, comisiones, módulos) ----
+// Arranca con configInicial() (la del dispositivo o el respaldo) y se actualiza con el doc barberias/{id}.
+// Las comisiones antes vivían en settings/commissions; ahora en barberos[].comision de la config.
+function aplicarConfig() {
+    ADMINS.splice(0, ADMINS.length, ...CFG.admins);
+    BARBER_EMAIL_MAP = mapaEmails(CFG);
+    BARBERS_LIST = barberosActivos(CFG);
+    barberCommissions = comisionesBase(CFG);
+    BARBER_THEME = temasDeConfig();
+    BARBERS_LIST.forEach(b => {
+        if (!BARBER_THEME[b]) BARBER_THEME[b] = { ...BARBER_EXTRA_THEMES[extraThemeIdx++ % BARBER_EXTRA_THEMES.length], initial: b.charAt(0).toUpperCase() };
+    });
+    const sel = document.getElementById('retiro-manual-barbero');
+    if (sel) {
+        const actual = sel.value;
+        sel.innerHTML = '<option value="">Seleccioná un barbero</option>' + BARBERS_LIST.map(b => {
+            const o = document.createElement('option'); o.value = b; o.textContent = etiquetaBarbero(CFG, b); return o.outerHTML;
+        }).join('');
+        sel.value = actual;
+    }
+    if (currentUser && BARBER_EMAIL_MAP[currentUser.email]) _esperandoNombre.splice(0).forEach(fn => fn());
+}
+aplicarConfig();
 function listenToSettings() {
-    onSnapshot(doc(db,PATH_SETTINGS,'commissions'), snap=>{
-        if(snap.exists()){ const d=snap.data(); BARBERS_LIST.forEach(b=>{ barberCommissions[b]=(d[b]??50)/100; }); }
+    escucharConfig(db, { doc, onSnapshot }, cfg => {
+        CFG = cfg;
+        aplicarConfig();
         render();
     });
 }
@@ -1863,12 +1873,11 @@ window.openAdminSettingsModal = () => {
 window.saveCommissions = async () => {
     const btn=document.getElementById('btn-save-commissions');
     btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
-    const data={};
-    BARBERS_LIST.forEach(b => {
-        const inp = document.getElementById(`comm-${b}`);
-        if (inp) data[b] = Number(inp.value);
+    const barberos = CFG.barberos.map(b => {
+        const inp = document.getElementById(`comm-${b.nombre}`);
+        return inp ? { ...b, comision: Number(inp.value) / 100 } : b;
     });
-    try{ await setDoc(doc(db,PATH_SETTINGS,'commissions'),data,{merge:true}); window.closeModals(); }
+    try{ await setDoc(doc(db,'barberias',BARBERIA_ID),{ barberos },{merge:true}); window.closeModals(); }
     catch{ alert('Error al guardar'); }
     btn.disabled=false; btn.innerHTML='GUARDAR CAMBIOS';
 };
@@ -1900,7 +1909,9 @@ window.crearBarbero = async () => {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'Error al crear cuenta');
-        await setDoc(doc(db, 'barberos', data.localId), { name, email, uid: data.localId, creadoEn: serverTimestamp() });
+        // Se suma a la config de la barbería (la lista de barberos sale de ahí).
+        const barberos = [...CFG.barberos.filter(b => b.nombre !== name), { nombre: name, email, comision: 0.5, activo: true }];
+        await setDoc(doc(db, 'barberias', BARBERIA_ID), { barberos }, { merge: true });
         showStatus(`✓ Barbero "${name}" creado exitosamente`, true);
         document.getElementById('nb-name').value = '';
         document.getElementById('nb-email').value = '';
@@ -1910,23 +1921,6 @@ window.crearBarbero = async () => {
     }
     btn.disabled = false; btn.innerHTML = 'Crear Barbero';
 };
-function listenToBarberos() {
-    onSnapshot(collection(db, 'barberos'), snap => {
-        snap.docs.forEach(d => {
-            const { name, email } = d.data();
-            if (!name) return;
-            if (!BARBERS_LIST.includes(name)) {
-                BARBERS_LIST.push(name);
-                if (!BARBER_THEME[name]) {
-                    const t = BARBER_EXTRA_THEMES[extraThemeIdx++ % BARBER_EXTRA_THEMES.length];
-                    BARBER_THEME[name] = { ...t, initial: name.charAt(0).toUpperCase() };
-                }
-                if (!barberCommissions[name]) barberCommissions[name] = 0.5;
-            }
-            if (email) BARBER_EMAIL_MAP[email] = name;
-        });
-    });
-}
 
 function listenToGastos() {
     onSnapshot(query(collection(db, PATH_GASTOS), orderBy('fecha', 'desc'), limit(300)), snap => {
@@ -2486,7 +2480,7 @@ function renderServiceStats(filtered) {
 window.renderServices = (selectedBarber) => {
     document.getElementById('svc-name').value = '';
     document.getElementById('svc-price').value = '';
-    document.getElementById('services-grid').innerHTML = SERVICES.filter(s => ['Mechas','Global'].includes(s.name) ? selectedBarber === 'SantiF' : true).map((s, i) => `
+    document.getElementById('services-grid').innerHTML = SERVICES.filter(s => servicioDisponible(CFG, s.name, selectedBarber)).map((s, i) => `
         <button type="button" onclick="window.selectSvc('${s.name}',${s.price},this)"
             class="svc-card svc-appear text-left p-4 bg-white/5 border-2 border-transparent rounded-2xl cursor-pointer transition-all duration-150 hover:bg-white/8 active:scale-[0.97] no-select"
             style="animation-delay:${i * 35}ms">
@@ -2696,6 +2690,7 @@ let currentStockMov = null;
 const ML_API_URL = 'https://tienda.sbbarber.com.ar/api/ml';
 const _mlSyncTimers = {};
 function queueMLSync(productoId) {
+    if (!moduloActivo(CFG, 'mercadolibre')) return;
     clearTimeout(_mlSyncTimers[productoId]);
     _mlSyncTimers[productoId] = setTimeout(async () => {
         delete _mlSyncTimers[productoId];

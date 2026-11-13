@@ -138,6 +138,8 @@
             .stock-low, .ml-pending, .pickit-pending, .animate-pulse { animation:none !important; }
             .animate-enter, .svc-appear { animation:none !important; }
         }
+        /* Módulos apagados en la config de la barbería (MercadoLibre, Pickit): no se ven */
+        .modulo-off { display:none !important; }
     </style>
     <link rel="stylesheet" href="../assets/sb-motion.css">
 </head>
@@ -182,13 +184,13 @@
                     <span class="md:hidden">$</span>
                 </button>
                 <!-- Botón historial ML -->
-                <button id="btn-historial-ml" onclick="window.openHistorialMLPanel()" class="flex items-center gap-1.5 bg-white/10 border border-white/20 text-white px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/20 transition">
+                <button id="btn-historial-ml" data-modulo="mercadolibre" onclick="window.openHistorialMLPanel()" class="flex items-center gap-1.5 bg-white/10 border border-white/20 text-white px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/20 transition">
                     <i class="fas fa-box text-xs"></i>
                     <span class="hidden md:inline">HISTORIAL ML</span>
                     <span class="md:hidden">ML</span>
                 </button>
                 <!-- Botón historial Pickit -->
-                <button id="btn-historial-pickit" title="Historial Pickit" onclick="window.openHistorialPickitPanel()" class="hidden md:flex items-center gap-1.5 bg-white/10 border border-white/20 text-white px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/20 transition">
+                <button id="btn-historial-pickit" data-modulo="pickit" title="Historial Pickit" onclick="window.openHistorialPickitPanel()" class="hidden md:flex items-center gap-1.5 bg-white/10 border border-white/20 text-white px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/20 transition">
                     <i class="fas fa-box-open text-xs"></i>
                     <span class="hidden md:inline">HISTORIAL PICKIT</span>
                 </button>
@@ -232,7 +234,7 @@
                         <button type="button" onclick="window.closeMasMenu(); window.openGastosPanel()" class="flex md:hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-receipt w-4 text-center text-gray-400"></i> Gastos
                         </button>
-                        <button id="btn-historial-pickit-menu" type="button" onclick="window.closeMasMenu(); window.openHistorialPickitPanel()" class="flex md:hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
+                        <button id="btn-historial-pickit-menu" data-modulo="pickit" type="button" onclick="window.closeMasMenu(); window.openHistorialPickitPanel()" class="flex md:hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-box-open w-4 text-center text-gray-400"></i> Historial Pickit
                         </button>
                         <button type="button" onclick="window.closeMasMenu(); window.openMenuEditor()" class="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
@@ -612,7 +614,7 @@
                 </div>
             </div>
             <div class="glass-card rounded-2xl p-5">
-                <div id="ml-status-bar" class="mb-4"></div>
+                <div id="ml-status-bar" data-modulo="mercadolibre" class="mb-4"></div>
                 <div class="relative mb-3">
                     <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
                     <input id="stock-prod-search" type="search" data-scan="nativo" placeholder="Buscar producto..." oninput="window.setStockBusqueda(this.value)" autocomplete="off"
@@ -1047,22 +1049,8 @@
                             class="p-3 rounded-xl border text-sm font-bold transition bg-cyan-600/20 border-cyan-500 text-cyan-300">
                             🧔 Cliente
                         </button>
-                        <button type="button" onclick="window.setDrinkComprador('Tony', this)" id="mv-comp-Tony"
-                            class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
-                            Tony
-                        </button>
-                        <button type="button" onclick="window.setDrinkComprador('Stefa', this)" id="mv-comp-Stefa"
-                            class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
-                            Stefa
-                        </button>
-                        <button type="button" onclick="window.setDrinkComprador('Santi', this)" id="mv-comp-Santi"
-                            class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
-                            Santi
-                        </button>
-                        <button type="button" onclick="window.setDrinkComprador('SantiF', this)" id="mv-comp-SantiF"
-                            class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">
-                            Santi F
-                        </button>
+                        <!-- Un botón por barbero: renderCompradoresBebida() (salen de la config de la barbería) -->
+                        <div id="mv-comp-barberos" class="contents"></div>
                     </div>
                     <input type="hidden" id="mv-comprador" value="cliente">
                     <!-- Método de pago (solo venta a cliente) -->
@@ -1625,6 +1613,7 @@ import { initClientes, pickerCliente, resolverCliente, limpiarCliente } from "..
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
 import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
 import { registrarPush, avisarTurnoNuevo } from "../assets/push.js";
+import { configInicial, escucharConfig, barberosActivos, etiquetaBarbero, mapaEmails, temaDe, comisionesBase, comisionConReglas, servicioDisponible, moduloActivo } from "../assets/config-barberia.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -1635,7 +1624,9 @@ const firebaseConfig = {
     appId: "1:213501157745:web:09fd59996cf1d72b6696d0"
 };
 
-const ADMINS    = ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
+// Barberos, admins, comisiones, colores, atajos y módulos: assets/config-barberia.js (doc barberias/{id}).
+let CFG = configInicial();
+const ADMINS    = [...CFG.admins];
 const PATH_CUTS = `artifacts/sb-barber-6dc16/public/data/all_cuts`;
 const PATH_STOCK   = `stock_items`;
 // Historial de bebidas: cada entrada/salida deja un movimiento; los conteos físicos van aparte
@@ -1645,7 +1636,7 @@ const PATH_STOCK_CONTEOS = 'stock_conteos';
 const PATH_VENTAS    = `ventas_productos`;
 const PATH_PRODUCTOS = `productos_barber`;
 const PATH_PROFILES  = `barber_profiles`;
-let BARBER_EMAIL_MAP = { 'ap1773508@gmail.com':'Tony', 'stefanoacostasla@gmail.com':'Stefa', 'rodriguezsantiagoet5@gmail.com':'Santi', 'santiagofl551@gmail.com':'SantiF' };
+let BARBER_EMAIL_MAP = mapaEmails(CFG);
 let barberProfilesData = {};
 
 const SERVICES = [
@@ -1659,7 +1650,7 @@ const SERVICES = [
     { name:'Global',          price:60000 }
 ];
 
-let BARBERS = ['Tony', 'Stefa', 'Santi', 'SantiF'];
+let BARBERS = barberosActivos(CFG);
 // Barberos con datos en lo que se está mirando: primero los actuales y después los que ya no están
 // (Maxi, Diego, Bauti...), para que sus cortes viejos sigan apareciendo al ver días pasados.
 function barberosConDatos(data) {
@@ -1670,24 +1661,14 @@ const exTag = b => BARBERS.includes(b) ? '' : ' <span class="text-[9px] font-sem
 function temaBarbero(b) {
     return BARBER_THEME[b] || { color:'gray', text:'text-gray-400', border:'border-gray-600', bg:'bg-gray-600', initial: escHtml(String(b || "?").charAt(0).toUpperCase()) };
 }
-const BARBER_COMISION = { Tony: 0.5, Stefa: 0.5, Santi: 0.5, SantiF: 0.5 };
-// Comisión de un corte puntual. Santi F, desde el 11/11/2026: Mechas, Global y Color 40% para él (60% la barber),
-// el resto según BARBER_COMISION. Sus cortes de antes de esa fecha quedan al 40% de todo, como se pagaban.
-const SANTIF_REGLA_DESDE = new Date(2026, 10, 11);
+let BARBER_COMISION = comisionesBase(CFG);
+// Comisión de un corte puntual: la base del barbero o una regla especial suya de la config
+// (hoy Santi F: Mechas, Global y Color al 40% desde el 11/11/2026, y todo al 40% antes).
 function comisionCorte(c) {
-    const base = BARBER_COMISION[c.barber] ?? 0.5;
-    if (c.barber !== "SantiF") return base;
-    const fecha = c.createdAt && c.createdAt.toDate ? c.createdAt.toDate() : new Date();
-    if (fecha < SANTIF_REGLA_DESDE) return 0.4;
-    return /mechas|global|color/i.test(c.service || "") ? 0.4 : base;
+    return comisionConReglas(CFG, c, BARBER_COMISION[c.barber] ?? 0.5);
 }
-let BARBER_THEME = {
-    Tony:   { color:'blue',    text:'text-blue-400',    border:'border-blue-500',    bg:'bg-blue-500',    initial:'T' },
-    Maxi:   { color:'emerald', text:'text-emerald-400', border:'border-emerald-500', bg:'bg-emerald-500', initial:'M' },
-    Stefa:  { color:'purple',  text:'text-purple-400',  border:'border-purple-500',  bg:'bg-purple-500',  initial:'S' },
-    Santi:  { color:'orange',  text:'text-orange-400',  border:'border-orange-500',  bg:'bg-orange-500',  initial:'Sa' },
-    SantiF: { color:'pink',    text:'text-pink-400',    border:'border-pink-500',    bg:'bg-pink-500',    initial:'F' }
-};
+const temasDeConfig = () => Object.fromEntries(CFG.barberos.map(b => [b.nombre, temaDe(b)]).filter(([, t]) => t));
+let BARBER_THEME = temasDeConfig();
 const BARBER_EXTRA_THEMES = [
     { color:'orange', text:'text-orange-400', border:'border-orange-500', bg:'bg-orange-500' },
     { color:'pink',   text:'text-pink-400',   border:'border-pink-500',   bg:'bg-pink-500'   },
@@ -1833,8 +1814,8 @@ async function init() {
                 listenToBarberos();
                 listenToGastos();
                 listenToConteos();
-                listenToMlDespachos();
-                listenToPickitDespachos();
+                if (moduloActivo(CFG, 'mercadolibre')) listenToMlDespachos();
+                if (moduloActivo(CFG, 'pickit')) listenToPickitDespachos();
                 listenToMenuData();
                 listenToPrecios();
                 listenToChecklist();
@@ -2170,7 +2151,7 @@ function renderBarberGrid() {
 window.renderServices = (selectedBarber) => {
     document.getElementById('svc-name').value = '';
     document.getElementById('svc-price').value = '';
-    const filtered = SERVICES.filter(s => ['Mechas','Global'].includes(s.name) ? selectedBarber === 'SantiF' : true);
+    const filtered = SERVICES.filter(s => servicioDisponible(CFG, s.name, selectedBarber));
     document.getElementById('services-grid').innerHTML = filtered.map((s, i) => `
         <button type="button" onclick="window.selectSvc('${jsAttr(s.name)}', ${s.price}, this)"
             class="svc-card svc-appear text-left p-4 bg-white/5 border-2 border-transparent rounded-2xl cursor-pointer transition-all duration-150 hover:bg-white/8 active:scale-[0.97]"
@@ -3291,6 +3272,7 @@ async function mlApi(action, body) {
 
 // Espera un toque (varias ventas seguidas = un solo envío) y le pide al servidor que copie el stock a ML.
 function queueMLSync(productoId) {
+    if (!moduloActivo(CFG, 'mercadolibre')) return;
     clearTimeout(_mlSyncTimers[productoId]);
     _mlSyncTimers[productoId] = setTimeout(() => {
         delete _mlSyncTimers[productoId];
@@ -3299,6 +3281,7 @@ function queueMLSync(productoId) {
 }
 
 async function loadMLCuenta() {
+    if (!moduloActivo(CFG, 'mercadolibre')) return;
     try {
         const snap = await getDoc(doc(db, 'ml_config', 'cuenta'));
         const d = snap.exists() ? snap.data() : null;
@@ -3325,6 +3308,7 @@ function renderMLStatusBar() {
 }
 
 function mlLinkLine(p, data, safeName) {
+    if (!moduloActivo(CFG, 'mercadolibre')) return '';
     if (data.mlItemId) {
         const sync = data.mlSync;
         const estado = sync?.ok === false
@@ -5268,10 +5252,9 @@ window.togglePagoSemanal = async (semana, barbero, monto) => {
     } catch (err) { console.error('pago semanal error:', err); alert('Error al guardar'); }
 };
 
-const ATAJOS_DESCUENTO = {
-    Digit7: { barbero: 'Tony', monto: 5000 },
-    Digit6: { barbero: 'Stefa', monto: 5000 }
-};
+// Ctrl+Shift+<tecla> → descuento semanal de un barbero (config de la barbería: atajos).
+const atajosDeConfig = () => Object.fromEntries((CFG.atajos || []).map(a => [a.tecla, { barbero: a.barbero, monto: a.monto }]));
+let ATAJOS_DESCUENTO = atajosDeConfig();
 document.addEventListener('keydown', async e => {
     if (!e.ctrlKey || !e.shiftKey || e.altKey || e.metaKey) return;
     const a = ATAJOS_DESCUENTO[e.code];
@@ -5934,7 +5917,7 @@ function updateHistorialPickitBadge() {
     const hoy = now.toLocaleDateString('en-CA');
     const yaCargadoHoy = allPickitDespachos.some(m => m.fecha === hoy);
     const despuesDe1230 = now.getHours() * 60 + now.getMinutes() >= 12 * 60 + 30;
-    const pendiente = despuesDe1230 && !yaCargadoHoy;
+    const pendiente = despuesDe1230 && !yaCargadoHoy && moduloActivo(CFG, 'pickit');
     btn.classList.toggle('pickit-pending', pendiente);
     // En el celu el botón va dentro del menú ⋮: avisa el ⋮ y el ítem del menú
     const celu = window.matchMedia('(max-width: 767px)').matches;
@@ -6334,21 +6317,33 @@ document.getElementById('nuevo-turno-form').addEventListener('submit', async e =
 
 pickerCliente(document.getElementById('client-name'));
 
-// ---- BARBEROS DINÁMICOS ----
-async function listenToBarberos() {
-    onSnapshot(collection(db, 'barberos'), snap => {
-        snap.docs.forEach(d => {
-            const { name, email } = d.data();
-            if (!name) return;
-            if (!BARBERS.includes(name)) {
-                BARBERS.push(name);
-                if (!BARBER_THEME[name]) {
-                    const t = BARBER_EXTRA_THEMES[extraThemeIdx++ % BARBER_EXTRA_THEMES.length];
-                    BARBER_THEME[name] = { ...t, initial: name.charAt(0).toUpperCase() };
-                }
-            }
-            if (email) BARBER_EMAIL_MAP[email] = name;
-        });
+// ---- CONFIG DE LA BARBERÍA (barberos, admins, comisiones, atajos, módulos) ----
+// Arranca con configInicial() (la del dispositivo o el respaldo) y se actualiza con el doc barberias/{id}.
+function aplicarConfig() {
+    ADMINS.splice(0, ADMINS.length, ...CFG.admins);
+    BARBER_EMAIL_MAP = mapaEmails(CFG);
+    BARBERS = barberosActivos(CFG);
+    BARBER_COMISION = comisionesBase(CFG);
+    BARBER_THEME = temasDeConfig();
+    // Barberos sin color en la config: uno de los extra, fijo por orden.
+    BARBERS.forEach(b => {
+        if (!BARBER_THEME[b]) BARBER_THEME[b] = { ...BARBER_EXTRA_THEMES[extraThemeIdx++ % BARBER_EXTRA_THEMES.length], initial: b.charAt(0).toUpperCase() };
+    });
+    ATAJOS_DESCUENTO = atajosDeConfig();
+    document.querySelectorAll('[data-modulo]').forEach(el => el.classList.toggle('modulo-off', !moduloActivo(CFG, el.dataset.modulo)));
+    renderCompradoresBebida();
+}
+function renderCompradoresBebida() {
+    const cont = document.getElementById('mv-comp-barberos');
+    if (!cont) return;
+    cont.innerHTML = BARBERS.map(b => `<button type="button" onclick="window.setDrinkComprador('${jsAttr(b)}', this)" id="mv-comp-${escHtml(b)}"
+        class="p-3 rounded-xl border text-sm font-bold transition bg-black/30 border-gray-700 text-gray-400 hover:border-gray-500">${escHtml(etiquetaBarbero(CFG, b))}</button>`).join('');
+}
+aplicarConfig();
+function listenToBarberos() {
+    escucharConfig(db, { doc, onSnapshot }, cfg => {
+        CFG = cfg;
+        aplicarConfig();
         renderCuts();
     });
 }

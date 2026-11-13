@@ -45,6 +45,13 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    // Config de cada barbería (barberos, admins, comisiones, módulos; assets/config-barberia.js):
+    // la leen todos los del equipo, la cambian solo los dueños.
+    match /barberias/{id} {
+      allow read: if esStaff();
+      allow write: if esDueno();
+    }
+
     // Tokens de la app del celu (assets/push.js): cada uno guarda el suyo y solo con su propio email,
     // así nadie se anota para recibir los avisos de otro (el servidor elige destinatarios por email).
     match /push_tokens/{t} {
