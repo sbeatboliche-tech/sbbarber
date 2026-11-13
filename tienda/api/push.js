@@ -1,7 +1,8 @@
 // Avisos push que disparan recepcionista y anotar (otro dominio: GitHub Pages), con el ID token de Firebase.
 //   POST /api/push?action=turno {turnoId} → "Turno nuevo" al barbero del turno (no a quien lo anotó).
+//   POST /api/push?action=prueba          → (solo dueños) aviso de prueba a los celus de los dueños.
 // El contenido sale del turno guardado en Firestore, no del cliente; turnos/{id}.pushEnviado evita duplicados.
-import { barberDb, verifyBarberUser } from '../lib/barberAdmin.js';
+import { barberDb, verifyBarberUser, OWNERS } from '../lib/barberAdmin.js';
 import { enviarPush } from '../lib/push.js';
 
 const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
@@ -19,6 +20,12 @@ export default async function handler(req, res) {
 
     try {
         if (req.query.action === 'turno') return res.json(await avisarTurno(req.body?.turnoId, user));
+        // Prueba: aviso a los celus de los dueños (para chequear que la app recibe).
+        if (req.query.action === 'prueba') {
+            if (!OWNERS.includes(user.email)) return res.status(403).json({ error: 'Solo dueños' });
+            const enviados = await enviarPush({ admins: true }, { titulo: '✅ Notificaciones andando', cuerpo: 'Prueba desde SB Barber' });
+            return res.json({ enviados });
+        }
         return res.status(400).json({ error: 'Acción desconocida' });
     } catch (e) {
         console.error('push:', e);
