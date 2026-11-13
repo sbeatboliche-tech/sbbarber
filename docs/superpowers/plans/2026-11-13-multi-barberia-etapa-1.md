@@ -42,9 +42,16 @@ el panel del dueño para dar de alta barberías (etapa 4), turnos públicos y ML
     { nombre: 'Maxi', color: 'emerald', inicial: 'M', activo: false }   // ex: solo para ver datos viejos
   ],
   servicios: [ { nombre: 'Corte', precio: 16000 }, ... ],    // hoy SERVICES; config_precios/servicios sigue mandando en el precio
-  atajos:    [ { tecla: 'Digit7', barbero: 'Tony', monto: 5000 }, { tecla: 'Digit6', barbero: 'Stefa', monto: 5000 } ]
+  atajos:    [ { tecla: 'Digit7', barbero: 'Tony', monto: 5000 }, { tecla: 'Digit6', barbero: 'Stefa', monto: 5000 } ],
+  // Lo que es propio de este local. Una barbería nueva arranca con todo en false (no ve ni el botón).
+  modulos:   { mercadolibre: true, pickit: true }
 }
 ```
+
+**Módulos por barbería (pedido del usuario 2026-11-13):** "Historial ML" (y todo lo de MercadoLibre: enlazar
+productos, ventas por canal `ml`) es solo de SB Barber; en la versión que se vende **no tiene que aparecer**.
+Cada pantalla/botón de un módulo se muestra solo si `modulos.<nombre>` es `true`. Sin config cargada
+(respaldo), SB Barber los ve como hoy.
 
 ### Cómo lo cargan las apps (`assets/config-barberia.js`, compartido)
 
@@ -54,6 +61,7 @@ el panel del dueño para dar de alta barberías (etapa 4), turnos públicos y ML
 4. `comisionCorte()` pasa a ser genérica: lee `reglasComision` del barbero en vez del `if (barber === 'SantiF')`.
 5. Los botones con nombres fijos (compradores de bebidas, `<option>` de anotar) se generan desde `barberos`.
 6. Los atajos de teclado se arman desde `atajos`.
+7. Botones y pantallas de MercadoLibre (Historial ML, enlazar con ML) y de Pickit, según `modulos`.
 
 ### Lo que queda igual en esta etapa (a propósito)
 
