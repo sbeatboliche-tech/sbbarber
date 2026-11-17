@@ -17,6 +17,10 @@ export const normNombre = s => String(s || '').toLowerCase().normalize('NFD').re
 // Mismo criterio que estadísticas: estos no son un cliente de verdad
 const GENERICOS = new Set(['cliente', 'clienta', 'x', 'xx', 'nn', 'sin nombre', 'nuevo', 'amigo']);
 export const esNombreValido = n => n.length >= 2 && !GENERICOS.has(n);
+// Teléfono: solo números (un + adelante se descarta). Vacío si no hay nada.
+export const normTelefono = s => String(s || '').replace(/\D/g, '');
+// Mínimo razonable para un celular argentino sin el 0 ni el 15 (ej. 11 2345 6789)
+export const telefonoValido = t => !t || (t.length >= 8 && t.length <= 15);
 
 let db = null, fb = null, getEmail = () => null;
 let lista = [];          // [{ id, nombre, n }]
@@ -48,7 +52,7 @@ async function sync() {
             const x = d.data();
             // Sacado de la lista desde estadísticas (ahí se actualiza creadoEn para que llegue acá)
             if (x.eliminado) { quitar(d.id); return; }
-            agregar({ id: d.id, nombre: x.nombre || '', n: x.n || normNombre(x.nombre), alias: Array.isArray(x.alias) ? x.alias : [] });
+            agregar({ id: d.id, nombre: x.nombre || '', n: x.n || normNombre(x.nombre), alias: Array.isArray(x.alias) ? x.alias : [], tel: x.telefono || '' });
         });
         syncedAt = ahora;
         guardarLocal();
@@ -82,8 +86,9 @@ const esTactil = () => matchMedia('(pointer: coarse)').matches || matchMedia('(m
 
 const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
-/** Mientras se escribe en el <input>, sugiere nombres ya guardados u ofrece agregar uno nuevo. */
-export function pickerCliente(input) {
+/** Mientras se escribe en el <input>, sugiere nombres ya guardados u ofrece agregar uno nuevo.
+ *  telInput (opcional): al elegir un cliente que ya tiene teléfono, se completa solo. */
+export function pickerCliente(input, telInput) {
     if (!input || input.dataset.picker) return;
     input.dataset.picker = '1';
     input.setAttribute('autocomplete', 'off');
@@ -106,7 +111,10 @@ export function pickerCliente(input) {
     const elegir = i => {
         const it = items[i];
         if (!it) return;
-        if (it.c) { input.value = it.c.nombre; input.dataset.clienteId = it.c.id; }
+        if (it.c) {
+            input.value = it.c.nombre; input.dataset.clienteId = it.c.id;
+            if (telInput && it.c.tel && !telInput.value.trim()) telInput.value = it.c.tel;
+        }
         else input.dataset.clienteId = resolverCliente(input).clienteId; // crea la ficha ya
         cerrar();
     };
@@ -156,8 +164,9 @@ export function pickerCliente(input) {
     input.form?.addEventListener('reset', () => { delete input.dataset.clienteId; cerrar(); });
 }
 
-/** Deja el input vacío y sin ficha elegida. */
-export function limpiarCliente(input) {
+/** Deja el input vacío y sin ficha elegida (y el teléfono, si se pasa). */
+export function limpiarCliente(input, telInput) {
+    if (telInput) telInput.value = '';
     if (!input) return;
     input.value = '';
     delete input.dataset.clienteId;
@@ -166,19 +175,30 @@ export function limpiarCliente(input) {
 /**
  * Al guardar: devuelve { clienteId, clientName }. Si el nombre coincide con una ficha la usa
  * (con el nombre tal cual está en la ficha); si es nuevo, crea la ficha sin esperar al servidor.
+ * telefono (opcional, ya normalizado): se guarda en la ficha si es nuevo o cambió. Así estadísticas
+ * tiene a quién escribirle cuando el cliente deja de venir.
  */
-export function resolverCliente(input) {
+export function resolverCliente(input, telefono = '') {
     const texto = (input?.value || '').trim();
     const n = normNombre(texto);
     if (!texto) return { clienteId: null, clientName: '' };
     const elegido = input.dataset.clienteId && porId.get(input.dataset.clienteId);
     const c = (elegido && elegido.n === n) ? elegido : (lista.find(x => x.n === n) || lista.find(x => x.alias?.includes(n)));
-    if (c) return { clienteId: c.id, clientName: c.nombre };
+    if (c) {
+        if (telefono && telefono !== c.tel && db) {
+            // creadoEn se actualiza para que los otros dispositivos se enteren (es la marca de sincronización)
+            fb.setDoc(fb.doc(db, COL, c.id), { telefono, creadoEn: fb.serverTimestamp() }, { merge: true })
+                .catch(err => console.warn('clientes: no se pudo guardar el teléfono', err));
+            c.tel = telefono;
+            guardarLocal();
+        }
+        return { clienteId: c.id, clientName: c.nombre };
+    }
     if (!esNombreValido(n) || !db) return { clienteId: null, clientName: texto };
     const ref = fb.doc(fb.collection(db, COL));
-    fb.setDoc(ref, { nombre: texto, n, creadoEn: fb.serverTimestamp(), creadoPor: getEmail() || null })
+    fb.setDoc(ref, { nombre: texto, n, ...(telefono ? { telefono } : {}), creadoEn: fb.serverTimestamp(), creadoPor: getEmail() || null })
         .catch(err => console.warn('clientes: no se pudo crear la ficha', err));
-    agregar({ id: ref.id, nombre: texto, n });
+    agregar({ id: ref.id, nombre: texto, n, tel: telefono });
     guardarLocal();
     return { clienteId: ref.id, clientName: texto };
 }

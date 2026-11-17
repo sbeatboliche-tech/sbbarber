@@ -971,7 +971,9 @@
                     <input type="hidden" id="svc-price">
                 </div>
                 <!-- Cliente -->
-                <input type="text" id="client-name" placeholder="Nombre del cliente (opcional)"
+                <input type="text" id="client-name" placeholder="Nombre y apellido del cliente (opcional)"
+                    class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-cyan-500/60 focus:bg-cyan-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
+                <input type="tel" id="client-tel" inputmode="tel" autocomplete="off" placeholder="Teléfono (opcional, para avisarle promos)"
                     class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-cyan-500/60 focus:bg-cyan-500/5 outline-none transition text-white placeholder-gray-600 text-sm">
                 <!-- Pago -->
                 <div>
@@ -1637,7 +1639,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, orderBy, where, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, getDoc, doc, increment, serverTimestamp, limit, writeBatch, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { initClientes, pickerCliente, resolverCliente, limpiarCliente } from "../assets/clientes.js";
+import { initClientes, pickerCliente, resolverCliente, limpiarCliente, normTelefono, telefonoValido } from "../assets/clientes.js";
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
 import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
 import { registrarPush, avisarTurnoNuevo } from "../assets/push.js";
@@ -2125,7 +2127,7 @@ window.openAddCutModal = () => {
     document.getElementById('services-grid').innerHTML = '';
     document.getElementById('svc-name').value = '';
     document.getElementById('svc-price').value = '';
-    limpiarCliente(document.getElementById('client-name'));
+    limpiarCliente(document.getElementById('client-name'), document.getElementById('client-tel'));
     document.getElementById('metodo-pago').value = 'efectivo';
     document.getElementById('propina-afecta-caja').checked = true;
     document.getElementById('corte-afecta-caja').checked = true;
@@ -2218,10 +2220,13 @@ document.getElementById('add-cut-form').addEventListener('submit', async e => {
         montoTransferencia = Number(document.getElementById('mp-monto-transferencia').value) || 0;
         if (montoEfectivo + montoTransferencia !== servicePrice) return alert(`Efectivo + Transferencia debe sumar $${servicePrice.toLocaleString('es-AR')}`);
     }
+    const telefono = normTelefono(document.getElementById('client-tel').value);
+    if (!telefonoValido(telefono)) return alert('El teléfono parece incompleto. Poné el número con característica, ej. 11 2345 6789 (o dejalo vacío).');
+    if (telefono && !document.getElementById('client-name').value.trim()) return alert('Para guardar el teléfono poné también el nombre del cliente.');
     const btn = document.getElementById('btn-submit-cut');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     try {
-        const { clienteId, clientName } = resolverCliente(document.getElementById('client-name'));
+        const { clienteId, clientName } = resolverCliente(document.getElementById('client-name'), telefono);
         const hoy = new Date().toLocaleDateString('en-CA');
         const cutData = {
             barber, service: serviceName, price: servicePrice,
@@ -6418,7 +6423,7 @@ document.getElementById('nuevo-turno-form').addEventListener('submit', async e =
 });
 
 
-pickerCliente(document.getElementById('client-name'));
+pickerCliente(document.getElementById('client-name'), document.getElementById('client-tel'));
 
 // ---- CONFIG DE LA BARBERÍA (barberos, admins, comisiones, atajos, módulos) ----
 // Arranca con configInicial() (la del dispositivo o el respaldo) y se actualiza con el doc barberias/{id}.

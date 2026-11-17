@@ -130,6 +130,13 @@
     .cli-del, .cli-edit { border:0; background:transparent; color:var(--muted); font-size:16px; line-height:1; cursor:pointer; padding:0 4px; }
     .cli-del:hover { color:#f87171; }
     .cli-edit { font-size:14px; }
+    .cli-tel { color:var(--muted); font-size:11px; white-space:nowrap; border:0; background:transparent; cursor:pointer; padding:0 2px; font-variant-numeric:tabular-nums; }
+    .cli-tel:hover { color:var(--brand); }
+    .cli-tel.vacio { opacity:.45; }
+    .wa-btn { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:999px; background:#16a34a; color:#fff !important; font-size:11px; font-weight:700; text-decoration:none; white-space:nowrap; }
+    .wa-btn:hover { background:#15803d; }
+    .promo-cfg { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); margin:0 0 10px; flex-wrap:wrap; }
+    .promo-cfg input { width:56px; padding:4px 6px; border-radius:8px; border:1px solid var(--border); background:transparent; color:inherit; font:inherit; }
     .cli-edit:hover { color:var(--brand); }
     @media (pointer: coarse) { .cli-del, .cli-edit { font-size:18px; padding:6px 10px; } .cli-row { padding:4px 0; } }
     .lista-sub { font-size:13px; margin:18px 0 4px; }
@@ -272,7 +279,11 @@
                 <div class="chart"></div>
             </div>
             <div class="card" id="c-perdidos">
-                <div class="card-h"><div><h2>Clientes que dejaron de venir</h2><div class="sub">Vinieron 2+ veces y hace más de 45 días que no vuelven (todo el historial)</div></div></div>
+                <div class="card-h"><div><h2>Clientes que dejaron de venir</h2><div class="sub">Vinieron 2+ veces y hace más de <span id="promo-dias-txt">45</span> días que no vuelven (todo el historial). Los que tienen teléfono tienen botón para mandarles el descuento por WhatsApp</div></div></div>
+                <div class="promo-cfg">
+                    <label>Sin venir hace más de <input type="number" id="promo-dias" min="15" max="365" step="5" value="45"> días</label>
+                    <label>· Descuento <input type="number" id="promo-pct" min="5" max="50" step="5" value="10"> %</label>
+                </div>
                 <div class="chart"></div>
             </div>
             <div class="card wide" id="c-lista-nombres">
@@ -363,7 +374,7 @@ const DAY = 864e5;
    Así no se gasta la cuota gratis de Firebase en cada visita.
    ========================================================= */
 const REFRESH_DIAS = 45;
-const CACHE_V = 4; // subir si cambia lo que guardan los norm* (fuerza a bajar todo de nuevo)
+const CACHE_V = 5; // subir si cambia lo que guardan los norm* (fuerza a bajar todo de nuevo)
 const tsMs = v => v == null ? null
     : typeof v.toMillis === 'function' ? v.toMillis()
     : typeof v === 'string' ? (Date.parse(v) || null)
@@ -403,8 +414,9 @@ const normPropina = (id, x) => {
     return { id, _ts: t, fecha: x.fecha || fechaDe(t), barbero: x.barbero || '—', monto: Number(x.monto) || 0,
         estado: x.estado || '', eliminado: !!x.eliminado };
 };
+// El teléfono se carga al anotar el corte (opcional) y sirve para mandar promos a los que dejaron de venir.
 const normCliente = (id, x) => ({ id, _ts: tsMs(x.creadoEn), nombre: x.nombre || '', n: x.n || normNombre(x.nombre || ''),
-    alias: Array.isArray(x.alias) ? x.alias : [], eliminado: !!x.eliminado });
+    alias: Array.isArray(x.alias) ? x.alias : [], eliminado: !!x.eliminado, tel: x.telefono || '' });
 // Turnos: el teléfono no se guarda en la caché ni se muestra
 const normTurno = (id, x) => ({ id, eliminado: !!x.eliminado, fecha: x.fecha || null, hora: x.hora || '', barbero: x.nombreBarbero || x.barbero || '—',
     servicio: String(x.nombreServicio || x.servicio || '').trim(), estado: x.estado || '',
@@ -554,16 +566,17 @@ let CLIENTES = new Map(); // key -> { nombre, visitas:[{t,price,barber}] }
 function prepararClientes() {
     CLIENTES = new Map();
     // Nombres viejos (renombrados o unidos en la lista) cuentan para la ficha actual
-    const aliasDe = new Map(), nombreDe = new Map();
+    const aliasDe = new Map(), nombreDe = new Map(), telDe = new Map();
     D.clientes.filter(c => !c.eliminado).forEach(c => {
         nombreDe.set(c.n, c.nombre);
+        if (c.tel) telDe.set(c.n, c.tel);
         c.alias.forEach(a => aliasDe.set(a, c.n));
     });
     D.cuts.slice().sort((a, b) => a.t - b.t).forEach(c => {
         const k0 = normNombre(c.cliente), k = nombreDe.has(k0) ? k0 : (aliasDe.get(k0) || k0);
         c.ck = (k.length >= 2 && !NOMBRES_GENERICOS.has(k)) ? k : null;
         if (!c.ck) return;
-        if (!CLIENTES.has(k)) CLIENTES.set(k, { nombre: nombreDe.get(k) || c.cliente, visitas: [] });
+        if (!CLIENTES.has(k)) CLIENTES.set(k, { nombre: nombreDe.get(k) || c.cliente, tel: telDe.get(k) || '', visitas: [] });
         const cl = CLIENTES.get(k);
         c.primera = cl.visitas.length === 0;
         cl.visitas.push(c);
@@ -1001,16 +1014,58 @@ function renderClientes(F, B, from, to) {
 
     renderFrecuencia(clientesPeriodo, from, to);
 
-    // Clientes que dejaron de venir (todo el historial)
-    const limite = Date.now() - 45 * DAY;
+    renderPerdidos();
+}
+
+// Clientes que dejaron de venir (todo el historial), con botón de WhatsApp para mandarles el descuento.
+// Primero los que tienen teléfono (a esos se les puede escribir), después por cantidad de visitas.
+function renderPerdidos() {
+    const dias = promoCfg.dias, limite = Date.now() - dias * DAY;
+    $('promo-dias-txt').textContent = dias;
     const perdidos = [...CLIENTES.values()].map(cl => {
         const vs = state.barber === 'todos' ? cl.visitas : cl.visitas.filter(v => v.barber === state.barber);
-        return { nombre: cl.nombre, visitas: vs.length, ultima: vs.length ? vs[vs.length - 1].t : 0, gasto: vs.reduce((s, v) => s + v.price, 0), barber: vs.length ? vs[vs.length - 1].barber : '' };
-    }).filter(r => r.visitas >= 2 && r.ultima < limite).sort((a, b) => b.visitas - a.visitas || b.ultima - a.ultima).slice(0, 20);
+        return { nombre: cl.nombre, tel: cl.tel, visitas: vs.length, ultima: vs.length ? vs[vs.length - 1].t : 0, barber: vs.length ? vs[vs.length - 1].barber : '' };
+    }).filter(r => r.visitas >= 2 && r.ultima < limite)
+      .sort((a, b) => (!!b.tel - !!a.tel) || b.visitas - a.visitas || b.ultima - a.ultima).slice(0, 50);
+    const conTel = perdidos.filter(r => r.tel).length;
     $('c-perdidos').querySelector('.chart').innerHTML = perdidos.length
-        ? tablaHTML([{ t: 'Cliente' }, { t: 'Visitas', num: 1 }, { t: 'Última visita' }, { t: 'Días sin venir', num: 1 }, { t: 'Con' }],
-            perdidos.map(r => [r.nombre, num(r.visitas), fmtFecha(r.ultima), num((Date.now() - r.ultima) / DAY), r.barber]))
+        ? `<div class="sub" style="margin-bottom:6px">${num(perdidos.length)} clientes · ${num(conTel)} con teléfono</div>
+          <div class="tbl-wrap"><table><thead><tr><th>Cliente</th><th class="num">Visitas</th><th>Última visita</th><th class="num">Días sin venir</th><th>Con</th><th>Avisar</th></tr></thead><tbody>${
+            perdidos.map(r => `<tr><td>${esc(r.nombre)}</td><td class="num">${num(r.visitas)}</td><td>${esc(fmtFecha(r.ultima))}</td>
+                <td class="num">${num((Date.now() - r.ultima) / DAY)}</td><td>${esc(r.barber)}</td>
+                <td>${r.tel ? `<a class="wa-btn" target="_blank" rel="noopener" href="${esc(waLink(r.tel, mensajePromo(r.nombre)))}" title="${esc(r.tel)}">WhatsApp</a>` : '<span class="sub">sin teléfono</span>'}</td></tr>`).join('')
+          }</tbody></table></div>`
         : '<div class="empty">Nadie en esta lista 🎉</div>';
+}
+
+// Config del descuento: se recuerda en este navegador
+const promoCfg = (() => {
+    let c = { dias: 45, pct: 10 };
+    try { c = { ...c, ...JSON.parse(localStorage.getItem('sb_promo_cfg') || '{}') }; } catch {}
+    return c;
+})();
+$('promo-dias').value = promoCfg.dias;
+$('promo-pct').value = promoCfg.pct;
+['promo-dias', 'promo-pct'].forEach(id => $(id).addEventListener('change', () => {
+    promoCfg.dias = Math.min(365, Math.max(15, Number($('promo-dias').value) || 45));
+    promoCfg.pct = Math.min(50, Math.max(5, Number($('promo-pct').value) || 10));
+    try { localStorage.setItem('sb_promo_cfg', JSON.stringify(promoCfg)); } catch {}
+    renderPerdidos();
+}));
+
+const primerNombre = n => String(n || '').trim().split(/\s+/)[0] || '';
+function mensajePromo(nombre) {
+    return `¡Hola ${primerNombre(nombre)}! Hace rato que no te vemos por SB Barber 💈 Te guardamos un ${promoCfg.pct}% de descuento en tu próximo corte. ¿Te reservamos un turno?`;
+}
+// wa.me pide el número completo con país. Celulares de Argentina: 54 9 + característica + número (sin 0 ni 15).
+function waLink(tel, texto) {
+    let d = String(tel).replace(/\D/g, '');
+    if (d.startsWith('54')) d = d.startsWith('549') ? d : '549' + d.slice(2);
+    else {
+        d = d.replace(/^0/, '');
+        if (d.length === 10) d = '549' + d;
+    }
+    return `https://wa.me/${d}?text=${encodeURIComponent(texto)}`;
 }
 
 // Frecuencia: dos cortes el mismo día cuentan como una sola visita
@@ -1329,7 +1384,7 @@ function renderListaClientes() {
     $('lista-clientes').innerHTML = lista.length
         ? lista.slice(0, MAX).map(c => {
             const v = visitas.get(c.n) || 0;
-            return `<div class="cli-row"><span class="cli-nombre">${esc(c.nombre)}</span><span class="cli-vis">${v ? `${num(v)} ${v === 1 ? 'visita' : 'visitas'}` : 'sin cortes'}</span><button class="cli-edit" data-id="${c.id}" title="Cambiar el nombre">✎</button><button class="cli-del" data-id="${c.id}" title="Sacar de la lista">×</button></div>`;
+            return `<div class="cli-row"><span class="cli-nombre">${esc(c.nombre)}</span><span class="cli-vis">${v ? `${num(v)} ${v === 1 ? 'visita' : 'visitas'}` : 'sin cortes'}</span><button class="cli-tel${c.tel ? '' : ' vacio'}" data-id="${c.id}" title="${c.tel ? 'Cambiar el teléfono' : 'Agregar teléfono'}">${c.tel ? '☎ ' + esc(c.tel) : '☎ +'}</button><button class="cli-edit" data-id="${c.id}" title="Cambiar el nombre">✎</button><button class="cli-del" data-id="${c.id}" title="Sacar de la lista">×</button></div>`;
         }).join('') + (lista.length > MAX ? `<div class="empty">… y ${num(lista.length - MAX)} más. Buscá para encontrarlos.</div>` : '')
         : `<div class="empty">${q ? 'No hay clientes con ese nombre' : 'Todavía no hay clientes en la lista'}</div>`;
 }
@@ -1338,6 +1393,8 @@ $('buscar-cliente').addEventListener('input', renderListaClientes);
 // Sacar de la lista: se marca eliminado (no se borra) para que no se vuelva a sumar del historial.
 // creadoEn se actualiza para que los celulares con la lista guardada se enteren del cambio.
 $('lista-clientes').addEventListener('click', async e => {
+    const tel = e.target.closest('.cli-tel');
+    if (tel) return editarTelefono(tel.dataset.id);
     const edit = e.target.closest('.cli-edit');
     if (edit) return editarCliente(edit.dataset.id);
     const btn = e.target.closest('.cli-del');
@@ -1350,6 +1407,22 @@ $('lista-clientes').addEventListener('click', async e => {
         renderListaClientes();
     } catch (err) { alert('No se pudo sacar: ' + (err?.message || err)); }
 });
+
+// Teléfono de la ficha (vacío = borrarlo). creadoEn se actualiza para que recepcionista/anotar lo vean.
+async function editarTelefono(id) {
+    const c = D.clientes.find(x => x.id === id);
+    if (!c) return;
+    const r = prompt(`Teléfono de ${c.nombre} (con característica, ej. 11 2345 6789). Vacío para borrarlo:`, c.tel);
+    if (r === null) return;
+    const t = r.replace(/\D/g, '');
+    if (t && (t.length < 8 || t.length > 15)) { alert('El teléfono parece incompleto.'); return; }
+    try {
+        await updateDoc(doc(db, 'clientes', c.id), { telefono: t, creadoEn: serverTimestamp() });
+        c.tel = t;
+        prepararClientes();
+        renderAll();
+    } catch (err) { alert('No se pudo guardar: ' + (err?.message || err)); }
+}
 
 // Cambiar el nombre. El nombre viejo queda como alias: sus cortes siguen contando para este cliente
 // y si alguien lo vuelve a escribir al anotar, se usa esta ficha. Si el nombre nuevo ya existe, se unen.

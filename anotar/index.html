@@ -711,7 +711,9 @@
                     <input type="hidden" id="svc-price">
                 </div>
                 <!-- Cliente -->
-                <input type="text" id="client-name" placeholder="Nombre del cliente"
+                <input type="text" id="client-name" placeholder="Nombre y apellido del cliente"
+                    class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-blue-500/60 focus:bg-blue-500/5 outline-none transition text-white placeholder-gray-600 text-sm no-select">
+                <input type="tel" id="client-tel" inputmode="tel" autocomplete="off" placeholder="Teléfono (opcional, para avisarle promos)"
                     class="w-full px-4 py-3.5 bg-white/5 rounded-2xl border border-white/10 focus:border-blue-500/60 focus:bg-blue-500/5 outline-none transition text-white placeholder-gray-600 text-sm no-select">
                 <label class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5 border border-white/10 cursor-pointer no-select">
                     <input type="checkbox" id="cut-afecta-caja" checked class="w-5 h-5 accent-cyan-500">
@@ -1043,7 +1045,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, deleteDoc, collection, query, onSnapshot, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment, where, writeBatch, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { initClientes, pickerCliente, resolverCliente, limpiarCliente } from "../assets/clientes.js";
+import { initClientes, pickerCliente, resolverCliente, limpiarCliente, normTelefono, telefonoValido } from "../assets/clientes.js";
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
 import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
 import { registrarPush, avisarTurnoNuevo } from "../assets/push.js";
@@ -2541,7 +2543,7 @@ window.openAddModal = () => {
     document.getElementById('services-grid').innerHTML = '';
     document.getElementById('svc-name').value = '';
     document.getElementById('svc-price').value = '';
-    limpiarCliente(document.getElementById('client-name'));
+    limpiarCliente(document.getElementById('client-name'), document.getElementById('client-tel'));
     document.getElementById('cut-propina').value = '';
     document.getElementById('cut-propina-afecta-caja').checked = true;
     document.getElementById('cut-afecta-caja').checked = true;
@@ -2619,7 +2621,7 @@ document.getElementById('login-form').addEventListener('submit', async e=>{
     catch{ alert('Error de acceso'); }
     btn.disabled=false; btn.innerHTML='INGRESAR';
 });
-pickerCliente(document.getElementById('client-name'));
+pickerCliente(document.getElementById('client-name'),document.getElementById('client-tel'));
 
 document.getElementById('add-form').addEventListener('submit', async e=>{
     e.preventDefault();
@@ -2636,9 +2638,12 @@ document.getElementById('add-form').addEventListener('submit', async e=>{
         montoTransferencia=Number(document.getElementById('cut-monto-transferencia').value)||0;
         if(montoEfectivo+montoTransferencia!==servicePrice) return alert(`Efectivo + Transferencia debe sumar $${servicePrice.toLocaleString('es-AR')}`);
     }
+    const telefono=normTelefono(document.getElementById('client-tel').value);
+    if(!telefonoValido(telefono)) return alert('El teléfono parece incompleto. Poné el número con característica, ej. 11 2345 6789 (o dejalo vacío).');
+    if(telefono&&!document.getElementById('client-name').value.trim()) return alert('Para guardar el teléfono poné también el nombre del cliente.');
     btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
     try{
-        const {clienteId,clientName}=resolverCliente(document.getElementById('client-name'));
+        const {clienteId,clientName}=resolverCliente(document.getElementById('client-name'),telefono);
         const hoy=new Date().toLocaleDateString('en-CA');
         const cutData={barber,service:serviceName,price:servicePrice,clientName,clienteId,userEmail:currentUser.email,metodoPago:cutMetodoPago,createdAt:serverTimestamp()};
         if(cutMetodoPago==='mixto'){ cutData.montoEfectivo=montoEfectivo; cutData.montoTransferencia=montoTransferencia; }
@@ -2649,7 +2654,7 @@ document.getElementById('add-form').addEventListener('submit', async e=>{
         }
         window.closeModals();
         document.getElementById('add-form').reset();
-        limpiarCliente(document.getElementById('client-name'));
+        limpiarCliente(document.getElementById('client-name'),document.getElementById('client-tel'));
         ['svc-name','svc-price','cut-propina','cut-monto-efectivo','cut-monto-transferencia'].forEach(id=>document.getElementById(id).value='');
         document.getElementById('cut-propina-afecta-caja').checked=true;
         document.getElementById('cut-afecta-caja').checked=true;
