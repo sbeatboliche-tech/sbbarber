@@ -346,7 +346,8 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, getDocs, query, where, doc, writeBatch, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, query, where, doc, writeBatch, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getDocs, iniciarContador } from "../assets/uso-lecturas.js"; // cuenta las lecturas (ver el archivo)
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -1517,6 +1518,7 @@ onAuthStateChanged(auth, user => {
         return;
     }
     show('login-view', false);
+    iniciarContador(db, user.email);
     arrancar(false);
 });
 </script>

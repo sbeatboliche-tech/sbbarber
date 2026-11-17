@@ -1638,7 +1638,9 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, orderBy, where, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, getDoc, doc, increment, serverTimestamp, limit, writeBatch, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, orderBy, where, addDoc, updateDoc, deleteDoc, setDoc, doc, increment, serverTimestamp, limit, writeBatch, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+// onSnapshot/getDocs/getDoc pasan por el contador de lecturas (mismas firmas que Firestore)
+import { onSnapshot, getDocs, getDoc, iniciarContador } from "../assets/uso-lecturas.js";
 import { initClientes, pickerCliente, resolverCliente, limpiarCliente, normTelefono, telefonoValido } from "../assets/clientes.js";
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
 import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
@@ -1850,6 +1852,7 @@ async function init() {
                 listenToMenuData();
                 listenToPrecios();
                 listenToChecklist();
+                iniciarContador(db, currentUser?.email);
                 initClientes(db, { collection, query, where, getDocs, doc, setDoc, serverTimestamp }, () => currentUser?.email);
             }
         } else {
@@ -5557,11 +5560,11 @@ function renderDispositivos() {
     }).join('');
 }
 // ---- USO DE FIREBASE: lecturas del día contra el cupo gratis (servidor: tienda/api/uso.js) ----
-// Se consulta cada 10 min con la pantalla visible; no gasta lecturas de Firestore (sale de Cloud Monitoring).
+// Es un estimado que suman las apps (assets/uso-lecturas.js). Se consulta cada 10 min con la pantalla visible.
 const USO_API_URL = 'https://tienda.sbbarber.com.ar/api/uso';
 let usoDatos = null, usoError = null, _usoTimer = null, _usoAvisado = 0;
 const fmtMiles = n => Number(n || 0).toLocaleString('es-AR');
-function colorUso(frac) { return frac >= 0.95 ? '#ef4444' : frac >= 0.8 ? '#f59e0b' : '#e5e7eb'; }
+function colorUso(frac) { return frac >= 0.85 ? '#ef4444' : frac >= 0.7 ? '#f59e0b' : '#e5e7eb'; }
 
 async function cargarUso() {
     try {
@@ -5589,13 +5592,13 @@ function pintarUso() {
     txt.textContent = `${Math.round(frac * 100)}%`;
     barra.style.width = `${Math.min(100, frac * 100)}%`;
     barra.style.background = colorUso(frac);
-    punto.classList.toggle('hidden', frac < 0.8);
+    punto.classList.toggle('hidden', frac < 0.7);
     punto.style.background = colorUso(frac);
     // Aviso en pantalla una vez por umbral (el aviso al celu lo manda el servidor).
-    const umbral = frac >= 0.95 ? 2 : frac >= 0.8 ? 1 : 0;
+    const umbral = frac >= 0.85 ? 2 : frac >= 0.7 ? 1 : 0;
     if (umbral > _usoAvisado) {
         _usoAvisado = umbral;
-        scanToast(umbral === 2 ? `Firebase casi sin lecturas: ${fmtMiles(usoDatos.lecturas)} de 50.000` : `Firebase al 80%: ${fmtMiles(usoDatos.lecturas)} de 50.000 lecturas`, false);
+        scanToast(umbral === 2 ? `Firebase cerca del límite: unas ${fmtMiles(usoDatos.lecturas)} de 50.000 lecturas` : `Firebase al 70%: unas ${fmtMiles(usoDatos.lecturas)} de 50.000 lecturas`, false);
     }
 }
 function renderUso() {
@@ -5616,15 +5619,17 @@ function renderUso() {
     const barras = horas.map(p => `<div class="flex-1 flex flex-col justify-end h-full" title="${hora(p.hora)}: ${fmtMiles(p.n)}">
             <div class="w-full rounded-t bg-white/50" style="height:${Math.max(2, p.n / max * 100)}%"></div></div>`).join('');
     el.innerHTML = `<div class="space-y-2.5">
-        ${fila('Lecturas', d.lecturas, d.limites.lecturas)}
-        ${fila('Escrituras', d.escrituras, d.limites.escrituras)}
-        ${fila('Borrados', d.borrados, d.limites.borrados)}
+        ${fila('Lecturas (estimado)', d.lecturas, d.limites.lecturas)}
         ${horas.length ? `<div class="bg-black/30 border border-white/10 rounded-xl px-4 py-3">
             <div class="text-xs font-bold text-white mb-2">Lecturas por hora</div>
             <div class="flex items-end gap-0.5 h-20">${barras}</div>
             <div class="flex justify-between text-[10px] text-gray-500 mt-1"><span>${hora(horas[0].hora)}</span><span>${hora(horas[horas.length - 1].hora)}</span></div>
         </div>` : ''}
-        <p class="text-[11px] text-gray-500 leading-relaxed">El cupo vuelve a cero a las <b class="text-gray-300">${hora(d.reinicio)}</b>. Los números tienen unos minutos de atraso. Si llega al 100%, la app deja de cargar datos hasta esa hora. Al 80% y al 95% te llega un aviso al celu.</p>
+        ${(d.dispositivos || []).length ? `<div class="bg-black/30 border border-white/10 rounded-xl px-4 py-3">
+            <div class="text-xs font-bold text-white mb-2">Quién lee más</div>
+            ${d.dispositivos.slice(0, 8).map(x => `<div class="flex justify-between text-[11px] py-0.5"><span class="text-gray-400 truncate mr-3">${escHtml(x.quien)}</span><span class="text-white tabular-nums">${fmtMiles(x.n)}</span></div>`).join('')}
+        </div>` : ''}
+        <p class="text-[11px] text-gray-500 leading-relaxed">Es un <b class="text-gray-300">estimado</b>: lo cuentan las apps (Google no da el número exacto sin plan pago). El cupo vuelve a cero a las <b class="text-gray-300">${hora(d.reinicio)}</b> y los números tienen unos minutos de atraso. Si llega al 100%, la app deja de cargar datos hasta esa hora. Al 70% y al 85% te llega un aviso al celu.</p>
         <p class="text-[10px] text-gray-600">Actualizado ${hora(d.actualizado)}</p>
     </div>`;
 }

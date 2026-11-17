@@ -1044,7 +1044,9 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, deleteDoc, collection, query, onSnapshot, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment, where, writeBatch, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, deleteDoc, collection, query, serverTimestamp, orderBy, addDoc, limit, updateDoc, increment, where, writeBatch, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+// onSnapshot/getDocs/getDoc pasan por el contador de lecturas (mismas firmas que Firestore)
+import { onSnapshot, getDocs, getDoc, iniciarContador } from "../assets/uso-lecturas.js";
 import { initClientes, pickerCliente, resolverCliente, limpiarCliente, normTelefono, telefonoValido } from "../assets/clientes.js";
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
 import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
@@ -1249,6 +1251,7 @@ function init() {
                 listenToPropinas();
                 listenToVentas();
                 listenToAnotarTurnos();
+                iniciarContador(db, currentUser?.email);
                 initClientes(db, { collection, query, where, getDocs, doc, setDoc, serverTimestamp }, () => currentUser?.email);
                 startDualSync();
             }

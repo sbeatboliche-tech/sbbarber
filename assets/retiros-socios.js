@@ -14,7 +14,8 @@
    initRetirosSocios({ getDb, contenedor, abrirRetiros, getEmail, confirmar, fondo })
    pedirClaveRetiros()
    ========================================================= */
-import { collection, query, orderBy, limit, onSnapshot, addDoc, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, query, orderBy, limit, addDoc, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { onSnapshot } from "./uso-lecturas.js"; // cuenta las lecturas
 
 const CLAVE_RETIROS = 'sbsb';
 const CLAVE_SOCIOS = 'sbsb2004';
