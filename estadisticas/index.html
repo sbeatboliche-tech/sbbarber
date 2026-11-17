@@ -278,7 +278,7 @@
                 <div class="card-h"><div><h2>Mejores clientes</h2><div class="sub">Por cantidad de visitas en el período</div></div></div>
                 <div class="chart"></div>
             </div>
-            <div class="card" id="c-perdidos">
+            <div class="card" id="c-clientes-perdidos">
                 <div class="card-h"><div><h2>Clientes que dejaron de venir</h2><div class="sub">Vinieron 2+ veces y hace más de <span id="promo-dias-txt">45</span> días que no vuelven (todo el historial). Los que tienen teléfono tienen botón para mandarles el descuento por WhatsApp</div></div></div>
                 <div class="promo-cfg">
                     <label>Sin venir hace más de <input type="number" id="promo-dias" min="15" max="365" step="5" value="45"> días</label>
@@ -1028,7 +1028,7 @@ function renderPerdidos() {
     }).filter(r => r.visitas >= 2 && r.ultima < limite)
       .sort((a, b) => (!!b.tel - !!a.tel) || b.visitas - a.visitas || b.ultima - a.ultima).slice(0, 50);
     const conTel = perdidos.filter(r => r.tel).length;
-    $('c-perdidos').querySelector('.chart').innerHTML = perdidos.length
+    $('c-clientes-perdidos').querySelector('.chart').innerHTML = perdidos.length
         ? `<div class="sub" style="margin-bottom:6px">${num(perdidos.length)} clientes · ${num(conTel)} con teléfono</div>
           <div class="tbl-wrap"><table><thead><tr><th>Cliente</th><th class="num">Visitas</th><th>Última visita</th><th class="num">Días sin venir</th><th>Con</th><th>Avisar</th></tr></thead><tbody>${
             perdidos.map(r => `<tr><td>${esc(r.nombre)}</td><td class="num">${num(r.visitas)}</td><td>${esc(fmtFecha(r.ultima))}</td>
