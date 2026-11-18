@@ -8,9 +8,9 @@
   <meta name="theme-color" content="#0a0a0a" />
   <meta property="og:title" content="SB Barber" />
   <meta property="og:description" content="Barbería en Dávila 951, CABA. Pedí tu turno por WhatsApp." />
-  <meta property="og:image" content="https://sbbarber.com.ar/assets/logo-sb.jpg" />
-  <link rel="icon" href="assets/logo-sb.jpg" />
-  <link rel="preload" as="image" href="assets/logo-sb.jpg" />
+  <meta property="og:image" content="https://sbbarber.com.ar/assets/logo-sb-studio.png" />
+  <link rel="icon" href="assets/logo-sb-studio.png" />
+  <link rel="preload" as="image" href="assets/logo-sb-studio.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
@@ -135,23 +135,30 @@
       background: linear-gradient(to bottom, transparent, var(--bg));
     }
 
+    /* Logo de SB Studio: círculo con un anillo de texto girando alrededor.
+       El contenedor lo mueve el JS al bajar (parallax); la entrada va en .logo-in */
     .logo {
-      position: absolute; top: 34%; left: 50%;
-      width: min(86vw, 560px); aspect-ratio: 1148 / 1170;
+      position: absolute; top: 33%; left: 50%;
+      width: min(70vw, 330px); aspect-ratio: 1;
       translate: -50% -50%;
       z-index: -1;
-      /* el fondo del logo es negro: "screen" lo funde con la portada */
-      mix-blend-mode: screen;
-      opacity: .9;
       will-change: transform;
-      /* el fondo de la foto es gris muy oscuro con viñeta: se esfuman los bordes para que no se vea el recuadro */
-      -webkit-mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
-              mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
     }
-    .logo img { filter: contrast(1.25) brightness(.92); }
-    /* La entrada va en la imagen: el contenedor lo mueve el JS al bajar (parallax) */
-    .logo img { width: 100%; height: 100%; object-fit: contain; opacity: 0; animation: logo-in 1.6s var(--ease) .2s forwards; }
-    @keyframes logo-in { from { opacity: 0; transform: scale(1.08); filter: contrast(1.25) brightness(.92) blur(12px); } to { opacity: 1; transform: scale(1); filter: contrast(1.25) brightness(.92) blur(0); } }
+    .logo-in { position: absolute; inset: 0; opacity: 0; animation: logo-in 1.4s var(--ease) .2s forwards; }
+    @keyframes logo-in { from { opacity: 0; transform: scale(.7) rotate(-25deg); filter: blur(10px); } to { opacity: 1; transform: none; filter: blur(0); } }
+    .logo img {
+      position: absolute; inset: 17%; width: 66%; height: 66%;
+      border-radius: 50%; object-fit: cover;   /* el círculo recorta las esquinas blancas de la foto */
+      box-shadow: 0 0 0 1px rgba(255,255,255,.3), 0 0 60px rgba(255,255,255,.14), 0 0 140px rgba(255,255,255,.06);
+      animation: flotar 6s ease-in-out 1.6s infinite;
+    }
+    .anillo { position: absolute; inset: 0; width: 100%; height: 100%; animation: girar 28s linear infinite; overflow: visible; }
+    .anillo text { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 10.5px; letter-spacing: .32em; fill: rgba(242,242,238,.55); text-transform: uppercase; }
+    .anillo .estrella { fill: var(--rojo); }
+    @keyframes girar { to { transform: rotate(360deg); } }
+    /* Aro de luz que late detrás */
+    .halo { position: absolute; inset: 12%; border-radius: 50%; border: 1px solid rgba(255,255,255,.12); animation: halo 3.6s ease-out 1.8s infinite; }
+    @keyframes halo { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(1.35); opacity: 0; } }
 
     .kicker {
       font-family: 'Syne', sans-serif; font-weight: 600;
@@ -294,7 +301,8 @@
 
     @media (min-width: 900px) {
       .portada { padding-bottom: 72px; }
-      .logo { top: 50%; left: auto; right: 4vw; translate: 0 -55%; width: min(44vw, 620px); }
+      .logo { top: 50%; left: auto; right: 7vw; translate: 0 -55%; width: min(30vw, 440px); }
+      .titulo { font-size: min(8vw, 170px); }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -316,11 +324,17 @@
   <section class="portada" id="portada">
     <div class="haces" aria-hidden="true"><div class="haz rojo"></div><div class="haz"></div><div class="haz azul"></div></div>
     <div class="foco" id="foco" aria-hidden="true"></div>
-    <div class="logo" id="logo" aria-hidden="true">
-      <img src="assets/logo-sb.jpg" alt="" width="1148" height="1170" />
+    <div class="logo" id="logo">
+      <div class="logo-in">
+        <div class="halo" aria-hidden="true"></div>
+        <svg class="anillo" viewBox="0 0 200 200" aria-hidden="true">
+          <defs><path id="circulo" d="M100,100 m-86,0 a86,86 0 1,1 172,0 a86,86 0 1,1 -172,0" /></defs>
+          <text><textPath href="#circulo" textLength="536">SB Studio <tspan class="estrella">✦</tspan> SB Barber <tspan class="estrella">✦</tspan> SB Studio <tspan class="estrella">✦</tspan> SB Barber <tspan class="estrella">✦</tspan></textPath></text>
+        </svg>
+        <img src="assets/logo-sb-studio.png" alt="SB Studio" width="320" height="320" />
+      </div>
     </div>
 
-    <p class="kicker">Barbería · Dávila 951 · CABA</p>
     <h1 class="titulo" aria-label="SB Barber">
       <span class="linea" data-letras>SB</span>
       <span class="linea" data-letras>Barber</span>
