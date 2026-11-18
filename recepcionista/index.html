@@ -189,6 +189,11 @@
                     <span class="hidden md:inline">HISTORIAL ML</span>
                     <span class="md:hidden">ML</span>
                 </button>
+                <!-- Botón Flex (paquetes por zona) -->
+                <button id="btn-flex" data-modulo="mercadolibre" title="Paquetes Flex" onclick="window.openFlexPanel()" class="hidden md:flex items-center gap-1.5 bg-white/10 border border-white/20 text-white px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/20 transition">
+                    <i class="fas fa-truck-fast text-xs"></i>
+                    <span class="hidden md:inline">FLEX</span>
+                </button>
                 <!-- Botón historial Pickit -->
                 <button id="btn-historial-pickit" data-modulo="pickit" title="Historial Pickit" onclick="window.openHistorialPickitPanel()" class="hidden md:flex items-center gap-1.5 bg-white/10 border border-white/20 text-white px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-white/20 transition">
                     <i class="fas fa-box-open text-xs"></i>
@@ -237,6 +242,9 @@
                         </button>
                         <button id="btn-historial-pickit-menu" data-modulo="pickit" type="button" onclick="window.closeMasMenu(); window.openHistorialPickitPanel()" class="flex md:hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-box-open w-4 text-center text-gray-400"></i> Historial Pickit
+                        </button>
+                        <button id="btn-flex-menu" data-modulo="mercadolibre" type="button" onclick="window.closeMasMenu(); window.openFlexPanel()" class="flex md:hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
+                            <i class="fas fa-truck-fast w-4 text-center text-gray-400"></i> Paquetes Flex
                         </button>
                         <button type="button" onclick="window.closeMasMenu(); window.openMenuEditor()" class="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-list-ul w-4 text-center text-gray-400"></i> Modificar menú
@@ -942,6 +950,74 @@
             </div>
         </div>
     </div><!-- /historial-pickit-panel -->
+
+    <!-- Paquetes Flex: cuántos salieron cada día y a qué zona, para controlar el detalle semanal de la logística -->
+    <div id="flex-panel" class="absolute inset-0 z-40 bg-[#0a0a0a] flex-col hidden" style="animation:slideIn 0.35s cubic-bezier(0.16,1,0.3,1)">
+        <header class="px-5 md:px-8 py-4 md:py-5 glass flex items-center justify-between flex-shrink-0 border-b border-white/5">
+            <div class="flex items-center gap-4">
+                <button onclick="window.closeFlexPanel()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
+                    <i class="fas fa-arrow-left text-sm"></i>
+                </button>
+                <div>
+                    <h1 class="text-base md:text-xl font-bold text-white leading-none tracking-wide">Paquetes Flex</h1>
+                    <span class="text-[10px] md:text-xs text-yellow-400 font-medium">Despachos por día y por zona</span>
+                </div>
+            </div>
+        </header>
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-8 pb-10 max-w-2xl md:mx-auto w-full space-y-4">
+                <!-- Cargar día -->
+                <div class="glass-card rounded-2xl p-5">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fas fa-truck-fast text-yellow-400"></i> Cargar día</h3>
+                    <label class="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Fecha de despacho</label>
+                    <input type="date" id="flex-fecha-input" onchange="window.cargarFlexDia()" class="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-yellow-400 outline-none mb-4">
+                    <div id="flex-zonas-carga" class="space-y-2"></div>
+                    <div class="flex items-center justify-between mt-4 px-1">
+                        <span class="text-xs text-gray-500">Total del día</span>
+                        <span id="flex-dia-total" class="text-lg font-extrabold text-yellow-400 tabular-nums">0</span>
+                    </div>
+                    <button onclick="window.guardarFlexDia()" id="btn-save-flex" class="w-full mt-3 bg-yellow-400 hover:bg-yellow-300 text-black font-bold py-3 rounded-xl text-sm transition">Guardar</button>
+                </div>
+
+                <!-- Semana / período -->
+                <div class="glass-card rounded-2xl p-5">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fas fa-calendar-week text-yellow-400"></i> Control semanal</h3>
+                    <div class="flex gap-2 mb-3">
+                        <button type="button" onclick="window.flexSemana(-1)" class="flex-1 text-xs font-bold py-2 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition">Semana pasada</button>
+                        <button type="button" onclick="window.flexSemana(0)" class="flex-1 text-xs font-bold py-2 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition">Esta semana</button>
+                    </div>
+                    <div class="flex items-end gap-3 mb-4">
+                        <div class="flex-1">
+                            <label class="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Desde</label>
+                            <input type="date" id="flex-desde-input" onchange="window.renderFlexPeriodo()" class="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-yellow-400 outline-none">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Hasta</label>
+                            <input type="date" id="flex-hasta-input" onchange="window.renderFlexPeriodo()" class="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-yellow-400 outline-none">
+                        </div>
+                    </div>
+                    <div id="flex-periodo" class="overflow-x-auto"></div>
+                </div>
+
+                <!-- Zonas -->
+                <div class="glass-card rounded-2xl p-5">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-2"><i class="fas fa-map-location-dot text-yellow-400"></i> Zonas y precios</h3>
+                    <p class="text-[11px] text-gray-500 mb-4">Ponelas igual que en el detalle de la logística. El precio por paquete es opcional: sirve para ver cuánto te tienen que cobrar.</p>
+                    <div id="flex-zonas-edit" class="space-y-2"></div>
+                    <div class="flex gap-2 mt-3">
+                        <button type="button" onclick="window.agregarFlexZona()" class="flex-1 text-xs font-bold py-2.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition"><i class="fas fa-plus mr-1"></i> Agregar zona</button>
+                        <button type="button" onclick="window.guardarFlexZonas()" id="btn-save-flex-zonas" class="flex-1 text-xs font-bold py-2.5 rounded-lg bg-white text-black hover:bg-gray-200 transition">Guardar zonas</button>
+                    </div>
+                </div>
+
+                <!-- Últimos días -->
+                <div class="glass-card rounded-2xl p-5">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="fas fa-list text-yellow-400"></i> Últimos días</h3>
+                    <div id="flex-lista" class="space-y-2"><p class="text-xs text-gray-600 text-center py-4">Sin registros</p></div>
+                </div>
+            </div>
+        </div>
+    </div><!-- /flex-panel -->
 
 
     <!-- ===== MODALES ===== -->
@@ -6008,6 +6084,180 @@ function renderMlPeriodoInternal() {
     total.textContent = suma;
 }
 window.renderMlPeriodo = renderMlPeriodoInternal;
+
+// ---- PAQUETES FLEX: por día y por zona ----
+// flex_despachos/{fecha} = { fecha, zonas: { "CABA": 5, ... }, total }. flex_config/zonas = { zonas: [{ nombre, precio }] }.
+// Solo se escucha con el panel abierto (no gasta lecturas el resto del día).
+const PATH_FLEX = 'flex_despachos';
+const FLEX_ZONAS_BASE = [{ nombre: 'CABA', precio: 0 }, { nombre: 'GBA 1', precio: 0 }, { nombre: 'GBA 2', precio: 0 }, { nombre: 'GBA 3', precio: 0 }];
+let flexDias = [], flexZonas = FLEX_ZONAS_BASE.map(z => ({ ...z })), flexCarga = {}, _flexUnsubs = [];
+const flexHoy = () => new Date().toLocaleDateString('en-CA');
+const flexFmtFecha = f => new Date(f + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' });
+const flexPlata = n => '$' + Math.round(n).toLocaleString('es-AR');
+
+window.openFlexPanel = () => {
+    const p = document.getElementById('flex-panel');
+    p.classList.remove('hidden'); p.classList.add('flex', 'flex-col');
+    document.getElementById('flex-fecha-input').value = flexHoy();
+    window.flexSemana(0, false);
+    if (!_flexUnsubs.length) {
+        _flexUnsubs.push(onSnapshot(query(collection(db, PATH_FLEX), orderBy('fecha', 'desc'), limit(120)), snap => {
+            flexDias = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+            if (!Object.keys(flexCarga).length) window.cargarFlexDia();
+            renderFlexPanel();
+        }));
+        _flexUnsubs.push(onSnapshot(doc(db, 'flex_config', 'zonas'), snap => {
+            const z = snap.exists() ? snap.data().zonas : null;
+            if (Array.isArray(z) && z.length) flexZonas = z.map(x => ({ nombre: String(x.nombre || ''), precio: Number(x.precio) || 0 }));
+            renderFlexZonasEdit();
+            renderFlexCarga();
+            renderFlexPanel();
+        }));
+    }
+    window.cargarFlexDia();
+    renderFlexZonasEdit();
+    renderFlexPanel();
+};
+window.closeFlexPanel = () => {
+    const p = document.getElementById('flex-panel');
+    p.classList.add('hidden'); p.classList.remove('flex', 'flex-col');
+    _flexUnsubs.forEach(u => u()); _flexUnsubs = [];
+    flexCarga = {};
+};
+
+// Lunes a domingo; desplazamiento en semanas (0 = esta, -1 = la pasada)
+window.flexSemana = (desplazamiento, pintar = true) => {
+    const d = new Date(); d.setHours(12, 0, 0, 0);
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + desplazamiento * 7);
+    const fin = new Date(d); fin.setDate(d.getDate() + 6);
+    document.getElementById('flex-desde-input').value = d.toLocaleDateString('en-CA');
+    document.getElementById('flex-hasta-input').value = fin.toLocaleDateString('en-CA');
+    if (pintar) renderFlexPeriodo();
+};
+
+// Carga del día: arranca con lo guardado para esa fecha
+window.cargarFlexDia = () => {
+    const fecha = document.getElementById('flex-fecha-input').value;
+    const guardado = flexDias.find(x => x.fecha === fecha);
+    flexCarga = { ...(guardado?.zonas || {}) };
+    renderFlexCarga();
+};
+function renderFlexCarga() {
+    const el = document.getElementById('flex-zonas-carga');
+    // Zonas configuradas + las que tenga guardadas ese día aunque ya no estén en la lista
+    const nombres = [...new Set([...flexZonas.map(z => z.nombre), ...Object.keys(flexCarga)])].filter(Boolean);
+    el.innerHTML = nombres.map(n => `<div class="flex items-center gap-3 bg-black/20 rounded-xl px-3 py-2">
+        <span class="flex-1 min-w-0 text-sm font-bold text-white truncate">${escHtml(n)}</span>
+        <button type="button" onclick="window.flexSumar('${jsAttr(n)}', -1)" class="w-9 h-9 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition active:scale-95"><i class="fas fa-minus text-xs"></i></button>
+        <input type="number" min="0" step="1" inputmode="numeric" value="${flexCarga[n] || ''}" placeholder="0" oninput="window.flexSetear('${jsAttr(n)}', this.value)" class="w-16 text-center bg-black/30 border border-gray-700 rounded-lg py-2 text-sm text-white font-bold tabular-nums focus:border-yellow-400 outline-none">
+        <button type="button" onclick="window.flexSumar('${jsAttr(n)}', 1)" class="w-9 h-9 rounded-lg bg-yellow-400 text-black hover:bg-yellow-300 transition active:scale-95"><i class="fas fa-plus text-xs"></i></button>
+    </div>`).join('') || '<p class="text-xs text-gray-600 text-center py-2">Agregá zonas abajo</p>';
+    document.getElementById('flex-dia-total').textContent = Object.values(flexCarga).reduce((a, b) => a + (Number(b) || 0), 0);
+}
+window.flexSumar = (n, d) => { flexCarga[n] = Math.max(0, (Number(flexCarga[n]) || 0) + d); renderFlexCarga(); };
+window.flexSetear = (n, v) => {
+    flexCarga[n] = Math.max(0, parseInt(v) || 0);
+    document.getElementById('flex-dia-total').textContent = Object.values(flexCarga).reduce((a, b) => a + (Number(b) || 0), 0);
+};
+
+window.guardarFlexDia = async () => {
+    const fecha = document.getElementById('flex-fecha-input').value;
+    if (!fecha) return alert('Elegí la fecha');
+    const zonas = Object.fromEntries(Object.entries(flexCarga).map(([k, v]) => [k, Number(v) || 0]).filter(([, v]) => v > 0));
+    const total = Object.values(zonas).reduce((a, b) => a + b, 0);
+    const btn = document.getElementById('btn-save-flex');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        if (total === 0) {
+            if (flexDias.some(x => x.fecha === fecha) && await customConfirm(`¿Borrar lo cargado el ${flexFmtFecha(fecha)}?`)) await deleteDoc(doc(db, PATH_FLEX, fecha));
+        } else {
+            await setDoc(doc(db, PATH_FLEX, fecha), { fecha, zonas, total, userEmail: currentUser?.email || null, actualizadoEn: serverTimestamp() });
+            btn.innerHTML = '<i class="fas fa-check"></i> Guardado';
+            await new Promise(r => setTimeout(r, 900));
+        }
+    } catch (e) { alert('Error al guardar: ' + e.message); }
+    btn.disabled = false; btn.textContent = 'Guardar';
+};
+window.borrarFlexDia = async (fecha) => {
+    if (!await customConfirm(`¿Borrar lo cargado el ${flexFmtFecha(fecha)}?`)) return;
+    try { await deleteDoc(doc(db, PATH_FLEX, fecha)); } catch (e) { alert('Error: ' + e.message); }
+};
+window.editarFlexDia = (fecha) => {
+    document.getElementById('flex-fecha-input').value = fecha;
+    window.cargarFlexDia();
+    document.getElementById('flex-fecha-input').scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+function renderFlexPanel() {
+    renderFlexPeriodo();
+    const el = document.getElementById('flex-lista');
+    el.innerHTML = flexDias.slice(0, 20).map(x => `<div class="flex items-center gap-3 bg-black/20 rounded-xl px-3 py-2.5">
+        <button type="button" onclick="window.editarFlexDia('${x.fecha}')" class="flex-1 min-w-0 text-left">
+            <div class="text-sm text-white capitalize">${flexFmtFecha(x.fecha)}</div>
+            <div class="text-[11px] text-gray-500 truncate">${Object.entries(x.zonas || {}).map(([k, v]) => `${escHtml(k)} ${v}`).join(' · ')}</div>
+        </button>
+        <span class="text-sm font-bold text-yellow-400 whitespace-nowrap">${x.total || 0} paq.</span>
+        <button onclick="window.borrarFlexDia('${x.fecha}')" class="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-600/20 transition flex-shrink-0"><i class="fas fa-trash text-[10px]"></i></button>
+    </div>`).join('') || '<p class="text-xs text-gray-600 text-center py-4">Sin registros</p>';
+}
+
+// Tabla día × zona del período, con totales y lo que habría que pagar si las zonas tienen precio
+function renderFlexPeriodo() {
+    const desde = document.getElementById('flex-desde-input').value, hasta = document.getElementById('flex-hasta-input').value;
+    const el = document.getElementById('flex-periodo');
+    if (!desde || !hasta) { el.innerHTML = ''; return; }
+    const dias = flexDias.filter(x => x.fecha >= desde && x.fecha <= hasta).sort((a, b) => a.fecha.localeCompare(b.fecha));
+    if (!dias.length) { el.innerHTML = '<p class="text-xs text-gray-600 text-center py-4">No hay paquetes cargados en esas fechas</p>'; return; }
+    const cols = [...new Set([...flexZonas.map(z => z.nombre), ...dias.flatMap(x => Object.keys(x.zonas || {}))])]
+        .filter(n => dias.some(x => x.zonas?.[n]));
+    const precio = n => flexZonas.find(z => z.nombre === n)?.precio || 0;
+    const tot = n => dias.reduce((s, x) => s + (Number(x.zonas?.[n]) || 0), 0);
+    const totalPaq = dias.reduce((s, x) => s + (Number(x.total) || 0), 0);
+    const hayPrecios = cols.some(n => precio(n) > 0);
+    const plata = cols.reduce((s, n) => s + tot(n) * precio(n), 0);
+    const th = 'px-2 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider text-right whitespace-nowrap';
+    const td = 'px-2 py-2 text-right tabular-nums whitespace-nowrap';
+    el.innerHTML = `<table class="w-full text-sm">
+        <thead><tr class="border-b border-white/10"><th class="${th} text-left">Día</th>${cols.map(n => `<th class="${th}">${escHtml(n)}</th>`).join('')}<th class="${th}">Total</th></tr></thead>
+        <tbody>${dias.map(x => `<tr class="border-b border-white/5"><td class="px-2 py-2 text-gray-300 capitalize whitespace-nowrap">${flexFmtFecha(x.fecha)}</td>${cols.map(n => `<td class="${td} ${x.zonas?.[n] ? 'text-white' : 'text-gray-700'}">${x.zonas?.[n] || '–'}</td>`).join('')}<td class="${td} font-bold text-yellow-400">${x.total || 0}</td></tr>`).join('')}</tbody>
+        <tfoot>
+            <tr class="border-t border-white/20"><td class="px-2 py-2 text-xs font-bold text-white">Paquetes</td>${cols.map(n => `<td class="${td} font-bold text-white">${tot(n)}</td>`).join('')}<td class="${td} font-extrabold text-yellow-400">${totalPaq}</td></tr>
+            ${hayPrecios ? `<tr><td class="px-2 py-2 text-xs font-bold text-white">A pagar</td>${cols.map(n => `<td class="${td} text-gray-300">${precio(n) ? flexPlata(tot(n) * precio(n)) : '–'}</td>`).join('')}<td class="${td} font-extrabold text-yellow-400">${flexPlata(plata)}</td></tr>` : ''}
+        </tfoot>
+    </table>
+    <p class="text-[11px] text-gray-500 mt-3">${dias.length} día${dias.length === 1 ? '' : 's'} con despachos. Comparalo con el detalle de la logística zona por zona.</p>`;
+}
+window.renderFlexPeriodo = renderFlexPeriodo;
+
+// Edición de zonas (nombre y precio por paquete)
+function renderFlexZonasEdit() {
+    const el = document.getElementById('flex-zonas-edit');
+    el.innerHTML = flexZonas.map((z, i) => `<div class="flex items-center gap-2">
+        <input type="text" value="${escHtml(z.nombre)}" placeholder="Zona" oninput="window.flexZonaCampo(${i}, 'nombre', this.value)" class="flex-1 min-w-0 bg-black/30 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:border-yellow-400 outline-none">
+        <div class="relative w-28 flex-shrink-0">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">$</span>
+            <input type="number" min="0" step="100" inputmode="numeric" value="${z.precio || ''}" placeholder="Precio" oninput="window.flexZonaCampo(${i}, 'precio', this.value)" class="w-full bg-black/30 border border-gray-700 rounded-lg pl-6 pr-2 py-2 text-sm text-white tabular-nums focus:border-yellow-400 outline-none">
+        </div>
+        <button type="button" onclick="window.quitarFlexZona(${i})" class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-600/20 transition flex-shrink-0"><i class="fas fa-times text-xs"></i></button>
+    </div>`).join('');
+}
+window.flexZonaCampo = (i, campo, v) => { if (flexZonas[i]) flexZonas[i][campo] = campo === 'precio' ? (Number(v) || 0) : v; };
+window.agregarFlexZona = () => { flexZonas.push({ nombre: '', precio: 0 }); renderFlexZonasEdit(); };
+window.quitarFlexZona = (i) => { flexZonas.splice(i, 1); renderFlexZonasEdit(); };
+window.guardarFlexZonas = async () => {
+    const zonas = flexZonas.map(z => ({ nombre: String(z.nombre || '').trim(), precio: Number(z.precio) || 0 })).filter(z => z.nombre);
+    if (new Set(zonas.map(z => z.nombre.toLowerCase())).size !== zonas.length) return alert('Hay dos zonas con el mismo nombre');
+    const btn = document.getElementById('btn-save-flex-zonas');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        await setDoc(doc(db, 'flex_config', 'zonas'), { zonas, actualizadoEn: serverTimestamp() });
+        flexZonas = zonas;
+        renderFlexCarga(); renderFlexPanel();
+        btn.innerHTML = '<i class="fas fa-check"></i> Guardadas';
+        await new Promise(r => setTimeout(r, 900));
+    } catch (e) { alert('Error al guardar: ' + e.message); }
+    btn.disabled = false; btn.textContent = 'Guardar zonas';
+};
 
 // ---- HISTORIAL PICKIT (despachos punto Pickit) ----
 function listenToPickitDespachos() {
