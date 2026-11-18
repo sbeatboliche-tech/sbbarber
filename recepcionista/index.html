@@ -6094,6 +6094,13 @@ let flexDias = [], flexZonas = FLEX_ZONAS_BASE.map(z => ({ ...z })), flexCarga =
 const flexHoy = () => new Date().toLocaleDateString('en-CA');
 const flexFmtFecha = f => new Date(f + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' });
 const flexPlata = n => '$' + Math.round(n).toLocaleString('es-AR');
+const flexCant = v => Math.max(0, parseInt(v) || 0);
+function normFlexDia(x) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(x?.fecha || ''))) return null;
+    const zonas = {};
+    Object.entries(x.zonas && typeof x.zonas === 'object' ? x.zonas : {}).forEach(([k, v]) => { const n = flexCant(v); if (n) zonas[String(k)] = n; });
+    return { fecha: x.fecha, zonas, total: Object.values(zonas).reduce((a, b) => a + b, 0) };
+}
 
 window.openFlexPanel = () => {
     const p = document.getElementById('flex-panel');
@@ -6102,7 +6109,8 @@ window.openFlexPanel = () => {
     window.flexSemana(0, false);
     if (!_flexUnsubs.length) {
         _flexUnsubs.push(onSnapshot(query(collection(db, PATH_FLEX), orderBy('fecha', 'desc'), limit(120)), snap => {
-            flexDias = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+            // Se normaliza todo al leer (fecha AAAA-MM-DD, cantidades enteras): lo que se pinta en HTML sale de acá
+            flexDias = snap.docs.map(d => normFlexDia(d.data())).filter(Boolean);
             if (!Object.keys(flexCarga).length) window.cargarFlexDia();
             renderFlexPanel();
         }));
