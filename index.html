@@ -73,7 +73,16 @@
       border-bottom: 1px solid transparent;
     }
     .barra.solida { background: rgba(10,10,10,.82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-color: var(--line); }
-    .marca { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: .28em; }
+    .marca { display: inline-flex; align-items: center; gap: 10px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: .28em; }
+    /* Logo redondo de SB Studio (el de Instagram): la foto tiene esquinas blancas, el círculo las recorta */
+    .sello { border-radius: 50%; object-fit: cover; display: block; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(255,255,255,.18); }
+    .sello-chico { width: 30px; height: 30px; }
+    .sello-pie {
+      width: 72px; height: 72px; margin: 0 auto 28px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.25), 0 0 40px rgba(255,255,255,.1);
+      animation: flotar 6s ease-in-out infinite;
+    }
+    @keyframes flotar { 0%,100% { translate: 0 0; } 50% { translate: 0 -6px; } }
     .btn-chico {
       font-family: 'Syne', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
       padding: 9px 14px; border: 1px solid var(--line-2); border-radius: 2px;
@@ -185,24 +194,6 @@
     .cta:hover { box-shadow: 0 14px 40px rgba(255,255,255,.14); }
     .cta svg { width: 18px; height: 18px; flex-shrink: 0; }
 
-    /* ── Cinta de servicios ── */
-    .cinta {
-      border-block: 1px solid var(--line);
-      overflow: hidden; white-space: nowrap;
-      padding: 18px 0;
-      -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
-              mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
-    }
-    .cinta-pista { display: inline-flex; animation: cinta 26s linear infinite; }
-    .cinta span {
-      font-family: 'Syne', sans-serif; font-weight: 800; text-transform: uppercase;
-      font-size: clamp(22px, 5vw, 40px); letter-spacing: .02em;
-      padding-right: .9em; color: transparent; -webkit-text-stroke: 1px rgba(242,242,238,.45);
-    }
-    .cinta span:nth-child(odd) { color: var(--text); -webkit-text-stroke: 0; }
-    .cinta i { font-style: normal; color: var(--rojo); padding-right: .9em; font-size: clamp(16px, 3.4vw, 26px); vertical-align: middle; }
-    @keyframes cinta { to { transform: translateX(-50%); } }
-
     /* ── Secciones ── */
     main { position: relative; }
     .seccion { max-width: calc(var(--col) + var(--gutter) * 2); margin: 0 auto; padding: 72px var(--gutter) 8px; }
@@ -310,14 +301,13 @@
       *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
       .titulo .letra { transform: none; }
       .aparece { opacity: 1; transform: none; }
-      .cinta-pista { animation: none; }
     }
   </style>
 </head>
 <body>
 
   <header class="barra" id="barra">
-    <a class="marca" href="#">SB BARBER</a>
+    <a class="marca" href="#"><img class="sello sello-chico" src="assets/logo-sb-studio.png" alt="" width="30" height="30" />SB BARBER</a>
     <a class="btn-chico" href="https://wa.me/541170583352?text=Hola!%20Quiero%20pedir%20un%20turno%20%F0%9F%92%88" target="_blank" rel="noopener">Turnos</a>
     <div class="poste" id="poste"></div>
   </header>
@@ -346,14 +336,6 @@
       </a>
     </div>
   </section>
-
-  <!-- Cinta de servicios (se duplica para que el loop no corte) -->
-  <div class="cinta" aria-label="Cortes, barba, mechas, global y color">
-    <div class="cinta-pista" aria-hidden="true">
-      <span>Cortes</span><i>✦</i><span>Barba</span><i>✦</i><span>Mechas</span><i>✦</i><span>Global</span><i>✦</i><span>Color</span><i>✦</i>
-      <span>Cortes</span><i>✦</i><span>Barba</span><i>✦</i><span>Mechas</span><i>✦</i><span>Global</span><i>✦</i><span>Color</span><i>✦</i>
-    </div>
-  </div>
 
   <main>
     <!-- 01 Turnos -->
@@ -419,8 +401,9 @@
   </main>
 
   <footer class="pie">
+    <img class="sello sello-pie aparece" src="assets/logo-sb-studio.png" alt="SB Studio" width="72" height="72" />
     <div class="pie-gigante" aria-hidden="true">SB Barber</div>
-    <div class="pie-abajo"><span>© <span id="anio">2026</span> SB Barber</span><span>Dávila 951 · CABA</span></div>
+    <div class="pie-abajo"><span>© 2023 SB Barber</span><span>Dávila 951 · CABA</span></div>
   </footer>
 
   <a class="cta flotante" id="flotante" href="https://wa.me/541170583352?text=Hola!%20Quiero%20pedir%20un%20turno%20%F0%9F%92%88" target="_blank" rel="noopener" aria-hidden="true" tabindex="-1">Pedí tu turno</a>
@@ -428,7 +411,6 @@
   <script>
     (() => {
       const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      document.getElementById('anio').textContent = new Date().getFullYear();
 
       // Título letra por letra
       let i = 0;
