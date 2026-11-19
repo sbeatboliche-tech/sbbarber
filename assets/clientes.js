@@ -88,6 +88,31 @@ const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;
 
 /** Mientras se escribe en el <input>, sugiere nombres ya guardados u ofrece agregar uno nuevo.
  *  telInput (opcional): al elegir un cliente que ya tiene teléfono, se completa solo. */
+// Marca el campo de teléfono cuando el cliente elegido todavía no tiene: así se lo piden y la base se completa de a poco.
+const TEL_PLACEHOLDER = 'Teléfono (opcional, para avisarle promos)';
+function avisoTel(telInput, texto) {
+    if (!telInput) return;
+    if (!telInput.dataset.phOriginal) telInput.dataset.phOriginal = telInput.placeholder || TEL_PLACEHOLDER;
+    if (texto) {
+        telInput.placeholder = texto;
+        telInput.style.borderColor = '#f59e0b';
+        telInput.style.boxShadow = '0 0 0 2px rgba(245,158,11,.25)';
+    } else {
+        telInput.placeholder = telInput.dataset.phOriginal;
+        telInput.style.borderColor = '';
+        telInput.style.boxShadow = '';
+    }
+}
+function revisarTel(input, telInput) {
+    if (!telInput) return;
+    const n = normNombre(input.value.trim());
+    if (!n || telInput.value.trim()) return avisoTel(telInput, '');
+    const c = lista.find(x => (input.dataset.clienteId && x.id === input.dataset.clienteId) || x.n === n || x.alias?.includes(n));
+    if (c && !c.tel) avisoTel(telInput, `📱 Falta el teléfono de ${c.nombre.split(' ')[0]}: pedíselo`);
+    else if (!c && esNombreValido(n)) avisoTel(telInput, '📱 Cliente nuevo: pedile el teléfono');
+    else avisoTel(telInput, '');
+}
+
 export function pickerCliente(input, telInput) {
     if (!input || input.dataset.picker) return;
     input.dataset.picker = '1';
@@ -117,6 +142,7 @@ export function pickerCliente(input, telInput) {
         }
         else input.dataset.clienteId = resolverCliente(input).clienteId; // crea la ficha ya
         cerrar();
+        revisarTel(input, telInput);
     };
     const pintar = () => {
         const fila = esTactil() ? 'padding:13px 16px;font-size:15px;' : 'padding:10px 14px;font-size:13px;';
@@ -145,7 +171,8 @@ export function pickerCliente(input, telInput) {
         // En el celu el teclado tapa lo de abajo: subir el campo para que las sugerencias se vean
         if (esTactil()) setTimeout(() => input.scrollIntoView({ block: 'start', behavior: 'smooth' }), 300);
     });
-    input.addEventListener('blur', () => setTimeout(cerrar, 250));
+    input.addEventListener('blur', () => setTimeout(() => { cerrar(); revisarTel(input, telInput); }, 250));
+    telInput?.addEventListener('input', () => { if (telInput.value.trim()) avisoTel(telInput, ''); });
     input.addEventListener('keydown', e => {
         if (menu.style.display === 'none' || !items.length) return;
         if (e.key === 'ArrowDown') { e.preventDefault(); activo = (activo + 1) % items.length; pintar(); }
@@ -166,7 +193,7 @@ export function pickerCliente(input, telInput) {
 
 /** Deja el input vacío y sin ficha elegida (y el teléfono, si se pasa). */
 export function limpiarCliente(input, telInput) {
-    if (telInput) telInput.value = '';
+    if (telInput) { telInput.value = ''; avisoTel(telInput, ''); }
     if (!input) return;
     input.value = '';
     delete input.dataset.clienteId;
