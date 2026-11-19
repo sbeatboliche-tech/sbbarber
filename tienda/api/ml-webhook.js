@@ -17,7 +17,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { barberDb } from '../lib/barberAdmin.js';
 import { mlFetch, getCuenta, PRODUCTOS } from '../lib/ml.js';
 import { enviarPush } from '../lib/push.js';
-import { zonaDe } from '../lib/flexZonas.js';
+import { anotarFlex } from '../lib/mlFlex.js';
 
 const PATH_VENTAS = 'ventas_productos';
 
@@ -125,40 +125,8 @@ async function procesarOrden(orderId, userId) {
 }
 
 // ---- Paquetes Flex ----
-const DESPACHADO = ['shipped', 'delivered', 'not_delivered'];
-
 async function procesarEnvio(envioId, userId) {
     const cuenta = await getCuenta();
     if (!cuenta || String(cuenta.userId) !== String(userId)) return;
     await anotarFlex(envioId);
-}
-
-async function anotarFlex(envioId) {
-    const db = barberDb();
-    const marcaRef = db.doc(`ml_flex/${envioId}`);
-    if ((await marcaRef.get()).exists) return; // ya anotado: no vuelve a consultar a ML
-
-    const s = await mlFetch(`/shipments/${envioId}`);
-    const tipo = s.logistic_type || s.logistic?.type;
-    if (tipo !== 'self_service' || !DESPACHADO.includes(s.status)) return;
-
-    const dir = s.receiver_address || s.destination?.shipping_address || {};
-    const cfg = await db.doc('flex_config/zonas').get();
-    const zonas = Array.isArray(cfg.data()?.zonas) ? cfg.data().zonas : [];
-    const zona = zonaDe(dir, zonas);
-    const cuando = s.status_history?.date_shipped || s.date_first_printed || s.last_updated || Date.now();
-    const fecha = new Date(cuando).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
-    const diaRef = db.doc(`flex_despachos/${fecha}`);
-
-    await db.runTransaction(async tx => {
-        if ((await tx.get(marcaRef)).exists) return;
-        tx.set(diaRef, {
-            fecha,
-            zonas: { [zona]: FieldValue.increment(1) },
-            total: FieldValue.increment(1),
-            envios: { [envioId]: { zona, ciudad: dir.city?.name || '', cp: String(dir.zip_code || ''), orden: String(s.order_id || '') } },
-            actualizadoEn: FieldValue.serverTimestamp()
-        }, { merge: true });
-        tx.set(marcaRef, { fecha, zona, ordenId: String(s.order_id || ''), anotadoEn: FieldValue.serverTimestamp() });
-    });
 }

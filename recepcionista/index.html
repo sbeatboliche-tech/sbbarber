@@ -6133,6 +6133,9 @@ window.openFlexPanel = () => {
     window.cargarFlexDia();
     renderFlexZonasEdit();
     renderFlexPanel();
+    // Que el servidor anote las ventas Flex de ML que ya salieron (lo nuevo entra solo por el listener)
+    mlApi('flex', {}).then(r => { if (r?.nuevos) scanToast(`${r.nuevos} envío${r.nuevos === 1 ? '' : 's'} Flex de MercadoLibre anotado${r.nuevos === 1 ? '' : 's'}`, true); })
+        .catch(e => console.warn('ML flex:', e.message));
 };
 window.closeFlexPanel = () => {
     const p = document.getElementById('flex-panel');
