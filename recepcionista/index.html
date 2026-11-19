@@ -1003,7 +1003,7 @@
                 <!-- Zonas -->
                 <div class="glass-card rounded-2xl p-5">
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-2"><i class="fas fa-map-location-dot text-yellow-400"></i> Zonas y precios</h3>
-                    <p class="text-[11px] text-gray-500 mb-4">Ponelas igual que en el detalle de la logística. El precio por paquete es opcional: sirve para ver cuánto te tienen que cobrar. Las ventas Flex de MercadoLibre se anotan solas el día que salen: la zona sale de las localidades que pongas (también sirven códigos postales). Capital va a CABA aunque no la escribas.</p>
+                    <p class="text-[11px] text-gray-500 mb-4">Ponelas igual que en el detalle de la logística. El precio por paquete es opcional: sirve para ver cuánto te tienen que cobrar. Las ventas Flex de MercadoLibre se anotan solas el día que salen y se clasifican solas: Capital → CABA, primer cordón → Zona 1, segundo → Zona 2, tercero (Pilar, Escobar, La Plata…) → Zona 3. Si tu logística pone alguna localidad en otra zona, escribila en esa zona (también sirven códigos postales) y esa manda.</p>
                     <div id="flex-zonas-edit" class="space-y-2"></div>
                     <div class="flex gap-2 mt-3">
                         <button type="button" onclick="window.agregarFlexZona()" class="flex-1 text-xs font-bold py-2.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition"><i class="fas fa-plus mr-1"></i> Agregar zona</button>
@@ -6092,7 +6092,7 @@ window.renderMlPeriodo = renderMlPeriodoInternal;
 // tienda/api/ml-webhook.js al despacharse (zona según localidades; si no coincide, "Sin zona").
 // Solo se escucha con el panel abierto (no gasta lecturas el resto del día).
 const PATH_FLEX = 'flex_despachos';
-const FLEX_ZONAS_BASE = [{ nombre: 'CABA', precio: 0 }, { nombre: 'GBA 1', precio: 0 }, { nombre: 'GBA 2', precio: 0 }, { nombre: 'GBA 3', precio: 0 }];
+const FLEX_ZONAS_BASE = [{ nombre: 'CABA', precio: 0 }, { nombre: 'Zona 1', precio: 0 }, { nombre: 'Zona 2', precio: 0 }, { nombre: 'Zona 3', precio: 0 }];
 let flexDias = [], flexZonas = FLEX_ZONAS_BASE.map(z => ({ ...z })), flexCarga = {}, _flexUnsubs = [];
 const flexHoy = () => new Date().toLocaleDateString('en-CA');
 const flexFmtFecha = f => new Date(f + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -6266,7 +6266,7 @@ function renderFlexZonasEdit() {
         </div>
         <button type="button" onclick="window.quitarFlexZona(${i})" class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-600/20 transition flex-shrink-0"><i class="fas fa-times text-xs"></i></button>
     </div>
-    <textarea rows="2" placeholder="Localidades, separadas por coma (ej: Lanús, Avellaneda, Quilmes)" oninput="window.flexZonaCampo(${i}, 'localidades', this.value)" class="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-300 focus:border-yellow-400 outline-none resize-y">${escHtml(z.localidades || '')}</textarea></div>`).join('');
+    <textarea rows="2" placeholder="Excepciones (opcional): localidades separadas por coma" oninput="window.flexZonaCampo(${i}, 'localidades', this.value)" class="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-300 focus:border-yellow-400 outline-none resize-y">${escHtml(z.localidades || '')}</textarea></div>`).join('');
 }
 window.flexZonaCampo = (i, campo, v) => { if (flexZonas[i]) flexZonas[i][campo] = campo === 'precio' ? (Number(v) || 0) : v; };
 window.agregarFlexZona = () => { flexZonas.push({ nombre: '', precio: 0, localidades: '' }); renderFlexZonasEdit(); };

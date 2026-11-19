@@ -7,8 +7,8 @@
 // ML reintenta las notificaciones, así que todo es idempotente: ml_ordenes/{orderId} guarda qué se hizo.
 //
 // Envíos Flex (topic shipments, logistic_type self_service): cuando el envío pasa a despachado se suma 1 paquete
-// en flex_despachos/{día de despacho} en la zona que corresponde a la localidad (flex_config/zonas.localidades;
-// si no coincide ninguna, Capital Federal va a "CABA" y el resto a "Sin zona"). Idempotente con ml_flex/{envío}.
+// en flex_despachos/{día de despacho} en la zona según la localidad (lib/flexZonas.js: CABA / Zona 1 / 2 / 3, con
+// prioridad para las localidades cargadas en flex_config/zonas; si no se reconoce, "Sin zona"). Idempotente con ml_flex/{envío}.
 //
 // ML pide responder 200 en menos de 500 ms: se responde enseguida y el trabajo sigue con waitUntil
 // (si no, Vercel congela la función apenas se manda la respuesta).
@@ -17,6 +17,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { barberDb } from '../lib/barberAdmin.js';
 import { mlFetch, getCuenta, PRODUCTOS } from '../lib/ml.js';
 import { enviarPush } from '../lib/push.js';
+import { zonaDe } from '../lib/flexZonas.js';
 
 const PATH_VENTAS = 'ventas_productos';
 
@@ -124,26 +125,12 @@ async function procesarOrden(orderId, userId) {
 }
 
 // ---- Paquetes Flex ----
-const norm = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 const DESPACHADO = ['shipped', 'delivered', 'not_delivered'];
 
 async function procesarEnvio(envioId, userId) {
     const cuenta = await getCuenta();
     if (!cuenta || String(cuenta.userId) !== String(userId)) return;
     await anotarFlex(envioId);
-}
-
-// Zona de la logística según la localidad del comprador. Las localidades de cada zona se cargan en recepcionista
-// (separadas por coma; también sirven códigos postales).
-function zonaDe(dir, zonas) {
-    const ciudad = norm(dir?.city?.name), barrio = norm(dir?.neighborhood?.name), cp = String(dir?.zip_code || '').replace(/\D/g, '');
-    for (const z of zonas) {
-        const lista = String(z.localidades || '').split(',').map(norm).filter(Boolean);
-        if (lista.some(l => l === ciudad || l === barrio || (cp && /^\d+$/.test(l) && l === cp))) return z.nombre;
-    }
-    const caba = dir?.state?.id === 'AR-C' || /capital federal|ciudad autonoma/.test(norm(dir?.state?.name));
-    if (caba) return zonas.find(z => norm(z.nombre) === 'caba')?.nombre || 'CABA';
-    return 'Sin zona';
 }
 
 async function anotarFlex(envioId) {
