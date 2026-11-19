@@ -522,6 +522,9 @@
                         const norm = s => (s||'').toLowerCase().trim();
                         const map = {}; Object.keys(p).forEach(k => { map[norm(k)] = p[k]; });
                         SERVICIOS.forEach(s => { const v = map[norm(s.nombre)]; if (v != null) s.precio = Number(v); });
+                        // Los eliminados desde Precios en recepción no se ofrecen
+                        const ocultos = new Set((p.__ocultos || []).map(norm));
+                        for (let i = SERVICIOS.length - 1; i >= 0; i--) if (ocultos.has(norm(SERVICIOS[i].nombre))) SERVICIOS.splice(i, 1);
                         const sl = document.getElementById('service-list');
                         if (sl && sl.children.length) renderServices();
                     }

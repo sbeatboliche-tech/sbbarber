@@ -2265,7 +2265,7 @@ function renderBarberGrid() {
 window.renderServices = (selectedBarber) => {
     document.getElementById('svc-name').value = '';
     document.getElementById('svc-price').value = '';
-    const filtered = SERVICES.filter(s => servicioDisponible(CFG, s.name, selectedBarber));
+    const filtered = SERVICES.filter(s => !SERVICIOS_OCULTOS.has(s.name) && servicioDisponible(CFG, s.name, selectedBarber));
     document.getElementById('services-grid').innerHTML = filtered.map((s, i) => `
         <button type="button" onclick="window.selectSvc('${jsAttr(s.name)}', ${s.price}, this)"
             class="svc-card svc-appear text-left p-4 bg-white/5 border-2 border-transparent rounded-2xl cursor-pointer transition-all duration-150 hover:bg-white/8 active:scale-[0.97]"
@@ -6810,7 +6810,11 @@ function customPromptNumero(titulo, valor = 0) {
 
 // ---- PRECIOS DE SERVICIOS (editables, en vivo) ----
 const PATH_PRECIOS_SERV = 'config_precios';
+// Servicios eliminados desde Precios (__ocultos): los base están en el código, así que no se borran, se ocultan
+let SERVICIOS_OCULTOS = new Set();
+let preciosBorrados = new Set();
 function applyServicePrices(overrides) {
+    if (Array.isArray(overrides.__ocultos)) SERVICIOS_OCULTOS = new Set(overrides.__ocultos);
     (overrides.__customServices || []).forEach(cs => {
         if (cs?.name && !SERVICES.find(s => s.name === cs.name)) {
             SERVICES.push({ name: cs.name, price: Number(overrides[cs.name]) || 0, custom: true });
@@ -6846,7 +6850,8 @@ function initPreciosSortable() {
 }
 window.openPreciosModal = () => {
     const cont = document.getElementById('precios-list');
-    cont.innerHTML = SERVICES.map((s, i) => `
+    preciosBorrados = new Set();
+    cont.innerHTML = SERVICES.map((s, i) => SERVICIOS_OCULTOS.has(s.name) ? '' : `
         <div class="precio-row flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl p-2.5" data-name="${s.name.replace(/"/g,'&quot;')}">
             <span class="precio-drag-handle cursor-grab text-gray-600 hover:text-gray-400 select-none text-base flex-shrink-0 px-1">⠿</span>
             <span class="flex-1 text-sm font-semibold text-gray-100 min-w-0 truncate">${escHtml(s.name)}</span>
@@ -6855,9 +6860,18 @@ window.openPreciosModal = () => {
                 <input type="number" inputmode="numeric" id="precio-serv-${i}" value="${s.price}" min="0"
                     class="w-24 bg-transparent py-2.5 text-sm text-white outline-none text-right">
             </div>
+            <button type="button" onclick="window.borrarPrecioServicio(this)" title="Eliminar" class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-500 hover:text-red-400 active:scale-90 transition flex-shrink-0"><i class="fas fa-trash text-xs"></i></button>
         </div>`).join('');
     initPreciosSortable();
     showModal('precios-modal');
+};
+// Se saca de la lista; queda eliminado recién al tocar "Guardar precios"
+window.borrarPrecioServicio = async (btn) => {
+    const row = btn.closest('.precio-row');
+    const name = row.dataset.name;
+    if (!(await customConfirm(`¿Eliminar "${name}"? Deja de aparecer al anotar cortes (lo ya anotado no cambia).`, 'Eliminar'))) return;
+    preciosBorrados.add(name);
+    row.remove();
 };
 window.addPrecioServicioRow = () => {
     const cont = document.getElementById('precios-list');
@@ -6880,18 +6894,25 @@ window.savePrecios = async () => {
     btn.disabled = true; const prev = btn.textContent; btn.textContent = 'Guardando...';
     try {
         const data = {};
+        const ocultos = new Set([...SERVICIOS_OCULTOS, ...preciosBorrados]);
         SERVICES.forEach((s, i) => {
-            const v = parseInt(document.getElementById('precio-serv-' + i).value);
+            const el = document.getElementById('precio-serv-' + i);
+            if (!el) return; // oculto o recién eliminado
+            const v = parseInt(el.value);
             data[s.name] = isNaN(v) ? s.price : v;
         });
         [...document.querySelectorAll('.precio-nuevo-row')].forEach(row => {
             const name = row.querySelector('.precio-nuevo-nombre').value.trim();
             const price = parseInt(row.querySelector('.precio-nuevo-precio').value) || 0;
-            if (name && !SERVICES.find(s => s.name === name)) {
+            if (!name) return;
+            // Si se vuelve a crear uno eliminado, reaparece con el precio nuevo
+            if (ocultos.has(name)) { ocultos.delete(name); data[name] = price; return; }
+            if (!SERVICES.find(s => s.name === name)) {
                 SERVICES.push({ name, price, custom: true });
                 data[name] = price;
             }
         });
+        data.__ocultos = [...ocultos];
         const customList = SERVICES.filter(s => s.custom).map(s => ({ name: s.name }));
         if (customList.length) data.__customServices = customList;
         const order = [...document.querySelectorAll('#precios-list .precio-row')]
