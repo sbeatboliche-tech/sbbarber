@@ -6,6 +6,10 @@
 // Venta cancelada después de descontar → devuelve el stock y borra la venta registrada.
 // ML reintenta las notificaciones, así que todo es idempotente: ml_ordenes/{orderId} guarda qué se hizo.
 //
+// Envíos Flex (topic shipments, logistic_type self_service): cuando el envío pasa a despachado se suma 1 paquete
+// en flex_despachos/{día de despacho} en la zona que corresponde a la localidad (flex_config/zonas.localidades;
+// si no coincide ninguna, Capital Federal va a "CABA" y el resto a "Sin zona"). Idempotente con ml_flex/{envío}.
+//
 // ML pide responder 200 en menos de 500 ms: se responde enseguida y el trabajo sigue con waitUntil
 // (si no, Vercel congela la función apenas se manda la respuesta).
 import { waitUntil } from '@vercel/functions';
@@ -19,7 +23,9 @@ const PATH_VENTAS = 'ventas_productos';
 export default async function handler(req, res) {
     const { topic, resource, user_id } = req.body || {};
     const orderId = topic === 'orders_v2' && /^\/orders\/(\d+)$/.exec(resource || '')?.[1];
+    const envioId = topic === 'shipments' && /^\/shipments\/(\d+)$/.exec(resource || '')?.[1];
     if (orderId) waitUntil(procesarOrden(orderId, user_id).catch(e => console.error('ML webhook:', orderId, e)));
+    if (envioId) waitUntil(procesarEnvio(envioId, user_id).catch(e => console.error('ML webhook envío:', envioId, e)));
     res.status(200).end();
 }
 
@@ -28,6 +34,8 @@ async function procesarOrden(orderId, userId) {
     if (!cuenta || String(cuenta.userId) !== String(userId)) return; // notificación de otra cuenta
 
     const order = await mlFetch(`/orders/${orderId}`);
+    // Por si la notificación del envío no llegó: si la orden ya figura despachada, se anota igual (es idempotente)
+    if (order.shipping?.id) await anotarFlex(String(order.shipping.id)).catch(e => console.error('ML flex:', order.shipping.id, e));
     const pagada = order.status === 'paid';
     const cancelada = order.status === 'cancelled';
     if (!pagada && !cancelada) return;
@@ -113,4 +121,57 @@ async function procesarOrden(orderId, userId) {
         await enviarPush({ admins: true }, { titulo: '🛒 Venta en MercadoLibre', cuerpo, datos: { tipo: 'ml', orderId } })
             .catch(e => console.error('ML webhook push:', orderId, e));
     }
+}
+
+// ---- Paquetes Flex ----
+const norm = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const DESPACHADO = ['shipped', 'delivered', 'not_delivered'];
+
+async function procesarEnvio(envioId, userId) {
+    const cuenta = await getCuenta();
+    if (!cuenta || String(cuenta.userId) !== String(userId)) return;
+    await anotarFlex(envioId);
+}
+
+// Zona de la logística según la localidad del comprador. Las localidades de cada zona se cargan en recepcionista
+// (separadas por coma; también sirven códigos postales).
+function zonaDe(dir, zonas) {
+    const ciudad = norm(dir?.city?.name), barrio = norm(dir?.neighborhood?.name), cp = String(dir?.zip_code || '').replace(/\D/g, '');
+    for (const z of zonas) {
+        const lista = String(z.localidades || '').split(',').map(norm).filter(Boolean);
+        if (lista.some(l => l === ciudad || l === barrio || (cp && /^\d+$/.test(l) && l === cp))) return z.nombre;
+    }
+    const caba = dir?.state?.id === 'AR-C' || /capital federal|ciudad autonoma/.test(norm(dir?.state?.name));
+    if (caba) return zonas.find(z => norm(z.nombre) === 'caba')?.nombre || 'CABA';
+    return 'Sin zona';
+}
+
+async function anotarFlex(envioId) {
+    const db = barberDb();
+    const marcaRef = db.doc(`ml_flex/${envioId}`);
+    if ((await marcaRef.get()).exists) return; // ya anotado: no vuelve a consultar a ML
+
+    const s = await mlFetch(`/shipments/${envioId}`);
+    const tipo = s.logistic_type || s.logistic?.type;
+    if (tipo !== 'self_service' || !DESPACHADO.includes(s.status)) return;
+
+    const dir = s.receiver_address || s.destination?.shipping_address || {};
+    const cfg = await db.doc('flex_config/zonas').get();
+    const zonas = Array.isArray(cfg.data()?.zonas) ? cfg.data().zonas : [];
+    const zona = zonaDe(dir, zonas);
+    const cuando = s.status_history?.date_shipped || s.date_first_printed || s.last_updated || Date.now();
+    const fecha = new Date(cuando).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+    const diaRef = db.doc(`flex_despachos/${fecha}`);
+
+    await db.runTransaction(async tx => {
+        if ((await tx.get(marcaRef)).exists) return;
+        tx.set(diaRef, {
+            fecha,
+            zonas: { [zona]: FieldValue.increment(1) },
+            total: FieldValue.increment(1),
+            envios: { [envioId]: { zona, ciudad: dir.city?.name || '', cp: String(dir.zip_code || ''), orden: String(s.order_id || '') } },
+            actualizadoEn: FieldValue.serverTimestamp()
+        }, { merge: true });
+        tx.set(marcaRef, { fecha, zona, ordenId: String(s.order_id || ''), anotadoEn: FieldValue.serverTimestamp() });
+    });
 }

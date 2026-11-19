@@ -972,6 +972,7 @@
                     <label class="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 block">Fecha de despacho</label>
                     <input type="date" id="flex-fecha-input" onchange="window.cargarFlexDia()" class="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-yellow-400 outline-none mb-4">
                     <div id="flex-zonas-carga" class="space-y-2"></div>
+                    <div id="flex-ml-dia"></div>
                     <div class="flex items-center justify-between mt-4 px-1">
                         <span class="text-xs text-gray-500">Total del día</span>
                         <span id="flex-dia-total" class="text-lg font-extrabold text-yellow-400 tabular-nums">0</span>
@@ -1002,7 +1003,7 @@
                 <!-- Zonas -->
                 <div class="glass-card rounded-2xl p-5">
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-2"><i class="fas fa-map-location-dot text-yellow-400"></i> Zonas y precios</h3>
-                    <p class="text-[11px] text-gray-500 mb-4">Ponelas igual que en el detalle de la logística. El precio por paquete es opcional: sirve para ver cuánto te tienen que cobrar.</p>
+                    <p class="text-[11px] text-gray-500 mb-4">Ponelas igual que en el detalle de la logística. El precio por paquete es opcional: sirve para ver cuánto te tienen que cobrar. Las ventas Flex de MercadoLibre se anotan solas el día que salen: la zona sale de las localidades que pongas (también sirven códigos postales). Capital va a CABA aunque no la escribas.</p>
                     <div id="flex-zonas-edit" class="space-y-2"></div>
                     <div class="flex gap-2 mt-3">
                         <button type="button" onclick="window.agregarFlexZona()" class="flex-1 text-xs font-bold py-2.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition"><i class="fas fa-plus mr-1"></i> Agregar zona</button>
@@ -6086,7 +6087,9 @@ function renderMlPeriodoInternal() {
 window.renderMlPeriodo = renderMlPeriodoInternal;
 
 // ---- PAQUETES FLEX: por día y por zona ----
-// flex_despachos/{fecha} = { fecha, zonas: { "CABA": 5, ... }, total }. flex_config/zonas = { zonas: [{ nombre, precio }] }.
+// flex_despachos/{fecha} = { fecha, zonas: { "CABA": 5, ... }, total, envios: { idEnvío: { zona, ciudad, cp, orden } } }.
+// flex_config/zonas = { zonas: [{ nombre, precio, localidades }] }. Los envíos Flex de MercadoLibre los suma solo
+// tienda/api/ml-webhook.js al despacharse (zona según localidades; si no coincide, "Sin zona").
 // Solo se escucha con el panel abierto (no gasta lecturas el resto del día).
 const PATH_FLEX = 'flex_despachos';
 const FLEX_ZONAS_BASE = [{ nombre: 'CABA', precio: 0 }, { nombre: 'GBA 1', precio: 0 }, { nombre: 'GBA 2', precio: 0 }, { nombre: 'GBA 3', precio: 0 }];
@@ -6099,7 +6102,12 @@ function normFlexDia(x) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(x?.fecha || ''))) return null;
     const zonas = {};
     Object.entries(x.zonas && typeof x.zonas === 'object' ? x.zonas : {}).forEach(([k, v]) => { const n = flexCant(v); if (n) zonas[String(k)] = n; });
-    return { fecha: x.fecha, zonas, total: Object.values(zonas).reduce((a, b) => a + b, 0) };
+    const envios = {};
+    Object.entries(x.envios && typeof x.envios === 'object' ? x.envios : {}).forEach(([id, e]) => {
+        if (!/^\d+$/.test(id) || !e || typeof e !== 'object') return;
+        envios[id] = { zona: String(e.zona || ''), ciudad: String(e.ciudad || ''), cp: String(e.cp || ''), orden: String(e.orden || '') };
+    });
+    return { fecha: x.fecha, zonas, envios, total: Object.values(zonas).reduce((a, b) => a + b, 0) };
 }
 
 window.openFlexPanel = () => {
@@ -6116,7 +6124,7 @@ window.openFlexPanel = () => {
         }));
         _flexUnsubs.push(onSnapshot(doc(db, 'flex_config', 'zonas'), snap => {
             const z = snap.exists() ? snap.data().zonas : null;
-            if (Array.isArray(z) && z.length) flexZonas = z.map(x => ({ nombre: String(x.nombre || ''), precio: Number(x.precio) || 0 }));
+            if (Array.isArray(z) && z.length) flexZonas = z.map(x => ({ nombre: String(x.nombre || ''), precio: Number(x.precio) || 0, localidades: String(x.localidades || '') }));
             renderFlexZonasEdit();
             renderFlexCarga();
             renderFlexPanel();
@@ -6161,6 +6169,14 @@ function renderFlexCarga() {
         <button type="button" onclick="window.flexSumar('${jsAttr(n)}', 1)" class="w-9 h-9 rounded-lg bg-yellow-400 text-black hover:bg-yellow-300 transition active:scale-95"><i class="fas fa-plus text-xs"></i></button>
     </div>`).join('') || '<p class="text-xs text-gray-600 text-center py-2">Agregá zonas abajo</p>';
     document.getElementById('flex-dia-total').textContent = Object.values(flexCarga).reduce((a, b) => a + (Number(b) || 0), 0);
+    const fecha = document.getElementById('flex-fecha-input').value;
+    const envios = Object.values(flexDias.find(x => x.fecha === fecha)?.envios || {});
+    const sinZona = Number(flexCarga['Sin zona']) || 0; // lo que todavía no se pasó a mano a una zona
+    document.getElementById('flex-ml-dia').innerHTML = envios.length ? `<div class="mt-4 bg-black/20 border border-white/10 rounded-xl px-3 py-2.5">
+        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5"><i class="fas fa-bolt text-yellow-400 mr-1"></i> ${envios.length} de MercadoLibre (se anotan solos)</div>
+        ${envios.map(e => `<div class="flex justify-between gap-3 text-[11px] py-0.5"><span class="text-gray-400 truncate">${escHtml(e.ciudad || 'Sin localidad')}${e.cp ? ' · CP ' + escHtml(e.cp) : ''}</span><span class="${e.zona === 'Sin zona' ? 'text-amber-400' : 'text-white'} whitespace-nowrap">${escHtml(e.zona)}</span></div>`).join('')}
+        ${sinZona ? `<p class="text-[11px] text-amber-400/90 mt-2 leading-snug">${sinZona === 1 ? 'Uno quedó' : sinZona + ' quedaron'} en "Sin zona": pasalos a mano con − y +, y sumá esa localidad a su zona abajo para que la próxima vez entre sola.</p>` : ''}
+    </div>` : '';
 }
 window.flexSumar = (n, d) => { flexCarga[n] = Math.max(0, (Number(flexCarga[n]) || 0) + d); renderFlexCarga(); };
 window.flexSetear = (n, v) => {
@@ -6179,7 +6195,9 @@ window.guardarFlexDia = async () => {
         if (total === 0) {
             if (flexDias.some(x => x.fecha === fecha) && await customConfirm(`¿Borrar lo cargado el ${flexFmtFecha(fecha)}?`)) await deleteDoc(doc(db, PATH_FLEX, fecha));
         } else {
-            await setDoc(doc(db, PATH_FLEX, fecha), { fecha, zonas, total, userEmail: currentUser?.email || null, actualizadoEn: serverTimestamp() });
+            // Se conserva la lista de envíos de ML del día (el webhook la usa para no anotar dos veces)
+            const envios = flexDias.find(x => x.fecha === fecha)?.envios || {};
+            await setDoc(doc(db, PATH_FLEX, fecha), { fecha, zonas, total, envios, userEmail: currentUser?.email || null, actualizadoEn: serverTimestamp() });
             btn.innerHTML = '<i class="fas fa-check"></i> Guardado';
             await new Promise(r => setTimeout(r, 900));
         }
@@ -6202,7 +6220,7 @@ function renderFlexPanel() {
     el.innerHTML = flexDias.slice(0, 20).map(x => `<div class="flex items-center gap-3 bg-black/20 rounded-xl px-3 py-2.5">
         <button type="button" onclick="window.editarFlexDia('${x.fecha}')" class="flex-1 min-w-0 text-left">
             <div class="text-sm text-white capitalize">${flexFmtFecha(x.fecha)}</div>
-            <div class="text-[11px] text-gray-500 truncate">${Object.entries(x.zonas || {}).map(([k, v]) => `${escHtml(k)} ${v}`).join(' · ')}</div>
+            <div class="text-[11px] text-gray-500 truncate">${Object.entries(x.zonas || {}).map(([k, v]) => `${escHtml(k)} ${v}`).join(' · ')}${Object.keys(x.envios || {}).length ? ` <span class="text-yellow-400/80">· ${Object.keys(x.envios).length} ML</span>` : ''}</div>
         </button>
         <span class="text-sm font-bold text-yellow-400 whitespace-nowrap">${x.total || 0} paq.</span>
         <button onclick="window.borrarFlexDia('${x.fecha}')" class="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-600/20 transition flex-shrink-0"><i class="fas fa-trash text-[10px]"></i></button>
@@ -6240,20 +6258,21 @@ window.renderFlexPeriodo = renderFlexPeriodo;
 // Edición de zonas (nombre y precio por paquete)
 function renderFlexZonasEdit() {
     const el = document.getElementById('flex-zonas-edit');
-    el.innerHTML = flexZonas.map((z, i) => `<div class="flex items-center gap-2">
+    el.innerHTML = flexZonas.map((z, i) => `<div class="bg-black/20 rounded-xl p-2 space-y-2"><div class="flex items-center gap-2">
         <input type="text" value="${escHtml(z.nombre)}" placeholder="Zona" oninput="window.flexZonaCampo(${i}, 'nombre', this.value)" class="flex-1 min-w-0 bg-black/30 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:border-yellow-400 outline-none">
         <div class="relative w-28 flex-shrink-0">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">$</span>
             <input type="number" min="0" step="100" inputmode="numeric" value="${z.precio || ''}" placeholder="Precio" oninput="window.flexZonaCampo(${i}, 'precio', this.value)" class="w-full bg-black/30 border border-gray-700 rounded-lg pl-6 pr-2 py-2 text-sm text-white tabular-nums focus:border-yellow-400 outline-none">
         </div>
         <button type="button" onclick="window.quitarFlexZona(${i})" class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-600/20 transition flex-shrink-0"><i class="fas fa-times text-xs"></i></button>
-    </div>`).join('');
+    </div>
+    <textarea rows="2" placeholder="Localidades, separadas por coma (ej: Lanús, Avellaneda, Quilmes)" oninput="window.flexZonaCampo(${i}, 'localidades', this.value)" class="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-300 focus:border-yellow-400 outline-none resize-y">${escHtml(z.localidades || '')}</textarea></div>`).join('');
 }
 window.flexZonaCampo = (i, campo, v) => { if (flexZonas[i]) flexZonas[i][campo] = campo === 'precio' ? (Number(v) || 0) : v; };
-window.agregarFlexZona = () => { flexZonas.push({ nombre: '', precio: 0 }); renderFlexZonasEdit(); };
+window.agregarFlexZona = () => { flexZonas.push({ nombre: '', precio: 0, localidades: '' }); renderFlexZonasEdit(); };
 window.quitarFlexZona = (i) => { flexZonas.splice(i, 1); renderFlexZonasEdit(); };
 window.guardarFlexZonas = async () => {
-    const zonas = flexZonas.map(z => ({ nombre: String(z.nombre || '').trim(), precio: Number(z.precio) || 0 })).filter(z => z.nombre);
+    const zonas = flexZonas.map(z => ({ nombre: String(z.nombre || '').trim(), precio: Number(z.precio) || 0, localidades: String(z.localidades || '').split(',').map(t => t.trim()).filter(Boolean).join(', ') })).filter(z => z.nombre);
     if (new Set(zonas.map(z => z.nombre.toLowerCase())).size !== zonas.length) return alert('Hay dos zonas con el mismo nombre');
     const btn = document.getElementById('btn-save-flex-zonas');
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
