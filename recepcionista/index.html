@@ -5067,7 +5067,7 @@ initRetirosSocios({
     abrirRetiros: window.openRetirosPanel, confirmar: (msg, lbl) => customConfirm(msg, lbl), fondo: '#0a0a0a'
 });
 // En la app del celu (solo entran los dueños) Retiros abre directo, sin contraseña. Socios la sigue pidiendo.
-window.pedirClaveRetiros = () => window.Capacitor?.isNativePlatform?.() ? window.openRetirosPanel() : pedirClaveRetiros();
+window.pedirClaveRetiros = () => isOwner && window.Capacitor?.isNativePlatform?.() ?window.openRetirosPanel() : pedirClaveRetiros();
 window.pedirClaveSocios = pedirClaveSocios;
 
 function renderRetirosPanel() {
