@@ -55,8 +55,13 @@ export default async function handler(req, res) {
             case 'flex':
                 if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
                 // {dias} para traer envíos más viejos a pedido (botón del panel); por defecto los últimos 10 días
+                // (la búsqueda larga solo recepción o dueños, con su propia espera)
                 const dias = Math.min(60, Math.max(1, parseInt(req.body?.dias) || 10));
-                return res.json(await revisarFlex(dias, { forzar: dias > 10 }));
+                const historial = dias > 10;
+                if (historial && !OWNERS.includes(user.email) && user.firebase?.sign_in_provider !== 'anonymous') {
+                    return res.status(403).json({ error: 'Solo recepción o los dueños' });
+                }
+                return res.json(await revisarFlex(historial ? dias : 10, { historial }));
             default:
                 return res.status(400).json({ error: 'Acción desconocida' });
         }

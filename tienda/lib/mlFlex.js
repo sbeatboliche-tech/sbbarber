@@ -50,15 +50,21 @@ export async function anotarFlex(envioId, { yaRevisado = false } = {}) {
 }
 
 // Revisa las ventas pagadas de los últimos `dias` y anota las Flex despachadas que falten.
-// No depende de que ML mande avisos de envíos. Como mucho una vez cada 3 minutos (ml_config/flex_revision).
-export async function revisarFlex(dias = 10, { forzar = false } = {}) {
+// No depende de que ML mande avisos de envíos. La revisión normal (10 días) corre como mucho cada 3 minutos
+// (ml_config/flex_revision) y la larga del botón, cada 2 (ml_config/flex_revision_hist). El chequeo es atómico.
+export async function revisarFlex(dias = 10, { historial = false } = {}) {
     const cuenta = await getCuenta();
     if (!cuenta) return { nuevos: 0, revisados: 0, sinCuenta: true };
     const db = barberDb();
-    const revRef = db.doc('ml_config/flex_revision');
-    const ultima = (await revRef.get()).data()?.en?.toMillis?.() || 0;
-    if (!forzar && Date.now() - ultima < 3 * 60 * 1000) return { nuevos: 0, revisados: 0, reciente: true };
-    await revRef.set({ en: FieldValue.serverTimestamp() });
+    const revRef = db.doc(historial ? 'ml_config/flex_revision_hist' : 'ml_config/flex_revision');
+    const espera = historial ? 2 * 60 * 1000 : 3 * 60 * 1000;
+    const libre = await db.runTransaction(async tx => {
+        const ultima = (await tx.get(revRef)).data()?.en?.toMillis?.() || 0;
+        if (Date.now() - ultima < espera) return false;
+        tx.set(revRef, { en: FieldValue.serverTimestamp() });
+        return true;
+    });
+    if (!libre) return { nuevos: 0, revisados: 0, reciente: true };
 
     const desde = new Date(Date.now() - dias * 864e5).toISOString().replace(/\.\d{3}Z$/, '.000-00:00');
     const envios = new Set();
