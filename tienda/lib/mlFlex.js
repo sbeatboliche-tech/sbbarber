@@ -16,7 +16,12 @@ export async function anotarFlex(envioId, { yaRevisado = false } = {}) {
 
     const s = await mlFetch(`/shipments/${envioId}`);
     const tipo = s.logistic_type || s.logistic?.type;
-    if (tipo !== 'self_service' || !DESPACHADO.includes(s.status)) return false;
+    if (tipo !== 'self_service') {
+        // No es Flex: se marca para no volver a consultarlo en cada revisión (no suma nada en flex_despachos)
+        await marcaRef.set({ noFlex: true, tipo: tipo || null, anotadoEn: FieldValue.serverTimestamp() }).catch(() => {});
+        return false;
+    }
+    if (!DESPACHADO.includes(s.status)) return false;
 
     const dir = s.receiver_address || s.destination?.shipping_address || {};
     const cfg = await db.doc('flex_config/zonas').get();
@@ -46,18 +51,18 @@ export async function anotarFlex(envioId, { yaRevisado = false } = {}) {
 
 // Revisa las ventas pagadas de los últimos `dias` y anota las Flex despachadas que falten.
 // No depende de que ML mande avisos de envíos. Como mucho una vez cada 3 minutos (ml_config/flex_revision).
-export async function revisarFlex(dias = 10) {
+export async function revisarFlex(dias = 10, { forzar = false } = {}) {
     const cuenta = await getCuenta();
     if (!cuenta) return { nuevos: 0, revisados: 0, sinCuenta: true };
     const db = barberDb();
     const revRef = db.doc('ml_config/flex_revision');
     const ultima = (await revRef.get()).data()?.en?.toMillis?.() || 0;
-    if (Date.now() - ultima < 3 * 60 * 1000) return { nuevos: 0, revisados: 0, reciente: true };
+    if (!forzar && Date.now() - ultima < 3 * 60 * 1000) return { nuevos: 0, revisados: 0, reciente: true };
     await revRef.set({ en: FieldValue.serverTimestamp() });
 
     const desde = new Date(Date.now() - dias * 864e5).toISOString().replace(/\.\d{3}Z$/, '.000-00:00');
     const envios = new Set();
-    for (let offset = 0; offset < 300; offset += 50) {
+    for (let offset = 0; offset < 1000; offset += 50) {
         const q = new URLSearchParams({ seller: String(cuenta.userId), 'order.status': 'paid', 'order.date_created.from': desde, sort: 'date_desc', limit: '50', offset: String(offset) });
         const r = await mlFetch(`/orders/search?${q}`);
         (r.results || []).forEach(o => { if (o.shipping?.id) envios.add(String(o.shipping.id)); });

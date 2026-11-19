@@ -1000,6 +1000,7 @@
                         </div>
                     </div>
                     <div id="flex-periodo" class="overflow-x-auto"></div>
+                    <button type="button" id="btn-flex-historial" onclick="window.flexTraerViejos()" class="w-full mt-3 text-xs font-bold py-2.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition"><i class="fas fa-clock-rotate-left mr-1"></i> Traer envíos de ML de los últimos 60 días</button>
                 </div>
 
                 <!-- Zonas -->
@@ -6138,6 +6139,16 @@ window.openFlexPanel = () => {
     // Que el servidor anote las ventas Flex de ML que ya salieron (lo nuevo entra solo por el listener)
     mlApi('flex', {}).then(r => { if (r?.nuevos) scanToast(`${r.nuevos} envío${r.nuevos === 1 ? '' : 's'} Flex de MercadoLibre anotado${r.nuevos === 1 ? '' : 's'}`, true); })
         .catch(e => console.warn('ML flex:', e.message));
+};
+// Solo se revisan solos los últimos 10 días; esto completa hasta 60 días para atrás
+window.flexTraerViejos = async () => {
+    const btn = document.getElementById('btn-flex-historial');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Buscando en MercadoLibre…';
+    try {
+        const r = await mlApi('flex', { dias: 60 });
+        btn.innerHTML = `<i class="fas fa-check mr-1"></i> ${r.nuevos ? `${r.nuevos} envío${r.nuevos === 1 ? '' : 's'} nuevo${r.nuevos === 1 ? '' : 's'}` : 'No faltaba ninguno'} (${r.revisados || 0} ventas revisadas)`;
+    } catch (e) { btn.innerHTML = 'Error: ' + escHtml(e.message); }
+    setTimeout(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-clock-rotate-left mr-1"></i> Traer envíos de ML de los últimos 60 días'; }, 6000);
 };
 window.closeFlexPanel = () => {
     const p = document.getElementById('flex-panel');
