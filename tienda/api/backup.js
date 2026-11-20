@@ -25,6 +25,12 @@ async function colecciones(db) {
     // Datos viejos de la barbería: artifacts/sb-barber-6dc16/public/data/{colección}
     const data = db.doc('artifacts/sb-barber-6dc16/public/data');
     try { (await data.listCollections()).forEach(c => lista.push(c.path)); } catch {}
+    // Datos de las otras barberías (multi-barbería etapa 2): barberias/{id}/{colección}
+    try {
+        for (const b of await db.collection('barberias').listDocuments()) {
+            (await b.listCollections()).forEach(c => lista.push(c.path));
+        }
+    } catch {}
     return lista;
 }
 
