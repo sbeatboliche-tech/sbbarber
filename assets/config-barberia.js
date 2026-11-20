@@ -5,7 +5,18 @@
 // Mientras el doc no llega (o si falla) se usa la última config guardada en este dispositivo y, si no
 // hay, CONFIG_RESPALDO: los valores de SB Barber de hoy. Así la app nunca se queda sin barberos.
 
-export const BARBERIA_ID = 'sb-barber';
+// Barbería de esta pestaña. Hasta la etapa 3 (login por barbería) siempre es SB Barber, salvo
+// `?barberia=<id>` en la URL para probar otra: solo sirve a los dueños (ver exigirAcceso y las reglas
+// de barberias/{id}/...). Plan etapa 2: docs/superpowers/plans/2026-11-20-multi-barberia-etapa-2.md
+export const SB_ID = 'sb-barber';
+function idDesdeUrl() {
+    try {
+        const p = new URLSearchParams(location.search).get('barberia');
+        return p && /^[a-z0-9-]{2,40}$/.test(p) ? p : null;
+    } catch { return null; }
+}
+export const BARBERIA_ID = idDesdeUrl() || SB_ID;
+export const ES_SB = BARBERIA_ID === SB_ID;
 const CACHE_KEY = `sb_config_barberia_${BARBERIA_ID}`;
 
 export const CONFIG_RESPALDO = {
@@ -40,13 +51,27 @@ function valida(cfg) {
     return cfg && Array.isArray(cfg.admins) && cfg.admins.length && Array.isArray(cfg.barberos);
 }
 
-// Config para arrancar ya (sincrónica): la del dispositivo o el respaldo.
+// Config para arrancar ya (sincrónica): la del dispositivo o el respaldo. El respaldo con los barberos
+// de SB es solo para SB; otra barbería arranca vacía hasta que llega su doc.
 export function configInicial() {
     try {
         const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
         if (valida(c)) return c;
     } catch {}
+    if (!ES_SB) return { nombre: BARBERIA_ID, admins: [...CONFIG_RESPALDO.admins], barberos: [], atajos: [], modulos: {} };
     return clonar(CONFIG_RESPALDO);
+}
+
+// Otra barbería por URL solo para los dueños: a cualquier otro lo devuelve a SB Barber (las reglas
+// igual le niegan esos datos; esto es para que no quede en una pantalla vacía con errores).
+export function exigirAcceso(email) {
+    if (ES_SB || CONFIG_RESPALDO.admins.includes(email)) return true;
+    try {
+        const u = new URL(location.href);
+        u.searchParams.delete('barberia');
+        location.replace(u.toString());
+    } catch {}
+    return false;
 }
 
 // Escucha el doc (1 lectura al abrir + los cambios). onCambio(cfg) solo si llega una config válida.

@@ -7,8 +7,9 @@
    Para no gastar lecturas de Firebase la lista se guarda en
    localStorage y solo se piden las fichas nuevas (por `creadoEn`).
    ========================================================= */
-const COL = 'clientes';
-const LS_KEY = 'sb_clientes_v1';
+import { ruta, claveLocal } from './rutas-barberia.js'; // SB: rutas de siempre; otra barbería: barberias/{id}/...
+const COL = ruta('clientes');
+const LS_KEY = claveLocal('sb_clientes_v1');
 const DAY = 864e5;
 const RESYNC_MS = 5 * 60 * 1000;
 

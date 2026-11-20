@@ -51,6 +51,12 @@ service cloud.firestore {
       allow read: if esStaff();
       allow write: if esDueno();
     }
+    // Datos de las otras barberías (multi-barbería etapa 2: barberias/{id}/cortes, retiros, ...; SB Barber
+    // sigue en las colecciones de la raíz). Hasta la etapa 3 (custom claims con la barbería del usuario)
+    // solo los dueños, para probar. Sin get(): cada get() en reglas cuesta una lectura.
+    match /barberias/{id}/{col}/{d=**} {
+      allow read, write: if esDueno();
+    }
 
     // Tokens de la app del celu (assets/push.js): cada uno guarda el suyo y solo con su propio email,
     // así nadie se anota para recibir los avisos de otro (el servidor elige destinatarios por email).
@@ -66,10 +72,12 @@ service cloud.firestore {
     // Las colecciones de MercadoLibre (ml_config: tokens cifrados de la cuenta; ml_ordenes: qué ventas de
     // ML ya se descontaron) las escribe solo el servidor (tienda/api, con cuenta de servicio). Si un cliente
     // pudiera tocarlas, podría saltear descuentos o "devolver" stock inventado.
+    // 'barberias' queda afuera: si no, este comodín (que también matchea barberias/x/retiros/...) le daría a
+    // los barberos de SB acceso a los datos de otra barbería (las reglas se suman: alcanza con que una permita).
     match /{coleccion}/{document=**} {
-      allow read: if (esStaff() && !(coleccion in ['ml_config', 'ml_ordenes'])) || (esDueno() && coleccion == 'ml_config');
-      allow create, update: if esStaff() && !(coleccion in ['ml_config', 'ml_ordenes']);
-      allow delete: if esDueno() && !(coleccion in ['ml_config', 'ml_ordenes']);
+      allow read: if (esStaff() && !(coleccion in ['ml_config', 'ml_ordenes', 'barberias'])) || (esDueno() && coleccion == 'ml_config');
+      allow create, update: if esStaff() && !(coleccion in ['ml_config', 'ml_ordenes', 'barberias']);
+      allow delete: if esDueno() && !(coleccion in ['ml_config', 'ml_ordenes', 'barberias']);
     }
   }
 }

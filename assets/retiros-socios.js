@@ -16,11 +16,12 @@
    ========================================================= */
 import { collection, query, orderBy, limit, addDoc, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { onSnapshot } from "./uso-lecturas.js"; // cuenta las lecturas
+import { ruta } from "./rutas-barberia.js"; // SB: rutas de siempre; otra barbería: barberias/{id}/...
 
 const CLAVE_RETIROS = 'sbsb';
 const CLAVE_SOCIOS = 'sbsb2004';
 const SOCIOS = ['Agus', 'Manu'];
-const PATH = 'retiros_socios';
+const PATH = ruta('retiros_socios');
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 let cfg = null;

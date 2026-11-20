@@ -246,7 +246,7 @@
                         <button id="btn-flex-menu" data-modulo="mercadolibre" type="button" onclick="window.closeMasMenu(); window.openFlexPanel()" class="flex md:hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-truck-fast w-4 text-center text-gray-400"></i> Paquetes Flex
                         </button>
-                        <button type="button" onclick="window.closeMasMenu(); window.openMenuEditor()" class="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
+                        <button type="button" data-solo-sb onclick="window.closeMasMenu(); window.openMenuEditor()" class="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-list-ul w-4 text-center text-gray-400"></i> Modificar menú
                         </button>
                         <!-- Solo dueños (se muestran al iniciar sesión) -->
@@ -1725,7 +1725,8 @@ import { initClientes, pickerCliente, resolverCliente, limpiarCliente, normTelef
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
 import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
 import { registrarPush, avisarTurnoNuevo } from "../assets/push.js";
-import { configInicial, escucharConfig, barberosActivos, etiquetaBarbero, mapaEmails, temaDe, comisionesBase, comisionConReglas, servicioDisponible, moduloActivo } from "../assets/config-barberia.js";
+import { ruta } from "../assets/rutas-barberia.js"; // SB: rutas de siempre; otra barbería: barberias/{id}/...
+import { BARBERIA_ID, ES_SB, exigirAcceso, configInicial, escucharConfig, barberosActivos, etiquetaBarbero, mapaEmails, temaDe, comisionesBase, comisionConReglas, servicioDisponible, moduloActivo } from "../assets/config-barberia.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -1739,15 +1740,15 @@ const firebaseConfig = {
 // Barberos, admins, comisiones, colores, atajos y módulos: assets/config-barberia.js (doc barberias/{id}).
 let CFG = configInicial();
 const ADMINS    = [...CFG.admins];
-const PATH_CUTS = `artifacts/sb-barber-6dc16/public/data/all_cuts`;
-const PATH_STOCK   = `stock_items`;
+const PATH_CUTS = ruta('all_cuts');
+const PATH_STOCK   = ruta('stock_items');
 // Historial de bebidas: cada entrada/salida deja un movimiento; los conteos físicos van aparte
-const PATH_STOCK_MOV     = 'stock_movimientos';
-const PATH_PERDIDOS      = 'perdidos';
-const PATH_STOCK_CONTEOS = 'stock_conteos';
-const PATH_VENTAS    = `ventas_productos`;
-const PATH_PRODUCTOS = `productos_barber`;
-const PATH_PROFILES  = `barber_profiles`;
+const PATH_STOCK_MOV     = ruta('stock_movimientos');
+const PATH_PERDIDOS      = ruta('perdidos');
+const PATH_STOCK_CONTEOS = ruta('stock_conteos');
+const PATH_VENTAS    = ruta('ventas_productos');
+const PATH_PRODUCTOS = ruta('productos_barber');
+const PATH_PROFILES  = ruta('barber_profiles');
 let BARBER_EMAIL_MAP = mapaEmails(CFG);
 let barberProfilesData = {};
 
@@ -1815,10 +1816,10 @@ const PRODUCTOS_BARBER_BASE = [
 let PRODUCTOS_BARBER = [];
 let productosCargados = false;
 
-const PATH_TURNOS = 'turnos';
-const PATH_GASTOS = 'gastos';
-const PATH_CONTEOS = 'conteos_caja';
-const PATH_SESSIONS = 'sessions';
+const PATH_TURNOS = ruta('turnos');
+const PATH_GASTOS = ruta('gastos');
+const PATH_CONTEOS = ruta('conteos_caja');
+const PATH_SESSIONS = ruta('sessions');
 const PATH_ML_DESPACHOS = 'ml_despachos';
 const PATH_PICKIT_DESPACHOS = 'pickit_despachos';
 const GASTOS_CATS = [
@@ -1881,6 +1882,7 @@ async function init() {
     onAuthStateChanged(auth, async user => {
         if (user) {
             currentUser = user;
+            if (!exigirAcceso(user.email)) return; // otra barbería por URL: solo dueños
             isOwner = ADMINS.includes(user.email);
             isAdmin = isOwner;
             // Solo entran los dueños con email y contraseña: las sesiones anónimas viejas (del
@@ -1929,7 +1931,7 @@ async function init() {
                 listenToConteos();
                 if (moduloActivo(CFG, 'mercadolibre')) listenToMlDespachos();
                 if (moduloActivo(CFG, 'pickit')) listenToPickitDespachos();
-                listenToMenuData();
+                if (ES_SB) listenToMenuData(); // menú público y tienda: solo SB Barber
                 listenToPrecios();
                 listenToChecklist();
                 iniciarContador(db, currentUser?.email);
@@ -2319,7 +2321,7 @@ document.getElementById('add-cut-form').addEventListener('submit', async e => {
         if (!corteAfectaCaja) cutData.afectaCaja = false;   // lo regala SB: cuenta para el barbero, no entra plata
         await addDoc(collection(db, PATH_CUTS), cutData);
         if (propinaAmt > 0) {
-            await addDoc(collection(db, 'propinas'), {
+            await addDoc(collection(db, ruta('propinas')), {
                 barbero: barber, monto: propinaAmt, fecha: hoy,
                 estado: 'pendiente',
                 descripcion: clientName ? `Propina de ${clientName}` : 'Propina de cliente',
@@ -2966,7 +2968,7 @@ window.deleteVenta = async (id) => {
         batch.update(doc(db, PATH_VENTAS, id), { eliminado: true, ...(esBebida ? { stockDevuelto: !!item } : {}), ...(prod ? { stockDevuelto: true } : {}) });
         if (prod) {
             batch.update(doc(db, PATH_PRODUCTOS, prod.id), { stock: increment(v.cantidad || 1) });
-            batch.set(doc(collection(db, 'productos_movimientos')), {
+            batch.set(doc(collection(db, ruta('productos_movimientos'))), {
                 productoId: prod.id, producto: prod.name, tipo: 'entrada', cantidad: v.cantidad || 1,
                 motivo: 'Venta eliminada', userEmail: currentUser?.email || null,
                 fecha: new Date().toLocaleDateString('en-CA'), creadoEn: serverTimestamp()
@@ -3735,7 +3737,7 @@ document.getElementById('producto-movement-form').addEventListener('submit', asy
                 creadoEn: serverTimestamp()
             });
         } else {
-            await addDoc(collection(db, 'productos_movimientos'), {
+            await addDoc(collection(db, ruta('productos_movimientos')), {
                 productoId, producto: productoName, tipo,
                 ...(tipo === 'salida' ? { salidaTipo } : {}),
                 cantidad: qty, motivo: motivo || null,
@@ -3948,7 +3950,7 @@ window.confirmarScanCarga = async () => {
             const n = items[id];
             const antes = Number(productoStock[id]?.stock) || 0;
             batch.update(doc(db, PATH_PRODUCTOS, id), { stock: modo === 'sumar' ? increment(n) : n });
-            batch.set(doc(collection(db, 'productos_movimientos')), {
+            batch.set(doc(collection(db, ruta('productos_movimientos'))), {
                 productoId: id, producto: PRODUCTOS_BARBER.find(p => p.id === id)?.name || id,
                 tipo: modo === 'sumar' ? 'entrada' : 'conteo',
                 cantidad: modo === 'sumar' ? n : n - antes,
@@ -5016,8 +5018,8 @@ function barberAvatar(name, size = 10) {
 }
 
 // ---- RETIROS Y PROPINAS ----
-const PATH_RETIROS = 'retiros';
-const PATH_PROPINAS = 'propinas';
+const PATH_RETIROS = ruta('retiros');
+const PATH_PROPINAS = ruta('propinas');
 let allRetiros = [], allPropinas = [];
 
 function listenToRetiros() {
@@ -5340,7 +5342,7 @@ document.getElementById('retiro-manual-rec-form').addEventListener('submit', asy
 // así no toca la caja diaria ni la app de los barberos, y apretarlo de nuevo esa semana no descuenta doble.
 // No se repite en las semanas siguientes. Para deshacerlo: borrar el doc en la consola de Firebase.
 // Ctrl+1..8 lo reserva el navegador para cambiar de pestaña, por eso se usa Ctrl+Shift.
-const PATH_AJUSTES = 'ajustes_semanales';
+const PATH_AJUSTES = ruta('ajustes_semanales');
 let allAjustes = {};
 function listenToAjustes() {
     onSnapshot(collection(db, PATH_AJUSTES), snap => {
@@ -5351,7 +5353,7 @@ function listenToAjustes() {
 }
 // Cierre semanal: tilde "Pagado" por barbero (colección pagos_semanales, un doc por semana y barbero).
 // Es solo una marca para acordarse; no cambia ningún cálculo.
-const PATH_PAGOS_SEMANALES = 'pagos_semanales';
+const PATH_PAGOS_SEMANALES = ruta('pagos_semanales');
 let allPagosSemanales = {};
 function listenToPagosSemanales() {
     onSnapshot(collection(db, PATH_PAGOS_SEMANALES), snap => {
@@ -5769,7 +5771,7 @@ window.openGastosPanel = () => {
 // Mismo doc que usa anotar para la ganancia neta semanal (settings/fixed_expenses).
 // Formato: items [{id, nombre, monto}]. Si el doc todavía tiene el formato viejo de anotar
 // (un monto por categoría fija) se muestran esas como ítems y quedan en items al guardar.
-const PATH_GASTOS_FIJOS = ['settings', 'fixed_expenses'];
+const PATH_GASTOS_FIJOS = [ruta('settings'), 'fixed_expenses'];
 const FIJOS_VIEJOS = [['alquiler', 'Alquiler'], ['insumos', 'Insumos'], ['cm', 'CM / Redes sociales'], ['servicios', 'Servicios (luz/gas)'], ['otros', 'Otros']];
 let gastosFijos = [];
 const escFijo = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -6749,6 +6751,9 @@ function aplicarConfig() {
     });
     ATAJOS_DESCUENTO = atajosDeConfig();
     document.querySelectorAll('[data-modulo]').forEach(el => el.classList.toggle('modulo-off', !moduloActivo(CFG, el.dataset.modulo)));
+    document.querySelectorAll('[data-solo-sb]').forEach(el => el.classList.toggle('modulo-off', !ES_SB));
+    // Estadísticas abre la misma barbería
+    if (!ES_SB) ['btn-estadisticas', 'btn-clientes'].forEach(id => { const a = document.getElementById(id); if (a) { const u = new URL(a.href); u.searchParams.set('barberia', BARBERIA_ID); a.href = u.toString(); } });
     renderCompradoresBebida();
 }
 function renderCompradoresBebida() {
@@ -6812,7 +6817,7 @@ function customPromptNumero(titulo, valor = 0) {
 }
 
 // ---- PRECIOS DE SERVICIOS (editables, en vivo) ----
-const PATH_PRECIOS_SERV = 'config_precios';
+const PATH_PRECIOS_SERV = ruta('config_precios');
 // Servicios eliminados desde Precios (__ocultos): los base están en el código, así que no se borran, se ocultan
 let SERVICIOS_OCULTOS = new Set();
 let preciosBorrados = new Set();

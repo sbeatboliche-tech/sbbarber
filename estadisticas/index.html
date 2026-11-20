@@ -348,6 +348,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, query, where, doc, writeBatch, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getDocs, iniciarContador } from "../assets/uso-lecturas.js"; // cuenta las lecturas (ver el archivo)
+import { ES_SB } from "../assets/config-barberia.js";
+import { ruta, claveLocal } from "../assets/rutas-barberia.js"; // SB: rutas de siempre; otra barbería (?barberia=, solo dueños): barberias/{id}/...
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -424,15 +426,15 @@ const normTurno = (id, x) => ({ id, eliminado: !!x.eliminado, fecha: x.fecha || 
     origen: x.telefono ? 'online' : 'recepcion', precio: Number(x.precio) || 0 });
 
 const FUENTES = [
-    { key:'cuts',       path:'artifacts/sb-barber-6dc16/public/data/all_cuts', tf:'createdAt', norm:normCut,     label:'cortes' },
-    { key:'cutsLegacy', path:'barbershop',                                     tf:'createdAt', norm:normCut,     label:'cortes viejos' },
-    { key:'ventas',     path:'ventas_productos',                               tf:'creadoEn',  norm:normVenta,   label:'ventas' },
-    { key:'perdidos',   path:'perdidos',                                       tf:'creadoEn',  norm:normPerdido, label:'perdidos' },
-    { key:'gastos',     path:'gastos',                                         tf:'creadoEn',  norm:normGasto,   label:'gastos' },
-    { key:'propinas',   path:'propinas',                                       tf:'creadoEn',  norm:normPropina, label:'propinas' },
+    { key:'cuts',       path:ruta('all_cuts'),                          tf:'createdAt', norm:normCut,     label:'cortes' },
+    ...(ES_SB ? [{ key:'cutsLegacy', path:'barbershop',                                     tf:'createdAt', norm:normCut,     label:'cortes viejos' }] : []), // 'barbershop': cortes viejos, solo SB
+    { key:'ventas',     path:ruta('ventas_productos'),                               tf:'creadoEn',  norm:normVenta,   label:'ventas' },
+    { key:'perdidos',   path:ruta('perdidos'),                                       tf:'creadoEn',  norm:normPerdido, label:'perdidos' },
+    { key:'gastos',     path:ruta('gastos'),                                         tf:'creadoEn',  norm:normGasto,   label:'gastos' },
+    { key:'propinas',   path:ruta('propinas'),                                       tf:'creadoEn',  norm:normPropina, label:'propinas' },
     // creadoEn de turnos mezcla Timestamp y texto: se trae completo (son pocos)
-    { key:'turnos',     path:'turnos',                                         tf:null,        norm:normTurno,   label:'turnos' },
-    { key:'clientes',   path:'clientes',                                       tf:'creadoEn',  norm:normCliente, label:'clientes' },
+    { key:'turnos',     path:ruta('turnos'),                                         tf:null,        norm:normTurno,   label:'turnos' },
+    { key:'clientes',   path:ruta('clientes'),                                       tf:'creadoEn',  norm:normCliente, label:'clientes' },
 ];
 
 function idb() {
@@ -457,7 +459,7 @@ async function cacheSet(key, val) {
 }
 
 async function syncFuente(f, forzarTodo) {
-    let cached = forzarTodo ? null : await cacheGet(f.key);
+    let cached = forzarTodo ? null : await cacheGet(claveLocal(f.key));
     if (cached && cached.v !== CACHE_V) cached = null;
     const ahora = Date.now();
     let docs;
@@ -472,7 +474,7 @@ async function syncFuente(f, forzarTodo) {
         // Lo viejo se conserva; lo de la ventana se reemplaza por lo que devolvió el server (si se borró, desaparece)
         docs = cached.docs.filter(d => !ids.has(d.id) && (d._ts == null || d._ts < desde.getTime())).concat(nuevos);
     }
-    await cacheSet(f.key, { v: CACHE_V, syncedAt: ahora, docs });
+    await cacheSet(claveLocal(f.key), { v: CACHE_V, syncedAt: ahora, docs });
     return docs;
 }
 
@@ -501,7 +503,7 @@ async function cargarTodo(forzarTodo = false) {
     }
     // Cortes nuevos + viejos, sin duplicados (mismo criterio que anotar)
     const map = new Map();
-    [...res.cutsLegacy, ...res.cuts].forEach(c => map.set(c.id, c));
+    [...(res.cutsLegacy || []), ...res.cuts].forEach(c => map.set(c.id, c));
     D.cuts = [...map.values()].filter(c => !c.eliminado && c.t);
     D.ventas = res.ventas.filter(v => !v.eliminado && v.fecha);
     D.perdidos = res.perdidos.filter(x => !x.eliminado && x.fecha);
@@ -1357,7 +1359,7 @@ async function guardarNombres(nombres, origen, { preguntar = true, progreso } = 
     for (let i = 0; i < faltan.length; i += 400) {
         const b = writeBatch(db);
         faltan.slice(i, i + 400).forEach(c => {
-            const ref = doc(collection(db, 'clientes'));
+            const ref = doc(collection(db, ruta('clientes')));
             b.set(ref, { nombre: c.nombre, n: c.n, creadoEn: serverTimestamp(), creadoPor: auth.currentUser?.email || null, origen });
             D.clientes.push({ id: ref.id, _ts: Date.now(), nombre: c.nombre, n: c.n, alias: [], eliminado: false });
         });
@@ -1403,7 +1405,7 @@ $('lista-clientes').addEventListener('click', async e => {
     const c = D.clientes.find(x => x.id === btn.dataset.id);
     if (!c || !confirm(`¿Sacar a «${c.nombre}» de la lista de clientes?`)) return;
     try {
-        await updateDoc(doc(db, 'clientes', c.id), { eliminado: true, creadoEn: serverTimestamp() });
+        await updateDoc(doc(db, ruta('clientes'), c.id), { eliminado: true, creadoEn: serverTimestamp() });
         c.eliminado = true;
         renderListaClientes();
     } catch (err) { alert('No se pudo sacar: ' + (err?.message || err)); }
@@ -1418,7 +1420,7 @@ async function editarTelefono(id) {
     const t = r.replace(/\D/g, '');
     if (t && (t.length < 8 || t.length > 15)) { alert('El teléfono parece incompleto.'); return; }
     try {
-        await updateDoc(doc(db, 'clientes', c.id), { telefono: t, creadoEn: serverTimestamp() });
+        await updateDoc(doc(db, ruta('clientes'), c.id), { telefono: t, creadoEn: serverTimestamp() });
         c.tel = t;
         prepararClientes();
         renderAll();
@@ -1440,13 +1442,13 @@ async function editarCliente(id) {
             if (!confirm(`Ya existe «${otro.nombre}». ¿Unir a «${c.nombre}» con ese cliente? Sus cortes pasan a contar juntos.`)) return;
             const alias = [...new Set([...otro.alias, c.n, ...c.alias])].filter(a => a !== otro.n);
             const b = writeBatch(db);
-            b.update(doc(db, 'clientes', otro.id), { alias, creadoEn: serverTimestamp() });
-            b.update(doc(db, 'clientes', c.id), { eliminado: true, creadoEn: serverTimestamp() });
+            b.update(doc(db, ruta('clientes'), otro.id), { alias, creadoEn: serverTimestamp() });
+            b.update(doc(db, ruta('clientes'), c.id), { eliminado: true, creadoEn: serverTimestamp() });
             await b.commit();
             otro.alias = alias; c.eliminado = true;
         } else {
             const alias = [...new Set([...c.alias, c.n])].filter(a => a !== nn);
-            await updateDoc(doc(db, 'clientes', c.id), { nombre: nuevo, n: nn, alias, creadoEn: serverTimestamp() });
+            await updateDoc(doc(db, ruta('clientes'), c.id), { nombre: nuevo, n: nn, alias, creadoEn: serverTimestamp() });
             Object.assign(c, { nombre: nuevo, n: nn, alias });
         }
         prepararClientes();

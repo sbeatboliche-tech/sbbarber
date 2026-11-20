@@ -1051,7 +1051,8 @@ import { initClientes, pickerCliente, resolverCliente, limpiarCliente, normTelef
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
 import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
 import { registrarPush, avisarTurnoNuevo } from "../assets/push.js";
-import { BARBERIA_ID, configInicial, escucharConfig, barberosActivos, etiquetaBarbero, mapaEmails, temaDe, comisionesBase, comisionConReglas, servicioDisponible, moduloActivo } from "../assets/config-barberia.js";
+import { ruta } from "../assets/rutas-barberia.js"; // SB: rutas de siempre; otra barbería: barberias/{id}/...
+import { BARBERIA_ID, ES_SB, exigirAcceso, configInicial, escucharConfig, barberosActivos, etiquetaBarbero, mapaEmails, temaDe, comisionesBase, comisionConReglas, servicioDisponible, moduloActivo } from "../assets/config-barberia.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -1108,17 +1109,17 @@ let extraThemeIdx = 0;
 // las lecturas del día muy por encima de lo que el uso real justificaba.
 let _listenersAttached = false;
 
-const PATH_MAIN     = `artifacts/${firebaseConfig.projectId}/public/data/all_cuts`;
+const PATH_MAIN     = ruta('all_cuts');
 const PATH_LEGACY   = `barbershop`;
-const PATH_PROFILES = `barber_profiles`;
-const PATH_SETTINGS = `settings`;
-const PATH_EXPENSES = `expenses`;
-const PATH_STOCK    = `stock_items`;
-const PATH_STOCK_MOV = `stock_movimientos`;   // historial de bebidas (se ve en recepcionista)
-const PATH_RETIROS  = `retiros`;
-const PATH_PROPINAS = `propinas`;
-const PATH_VENTAS   = `ventas_productos`;
-const PATH_TURNOS   = `turnos`;
+const PATH_PROFILES = ruta('barber_profiles');
+const PATH_SETTINGS = ruta('settings');
+const PATH_EXPENSES = ruta('expenses');
+const PATH_STOCK    = ruta('stock_items');
+const PATH_STOCK_MOV = ruta('stock_movimientos');   // historial de bebidas (se ve en recepcionista)
+const PATH_RETIROS  = ruta('retiros');
+const PATH_PROPINAS = ruta('propinas');
+const PATH_VENTAS   = ruta('ventas_productos');
+const PATH_TURNOS   = ruta('turnos');
 let BARBERS_LIST  = barberosActivos(CFG);
 // Barberos con datos en lo que se está mirando: primero los actuales y después los que ya no están
 // (Maxi, Diego, Bauti...), para que sus cortes viejos sigan apareciendo en estadísticas y cierres.
@@ -1131,8 +1132,8 @@ const exTag = b => esExBarbero(b) ? ' <span class="text-[9px] font-semibold text
 function temaBarbero(b) {
     return BARBER_THEME[b] || { color:'gray', text:'text-gray-400', border:'border-gray-600', bg:'bg-gray-600', initial: escStock(String(b || "?").charAt(0).toUpperCase()) };
 }
-const PATH_GASTOS = 'gastos';
-const PATH_CONTEOS = 'conteos_caja';
+const PATH_GASTOS = ruta('gastos');
+const PATH_CONTEOS = ruta('conteos_caja');
 const GASTOS_CATS = [
     { id:'insumos',   label:'Insumos',   icon:'🧴' },
     { id:'servicios', label:'Servicios', icon:'💡' },
@@ -1208,6 +1209,7 @@ function init() {
         clearTimeout(loadingTimeout);
         if(user) {
             currentUser=user;
+            if(!exigirAcceso(user.email)) return; // otra barbería por URL: solo dueños
             document.getElementById('loading-view').classList.add('hidden');
             document.getElementById('dashboard-view').classList.remove('hidden');
             document.getElementById('login-view').classList.add('hidden');
@@ -1819,7 +1821,7 @@ window.openUpdatesModal = () => {
 };
 
 // ---- PRECIOS DE SERVICIOS (editables desde recepción, en vivo) ----
-const PATH_PRECIOS_SERV = 'config_precios';
+const PATH_PRECIOS_SERV = ruta('config_precios');
 let SERVICIOS_OCULTOS = new Set();
 function listenToPrecios() {
     onSnapshot(doc(db, PATH_PRECIOS_SERV, 'servicios'), snap => {
@@ -2260,7 +2262,7 @@ document.getElementById('stock-item-form').addEventListener('submit', async e=>{
                 // Perdido: no es venta ni regalo, va a su propia colección (estadísticas → perdidos)
                 const item=allStock.find(i=>i.id===itemId);
                 const motivo=(document.getElementById('stock-motivo').value||'').trim();
-                batch.set(doc(collection(db,'perdidos')),{
+                batch.set(doc(collection(db,ruta('perdidos'))),{
                     tipo:'bebida', itemId, producto:itemName,
                     precio:item?.price||0, cantidad:qty, motivo:motivo||null,
                     userEmail:currentUser.email,
@@ -2339,7 +2341,7 @@ function startDualSync() {
     const lunes=new Date(hoy0); lunes.setDate(hoy0.getDate()-((hoy0.getDay()||7)-1));
     const desde=new Date(Math.min(lunes, new Date(hoy0.getFullYear(),hoy0.getMonth(),1))); desde.setDate(desde.getDate()-1);
     onSnapshot(query(collection(db,PATH_MAIN),where('createdAt','>=',desde),orderBy('createdAt','desc'),limit(500)),s=>{ d1=s.docs.map(d=>({...d.data(),id:d.id,_ref:d.ref.path})); upd(); });
-    onSnapshot(query(collection(db,PATH_LEGACY),where('createdAt','>=',desde),orderBy('createdAt','desc'),limit(500)),s=>{ d2=s.docs.map(d=>({...d.data(),id:d.id,_ref:d.ref.path})); upd(); });
+    if(ES_SB) onSnapshot(query(collection(db,PATH_LEGACY),where('createdAt','>=',desde),orderBy('createdAt','desc'),limit(500)),s=>{ d2=s.docs.map(d=>({...d.data(),id:d.id,_ref:d.ref.path})); upd(); });
 }
 
 function render() {
@@ -2698,7 +2700,7 @@ document.getElementById('date-search-form').addEventListener('submit', e=>{
 document.querySelector('button[onclick="window.setPeriod(\'historial\',this)"]').addEventListener('click', ()=>showModal('date-search-modal'));
 
 // ---- STOCK DE PRODUCTOS ----
-const PATH_PRODUCTOS = 'productos_barber';
+const PATH_PRODUCTOS = ruta('productos_barber');
 let stockProductosData = {};
 let stockProductosLoaded = false;
 let currentStockMov = null;
@@ -3415,7 +3417,7 @@ window.confirmarScanCarga = async () => {
             const n = items[id];
             const antes = Number(stockProductosData[id]?.stock) || 0;
             batch.update(doc(db, PATH_PRODUCTOS, id), { stock: modo === 'sumar' ? increment(n) : n });
-            batch.set(doc(collection(db, 'productos_movimientos')), {
+            batch.set(doc(collection(db, ruta('productos_movimientos'))), {
                 productoId: id, producto: PRODUCTOS_BARBER.find(p => p.id === id)?.name || id,
                 tipo: modo === 'sumar' ? 'entrada' : 'conteo',
                 cantidad: modo === 'sumar' ? n : n - antes,
