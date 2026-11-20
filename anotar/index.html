@@ -4158,10 +4158,13 @@ function renderAnotarTurnosDayTabs() {
         cTop = cTop.charAt(0).toUpperCase() + cTop.slice(1);
         cBot = d.toLocaleDateString('es-AR',{day:'numeric',month:'short'});
     }
-    const custom = `<button onclick="window.openAnotarTurnosCustomPicker()" class="flex-1 py-2 px-1 rounded-lg text-[10px] font-bold transition-all text-center ${customActive ? 'text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow' : 'text-gray-500 hover:text-gray-300'}">
+    // El input de fecha va transparente ENCIMA del botón: en la app (WebView de Android) showPicker() sobre
+    // un input oculto no abría nada, así el toque cae directo en el calendario nativo.
+    const custom = `<div class="relative flex-1 py-2 px-1 rounded-lg text-[10px] font-bold transition-all text-center ${customActive ? 'text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow' : 'text-gray-500 hover:text-gray-300'}">
         <div>${cTop}</div>
         <div class="text-[9px] ${customActive ? 'text-amber-100' : 'text-gray-600'} mt-0.5">${cBot}</div>
-    </button>`;
+        <input type="date" value="${anotarTurnosCustomDate || ''}" aria-label="Elegir otra fecha" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" style="min-height:0" onclick="try{this.showPicker()}catch(e){}" onchange="window.onAnotarTurnosCustomDateSelected(this.value)">
+    </div>`;
     c.innerHTML = fixed + custom;
 }
 window.openAnotarTurnosCustomPicker = () => {
