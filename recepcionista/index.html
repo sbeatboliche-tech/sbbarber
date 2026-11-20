@@ -2788,10 +2788,13 @@ window.quickSale = async id => {
     quickSaleBusy = false;
 };
 
+// Cuota gratis de Firebase: cada documento que trae un listener al abrir la app es una lectura.
+// Lo que se usa es de esta semana o del mes, así que no se traen ventas/retiros de hace meses.
+const haceDias = n => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - n); return d; };
 // ---- VENTAS DE PRODUCTOS ----
 function listenToVentas() {
     onSnapshot(
-        query(collection(db, PATH_VENTAS), orderBy('creadoEn', 'desc'), limit(1200)),
+        query(collection(db, PATH_VENTAS), where('creadoEn', '>=', haceDias(35)), orderBy('creadoEn', 'desc'), limit(1200)),
         snap => {
             allVentas = snap.docs.map(d => ({ ...d.data(), id: d.id }));
             renderVentas();
@@ -5018,7 +5021,7 @@ const PATH_PROPINAS = 'propinas';
 let allRetiros = [], allPropinas = [];
 
 function listenToRetiros() {
-    onSnapshot(query(collection(db, PATH_RETIROS), orderBy('creadoEn','desc'), limit(800)), snap => {
+    onSnapshot(query(collection(db, PATH_RETIROS), where('creadoEn', '>=', haceDias(45)), orderBy('creadoEn','desc'), limit(800)), snap => {
         allRetiros = snap.docs.map(d => ({...d.data(), id: d.id}));
         updateRetirosBadge();
         if (!document.getElementById('cierre-caja-view').classList.contains('hidden') && cierreCajaTab === 'semanal') renderCierreCajaSemanal();
@@ -5027,7 +5030,7 @@ function listenToRetiros() {
             renderBarberDetail(document.getElementById('barber-detail-name').textContent);
         }
     });
-    onSnapshot(query(collection(db, PATH_PROPINAS), orderBy('creadoEn','desc'), limit(800)), snap => {
+    onSnapshot(query(collection(db, PATH_PROPINAS), where('creadoEn', '>=', haceDias(45)), orderBy('creadoEn','desc'), limit(800)), snap => {
         allPropinas = snap.docs.map(d => ({...d.data(), id: d.id}));
         updateRetirosBadge();
         if (!document.getElementById('cierre-caja-view').classList.contains('hidden') && cierreCajaTab === 'diario') renderCierreCaja();
@@ -5991,7 +5994,7 @@ document.getElementById('nuevo-gasto-form').addEventListener('submit', async e =
 // ---- HISTORIAL ML (despachos punto Mercado Libre) ----
 function listenToMlDespachos() {
     onSnapshot(
-        query(collection(db, PATH_ML_DESPACHOS), orderBy('fecha', 'desc'), limit(400)),
+        query(collection(db, PATH_ML_DESPACHOS), orderBy('fecha', 'desc'), limit(120)), // un doc por día: 4 meses
         snap => {
             allMlDespachos = snap.docs.map(d => ({ ...d.data(), id: d.id }));
             if (!document.getElementById('historial-ml-panel').classList.contains('hidden')) renderHistorialMLPanel();
@@ -6314,7 +6317,7 @@ window.guardarFlexZonas = async () => {
 // ---- HISTORIAL PICKIT (despachos punto Pickit) ----
 function listenToPickitDespachos() {
     onSnapshot(
-        query(collection(db, PATH_PICKIT_DESPACHOS), orderBy('fecha', 'desc'), limit(400)),
+        query(collection(db, PATH_PICKIT_DESPACHOS), orderBy('fecha', 'desc'), limit(120)),
         snap => {
             allPickitDespachos = snap.docs.map(d => ({ ...d.data(), id: d.id }));
             if (!document.getElementById('historial-pickit-panel').classList.contains('hidden')) renderHistorialPickitPanel();

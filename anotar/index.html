@@ -1296,12 +1296,15 @@ function cuandoHayaNombre(fn) {
     if (ADMINS.includes(currentUser.email) || BARBER_EMAIL_MAP[currentUser.email]) return fn();
     _esperandoNombre.push(fn);
 }
+// Cuota gratis de Firebase: cada documento que trae un listener al abrir la app es una lectura.
+// Lo que se usa es de esta semana o del mes, así que no se traen ventas/retiros de hace meses.
+const haceDias = n => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - n); return d; };
 function listenToRetiros() { cuandoHayaNombre(_listenToRetiros); }
 function _listenToRetiros() {
     const isAdmin=ADMINS.includes(currentUser.email);
     const myName=BARBER_EMAIL_MAP[currentUser.email];
     const q=isAdmin
-        ? query(collection(db,PATH_RETIROS), orderBy('creadoEn','desc'), limit(800))
+        ? query(collection(db,PATH_RETIROS), where('creadoEn','>=',haceDias(45)), orderBy('creadoEn','desc'), limit(800))
         : query(collection(db,PATH_RETIROS), where('barbero','==',myName));
     onSnapshot(q, snap => {
         const docs=snap.docs.map(d=>({...d.data(),id:d.id}));
@@ -1318,7 +1321,7 @@ function _listenToPropinas() {
     const isAdmin=ADMINS.includes(currentUser.email);
     const myName=BARBER_EMAIL_MAP[currentUser.email];
     const q=isAdmin
-        ? query(collection(db,PATH_PROPINAS), orderBy('creadoEn','desc'), limit(800))
+        ? query(collection(db,PATH_PROPINAS), where('creadoEn','>=',haceDias(45)), orderBy('creadoEn','desc'), limit(800))
         : query(collection(db,PATH_PROPINAS), where('barbero','==',myName));
     onSnapshot(q, snap => {
         const docs=snap.docs.map(d=>({...d.data(),id:d.id}));
@@ -2330,8 +2333,13 @@ function startDualSync() {
         if(!document.getElementById('retiros-view').classList.contains('hidden')) renderRetirosView();
         document.getElementById('loading-view').classList.add('hidden');
     };
-    onSnapshot(query(collection(db,PATH_MAIN),orderBy('createdAt','desc'),limit(500)),s=>{ d1=s.docs.map(d=>({...d.data(),id:d.id,_ref:d.ref.path})); upd(); });
-    onSnapshot(query(collection(db,PATH_LEGACY),orderBy('createdAt','desc'),limit(500)),s=>{ d2=s.docs.map(d=>({...d.data(),id:d.id,_ref:d.ref.path})); upd(); });
+    // Desde el lunes o el 1° del mes (lo que sea antes) menos un día, para "ayer": es lo que muestran los filtros.
+    // La colección vieja 'barbershop' ya no recibe cortes: con esto deja de traer 500 docs viejos en cada apertura.
+    const hoy0=new Date(); hoy0.setHours(0,0,0,0);
+    const lunes=new Date(hoy0); lunes.setDate(hoy0.getDate()-((hoy0.getDay()||7)-1));
+    const desde=new Date(Math.min(lunes, new Date(hoy0.getFullYear(),hoy0.getMonth(),1))); desde.setDate(desde.getDate()-1);
+    onSnapshot(query(collection(db,PATH_MAIN),where('createdAt','>=',desde),orderBy('createdAt','desc'),limit(500)),s=>{ d1=s.docs.map(d=>({...d.data(),id:d.id,_ref:d.ref.path})); upd(); });
+    onSnapshot(query(collection(db,PATH_LEGACY),where('createdAt','>=',desde),orderBy('createdAt','desc'),limit(500)),s=>{ d2=s.docs.map(d=>({...d.data(),id:d.id,_ref:d.ref.path})); upd(); });
 }
 
 function render() {
@@ -2973,7 +2981,7 @@ window.submitStockMov = async () => {
 function listenToVentas() {
     const isAdmin = ADMINS.includes(currentUser.email);
     const q = isAdmin
-        ? query(collection(db,PATH_VENTAS), orderBy('creadoEn','desc'), limit(1200))
+        ? query(collection(db,PATH_VENTAS), where('creadoEn','>=',haceDias(35)), orderBy('creadoEn','desc'), limit(1200))
         : query(collection(db,PATH_VENTAS), where('userEmail','==',currentUser.email), orderBy('creadoEn','desc'), limit(400));
     onSnapshot(q, snap => {
         allVentas = snap.docs.map(d => ({...d.data(), id:d.id}));
