@@ -46,6 +46,13 @@ async function copiar(db, nombre, presupuesto) {
 
 export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
+    // Solo el cron: con CRON_SECRET en Vercel, Vercel lo manda en el header; sin él, solo se acepta
+    // en la ventana del cron (domingo 8 a 11 UTC), así nadie puede adelantarla y gastar lecturas.
+    const ahora = new Date();
+    const autorizado = process.env.CRON_SECRET
+        ? req.headers.authorization === `Bearer ${process.env.CRON_SECRET}`
+        : ahora.getUTCDay() === 0 && ahora.getUTCHours() >= 8 && ahora.getUTCHours() < 11;
+    if (!autorizado) return res.status(403).json({ error: 'No autorizado' });
     try {
         const marca = barberDb().doc('backup_estado/ultimo');
         const libre = await barberDb().runTransaction(async tx => {
@@ -83,6 +90,6 @@ export default async function handler(req, res) {
     } catch (e) {
         console.error('backup:', e);
         await barberDb().doc('backup_estado/ultimo').set({ estado: 'error', error: e.message }, { merge: true }).catch(() => {});
-        return res.status(500).json({ error: e.message });
+        return res.status(500).json({ error: 'Falló la copia' });
     }
 }
