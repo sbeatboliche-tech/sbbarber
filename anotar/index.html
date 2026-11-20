@@ -2727,7 +2727,9 @@ function listenToStockProductos() {
         snap.docChanges().forEach(ch => {
             if (ch.type === 'removed' || !ch.doc.metadata.hasPendingWrites) return;
             const d = ch.doc.data();
-            if (d.mlItemId && prevStock[ch.doc.id]?.stock !== d.stock) queueMLSync(ch.doc.id);
+            // Enlazado a ML: formato nuevo (mlEnlaces, varias publicaciones) o viejo (mlItemId)
+            const conML = d.mlItemId || (Array.isArray(d.mlEnlaces) && d.mlEnlaces.length);
+            if (conML && prevStock[ch.doc.id]?.stock !== d.stock) queueMLSync(ch.doc.id);
         });
         stockProductosData = {};
         snap.docs.forEach(d => { stockProductosData[d.id] = { id: d.id, ...d.data() }; });

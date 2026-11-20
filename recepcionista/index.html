@@ -661,11 +661,30 @@
             </div>
             <div id="ml-link-confirmar" class="hidden px-5 pb-5 space-y-3">
                 <p id="ml-link-elegida" class="text-sm text-white font-semibold"></p>
-                <p class="text-xs text-gray-400">¿Qué stock queda? Desde ahora los dos van a ser siempre iguales.</p>
+                <label class="flex items-center justify-between gap-3 bg-black/30 border border-white/10 rounded-xl px-3 py-2">
+                    <span class="text-xs text-gray-400">Unidades del producto por cada venta <span class="text-gray-600">(kit x3 = 3)</span></span>
+                    <input type="number" id="ml-link-unidades" min="1" step="1" value="1" data-scan="nativo" class="w-16 px-2 py-1.5 bg-black/40 rounded-lg border border-white/15 text-white text-sm text-center outline-none">
+                </label>
+                <p id="ml-link-pregunta" class="text-xs text-gray-400">¿Qué stock queda? Desde ahora los dos van a ser siempre iguales.</p>
                 <button onclick="window.confirmMLLink('app')" id="ml-link-btn-app" class="w-full p-3.5 rounded-xl bg-white/5 border border-white/15 text-white font-bold text-sm hover:bg-white/10 transition"></button>
                 <button onclick="window.confirmMLLink('ml')" id="ml-link-btn-ml" class="w-full p-3.5 rounded-xl bg-white/5 border border-white/15 text-white font-bold text-sm hover:bg-white/10 transition"></button>
                 <button onclick="window.backMLLink()" class="w-full p-2 text-xs text-gray-400 hover:text-white transition">← Elegir otra publicación</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Publicaciones de ML que todavía no tienen producto (window.openMLSueltas) -->
+    <div id="ml-sueltas-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex-col justify-end md:justify-center">
+        <div class="glass-modal rounded-t-3xl md:rounded-3xl md:max-w-lg md:mx-auto w-full max-h-[85vh] flex flex-col overflow-hidden">
+            <div class="flex justify-between items-start p-5 pb-3 flex-shrink-0">
+                <div class="min-w-0">
+                    <h2 class="text-lg font-bold text-white">Publicaciones sin producto</h2>
+                    <p class="text-xs text-gray-400">Así cada venta de ML descuenta stock y aparece en Venta producto</p>
+                </div>
+                <button onclick="window.closeMLSueltas()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:bg-white/20 transition flex-shrink-0"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="ml-sueltas-list" class="flex-1 overflow-y-auto space-y-2 px-5"></div>
+            <button id="ml-sueltas-pausadas" onclick="window.toggleMLSueltasPausadas()" class="flex-shrink-0 p-3 text-xs text-gray-400 hover:text-white transition"></button>
         </div>
     </div>
 
@@ -3336,7 +3355,7 @@ async function listenToProductos() {
         snap.docChanges().forEach(ch => {
             if (ch.type === 'removed' || !ch.doc.metadata.hasPendingWrites) return;
             const d = ch.doc.data();
-            if (d.mlItemId && prevStock[ch.doc.id]?.stock !== d.stock) queueMLSync(ch.doc.id);
+            if (enlacesML(d).length && prevStock[ch.doc.id]?.stock !== d.stock) queueMLSync(ch.doc.id);
         });
         productoStock = {};
         const customProds = [];
@@ -3369,6 +3388,21 @@ let mlCuenta = null;          // { conectado, nickname } — se lee de ml_config
 let mlItemsCache = null;      // publicaciones del vendedor (se piden al abrir el enlace)
 let mlLinkProductoId = null, mlLinkElegida = null;
 const _mlSyncTimers = {};
+
+// Publicaciones de ML de un producto (mismo criterio que enlacesDe en tienda/lib/ml.js): un producto puede estar
+// en varias publicaciones y una publicación puede ser un kit (`unidades` del producto por cada venta).
+// El formato viejo (mlItemId/mlVariationId sueltos) cuenta como un enlace de 1 unidad.
+function enlacesML(d) {
+    const l = Array.isArray(d?.mlEnlaces) ? d.mlEnlaces.filter(e => e && e.itemId) : [];
+    if (!l.length && d?.mlItemId) l.push({ itemId: d.mlItemId, variationId: d.mlVariationId || null, titulo: d.mlTitulo || '', unidades: 1 });
+    return l.map(e => ({ itemId: String(e.itemId), variationId: e.variationId ? String(e.variationId) : null,
+        titulo: e.titulo || '', unidades: Math.max(1, Math.floor(Number(e.unidades) || 1)) }));
+}
+const mismaPublicacion = (e, it) => e.itemId === String(it.itemId) && String(e.variationId || '') === String(it.variationId || '');
+// Producto que ya tiene esa publicación (o null)
+function productoConPublicacion(it, salvoId = null) {
+    return PRODUCTOS_BARBER.find(p => p.id !== salvoId && enlacesML(productoStock[p.id]).some(e => mismaPublicacion(e, it))) || null;
+}
 
 // Escape de texto cargado por usuarios antes de meterlo en HTML. Son declaraciones de función
 // (no const) para que existan desde que arranca el módulo, aunque se usen en funciones de más arriba.
@@ -3423,23 +3457,31 @@ function renderMLStatusBar() {
         </div>`;
         return;
     }
-    el.innerHTML = `<div class="flex items-center justify-between gap-3 bg-black/30 border border-white/10 rounded-xl px-4 py-3">
+    el.innerHTML = `<div class="flex items-center justify-between flex-wrap gap-3 bg-black/30 border border-white/10 rounded-xl px-4 py-3">
         <div class="text-xs text-gray-400 min-w-0 truncate"><i class="fas fa-link text-emerald-400 mr-1"></i><span class="font-bold text-white">MercadoLibre</span> · ${escHtml(mlCuenta.nickname || 'conectado')}</div>
-        ${isAdmin ? `<button id="btn-ml-sync-all" onclick="window.syncAllML()" class="text-xs font-bold px-3 py-2 rounded-lg bg-white/10 border border-white/15 text-white hover:bg-white/20 transition flex-shrink-0">Sincronizar todo</button>` : ''}
+        ${isAdmin ? `<div class="flex gap-2 flex-shrink-0">
+            <button onclick="window.openMLSueltas()" class="text-xs font-bold px-3 py-2 rounded-lg bg-white text-black hover:bg-gray-200 transition">Publicaciones sin producto</button>
+            <button id="btn-ml-sync-all" onclick="window.syncAllML()" class="text-xs font-bold px-3 py-2 rounded-lg bg-white/10 border border-white/15 text-white hover:bg-white/20 transition">Sincronizar todo</button>
+        </div>` : ''}
     </div>`;
 }
 
 function mlLinkLine(p, data, safeName) {
     if (!moduloActivo(CFG, 'mercadolibre')) return '';
-    if (data.mlItemId) {
+    const enlaces = enlacesML(data);
+    if (enlaces.length) {
         const sync = data.mlSync;
         const estado = sync?.ok === false
             ? `<span class="text-red-400" title="${escHtml(sync.error || '')}">⚠ no se pudo sincronizar</span>`
             : sync?.ok ? '<span class="text-emerald-400">✓ sincronizado con ML</span>' : '<span class="text-gray-500">enlazado con ML</span>';
-        return `<div class="text-[10px] mt-0.5 flex items-center gap-1.5 flex-wrap">
-            <i class="fas fa-link text-gray-500"></i>${estado}
-            ${isAdmin ? `<button onclick="window.openMLLink('${p.id}')" class="text-gray-400 underline hover:text-white">cambiar</button>
-            <button onclick="window.unlinkML('${p.id}')" class="text-gray-400 underline hover:text-red-400">quitar</button>` : ''}
+        const filas = enlaces.map((e, k) => `<div class="flex items-center gap-1.5 min-w-0">
+            <span class="truncate text-gray-500" title="${escHtml(e.titulo || e.itemId)}">· ${escHtml(e.titulo || e.itemId)}${e.unidades > 1 ? ` <b class="text-amber-400">(kit x${e.unidades})</b>` : ''}</span>
+            ${isAdmin ? `<button onclick="window.unlinkML('${p.id}',${k})" class="text-gray-500 hover:text-red-400 flex-shrink-0" title="Quitar esta publicación"><i class="fas fa-times"></i></button>` : ''}
+        </div>`).join('');
+        return `<div class="text-[10px] mt-0.5">
+            <div class="flex items-center gap-1.5 flex-wrap"><i class="fas fa-link text-gray-500"></i>${estado}
+                ${isAdmin ? `<button onclick="window.openMLLink('${p.id}')" class="text-gray-400 underline hover:text-white">+ publicación</button>` : ''}
+            </div>${filas}
         </div>`;
     }
     return isAdmin ? `<button onclick="window.openMLLink('${p.id}')" class="mt-1 text-[10px] font-bold text-white/80 border border-white/15 rounded-md px-2 py-1 hover:bg-white/10 transition"><i class="fas fa-link mr-1"></i>Enlazar con ML</button>` : '';
@@ -3504,8 +3546,7 @@ window.renderMLLinkList = () => {
         .filter(({ it }) => !q || normalizarTexto(`${it.title} ${it.variacion} ${it.itemId}`).includes(q));
     if (!filas.length) { list.innerHTML = '<p class="text-xs text-gray-500 text-center py-6">No hay publicaciones que coincidan</p>'; return; }
     list.innerHTML = filas.map(({ it, i }) => {
-        const yaEnlazado = PRODUCTOS_BARBER.find(p => p.id !== mlLinkProductoId && productoStock[p.id]?.mlItemId === it.itemId &&
-            String(productoStock[p.id]?.mlVariationId || '') === String(it.variationId || ''));
+        const yaEnlazado = productoConPublicacion(it, mlLinkProductoId);
         return `<button onclick="window.pickMLItem(${i})" class="w-full flex items-center gap-3 bg-black/30 border border-white/10 rounded-xl p-2.5 text-left hover:bg-white/5 transition">
             ${it.thumbnail ? `<img src="${escHtml(it.thumbnail.replace('http://', 'https://'))}" alt="" class="w-11 h-11 rounded-lg object-cover flex-shrink-0 bg-white">` : '<div class="w-11 h-11 rounded-lg bg-white/5 flex-shrink-0"></div>'}
             <div class="min-w-0 flex-1">
@@ -3520,38 +3561,130 @@ window.renderMLLinkList = () => {
 window.pickMLItem = (i) => {
     mlLinkElegida = mlItemsCache[i];
     const appStock = Number(productoStock[mlLinkProductoId]?.stock) || 0;
+    // Si el producto ya tiene otra publicación, el stock es el de la app (es uno solo para todas).
+    const yaTiene = enlacesML(productoStock[mlLinkProductoId]).length > 0;
     document.getElementById('ml-link-elegida').textContent = mlLinkElegida.title + (mlLinkElegida.variacion ? ` — ${mlLinkElegida.variacion}` : '');
-    document.getElementById('ml-link-btn-app').textContent = `Usar el de la app: ${appStock} unid.`;
+    // "Kit X3 After Shave" → 3 unidades por venta (se puede corregir a mano)
+    document.getElementById('ml-link-unidades').value = Number(/\bkit\s*x?\s*(\d+)/i.exec(mlLinkElegida.title)?.[1]) || 1;
+    document.getElementById('ml-link-pregunta').textContent = yaTiene
+        ? `Se suma a las otras publicaciones de este producto. Todas van a mostrar el stock de la app (${appStock} unid.).`
+        : '¿Qué stock queda? Desde ahora los dos van a ser siempre iguales.';
+    document.getElementById('ml-link-btn-app').textContent = yaTiene ? 'Agregar publicación' : `Usar el de la app: ${appStock} unid.`;
+    document.getElementById('ml-link-btn-ml').classList.toggle('hidden', yaTiene);
     document.getElementById('ml-link-btn-ml').textContent = `Usar el de MercadoLibre: ${Number(mlLinkElegida.stock) || 0} unid.`;
     const elegir = document.getElementById('ml-link-elegir');
     elegir.classList.add('hidden'); elegir.classList.remove('flex');
     document.getElementById('ml-link-confirmar').classList.remove('hidden');
 };
 
+// Enlace nuevo a partir de una publicación de la lista de ML
+const enlaceDeItem = (it, unidades = 1) => ({
+    itemId: String(it.itemId), variationId: it.variationId ? String(it.variationId) : null,
+    titulo: it.title + (it.variacion ? ` — ${it.variacion}` : ''), unidades: Math.max(1, Math.floor(Number(unidades) || 1))
+});
+
+// Suma la publicación a las del producto (se guarda siempre en mlEnlaces; los campos viejos se limpian).
+async function agregarEnlaceML(id, it, unidades, stockDeML) {
+    const otro = productoConPublicacion(it, id);
+    if (otro) throw new Error(`Esa publicación ya está enlazada a "${otro.name}". Quitala de ahí primero.`);
+    const enlaces = enlacesML(productoStock[id]).filter(e => !mismaPublicacion(e, it));
+    enlaces.push(enlaceDeItem(it, unidades));
+    const data = { mlEnlaces: enlaces, mlItemId: null, mlVariationId: null, mlTitulo: null, mlSync: null };
+    if (stockDeML) data.stock = Math.max(0, Number(it.stock) || 0) * enlaces[enlaces.length - 1].unidades;
+    await updateDoc(doc(db, PATH_PRODUCTOS, id), data);
+    mlItemsCache = null; // el stock de ML puede cambiar: la próxima vez se vuelve a pedir
+    // Con el stock de la app hay que mandarlo a ML; con el de ML ya coinciden, igual se confirma.
+    await mlApi('sync', { ids: [id] });
+}
+
 window.confirmMLLink = async (fuente) => {
     const it = mlLinkElegida, id = mlLinkProductoId;
     if (!it || !id) return;
-    const data = {
-        mlItemId: it.itemId,
-        mlVariationId: it.variationId ? String(it.variationId) : null,
-        mlTitulo: it.title + (it.variacion ? ` — ${it.variacion}` : ''),
-        mlSync: null
-    };
-    if (fuente === 'ml') data.stock = Math.max(0, Number(it.stock) || 0);
+    const unidades = document.getElementById('ml-link-unidades').value;
     try {
-        await updateDoc(doc(db, PATH_PRODUCTOS, id), data);
+        await agregarEnlaceML(id, it, unidades, fuente === 'ml');
         window.closeMLLink();
-        mlItemsCache = null; // el stock de ML puede cambiar: la próxima vez se vuelve a pedir
-        // Con el stock de la app hay que mandarlo a ML; con el de ML ya coinciden, igual se confirma.
-        await mlApi('sync', { ids: [id] });
+        if (esVisible('ml-sueltas-modal')) window.renderMLSueltas();
     } catch (e) { alert('Error al enlazar: ' + e.message); }
 };
 
-window.unlinkML = async (id) => {
+window.unlinkML = async (id, k) => {
     const name = PRODUCTOS_BARBER.find(p => p.id === id)?.name || 'este producto';
-    if (!await customConfirm(`¿Desenlazar "${name}" de MercadoLibre? El stock deja de sincronizarse.`, 'Desenlazar')) return;
-    try { await updateDoc(doc(db, PATH_PRODUCTOS, id), { mlItemId: null, mlVariationId: null, mlTitulo: null, mlSync: null }); }
-    catch (e) { alert('Error al desenlazar'); }
+    const enlaces = enlacesML(productoStock[id]);
+    const e = enlaces[k];
+    if (!e) return;
+    if (!await customConfirm(`¿Quitar "${e.titulo || e.itemId}" de "${name}"? Esa publicación deja de sincronizarse y sus ventas ya no descuentan stock.`, 'Quitar')) return;
+    try { await updateDoc(doc(db, PATH_PRODUCTOS, id), { mlEnlaces: enlaces.filter((_, j) => j !== k), mlItemId: null, mlVariationId: null, mlTitulo: null, mlSync: null }); }
+    catch (err) { alert('Error al desenlazar'); }
+};
+
+// ---- Publicaciones de ML sin producto: para que cada una esté en "Venta producto" y descuente stock ----
+let mlSueltasVerPausadas = false;
+window.openMLSueltas = async () => {
+    if (!mlCuenta?.conectado) return alert('Primero hay que conectar la cuenta de MercadoLibre.');
+    const m = document.getElementById('ml-sueltas-modal');
+    m.classList.remove('hidden'); m.classList.add('flex');
+    if (!mlItemsCache) {
+        document.getElementById('ml-sueltas-list').innerHTML = '<p class="text-xs text-gray-500 text-center py-6"><i class="fas fa-spinner fa-spin mr-1"></i> Cargando publicaciones...</p>';
+        try { mlItemsCache = (await mlApi('items')).items; }
+        catch (e) { document.getElementById('ml-sueltas-list').innerHTML = `<p class="text-xs text-red-400 text-center py-6">${escHtml(e.message)}</p>`; return; }
+    }
+    window.renderMLSueltas();
+};
+window.closeMLSueltas = () => {
+    const m = document.getElementById('ml-sueltas-modal');
+    m.classList.add('hidden'); m.classList.remove('flex');
+};
+window.toggleMLSueltasPausadas = () => { mlSueltasVerPausadas = !mlSueltasVerPausadas; window.renderMLSueltas(); };
+window.renderMLSueltas = () => {
+    const list = document.getElementById('ml-sueltas-list');
+    if (!mlItemsCache) return;
+    const sueltas = mlItemsCache.map((it, i) => ({ it, i })).filter(({ it }) => !productoConPublicacion(it));
+    const visibles = sueltas.filter(({ it }) => mlSueltasVerPausadas || it.status !== 'paused');
+    const pausadas = sueltas.length - sueltas.filter(({ it }) => it.status !== 'paused').length;
+    document.getElementById('ml-sueltas-pausadas').textContent = mlSueltasVerPausadas ? `Ocultar pausadas` : `Ver también las pausadas (${pausadas})`;
+    if (!visibles.length) { list.innerHTML = '<p class="text-xs text-emerald-400 text-center py-6"><i class="fas fa-check mr-1"></i>Todas las publicaciones tienen su producto</p>'; return; }
+    const opciones = PRODUCTOS_BARBER.map(p => `<option value="${escHtml(p.id)}">${escHtml(p.name)}</option>`).join('');
+    list.innerHTML = visibles.map(({ it, i }) => `<div class="bg-black/30 border border-white/10 rounded-xl p-2.5 space-y-2">
+        <div class="flex items-center gap-3">
+            ${it.thumbnail ? `<img src="${escHtml(it.thumbnail.replace('http://', 'https://'))}" alt="" class="w-11 h-11 rounded-lg object-cover flex-shrink-0 bg-white">` : '<div class="w-11 h-11 rounded-lg bg-white/5 flex-shrink-0"></div>'}
+            <div class="min-w-0 flex-1">
+                <p class="text-xs font-semibold text-white line-clamp-2">${escHtml(it.title)}</p>
+                <p class="text-[10px] text-gray-500">${it.variacion ? escHtml(it.variacion) + ' · ' : ''}${it.precio ? '$' + Number(it.precio).toLocaleString('es-AR') + ' · ' : ''}${Number(it.stock) || 0} en ML${it.status === 'paused' ? ' · pausada' : ''}</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="window.crearProductoDesdeML(${i})" class="flex-1 text-[11px] font-bold px-2 py-2 rounded-lg bg-white text-black hover:bg-gray-200 transition">Crear producto</button>
+            <select onchange="if(this.value){window.enlazarSueltaML(${i}, this.value); this.value='';}" class="flex-1 min-w-0 text-[11px] px-2 py-2 rounded-lg bg-black/40 border border-white/15 text-white">
+                <option value="">Es un producto que ya está…</option>${opciones}
+            </select>
+        </div>
+    </div>`).join('');
+};
+// Producto nuevo con el nombre, precio y stock de la publicación, ya enlazado.
+window.crearProductoDesdeML = async (i) => {
+    const it = mlItemsCache?.[i];
+    if (!it) return;
+    const nombre = (it.title + (it.variacion ? ` ${it.variacion}` : '')).trim();
+    const slug = nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40);
+    const id = `custom-${slug || 'producto'}-${Date.now().toString(36)}`;
+    const data = { name: nombre, precio: Math.max(0, Number(it.precio) || 0), stock: Math.max(0, Number(it.stock) || 0), custom: true,
+        mlEnlaces: [enlaceDeItem(it)] };
+    if (it.thumbnail) data.photoURL = it.thumbnail.replace('http://', 'https://');
+    try {
+        await setDoc(doc(db, PATH_PRODUCTOS, id), data);
+        if (!PRODUCTOS_BARBER.find(p => p.id === id)) PRODUCTOS_BARBER.push({ id, name: nombre, precio: data.precio, custom: true });
+        productoStock[id] = data;
+        window.renderMLSueltas();
+    } catch (e) { alert('Error al crear el producto: ' + e.message); }
+};
+// La publicación es de un producto que ya existe: abre la confirmación de siempre (stock y kit).
+window.enlazarSueltaML = (i, productoId) => {
+    mlLinkProductoId = productoId;
+    document.getElementById('ml-link-producto').textContent = PRODUCTOS_BARBER.find(p => p.id === productoId)?.name || '';
+    const m = document.getElementById('ml-link-modal');
+    m.classList.remove('hidden'); m.classList.add('flex');
+    window.pickMLItem(i);
 };
 
 // Vuelta de la autorización de ML (tienda/api/ml.js redirige con #ml=...)

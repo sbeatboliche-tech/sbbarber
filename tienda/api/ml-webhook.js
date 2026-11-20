@@ -1,7 +1,9 @@
 // Notificaciones de MercadoLibre (topic orders_v2). Se configura en la app de developers.mercadolibre.com.ar
 // como "URL de retorno de notificaciones": https://tienda.sbbarber.com.ar/api/ml-webhook
 //
-// Venta pagada  → descuenta el stock del producto enlazado y la registra en ventas_productos con canal 'ml'
+// Venta pagada  → se registra SIEMPRE en ventas_productos con canal 'ml' (sin enlace: sinEnlazar, no toca stock);
+//                 si la publicación está enlazada (mlEnlaces, ver enlacesDe en lib/ml.js) descuenta unidades × cantidad
+//                 y copia el stock nuevo a las otras publicaciones del producto
 //                 (el cierre de caja ya excluye ese canal: esa plata no pasa por la caja).
 // Venta cancelada después de descontar → devuelve el stock y borra la venta registrada.
 // ML reintenta las notificaciones, así que todo es idempotente: ml_ordenes/{orderId} guarda qué se hizo.
@@ -15,7 +17,7 @@
 import { waitUntil } from '@vercel/functions';
 import { FieldValue } from 'firebase-admin/firestore';
 import { barberDb } from '../lib/barberAdmin.js';
-import { mlFetch, getCuenta, PRODUCTOS } from '../lib/ml.js';
+import { mlFetch, getCuenta, PRODUCTOS, enlacesDe, sincronizarStock } from '../lib/ml.js';
 import { enviarPush } from '../lib/push.js';
 import { anotarFlex } from '../lib/mlFlex.js';
 
@@ -51,39 +53,47 @@ async function procesarOrden(orderId, userId) {
     })).filter(l => l.itemId && l.cantidad > 0);
     if (!lineas.length) return;
 
-    // Productos enlazados a alguna de las publicaciones de la orden (máximo 30 valores por 'in').
-    const itemIds = [...new Set(lineas.map(l => l.itemId))].slice(0, 30);
-    const prodSnap = await db.collection(PRODUCTOS).where('mlItemId', 'in', itemIds).get();
-    const prods = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const productoDe = l => prods.find(p => p.mlItemId === l.itemId && (!p.mlVariationId || String(p.mlVariationId) === l.variationId));
+    // Producto de cada línea: el que tenga un enlace a esa publicación (y variante, si el enlace la fija).
+    // Son pocos productos (~20): se leen todos para soportar varios enlaces por producto.
+    const prods = (await db.collection(PRODUCTOS).get()).docs.map(d => ({ id: d.id, ...d.data() })).filter(p => !p.oculto);
+    const enlaceDe = l => {
+        for (const p of prods) {
+            const e = enlacesDe(p).find(e => e.itemId === l.itemId && (!e.variationId || e.variationId === l.variationId));
+            if (e) return { prod: p, unidades: e.unidades };
+        }
+        return null;
+    };
 
     const fechaAR = new Date(order.date_closed || order.date_created || Date.now())
         .toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
     const marcaRef = db.doc(`ml_ordenes/${orderId}`);
 
     let ventaNueva = false;
+    let tocados = [];
     await db.runTransaction(async tx => {
-        ventaNueva = false; // la transacción se puede reintentar: vale lo de la última pasada
+        ventaNueva = false; tocados = []; // la transacción se puede reintentar: vale lo de la última pasada
         const marca = await tx.get(marcaRef);
         const estado = marca.exists ? marca.data().estado : null;
 
         if (pagada && !estado) {
             ventaNueva = true;
-            const enlazadas = lineas.map((l, i) => ({ ...l, i, prod: productoDe(l) })).filter(l => l.prod);
+            const todas = lineas.map((l, i) => ({ ...l, i, enl: enlaceDe(l) }));
+            const enlazadas = todas.filter(l => l.enl);
             // En una transacción todas las lecturas van antes que las escrituras.
-            const refs = enlazadas.map(l => db.doc(`${PRODUCTOS}/${l.prod.id}`));
-            const snaps = await Promise.all(refs.map(r => tx.get(r)));
-            const stockNuevo = {};
-            enlazadas.forEach((l, k) => {
-                const actual = stockNuevo[l.prod.id] ?? (Number(snaps[k].data()?.stock) || 0);
-                stockNuevo[l.prod.id] = Math.max(0, actual - l.cantidad);
-            });
+            const ids = [...new Set(enlazadas.map(l => l.enl.prod.id))];
+            const snaps = await Promise.all(ids.map(id => tx.get(db.doc(`${PRODUCTOS}/${id}`))));
+            const stockNuevo = Object.fromEntries(ids.map((id, k) => [id, Number(snaps[k].data()?.stock) || 0]));
+            enlazadas.forEach(l => { stockNuevo[l.enl.prod.id] = Math.max(0, stockNuevo[l.enl.prod.id] - l.cantidad * l.enl.unidades); });
             Object.entries(stockNuevo).forEach(([id, stock]) => tx.update(db.doc(`${PRODUCTOS}/${id}`), { stock }));
-            enlazadas.forEach(l => {
+            tocados = ids;
+            // Toda venta de ML queda registrada, esté enlazada o no (sin enlace no descuenta stock).
+            // Un kit (unidades > 1) se anota en unidades del producto: Kit x3 vendido 1 vez = 3 unidades.
+            todas.forEach(l => {
+                const u = l.enl?.unidades || 1;
                 tx.set(db.doc(`${PATH_VENTAS}/ml-${orderId}-${l.i}`), {
-                    producto: l.prod.name || l.titulo,
-                    precio: l.precio,
-                    cantidad: l.cantidad,
+                    producto: l.enl ? (l.enl.prod.name || l.titulo) : l.titulo,
+                    precio: l.precio / u,
+                    cantidad: l.cantidad * u,
                     total: l.precio * l.cantidad,
                     tipo: 'producto',
                     canal: 'ml',
@@ -93,31 +103,39 @@ async function procesarOrden(orderId, userId) {
                     grupoVenta: `ml-${orderId}`,
                     origen: 'ml_auto',
                     mlOrderId: String(orderId),
+                    mlItemId: l.itemId,
+                    mlTitulo: l.titulo,
+                    ...(l.enl ? { productoId: l.enl.prod.id } : { sinEnlazar: true }),
                     creadoEn: FieldValue.serverTimestamp()
                 });
             });
             tx.set(marcaRef, {
                 estado: 'descontado',
-                lineas: enlazadas.map(l => ({ i: l.i, productoId: l.prod.id, cantidad: l.cantidad })),
-                sinEnlazar: lineas.filter(l => !productoDe(l)).map(l => ({ itemId: l.itemId, titulo: l.titulo, cantidad: l.cantidad })),
+                lineas: enlazadas.map(l => ({ i: l.i, productoId: l.enl.prod.id, cantidad: l.cantidad * l.enl.unidades })),
+                ventas: todas.map(l => l.i),
+                sinEnlazar: todas.filter(l => !l.enl).map(l => ({ itemId: l.itemId, titulo: l.titulo, cantidad: l.cantidad })),
                 procesadoEn: FieldValue.serverTimestamp()
             });
         } else if (cancelada && estado === 'descontado') {
-            const lineasMarca = marca.data().lineas || [];
+            const m = marca.data();
+            const lineasMarca = m.lineas || [];
             const refs = lineasMarca.map(l => db.doc(`${PRODUCTOS}/${l.productoId}`));
             await Promise.all(refs.map(r => tx.get(r)));
-            lineasMarca.forEach(l => {
-                tx.update(db.doc(`${PRODUCTOS}/${l.productoId}`), { stock: FieldValue.increment(l.cantidad) });
-                tx.delete(db.doc(`${PATH_VENTAS}/ml-${orderId}-${l.i}`));
-            });
+            lineasMarca.forEach(l => tx.update(db.doc(`${PRODUCTOS}/${l.productoId}`), { stock: FieldValue.increment(l.cantidad) }));
+            // Las marcas viejas no tienen `ventas`: ahí solo se registraban las enlazadas.
+            (m.ventas || lineasMarca.map(l => l.i)).forEach(i => tx.delete(db.doc(`${PATH_VENTAS}/ml-${orderId}-${i}`)));
+            tocados = [...new Set(lineasMarca.map(l => l.productoId))];
             tx.update(marcaRef, { estado: 'devuelto', devueltoEn: FieldValue.serverTimestamp() });
         }
     });
 
+    // El producto puede estar en otras publicaciones (o en un kit): se les copia el stock nuevo.
+    if (tocados.length) await sincronizarStock(tocados).catch(e => console.error('ML webhook sync:', orderId, e));
+
     // Aviso a los dueños en la app (solo la primera vez que entra la venta). Si falla, la venta ya quedó guardada.
     if (ventaNueva) {
         const total = lineas.reduce((t, l) => t + l.precio * l.cantidad, 0);
-        const cuerpo = lineas.map(l => `${l.cantidad > 1 ? l.cantidad + '× ' : ''}${productoDe(l)?.name || l.titulo}`).join(', ')
+        const cuerpo = lineas.map(l => `${l.cantidad > 1 ? l.cantidad + '× ' : ''}${enlaceDe(l)?.prod.name || l.titulo}`).join(', ')
             + ` · $${total.toLocaleString('es-AR')}`;
         await enviarPush({ admins: true }, { titulo: '🛒 Venta en MercadoLibre', cuerpo, datos: { tipo: 'ml', orderId } })
             .catch(e => console.error('ML webhook push:', orderId, e));

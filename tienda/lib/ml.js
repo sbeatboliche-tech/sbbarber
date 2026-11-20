@@ -117,14 +117,14 @@ export async function listarPublicaciones() {
     }
     const filas = [];
     for (let i = 0; i < ids.length; i += 20) {
-        const lote = await mlFetch(`/items?ids=${ids.slice(i, i + 20).join(',')}&attributes=id,title,available_quantity,thumbnail,variations,status`);
+        const lote = await mlFetch(`/items?ids=${ids.slice(i, i + 20).join(',')}&attributes=id,title,price,available_quantity,thumbnail,variations,status`);
         for (const { code, body: it } of lote) {
             if (code !== 200 || !it) continue;
-            const base = { itemId: it.id, title: it.title, thumbnail: it.thumbnail, status: it.status };
+            const base = { itemId: it.id, title: it.title, thumbnail: it.thumbnail, status: it.status, precio: Number(it.price) || 0 };
             if (Array.isArray(it.variations) && it.variations.length) {
                 for (const v of it.variations) {
                     const nombre = (v.attribute_combinations || []).map(a => a.value_name).filter(Boolean).join(' / ');
-                    filas.push({ ...base, variationId: v.id, variacion: nombre, stock: v.available_quantity });
+                    filas.push({ ...base, variationId: v.id, variacion: nombre, stock: v.available_quantity, precio: Number(v.price) || base.precio });
                 }
             } else {
                 filas.push({ ...base, variationId: null, variacion: '', stock: it.available_quantity });
@@ -134,7 +134,25 @@ export async function listarPublicaciones() {
     return filas;
 }
 
+// Publicaciones enlazadas a un producto. Un producto puede estar en varias publicaciones (ej. el mismo
+// after shave publicado dos veces) y una publicación puede ser un kit: `unidades` = cuántas del producto
+// salen por cada venta (Kit x3 → 3). Formato viejo (mlItemId/mlVariationId sueltos) = un enlace de 1 unidad.
+export function enlacesDe(p) {
+    const lista = Array.isArray(p?.mlEnlaces) ? p.mlEnlaces.filter(e => e && e.itemId) : [];
+    if (!lista.length && p?.mlItemId) lista.push({ itemId: p.mlItemId, variationId: p.mlVariationId || null, unidades: 1 });
+    return lista.map(e => ({
+        itemId: String(e.itemId),
+        variationId: e.variationId ? String(e.variationId) : null,
+        unidades: Math.max(1, Math.floor(Number(e.unidades) || 1))
+    }));
+}
+
+// Los enlaces los escribe el cliente (cualquier usuario logueado puede), así que se validan antes de
+// meterlos en una URL que se llama con el token del vendedor.
+const enlaceValido = e => ITEM_ID_RE.test(e.itemId) && (!e.variationId || /^\d+$/.test(e.variationId));
+
 // Pone en ML el stock que tiene la app para los productos enlazados indicados (o todos si ids es null).
+// Cada publicación recibe stock / unidades (un kit x3 con 10 en la app → 3 en ML).
 // Siempre "copia" el valor actual de Firestore, así que llamarla de más no hace daño.
 export async function sincronizarStock(ids = null) {
     const db = barberDb();
@@ -142,47 +160,46 @@ export async function sincronizarStock(ids = null) {
     if (ids && ids.length) {
         docs = (await Promise.all(ids.slice(0, 50).map(id => db.doc(`${PRODUCTOS}/${id}`).get()))).filter(d => d.exists);
     } else {
-        docs = (await db.collection(PRODUCTOS).where('mlItemId', '!=', null).get()).docs;
+        docs = (await db.collection(PRODUCTOS).get()).docs; // son pocos (~20): más simple que filtrar los dos formatos
     }
-    // mlItemId/mlVariationId los escribe el cliente (cualquier usuario logueado puede), así que se
-    // validan antes de meterlos en una URL que se llama con el token del vendedor.
-    const valido = p => ITEM_ID_RE.test(p.mlItemId || '') && (!p.mlVariationId || /^\d+$/.test(String(p.mlVariationId)));
-    const todos = docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.mlItemId && !p.oculto);
-    const enlazados = todos.filter(valido);
-    for (const p of todos.filter(p => !valido(p))) {
-        await db.doc(`${PRODUCTOS}/${p.id}`).set({ mlSync: { ok: false, error: 'Enlace inválido: volvé a enlazar el producto', en: new Date() } }, { merge: true });
-    }
+    const todos = docs.map(d => ({ id: d.id, ...d.data() })).filter(p => !p.oculto && enlacesDe(p).length);
+    const qtyDe = p => Math.max(0, Math.floor(Number(p.stock) || 0));
 
     // Agrupar por publicación: con variantes, ML borra las que no se mandan en el PUT, así que
     // hay que mandar todas las variantes de la publicación (cambiando solo las enlazadas).
     const porItem = {};
-    enlazados.forEach(p => (porItem[p.mlItemId] ||= []).push(p));
+    const invalidos = new Set();
+    for (const p of todos) {
+        for (const e of enlacesDe(p)) {
+            if (!enlaceValido(e)) { invalidos.add(p.id); continue; }
+            (porItem[e.itemId] ||= []).push({ p, variationId: e.variationId, qty: Math.floor(qtyDe(p) / e.unidades) });
+        }
+    }
 
-    const resultados = [];
-    for (const [itemId, prods] of Object.entries(porItem)) {
-        const qtyDe = p => Math.max(0, Math.floor(Number(p.stock) || 0));
+    const errores = {}; // productoId → mensaje
+    for (const [itemId, filas] of Object.entries(porItem)) {
         try {
-            const conVariante = prods.filter(p => p.mlVariationId);
+            const conVariante = filas.filter(f => f.variationId);
             if (conVariante.length) {
                 const item = await mlFetch(`/items/${encodeURIComponent(itemId)}?attributes=variations`);
                 const variations = (item.variations || []).map(v => {
-                    const p = conVariante.find(x => String(x.mlVariationId) === String(v.id));
-                    return { id: v.id, available_quantity: p ? qtyDe(p) : v.available_quantity };
+                    const f = conVariante.find(x => x.variationId === String(v.id));
+                    return { id: v.id, available_quantity: f ? f.qty : v.available_quantity };
                 });
                 await mlFetch(`/items/${encodeURIComponent(itemId)}`, { method: 'PUT', body: { variations } });
             } else {
-                await mlFetch(`/items/${encodeURIComponent(itemId)}`, { method: 'PUT', body: { available_quantity: qtyDe(prods[0]) } });
-            }
-            for (const p of prods) {
-                await db.doc(`${PRODUCTOS}/${p.id}`).set({ mlSync: { ok: true, stock: qtyDe(p), en: new Date() } }, { merge: true });
-                resultados.push({ id: p.id, ok: true, stock: qtyDe(p) });
+                await mlFetch(`/items/${encodeURIComponent(itemId)}`, { method: 'PUT', body: { available_quantity: filas[0].qty } });
             }
         } catch (e) {
-            for (const p of prods) {
-                await db.doc(`${PRODUCTOS}/${p.id}`).set({ mlSync: { ok: false, error: String(e.message).slice(0, 300), en: new Date() } }, { merge: true });
-                resultados.push({ id: p.id, ok: false, error: e.message });
-            }
+            filas.forEach(f => { errores[f.p.id] = `${itemId}: ${String(e.message).slice(0, 250)}`; });
         }
+    }
+
+    const resultados = [];
+    for (const p of todos) {
+        const error = invalidos.has(p.id) ? 'Enlace inválido: volvé a enlazar el producto' : errores[p.id];
+        await db.doc(`${PRODUCTOS}/${p.id}`).set({ mlSync: error ? { ok: false, error, en: new Date() } : { ok: true, stock: qtyDe(p), en: new Date() } }, { merge: true });
+        resultados.push(error ? { id: p.id, ok: false, error } : { id: p.id, ok: true, stock: qtyDe(p) });
     }
     return resultados;
 }
