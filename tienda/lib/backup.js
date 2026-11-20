@@ -1,3 +1,5 @@
+// Se ejecuta como /api/uso?action=backup (cron de vercel.json): el plan Hobby de Vercel permite como máximo
+// 12 funciones en api/, y como función propia era la número 13 y hacía fallar todos los deploys.
 // Copia de seguridad semanal de las bases de Firestore (barbería sb-barber-6dc16 + tienda sbbarbertienda).
 // La dispara el cron de Vercel (vercel.json) los domingos a la madrugada, recién arrancada la cuota diaria
 // de lecturas (se renueva a medianoche de California). Arma un JSON comprimido por proyecto y lo manda
@@ -9,15 +11,15 @@
 import zlib from 'node:zlib';
 import nodemailer from 'nodemailer';
 import { FieldValue } from 'firebase-admin/firestore';
-import { barberDb } from '../lib/barberAdmin.js';
-import { getAdminDb } from '../lib/firebaseAdmin.js';
+import { barberDb } from './barberAdmin.js';
+import { getAdminDb } from './firebaseAdmin.js';
 
 const TOPE_COLECCION = 15000;
 const TOPE_TOTAL = 20000;
 const SALTEAR = new Set(['tienda_visitas']); // contador de visitas: mucho volumen y no hace falta respaldarlo
 const MAIL = 'sbbaarber@gmail.com';
 
-export const config = { maxDuration: 300 };
+// maxDuration (300 s) se declara en api/uso.js, que es la función que la ejecuta.
 
 async function colecciones(db) {
     const raiz = await db.listCollections();

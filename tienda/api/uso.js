@@ -5,14 +5,20 @@
 // estadísticas cuentan lo que reciben y lo suman en uso_lecturas/{día} (assets/uso-lecturas.js).
 // Si pasa el 70% / 85%, avisa una vez por día a los celus de los dueños (más temprano que el límite
 // real porque el estimado puede quedarse corto).
+//   GET /api/uso?action=backup → copia de seguridad semanal (cron de vercel.json, ver lib/backup.js). Va acá
+// adentro porque el plan Hobby de Vercel no deja más de 12 funciones en api/.
 import { barberDb, verifyBarberUser, OWNERS } from '../lib/barberAdmin.js';
 import { enviarPush } from '../lib/push.js';
+import backupHandler from '../lib/backup.js';
+
+export const config = { maxDuration: 300 }; // lo necesita la copia de seguridad
 
 const LIMITES = { lecturas: 50000 };
 const AVISOS = [0.85, 0.7];   // de mayor a menor: se manda el más alto alcanzado que no se haya mandado
 let _cache = null;            // { t, datos }: la función queda tibia entre pedidos, así no se lee de más
 
 export default async function handler(req, res) {
+    if (req.query?.action === 'backup') return backupHandler(req, res); // tiene su propia autorización (cron)
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');

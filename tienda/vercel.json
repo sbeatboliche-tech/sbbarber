@@ -4,7 +4,7 @@
   "installCommand": "npm install",
   "cleanUrls": true,
   "crons": [
-    { "path": "/api/backup", "schedule": "0 9 * * 0" }
+    { "path": "/api/uso?action=backup", "schedule": "0 9 * * 0" }
   ],
   "rewrites": [
     { "source": "/p/:id", "destination": "/api/producto?id=:id" }
