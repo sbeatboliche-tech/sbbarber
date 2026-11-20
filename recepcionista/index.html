@@ -3577,6 +3577,9 @@ window.pickMLItem = (i) => {
     document.getElementById('ml-link-confirmar').classList.remove('hidden');
 };
 
+// Foto de la publicación en tamaño original (ML da la miniatura "-I"; "-O" es la imagen completa)
+const fotoML = t => t ? t.replace('http://', 'https://').replace(/-[A-Z]\.(jpg|jpeg|webp|png)$/i, '-O.$1') : null;
+
 // Enlace nuevo a partir de una publicación de la lista de ML
 const enlaceDeItem = (it, unidades = 1) => ({
     itemId: String(it.itemId), variationId: it.variationId ? String(it.variationId) : null,
@@ -3591,6 +3594,8 @@ async function agregarEnlaceML(id, it, unidades, stockDeML) {
     enlaces.push(enlaceDeItem(it, unidades));
     const data = { mlEnlaces: enlaces, mlItemId: null, mlVariationId: null, mlTitulo: null, mlSync: null };
     if (stockDeML) data.stock = Math.max(0, Number(it.stock) || 0) * enlaces[enlaces.length - 1].unidades;
+    // La foto de la primera publicación enlazada (la de ML manda: es la que ve el comprador)
+    if (enlaces.length === 1 && it.thumbnail) data.photoURL = fotoML(it.thumbnail);
     await updateDoc(doc(db, PATH_PRODUCTOS, id), data);
     mlItemsCache = null; // el stock de ML puede cambiar: la próxima vez se vuelve a pedir
     // Con el stock de la app hay que mandarlo a ML; con el de ML ya coinciden, igual se confirma.
@@ -3670,7 +3675,7 @@ window.crearProductoDesdeML = async (i) => {
     const id = `custom-${slug || 'producto'}-${Date.now().toString(36)}`;
     const data = { name: nombre, precio: Math.max(0, Number(it.precio) || 0), stock: Math.max(0, Number(it.stock) || 0), custom: true,
         mlEnlaces: [enlaceDeItem(it)] };
-    if (it.thumbnail) data.photoURL = it.thumbnail.replace('http://', 'https://');
+    if (it.thumbnail) data.photoURL = fotoML(it.thumbnail);
     try {
         await setDoc(doc(db, PATH_PRODUCTOS, id), data);
         if (!PRODUCTOS_BARBER.find(p => p.id === id)) PRODUCTOS_BARBER.push({ id, name: nombre, precio: data.precio, custom: true });
