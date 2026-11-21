@@ -3475,7 +3475,7 @@ function mlLinkLine(p, data, safeName) {
             ? `<span class="text-red-400" title="${escHtml(sync.error || '')}">⚠ no se pudo sincronizar</span>`
             : sync?.ok ? '<span class="text-emerald-400">✓ sincronizado con ML</span>' : '<span class="text-gray-500">enlazado con ML</span>';
         const filas = enlaces.map((e, k) => `<div class="flex items-center gap-1.5 min-w-0">
-            <span class="truncate text-gray-500" title="${escHtml(e.titulo || e.itemId)}">· ${escHtml(e.titulo || e.itemId)}${e.unidades > 1 ? ` <b class="text-amber-400">(kit x${e.unidades})</b>` : ''}</span>
+            <span class="truncate text-gray-500" title="${escHtml(e.titulo || e.itemId)}">· ${escHtml(e.titulo || e.itemId)}${e.unidades > 1 ? ` <b class="text-amber-400">(x${e.unidades})</b>` : ''}${productoConPublicacion(e, p.id) ? ' <b class="text-amber-400">(kit)</b>' : ''}</span>
             ${isAdmin ? `<button onclick="window.unlinkML('${p.id}',${k})" class="text-gray-500 hover:text-red-400 flex-shrink-0" title="Quitar esta publicación"><i class="fas fa-times"></i></button>` : ''}
         </div>`).join('');
         return `<div class="text-[10px] mt-0.5">
@@ -3588,8 +3588,10 @@ const enlaceDeItem = (it, unidades = 1) => ({
 
 // Suma la publicación a las del producto (se guarda siempre en mlEnlaces; los campos viejos se limpian).
 async function agregarEnlaceML(id, it, unidades, stockDeML) {
+    // Ya enlazada a otro producto: vale si es un kit armado (ej. Kit x3 = 1 celeste + 1 verde + 1 violeta);
+    // cada venta descuenta de todos y ML muestra lo que alcanza para armarlo.
     const otro = productoConPublicacion(it, id);
-    if (otro) throw new Error(`Esa publicación ya está enlazada a "${otro.name}". Quitala de ahí primero.`);
+    if (otro && !await customConfirm(`Esa publicación ya descuenta de "${otro.name}". ¿Es un kit que también lleva este producto? Cada venta va a descontar de los dos.`, 'Sí, es un kit')) return false;
     const enlaces = enlacesML(productoStock[id]).filter(e => !mismaPublicacion(e, it));
     enlaces.push(enlaceDeItem(it, unidades));
     const data = { mlEnlaces: enlaces, mlItemId: null, mlVariationId: null, mlTitulo: null, mlSync: null };
@@ -3600,6 +3602,7 @@ async function agregarEnlaceML(id, it, unidades, stockDeML) {
     mlItemsCache = null; // el stock de ML puede cambiar: la próxima vez se vuelve a pedir
     // Con el stock de la app hay que mandarlo a ML; con el de ML ya coinciden, igual se confirma.
     await mlApi('sync', { ids: [id] });
+    return true;
 }
 
 window.confirmMLLink = async (fuente) => {
@@ -3607,7 +3610,7 @@ window.confirmMLLink = async (fuente) => {
     if (!it || !id) return;
     const unidades = document.getElementById('ml-link-unidades').value;
     try {
-        await agregarEnlaceML(id, it, unidades, fuente === 'ml');
+        if (!await agregarEnlaceML(id, it, unidades, fuente === 'ml')) return;
         window.closeMLLink();
         if (esVisible('ml-sueltas-modal')) window.renderMLSueltas();
     } catch (e) { alert('Error al enlazar: ' + e.message); }

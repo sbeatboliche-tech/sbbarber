@@ -53,16 +53,14 @@ async function procesarOrden(orderId, userId) {
     })).filter(l => l.itemId && l.cantidad > 0);
     if (!lineas.length) return;
 
-    // Producto de cada línea: el que tenga un enlace a esa publicación (y variante, si el enlace la fija).
-    // Son pocos productos (~20): se leen todos para soportar varios enlaces por producto.
+    // Productos de cada línea: todos los que tengan un enlace a esa publicación (y variante, si el enlace la fija).
+    // Normalmente es uno; un kit armado (ej. Kit x3 = 1 celeste + 1 verde + 1 violeta) descuenta de varios.
+    // Son pocos productos (~20): se leen todos.
     const prods = (await db.collection(PRODUCTOS).get()).docs.map(d => ({ id: d.id, ...d.data() })).filter(p => !p.oculto);
-    const enlaceDe = l => {
-        for (const p of prods) {
-            const e = enlacesDe(p).find(e => e.itemId === l.itemId && (!e.variationId || e.variationId === l.variationId));
-            if (e) return { prod: p, unidades: e.unidades };
-        }
-        return null;
-    };
+    const componentesDe = l => prods.flatMap(p => {
+        const e = enlacesDe(p).find(e => e.itemId === l.itemId && (!e.variationId || e.variationId === l.variationId));
+        return e ? [{ prod: p, unidades: e.unidades }] : [];
+    });
 
     const fechaAR = new Date(order.date_closed || order.date_created || Date.now())
         .toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
@@ -77,24 +75,32 @@ async function procesarOrden(orderId, userId) {
 
         if (pagada && !estado) {
             ventaNueva = true;
-            const todas = lineas.map((l, i) => ({ ...l, i, enl: enlaceDe(l) }));
-            const enlazadas = todas.filter(l => l.enl);
+            const todas = lineas.map((l, i) => ({ ...l, i, comps: componentesDe(l) }));
+            // Una fila por producto descontado (o una sin producto si la publicación no está enlazada).
+            // La primera conserva el id de siempre (ml-{orden}-{i}); las otras del kit suman -{k}.
+            const filas = todas.flatMap(l => {
+                if (!l.comps.length) return [{ l, sufijo: `${l.i}`, comp: null, parte: 1 }];
+                const totalU = l.comps.reduce((t, c) => t + c.unidades, 0);
+                return l.comps.map((c, k) => ({ l, sufijo: k ? `${l.i}-${k}` : `${l.i}`, comp: c, parte: c.unidades / totalU }));
+            });
+            const enlazadas = filas.filter(f => f.comp);
             // En una transacción todas las lecturas van antes que las escrituras.
-            const ids = [...new Set(enlazadas.map(l => l.enl.prod.id))];
+            const ids = [...new Set(enlazadas.map(f => f.comp.prod.id))];
             const snaps = await Promise.all(ids.map(id => tx.get(db.doc(`${PRODUCTOS}/${id}`))));
             const stockNuevo = Object.fromEntries(ids.map((id, k) => [id, Number(snaps[k].data()?.stock) || 0]));
-            enlazadas.forEach(l => { stockNuevo[l.enl.prod.id] = Math.max(0, stockNuevo[l.enl.prod.id] - l.cantidad * l.enl.unidades); });
+            enlazadas.forEach(f => { stockNuevo[f.comp.prod.id] = Math.max(0, stockNuevo[f.comp.prod.id] - f.l.cantidad * f.comp.unidades); });
             Object.entries(stockNuevo).forEach(([id, stock]) => tx.update(db.doc(`${PRODUCTOS}/${id}`), { stock }));
             tocados = ids;
             // Toda venta de ML queda registrada, esté enlazada o no (sin enlace no descuenta stock).
-            // Un kit (unidades > 1) se anota en unidades del producto: Kit x3 vendido 1 vez = 3 unidades.
-            todas.forEach(l => {
-                const u = l.enl?.unidades || 1;
-                tx.set(db.doc(`${PATH_VENTAS}/ml-${orderId}-${l.i}`), {
-                    producto: l.enl ? (l.enl.prod.name || l.titulo) : l.titulo,
-                    precio: l.precio / u,
+            // Se anota en unidades de cada producto; la plata del kit se reparte según las unidades de cada uno.
+            filas.forEach(({ l, sufijo, comp, parte }) => {
+                const u = comp?.unidades || 1;
+                const total = l.precio * l.cantidad * parte;
+                tx.set(db.doc(`${PATH_VENTAS}/ml-${orderId}-${sufijo}`), {
+                    producto: comp ? (comp.prod.name || l.titulo) : l.titulo,
+                    precio: total / (l.cantidad * u),
                     cantidad: l.cantidad * u,
-                    total: l.precio * l.cantidad,
+                    total,
                     tipo: 'producto',
                     canal: 'ml',
                     barbero: 'MercadoLibre',
@@ -105,15 +111,15 @@ async function procesarOrden(orderId, userId) {
                     mlOrderId: String(orderId),
                     mlItemId: l.itemId,
                     mlTitulo: l.titulo,
-                    ...(l.enl ? { productoId: l.enl.prod.id } : { sinEnlazar: true }),
+                    ...(comp ? { productoId: comp.prod.id } : { sinEnlazar: true }),
                     creadoEn: FieldValue.serverTimestamp()
                 });
             });
             tx.set(marcaRef, {
                 estado: 'descontado',
-                lineas: enlazadas.map(l => ({ i: l.i, productoId: l.enl.prod.id, cantidad: l.cantidad * l.enl.unidades })),
-                ventas: todas.map(l => l.i),
-                sinEnlazar: todas.filter(l => !l.enl).map(l => ({ itemId: l.itemId, titulo: l.titulo, cantidad: l.cantidad })),
+                lineas: enlazadas.map(f => ({ i: f.l.i, productoId: f.comp.prod.id, cantidad: f.l.cantidad * f.comp.unidades })),
+                ventas: filas.map(f => f.sufijo),
+                sinEnlazar: todas.filter(l => !l.comps.length).map(l => ({ itemId: l.itemId, titulo: l.titulo, cantidad: l.cantidad })),
                 procesadoEn: FieldValue.serverTimestamp()
             });
         } else if (cancelada && estado === 'descontado') {
@@ -135,7 +141,7 @@ async function procesarOrden(orderId, userId) {
     // Aviso a los dueños en la app (solo la primera vez que entra la venta). Si falla, la venta ya quedó guardada.
     if (ventaNueva) {
         const total = lineas.reduce((t, l) => t + l.precio * l.cantidad, 0);
-        const cuerpo = lineas.map(l => `${l.cantidad > 1 ? l.cantidad + '× ' : ''}${enlaceDe(l)?.prod.name || l.titulo}`).join(', ')
+        const cuerpo = lineas.map(l => `${l.cantidad > 1 ? l.cantidad + '× ' : ''}${l.titulo}`).join(', ')
             + ` · $${total.toLocaleString('es-AR')}`;
         await enviarPush({ admins: true }, { titulo: '🛒 Venta en MercadoLibre', cuerpo, datos: { tipo: 'ml', orderId } })
             .catch(e => console.error('ML webhook push:', orderId, e));

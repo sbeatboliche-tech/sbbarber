@@ -156,13 +156,16 @@ const enlaceValido = e => ITEM_ID_RE.test(e.itemId) && (!e.variationId || /^\d+$
 // Siempre "copia" el valor actual de Firestore, así que llamarla de más no hace daño.
 export async function sincronizarStock(ids = null) {
     const db = barberDb();
-    let docs;
+    // Se leen todos (son pocos, ~20): una publicación puede depender de varios productos (kit armado),
+    // así que al cambiar uno hay que mirar también a los otros del kit.
+    const docs = (await db.collection(PRODUCTOS).get()).docs;
+    const conML = docs.map(d => ({ id: d.id, ...d.data() })).filter(p => !p.oculto && enlacesDe(p).length);
+    let todos = conML;
     if (ids && ids.length) {
-        docs = (await Promise.all(ids.slice(0, 50).map(id => db.doc(`${PRODUCTOS}/${id}`).get()))).filter(d => d.exists);
-    } else {
-        docs = (await db.collection(PRODUCTOS).get()).docs; // son pocos (~20): más simple que filtrar los dos formatos
+        const pedidos = new Set(ids.slice(0, 50).map(String));
+        const items = new Set(conML.filter(p => pedidos.has(p.id)).flatMap(p => enlacesDe(p).map(e => e.itemId)));
+        todos = conML.filter(p => pedidos.has(p.id) || enlacesDe(p).some(e => items.has(e.itemId)));
     }
-    const todos = docs.map(d => ({ id: d.id, ...d.data() })).filter(p => !p.oculto && enlacesDe(p).length);
     const qtyDe = p => Math.max(0, Math.floor(Number(p.stock) || 0));
 
     // Agrupar por publicación: con variantes, ML borra las que no se mandan en el PUT, así que
@@ -179,16 +182,19 @@ export async function sincronizarStock(ids = null) {
     const errores = {}; // productoId → mensaje
     for (const [itemId, filas] of Object.entries(porItem)) {
         try {
+            // Un kit armado con varios productos (ej. Kit x3 = 1 celeste + 1 verde + 1 violeta) tiene una fila
+            // por producto: en ML va lo que alcanza para armarlo, o sea el mínimo.
+            const minimo = fs => Math.min(...fs.map(f => f.qty));
             const conVariante = filas.filter(f => f.variationId);
             if (conVariante.length) {
                 const item = await mlFetch(`/items/${encodeURIComponent(itemId)}?attributes=variations`);
                 const variations = (item.variations || []).map(v => {
-                    const f = conVariante.find(x => x.variationId === String(v.id));
-                    return { id: v.id, available_quantity: f ? f.qty : v.available_quantity };
+                    const fs = conVariante.filter(x => x.variationId === String(v.id));
+                    return { id: v.id, available_quantity: fs.length ? minimo(fs) : v.available_quantity };
                 });
                 await mlFetch(`/items/${encodeURIComponent(itemId)}`, { method: 'PUT', body: { variations } });
             } else {
-                await mlFetch(`/items/${encodeURIComponent(itemId)}`, { method: 'PUT', body: { available_quantity: filas[0].qty } });
+                await mlFetch(`/items/${encodeURIComponent(itemId)}`, { method: 'PUT', body: { available_quantity: minimo(filas) } });
             }
         } catch (e) {
             filas.forEach(f => { errores[f.p.id] = `${itemId}: ${String(e.message).slice(0, 250)}`; });
