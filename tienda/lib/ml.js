@@ -147,6 +147,22 @@ export function enlacesDe(p) {
     }));
 }
 
+// Cambia el precio de una publicación (lo pide recepcionista; es independiente del precio del local).
+// Con variantes, ML borra las que no se mandan en el PUT: se mandan todas con el precio nuevo.
+export async function cambiarPrecio(itemId, precio) {
+    itemId = String(itemId || '');
+    precio = Math.round(Number(precio));
+    if (!ITEM_ID_RE.test(itemId)) throw new Error('Publicación inválida');
+    if (!Number.isFinite(precio) || precio < 100 || precio > 50000000) throw new Error('Precio inválido');
+    const path = `/items/${encodeURIComponent(itemId)}`;
+    const item = await mlFetch(`${path}?attributes=variations`);
+    const body = Array.isArray(item.variations) && item.variations.length
+        ? { variations: item.variations.map(v => ({ id: v.id, price: precio, available_quantity: v.available_quantity })) }
+        : { price: precio };
+    const r = await mlFetch(path, { method: 'PUT', body });
+    return { itemId, precio: Number(r.price) || precio };
+}
+
 // Los enlaces los escribe el cliente (cualquier usuario logueado puede), así que se validan antes de
 // meterlos en una URL que se llama con el token del vendedor.
 const enlaceValido = e => ITEM_ID_RE.test(e.itemId) && (!e.variationId || /^\d+$/.test(e.variationId));

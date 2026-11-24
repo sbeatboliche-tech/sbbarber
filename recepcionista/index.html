@@ -3387,7 +3387,31 @@ const ML_API_URL = 'https://tienda.sbbarber.com.ar/api/ml';
 let mlCuenta = null;          // { conectado, nickname } — se lee de ml_config/cuenta
 let mlItemsCache = null;      // publicaciones del vendedor (se piden al abrir el enlace)
 let mlLinkProductoId = null, mlLinkElegida = null;
+let mlPrecios = null;         // itemId → precio en ML (solo dueños; se pide al abrir Stock de productos)
 const _mlSyncTimers = {};
+
+// Precios de las publicaciones: se piden a ML (no gasta lecturas de Firebase) una vez por apertura del panel
+async function loadMLPrecios() {
+    if (!isOwner || !moduloActivo(CFG, 'mercadolibre')) return;
+    try {
+        mlItemsCache = (await mlApi('items')).items;
+        mlPrecios = Object.fromEntries(mlItemsCache.map(it => [String(it.itemId), it.precio]));
+        renderProductoStock();
+    } catch (e) { console.warn('ML precios:', e.message); }
+}
+
+window.editarPrecioML = async (itemId, titulo) => {
+    const actual = mlPrecios?.[itemId] || 0;
+    const precio = await customPromptNumero(`Precio en MercadoLibre<br><span style="font-size:12px;color:#a3a3a3;font-weight:400">${escHtml(titulo)}</span>`, actual);
+    if (precio == null || precio === actual) return;
+    if (precio < 100) return alert('Precio inválido');
+    try {
+        const r = await mlApi('precio', { itemId, precio });
+        mlPrecios[itemId] = r.precio;
+        (mlItemsCache || []).forEach(it => { if (String(it.itemId) === itemId) it.precio = r.precio; });
+        renderProductoStock();
+    } catch (e) { alert('No se pudo cambiar el precio en MercadoLibre: ' + e.message); }
+};
 
 // Publicaciones de ML de un producto (mismo criterio que enlacesDe en tienda/lib/ml.js): un producto puede estar
 // en varias publicaciones y una publicación puede ser un kit (`unidades` del producto por cada venta).
@@ -3474,10 +3498,15 @@ function mlLinkLine(p, data, safeName) {
         const estado = sync?.ok === false
             ? `<span class="text-red-400" title="${escHtml(sync.error || '')}">⚠ no se pudo sincronizar</span>`
             : sync?.ok ? '<span class="text-emerald-400">✓ sincronizado con ML</span>' : '<span class="text-gray-500">enlazado con ML</span>';
-        const filas = enlaces.map((e, k) => `<div class="flex items-center gap-1.5 min-w-0">
+        const filas = enlaces.map((e, k) => {
+            // Precio de la publicación en ML (distinto del precio del local): solo lo ven y lo cambian los dueños
+            const pr = isOwner && mlPrecios ? mlPrecios[e.itemId] : undefined;
+            const btnPrecio = pr === undefined ? '' : `<button onclick="window.editarPrecioML('${jsAttr(e.itemId)}','${jsAttr(e.titulo || e.itemId)}')" title="Precio en MercadoLibre" class="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-yellow-400/10 border border-yellow-400/30 text-yellow-300 font-bold hover:bg-yellow-400/20 transition">ML $${Number(pr).toLocaleString('es-AR')} <i class="fas fa-pen" style="font-size:8px"></i></button>`;
+            return `<div class="flex items-center gap-1.5 min-w-0 mt-0.5">
+            ${btnPrecio}
             <span class="truncate text-gray-500" title="${escHtml(e.titulo || e.itemId)}">· ${escHtml(e.titulo || e.itemId)}${e.unidades > 1 ? ` <b class="text-amber-400">(x${e.unidades})</b>` : ''}${productoConPublicacion(e, p.id) ? ' <b class="text-amber-400">(kit)</b>' : ''}</span>
             ${isAdmin ? `<button onclick="window.unlinkML('${p.id}',${k})" class="text-gray-500 hover:text-red-400 flex-shrink-0" title="Quitar esta publicación"><i class="fas fa-times"></i></button>` : ''}
-        </div>`).join('');
+        </div>`; }).join('');
         return `<div class="text-[10px] mt-0.5">
             <div class="flex items-center gap-1.5 flex-wrap"><i class="fas fa-link text-gray-500"></i>${estado}
                 ${isAdmin ? `<button onclick="window.openMLLink('${p.id}')" class="text-gray-400 underline hover:text-white">+ publicación</button>` : ''}
@@ -5560,6 +5589,7 @@ window.openStockProductosPanel = () => {
     const p = document.getElementById('stock-productos-panel');
     p.classList.remove('hidden'); p.classList.add('flex', 'flex-col');
     loadMLCuenta();
+    loadMLPrecios();
 };
 window.closeStockProductosPanel = () => {
     const p = document.getElementById('stock-productos-panel');

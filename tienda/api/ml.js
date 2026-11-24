@@ -5,11 +5,12 @@
 //   GET  /api/ml?code=...&state=...       → vuelta de la autorización de ML (redirect URI registrada)
 //   GET  /api/ml?action=items             → publicaciones del vendedor para enlazar productos
 //   POST /api/ml?action=sync {ids?: []}   → copia a ML el stock de la app (todos si no hay ids)
-//   POST /api/ml?action=flex              → anota en Paquetes Flex los envíos Flex despachados de los últimos días
+//   POST /api/ml?action=precio {itemId, precio} → (solo dueños) cambia el precio de la publicación en ML
+//   POST /api/ml?action=flex            → anota en Paquetes Flex los envíos Flex despachados de los últimos días
 import crypto from 'node:crypto';
 import { barberDb, verifyBarberUser, OWNERS } from '../lib/barberAdmin.js';
 import { revisarFlex } from '../lib/mlFlex.js';
-import { ML_AUTH_URL, CONFIG_DOC, redirectUri, exchangeCode, saveTokens, mlFetch, getCuenta, listarPublicaciones, sincronizarStock } from '../lib/ml.js';
+import { ML_AUTH_URL, CONFIG_DOC, redirectUri, exchangeCode, saveTokens, mlFetch, getCuenta, listarPublicaciones, sincronizarStock, cambiarPrecio } from '../lib/ml.js';
 
 const APP_URL = 'https://sbbarber.com.ar/recepcionista/';
 
@@ -52,6 +53,11 @@ export default async function handler(req, res) {
                 const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : null;
                 return res.json({ resultados: await sincronizarStock(ids) });
             }
+            case 'precio':
+                // Precio de la publicación en ML (no el del local). Solo dueños: cambia lo que cobra la cuenta.
+                if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+                if (!OWNERS.includes(user.email)) return res.status(403).json({ error: 'Solo los dueños pueden cambiar precios de ML' });
+                return res.json(await cambiarPrecio(req.body?.itemId, req.body?.precio));
             case 'flex':
                 if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
                 // {dias} para traer envíos más viejos a pedido (botón del panel); por defecto los últimos 10 días
