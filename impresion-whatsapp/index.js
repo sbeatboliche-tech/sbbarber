@@ -175,6 +175,9 @@ const leerBody = req => new Promise(resolve => {
 http.createServer(async (req, res) => {
     try {
         const url = new URL(req.url, PANEL);
+        // DNS rebinding: una página de internet podría apuntar su dominio a 127.0.0.1 y leer el panel (el QR
+        // de WhatsApp, las fotos). Solo se atiende si se entró como localhost.
+        if (![`localhost:${PUERTO}`, `127.0.0.1:${PUERTO}`].includes(req.headers.host)) { res.writeHead(403); return res.end(); }
         if (req.method === 'POST') {
             // Que ninguna página de internet pueda mandar a imprimir: solo el propio panel
             const origen = req.headers.origin;
