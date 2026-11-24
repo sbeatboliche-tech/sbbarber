@@ -3,7 +3,7 @@
 // Queda conectado al WhatsApp del celu como un WhatsApp Web más (whatsapp-web.js, con el Chrome de la compu).
 // Cuando alguien escribe "imprimir" (o "imprimí", "quiero imprimir esto"...), las fotos/PDF que mandó en los
 // 30 minutos de antes y los que mande en los 30 de después entran a la cola. La cola se ve en el panel
-// http://localhost:3939, donde se confirma cada impresión (no se imprime nada sin tocar el botón).
+// http://localhost:3939, donde se confirma cada impresión; con "Imprimir automático" prendido salen solas.
 // Las fotos de chats que no pidieron imprimir quedan solo en memoria 30 minutos y se descartan: no se guardan.
 // Los grupos y los estados se ignoran.
 const fs = require('fs');
@@ -122,6 +122,23 @@ function encolar(f) {
     });
     guardar();
     console.log(`Nueva foto para imprimir de ${f.nombre || f.numero}`);
+    // Con "Imprimir automático" prendido en el panel sale sola (1 copia); si no, espera que la confirmen
+    if (estado.automatico) colaImpresion = colaImpresion.then(() => imprimirTrabajo(id, 1)).catch(() => {});
+}
+let colaImpresion = Promise.resolve(); // de a una, en el orden en que llegaron
+
+async function imprimirTrabajo(id, copias) {
+    const t = estado.trabajos.find(x => x.id === id);
+    if (!t || t.estado === 'descartado') return null;
+    t.estado = 'imprimiendo'; guardar();
+    try {
+        await imprimir(t, copias);
+        Object.assign(t, { estado: 'impreso', copias, impresoEn: new Date().toISOString(), error: null });
+    } catch (e) {
+        Object.assign(t, { estado: 'error', error: e.message });
+    }
+    guardar();
+    return t;
 }
 
 // ---- Impresión ----
@@ -172,7 +189,7 @@ http.createServer(async (req, res) => {
         if (req.method === 'GET' && url.pathname === '/api/estado') {
             const desde = Date.now() - 3 * 864e5; // lo impreso/descartado se muestra 3 días
             return json(res, 200, {
-                wa, impresora: estado.impresora, impresoras: await impresoras(),
+                wa, impresora: estado.impresora, impresoras: await impresoras(), automatico: !!estado.automatico,
                 trabajos: estado.trabajos.filter(t => t.estado === 'pendiente' || t.estado === 'error' || t.estado === 'imprimiendo' || Date.parse(t.recibido) > desde),
             });
         }
@@ -185,18 +202,13 @@ http.createServer(async (req, res) => {
         }
         if (req.method === 'POST' && url.pathname === '/api/imprimir') {
             const { id, copias } = await leerBody(req);
-            const t = estado.trabajos.find(x => x.id === id);
-            if (!t || t.estado === 'descartado') return json(res, 404, { error: 'No está' });
-            const n = Math.min(50, Math.max(1, parseInt(copias) || 1));
-            t.estado = 'imprimiendo'; guardar();
-            try {
-                await imprimir(t, n);
-                Object.assign(t, { estado: 'impreso', copias: n, impresoEn: new Date().toISOString(), error: null });
-            } catch (e) {
-                Object.assign(t, { estado: 'error', error: e.message });
-            }
-            guardar();
-            return json(res, 200, t);
+            const t = await imprimirTrabajo(id, Math.min(50, Math.max(1, parseInt(copias) || 1)));
+            return t ? json(res, 200, t) : json(res, 404, { error: 'No está' });
+        }
+        if (req.method === 'POST' && url.pathname === '/api/automatico') {
+            const { activo } = await leerBody(req);
+            estado.automatico = !!activo; guardar();
+            return json(res, 200, { automatico: estado.automatico });
         }
         if (req.method === 'POST' && url.pathname === '/api/descartar') {
             const { id } = await leerBody(req);
