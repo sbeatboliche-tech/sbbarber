@@ -3765,7 +3765,8 @@ function renderProductoStock() {
         const badge = qty === 0
             ? '<div class="text-[10px] text-red-500 font-bold">Sin stock</div>'
             : isLow ? '<div class="text-[10px] text-yellow-500 font-bold">Stock bajo</div>' : '';
-        const precioLabel = `<button onclick="window.editarPrecioProducto('${p.id}','${jsAttr(p.name)}')" class="hover:text-white transition">${p.precio > 0 ? `$${p.precio.toLocaleString('es-AR')} c/u` : 'Sin precio'} <i class="fas fa-pen ml-0.5" style="font-size:8px"></i></button>`;
+        // Botón visible (antes era texto chico con un lápiz y no se notaba que se podía tocar)
+        const precioLabel = `<button onclick="window.editarPrecioProducto('${p.id}','${jsAttr(p.name)}')" title="Modificar precio" class="inline-flex items-center gap-1.5 mt-1 mb-0.5 px-2.5 py-1 rounded-lg bg-white/10 border border-white/20 text-white text-xs font-bold hover:bg-white/20 hover:border-white/40 active:scale-95 transition">${p.precio > 0 ? `$${p.precio.toLocaleString('es-AR')}` : 'Sin precio'}<span class="text-[10px] font-semibold text-gray-400"><i class="fas fa-pen mr-0.5" style="font-size:9px"></i>Modificar</span></button>`;
         const safeName = jsAttr(p.name);
         const thumb = data.photoURL
             ? `<img src="${data.photoURL}" onclick="window.openEditProductoPhoto('${p.id}','${safeName}')" class="w-11 h-11 rounded-lg object-cover flex-shrink-0 cursor-pointer">`
@@ -3775,7 +3776,7 @@ function renderProductoStock() {
             ${thumb}
             <div class="flex-1 min-w-0">
                 <div class="text-sm font-bold text-white truncate">${escHtml(p.name)}</div>
-                <div class="text-[10px] text-gray-500">${precioLabel}</div>
+                <div>${precioLabel}</div>
                 <button onclick="window.cambiarCategoriaProducto('${p.id}')" class="text-[10px] text-gray-500 hover:text-white transition mr-2"><i class="fas fa-tag mr-0.5"></i>${escHtml(categoriaDe(p.id))}</button>
                 <button onclick="window.openCodigoProducto('${p.id}')" class="text-[10px] ${codigos.length ? 'text-gray-400' : 'text-gray-600'} hover:text-white transition">
                     <i class="fas fa-barcode mr-0.5"></i>${codigos.length ? escHtml(codigos[0]) + (codigos.length > 1 ? ` +${codigos.length - 1}` : '') : 'Asignar código'}
