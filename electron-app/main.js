@@ -1,8 +1,31 @@
 const { app, BrowserWindow, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const { spawn } = require('child_process')
 
 const APP_URL = 'https://sbeatboliche-tech.github.io/sbbarber/recepcionista/'
+
+// Los links que abren otra ventana van a Chrome aunque el navegador predeterminado de Windows sea
+// Internet Explorer / Edge. Si Chrome no está instalado, se usa el predeterminado.
+function rutaChrome() {
+    const e = process.env
+    return [
+        e.PROGRAMFILES && path.join(e.PROGRAMFILES, 'Google/Chrome/Application/chrome.exe'),
+        e['PROGRAMFILES(X86)'] && path.join(e['PROGRAMFILES(X86)'], 'Google/Chrome/Application/chrome.exe'),
+        e.LOCALAPPDATA && path.join(e.LOCALAPPDATA, 'Google/Chrome/Application/chrome.exe'),
+    ].find(p => p && fs.existsSync(p))
+}
+
+function abrirEnChrome(url) {
+    if (!/^https?:\/\//i.test(url)) return shell.openExternal(url) // mailto:, whatsapp:, etc.
+    const chrome = process.platform === 'win32' && rutaChrome()
+    if (!chrome) return shell.openExternal(url)
+    try {
+        spawn(chrome, [url], { detached: true, stdio: 'ignore' }).unref()
+    } catch {
+        shell.openExternal(url)
+    }
+}
 
 function createWindow() {
     const win = new BrowserWindow({
@@ -27,9 +50,9 @@ function createWindow() {
 
     win.once('ready-to-show', () => win.show())
 
-    // Abrir links externos en el browser del sistema
+    // Abrir links externos en Chrome (ver abrirEnChrome)
     win.webContents.setWindowOpenHandler(({ url }) => {
-        shell.openExternal(url)
+        abrirEnChrome(url)
         return { action: 'deny' }
     })
 
