@@ -1,0 +1,7 @@
+node_modules/
+# Sesión de WhatsApp: con esto cualquiera entra a la cuenta. NUNCA subirlo.
+.wwebjs_auth/
+.wwebjs_cache/
+# Fotos de los clientes y la cola
+cola/
+estado.json

@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Impresiones WhatsApp</title>
+<style>
+    :root { --bg:#0a0a0a; --card:#141414; --borde:#262626; --txt:#fafafa; --gris:#8a8a8a; --verde:#22c55e; --rojo:#f87171; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--txt); font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    header { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;
+             padding:16px 20px; background:rgba(10,10,10,.92); backdrop-filter:blur(8px); border-bottom:1px solid var(--borde); }
+    h1 { margin:0; font-size:18px; letter-spacing:.04em; }
+    .sub { color:var(--gris); font-size:12px; margin-top:3px; }
+    .pill { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; padding:6px 10px; border-radius:999px; border:1px solid var(--borde); }
+    .dot { width:8px; height:8px; border-radius:50%; background:var(--gris); }
+    .ok .dot { background:var(--verde); box-shadow:0 0 8px var(--verde); }
+    .mal .dot { background:var(--rojo); }
+    select, input[type=number] { background:#1c1c1c; color:var(--txt); border:1px solid #333; border-radius:10px; padding:8px 10px; font-size:13px; }
+    main { padding:20px; max-width:1200px; margin:0 auto; }
+    .qr { text-align:center; background:var(--card); border:1px solid var(--borde); border-radius:18px; padding:28px; margin-bottom:20px; }
+    .qr img { background:#fff; padding:10px; border-radius:12px; }
+    .qr ol { text-align:left; display:inline-block; color:#cfcfcf; font-size:14px; line-height:1.7; }
+    h2 { font-size:13px; text-transform:uppercase; letter-spacing:.12em; color:var(--gris); margin:26px 0 12px; }
+    .cliente { background:var(--card); border:1px solid var(--borde); border-radius:18px; padding:16px; margin-bottom:14px; }
+    .cliente.nuevo { border-color:#fafafa66; box-shadow:0 0 0 1px #fafafa22, 0 0 24px #ffffff10; }
+    .cab { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .nombre { font-weight:800; font-size:15px; }
+    .num { color:var(--gris); font-size:12px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:12px; }
+    .foto { background:#0f0f0f; border:1px solid var(--borde); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; }
+    .foto .img { aspect-ratio:1; background:#000; display:flex; align-items:center; justify-content:center; cursor:zoom-in; }
+    .foto img { width:100%; height:100%; object-fit:contain; }
+    .pdf { font-size:40px; font-weight:900; color:var(--gris); }
+    .acciones { display:flex; gap:6px; padding:8px; align-items:center; }
+    .acciones input { width:52px; padding:7px 6px; }
+    button { font:inherit; cursor:pointer; border-radius:10px; border:1px solid #333; background:#1c1c1c; color:var(--txt); padding:8px 12px; font-size:13px; font-weight:700; transition:.15s; }
+    button:hover { background:#262626; }
+    button.prim { background:var(--txt); color:#000; border-color:var(--txt); }
+    button.prim:hover { background:#d4d4d4; }
+    button:disabled { opacity:.5; cursor:wait; }
+    .flex1 { flex:1; }
+    .estado { font-size:11px; font-weight:700; padding:6px 8px; }
+    .estado.error { color:var(--rojo); }
+    .estado.impreso { color:var(--verde); }
+    .vacio { color:var(--gris); text-align:center; padding:40px 10px; border:1px dashed var(--borde); border-radius:18px; }
+    .hist .foto { opacity:.75; }
+    #zoom { position:fixed; inset:0; background:rgba(0,0,0,.9); display:none; align-items:center; justify-content:center; z-index:10; cursor:zoom-out; }
+    #zoom img { max-width:95vw; max-height:95vh; }
+    @media (max-width:600px) { main { padding:16px; } .grid { grid-template-columns:repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+<header>
+    <div>
+        <h1>IMPRESIONES · WHATSAPP</h1>
+        <div class="sub">Entran las fotos de quien escriba "imprimir". Nada sale sin que toques Imprimir.</div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+        <span id="wa" class="pill"><span class="dot"></span><span>Conectando…</span></span>
+        <select id="impresora" title="Impresora"></select>
+    </div>
+</header>
+<main>
+    <div id="qr"></div>
+    <h2>Para imprimir</h2>
+    <div id="pendientes"></div>
+    <h2>Últimos 3 días</h2>
+    <div id="historial" class="hist"></div>
+</main>
+<div id="zoom" onclick="this.style.display='none'"><img alt=""></div>
+<script>
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const hora = iso => new Date(iso).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+let ultimo = '', vistos = null;
+
+async function api(ruta, body) {
+    const r = await fetch(ruta, body ? { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(body) } : undefined);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || r.status);
+    return j;
+}
+
+function miniatura(t) {
+    return t.mimetype === 'application/pdf'
+        ? `<div class="img" onclick="window.open('/archivo/${t.id}')"><span class="pdf">PDF</span></div>`
+        : `<div class="img" onclick="zoom('${t.id}')"><img loading="lazy" src="/archivo/${t.id}" alt=""></div>`;
+}
+
+function agrupar(lista) {
+    const g = new Map();
+    for (const t of lista) { const k = t.numero; if (!g.has(k)) g.set(k, []); g.get(k).push(t); }
+    return [...g.values()];
+}
+
+function render(d) {
+    // WhatsApp
+    const w = document.getElementById('wa');
+    const txt = { listo: `Conectado${d.wa.cuenta ? ' · ' + d.wa.cuenta : ''}`, qr: 'Falta vincular', conectando: 'Conectando…', iniciando: 'Iniciando…', desconectado: 'Desconectado, reintentando…', error: 'Error' }[d.wa.estado] || d.wa.estado;
+    w.className = 'pill ' + (d.wa.estado === 'listo' ? 'ok' : ['error', 'desconectado'].includes(d.wa.estado) ? 'mal' : '');
+    w.innerHTML = `<span class="dot"></span><span>${esc(txt)}</span>`;
+    if (d.wa.error) w.title = d.wa.error;
+    document.getElementById('qr').innerHTML = d.wa.estado === 'qr' && d.wa.qr ? `<div class="qr">
+        <img src="${d.wa.qr}" width="260" height="260" alt="Código QR">
+        <div><ol><li>En el celu abrí <b>WhatsApp</b> → <b>⋮ / Configuración</b> → <b>Dispositivos vinculados</b></li>
+        <li>Tocá <b>Vincular un dispositivo</b> y escaneá este código</li>
+        <li>Listo: queda vinculado aunque reinicies la compu</li></ol></div></div>` : '';
+
+    // Impresoras
+    const sel = document.getElementById('impresora');
+    if (document.activeElement !== sel) {
+        const pred = d.impresoras.find(p => p.predeterminada);
+        sel.innerHTML = `<option value="">Predeterminada${pred ? ' (' + esc(pred.nombre) + ')' : ''}</option>` +
+            d.impresoras.map(p => `<option value="${esc(p.nombre)}" ${p.nombre === d.impresora ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('');
+    }
+
+    // Pendientes, agrupados por cliente
+    const pend = d.trabajos.filter(t => ['pendiente', 'error', 'imprimiendo'].includes(t.estado));
+    const nuevos = vistos ? pend.filter(t => !vistos.has(t.id)) : [];
+    document.getElementById('pendientes').innerHTML = pend.length ? agrupar(pend).map(g => `
+        <div class="cliente ${g.some(t => nuevos.includes(t)) ? 'nuevo' : ''}">
+            <div class="cab">
+                <div><div class="nombre">${esc(g[0].nombre || 'Sin nombre')}</div><div class="num">+${esc(g[0].numero)} · ${g.length} archivo${g.length > 1 ? 's' : ''} · ${hora(g[0].recibido)}</div></div>
+                <div style="display:flex; gap:6px">
+                    <button onclick="imprimirTodas('${esc(g[0].numero)}')" class="prim">Imprimir todas (${g.length})</button>
+                    <button onclick="descartarTodas('${esc(g[0].numero)}')">Descartar todas</button>
+                </div>
+            </div>
+            <div class="grid">${g.map(t => `
+                <div class="foto">${miniatura(t)}
+                    ${t.estado === 'error' ? `<div class="estado error" title="${esc(t.error)}">⚠ ${esc(t.error)}</div>` : ''}
+                    <div class="acciones">
+                        <input type="number" min="1" max="50" value="1" id="c-${t.id}" title="Copias">
+                        <button class="prim flex1" data-id="${t.id}" onclick="imprimir('${t.id}')" ${t.estado === 'imprimiendo' ? 'disabled' : ''}>${t.estado === 'imprimiendo' ? 'Imprimiendo…' : t.estado === 'error' ? 'Reintentar' : 'Imprimir'}</button>
+                        <button onclick="descartar('${t.id}')" title="Descartar">✕</button>
+                    </div>
+                </div>`).join('')}
+            </div>
+        </div>`).join('') : '<div class="vacio">No hay nada para imprimir. Cuando alguien te escriba "imprimir" con fotos, aparecen acá.</div>';
+
+    // Historial
+    const hist = d.trabajos.filter(t => ['impreso', 'descartado'].includes(t.estado)).reverse();
+    document.getElementById('historial').innerHTML = hist.length ? agrupar(hist).map(g => `
+        <div class="cliente">
+            <div class="cab"><div><div class="nombre">${esc(g[0].nombre || 'Sin nombre')}</div><div class="num">+${esc(g[0].numero)}</div></div></div>
+            <div class="grid">${g.map(t => `
+                <div class="foto">${t.estado === 'impreso' ? miniatura(t) : '<div class="img"><span class="pdf" style="font-size:14px">Descartada</span></div>'}
+                    <div class="acciones">
+                        <span class="estado ${t.estado} flex1">${t.estado === 'impreso' ? `✓ ${t.copias || 1} copia${(t.copias || 1) > 1 ? 's' : ''} · ${hora(t.impresoEn)}` : 'Descartada'}</span>
+                        ${t.estado === 'impreso' ? `<button onclick="imprimir('${t.id}')" title="Imprimir de nuevo">↻</button>` : ''}
+                    </div>
+                </div>`).join('')}
+            </div>
+        </div>`).join('') : '<div class="vacio">Todavía no se imprimió nada.</div>';
+
+    if (nuevos.length) avisar(nuevos.length);
+    vistos = new Set(pend.map(t => t.id));
+    document.title = pend.length ? `(${pend.length}) Impresiones WhatsApp` : 'Impresiones WhatsApp';
+}
+
+function avisar(n) {
+    try { // pitido corto (el navegador lo deja sonar después de haber tocado la página una vez)
+        const ctx = new AudioContext(), o = ctx.createOscillator(), g = ctx.createGain();
+        o.frequency.value = 880; g.gain.value = 0.15; o.connect(g); g.connect(ctx.destination);
+        o.start(); o.stop(ctx.currentTime + 0.25);
+    } catch {}
+    if ('Notification' in window && Notification.permission === 'granted') new Notification('Fotos para imprimir', { body: `${n} nueva${n > 1 ? 's' : ''}` });
+}
+
+async function cargar() {
+    try {
+        const d = await api('/api/estado');
+        const s = JSON.stringify(d);
+        if (s !== ultimo) { ultimo = s; render(d); }
+    } catch {
+        document.getElementById('wa').innerHTML = '<span class="dot"></span><span>El programa no está corriendo</span>';
+        document.getElementById('wa').className = 'pill mal';
+    }
+}
+
+async function imprimir(id) {
+    const input = document.getElementById('c-' + id);
+    const copias = input ? Number(input.value) || 1 : 1;
+    document.querySelectorAll(`button[data-id="${id}"]`).forEach(b => { b.disabled = true; b.textContent = 'Imprimiendo…'; });
+    try { await api('/api/imprimir', { id, copias }); } catch (e) { alert('No se pudo imprimir: ' + e.message); }
+    ultimo = ''; cargar();
+}
+async function descartar(id) { try { await api('/api/descartar', { id }); } catch (e) { alert(e.message); } ultimo = ''; cargar(); }
+async function imprimirTodas(numero) {
+    const d = JSON.parse(ultimo || '{}');
+    for (const t of (d.trabajos || []).filter(t => t.numero === numero && ['pendiente', 'error'].includes(t.estado))) await imprimir(t.id);
+}
+async function descartarTodas(numero) {
+    if (!confirm('¿Descartar todas las fotos de este cliente?')) return;
+    const d = JSON.parse(ultimo || '{}');
+    for (const t of (d.trabajos || []).filter(t => t.numero === numero && ['pendiente', 'error'].includes(t.estado))) await api('/api/descartar', { id: t.id }).catch(() => {});
+    ultimo = ''; cargar();
+}
+function zoom(id) { const z = document.getElementById('zoom'); z.querySelector('img').src = '/archivo/' + id; z.style.display = 'flex'; }
+
+document.getElementById('impresora').addEventListener('change', async e => {
+    try { await api('/api/impresora', { nombre: e.target.value }); } catch (err) { alert(err.message); }
+    e.target.blur(); ultimo = ''; cargar();
+});
+document.addEventListener('click', () => { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); }, { once: true });
+
+cargar();
+setInterval(cargar, 3000);
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "sbbarber-impresion-whatsapp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fotos que llegan por WhatsApp con la palabra 'imprimir' → panel en la compu para imprimirlas",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.3",
+    "whatsapp-web.js": "^1.26.0"
+  }
+}
