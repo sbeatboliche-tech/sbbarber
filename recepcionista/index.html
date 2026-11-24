@@ -199,6 +199,11 @@
                     <i class="fas fa-box-open text-xs"></i>
                     <span class="hidden md:inline">HISTORIAL PICKIT</span>
                 </button>
+                <!-- Hacer un envío en Hop Envíos (en la app de escritorio abre Chrome, que ya tiene la sesión guardada) -->
+                <a href="https://pyme-frontend.hopenvios.com.ar/" target="_blank" rel="noopener" data-solo-sb title="Hacer un envío (Hop Envíos)" class="hidden md:flex items-center gap-1.5 bg-white text-black px-2 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-gray-200 transition">
+                    <i class="fas fa-paper-plane text-xs"></i>
+                    <span class="hidden md:inline">HACER UN ENVÍO</span>
+                </a>
             </div>
             <div class="flex items-center gap-2">
                 <!-- Botón nuevo corte solo visible en desktop -->
@@ -243,6 +248,9 @@
                         <button id="btn-historial-pickit-menu" data-modulo="pickit" type="button" onclick="window.closeMasMenu(); window.openHistorialPickitPanel()" class="flex md:hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-box-open w-4 text-center text-gray-400"></i> Historial Pickit
                         </button>
+                        <a href="https://pyme-frontend.hopenvios.com.ar/" target="_blank" rel="noopener" data-solo-sb onclick="window.closeMasMenu()" class="flex md:hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
+                            <i class="fas fa-paper-plane w-4 text-center text-gray-400"></i> Hacer un envío
+                        </a>
                         <button id="btn-flex-menu" data-modulo="mercadolibre" type="button" onclick="window.closeMasMenu(); window.openFlexPanel()" class="flex md:hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-truck-fast w-4 text-center text-gray-400"></i> Paquetes Flex
                         </button>
