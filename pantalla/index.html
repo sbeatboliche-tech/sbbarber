@@ -27,6 +27,10 @@
     body.rot90 #lienzo  { transform:translateX(100vw) rotate(90deg); }
     body.rot-90 #lienzo { transform:translateY(100vh) rotate(-90deg); }
     #lienzo { --u: 1vh; } body.rot #lienzo { --u: 1vw; } /* unidad = 1% del alto del lienzo */
+    /* ?vista=1: para mirarla desde la compu, la tele parada (9:16) en el centro de la pantalla */
+    body.vista { background:#1a1a1a; }
+    body.vista #lienzo { left:50%; width:calc(100vh * 9 / 16); transform:translateX(-50%);
+                         box-shadow:0 0 0 10px #000, 0 0 0 12px #333, 0 20px 60px rgba(0,0,0,.8); }
 
     /* Fondo: brillo suave que se mueve lento */
     .fondo { position:absolute; inset:-20%; pointer-events:none;
@@ -107,6 +111,7 @@ const params = new URLSearchParams(location.search);
 const MODO = params.get('modo') === 'vidriera' ? 'vidriera' : 'precios';
 const ROT = params.get('rotar');
 if (ROT === '90' || ROT === '-90') document.body.classList.add('rot', ROT === '90' ? 'rot90' : 'rot-90');
+else if (params.get('vista')) document.body.classList.add('vista');
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const plata = n => `<small>$</small>${Number(n || 0).toLocaleString('es-AR')}`;
