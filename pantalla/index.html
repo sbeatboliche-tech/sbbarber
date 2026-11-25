@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SB Barber — Pantalla</title>
+<!--
+  Teles verticales del mostrador. Se abre una URL por tele, en pantalla completa:
+    https://sbbarber.com.ar/pantalla/?modo=precios    → precios de servicios (los de Precios en recepcionista)
+    https://sbbarber.com.ar/pantalla/?modo=vidriera   → productos con foto y precio, intercalados con QR
+  Si la tele no deja girar la imagen desde su menú (queda acostada), agregar &rotar=90 (o &rotar=-90).
+  Datos: tienda.sbbarber.com.ar/api/catalogo?pantalla=1 (lib/pantalla.js, caché de 15 min). Se refresca sola.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+    :root { --bg:#050505; --txt:#fafafa; --gris:#8c8c8c; --linea:rgba(255,255,255,.14); }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    html, body { width:100%; height:100%; background:var(--bg); color:var(--txt); overflow:hidden; cursor:none;
+                 font-family:Inter, system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+
+    /* Lienzo vertical. Con ?rotar=90 se gira entero para teles que muestran la imagen acostada */
+    #lienzo { position:fixed; left:0; top:0; width:100vw; height:100vh; overflow:hidden; }
+    body.rot #lienzo { width:100vh; height:100vw; transform-origin:top left; }
+    body.rot90 #lienzo  { transform:translateX(100vw) rotate(90deg); }
+    body.rot-90 #lienzo { transform:translateY(100vh) rotate(-90deg); }
+    #lienzo { --u: 1vh; } body.rot #lienzo { --u: 1vw; } /* unidad = 1% del alto del lienzo */
+
+    /* Fondo: brillo suave que se mueve lento */
+    .fondo { position:absolute; inset:-20%; pointer-events:none;
+             background:radial-gradient(40% 30% at 30% 25%, rgba(255,255,255,.09), transparent 70%),
+                        radial-gradient(35% 28% at 75% 80%, rgba(255,255,255,.06), transparent 70%);
+             animation:deriva 38s ease-in-out infinite alternate; }
+    @keyframes deriva { to { transform:translate(6%, -5%) scale(1.08); } }
+    .grano { position:absolute; inset:0; pointer-events:none; opacity:.05;
+             background-image:repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px); }
+
+    .contenido { position:relative; height:100%; display:flex; flex-direction:column; align-items:center;
+                 padding:calc(var(--u)*4) calc(var(--u)*3.2); }
+    .logo { width:calc(var(--u)*13); height:calc(var(--u)*13); border-radius:50%;
+            box-shadow:0 0 calc(var(--u)*4) rgba(255,255,255,.18); animation:respira 6s ease-in-out infinite; }
+    @keyframes respira { 50% { box-shadow:0 0 calc(var(--u)*6) rgba(255,255,255,.3); } }
+    .titulo { font-family:'Bebas Neue', Impact, sans-serif; font-size:calc(var(--u)*7.4); letter-spacing:.14em;
+              margin-top:calc(var(--u)*2.2); line-height:1; text-shadow:0 0 calc(var(--u)*2.5) rgba(255,255,255,.25); }
+    .subt { color:var(--gris); font-size:calc(var(--u)*1.5); letter-spacing:.38em; text-transform:uppercase; margin-top:calc(var(--u)*.8); }
+    .sep { width:40%; height:1px; margin:calc(var(--u)*2.6) 0 calc(var(--u)*1.6);
+           background:linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent); }
+
+    /* ---- PRECIOS ---- */
+    .lista { width:100%; flex:1; display:flex; flex-direction:column; justify-content:space-evenly; }
+    .fila { position:relative; display:flex; align-items:baseline; gap:calc(var(--u)*1.2); padding:calc(var(--u)*.9) calc(var(--u)*1.2);
+            opacity:0; transform:translateY(calc(var(--u)*1.5)); animation:entra .9s cubic-bezier(.16,1,.3,1) forwards; overflow:hidden; }
+    @keyframes entra { to { opacity:1; transform:none; } }
+    .fila .nom { font-family:'Bebas Neue', Impact, sans-serif; font-size:var(--fs, calc(var(--u)*4.6)); letter-spacing:.05em; white-space:nowrap; }
+    .fila .pts { flex:1; border-bottom:calc(var(--u)*.25) dotted rgba(255,255,255,.28); transform:translateY(calc(var(--u)*-.8)); }
+    .fila .pre { font-family:'Bebas Neue', Impact, sans-serif; font-size:var(--fs, calc(var(--u)*4.6)); letter-spacing:.03em;
+                 text-shadow:0 0 calc(var(--u)*1.6) rgba(255,255,255,.35); }
+    .fila .pre small { font-size:.6em; vertical-align:.32em; margin-right:.06em; color:#d4d4d4; }
+    /* Brillo que recorre las filas de a una, cada tanto */
+    .fila::after { content:''; position:absolute; top:0; bottom:0; width:30%; left:-40%;
+                   background:linear-gradient(100deg, transparent, rgba(255,255,255,.13), transparent); transform:skewX(-18deg); }
+    .fila.brilla::after { animation:barrido 1.6s ease-in-out; }
+    @keyframes barrido { to { left:120%; } }
+    .fila.brilla .pre { animation:pulso 1.6s ease-in-out; }
+    @keyframes pulso { 40% { text-shadow:0 0 calc(var(--u)*3) rgba(255,255,255,.9); } }
+
+    .pie { display:flex; align-items:center; gap:calc(var(--u)*2); margin-top:calc(var(--u)*1.5); padding:calc(var(--u)*1.4) calc(var(--u)*2);
+           border:1px solid var(--linea); border-radius:calc(var(--u)*2); background:rgba(255,255,255,.03); }
+    .pie .qr { background:#fff; padding:calc(var(--u)*.6); border-radius:calc(var(--u)*.8); line-height:0; }
+    .pie .qr img, .pie .qr canvas { width:calc(var(--u)*8.5) !important; height:calc(var(--u)*8.5) !important; }
+    .pie b { display:block; font-family:'Bebas Neue', Impact, sans-serif; font-size:calc(var(--u)*3.2); letter-spacing:.08em; }
+    .pie span { color:var(--gris); font-size:calc(var(--u)*1.5); }
+
+    /* ---- VIDRIERA ---- */
+    .slides { position:relative; width:100%; flex:1; margin-top:calc(var(--u)*2); }
+    .slide { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+             opacity:0; transform:scale(.97); transition:opacity 1.1s ease, transform 1.4s cubic-bezier(.16,1,.3,1); }
+    .slide.activa { opacity:1; transform:none; }
+    .foto { width:100%; flex:1; max-height:calc(var(--u)*52); background:#fff; border-radius:calc(var(--u)*3); overflow:hidden;
+            display:flex; align-items:center; justify-content:center; box-shadow:0 0 calc(var(--u)*6) rgba(255,255,255,.12); }
+    .foto img { width:88%; height:88%; object-fit:contain; }
+    .slide.activa .foto img { animation:zoom 9s ease-out forwards; }
+    @keyframes zoom { from { transform:scale(1); } to { transform:scale(1.07); } }
+    .prod-nom { font-family:'Bebas Neue', Impact, sans-serif; font-size:calc(var(--u)*5); letter-spacing:.05em; text-align:center;
+                line-height:1.02; margin-top:calc(var(--u)*3); max-width:100%; }
+    .prod-pre { font-family:'Bebas Neue', Impact, sans-serif; font-size:calc(var(--u)*9); line-height:1; margin-top:calc(var(--u)*1.2);
+                text-shadow:0 0 calc(var(--u)*3) rgba(255,255,255,.35); }
+    .prod-pre small { font-size:.55em; vertical-align:.38em; color:#d4d4d4; }
+    .chip { margin-top:calc(var(--u)*1.6); font-size:calc(var(--u)*1.6); letter-spacing:.3em; color:var(--gris); text-transform:uppercase; }
+    .qr-grande { background:#fff; padding:calc(var(--u)*2); border-radius:calc(var(--u)*3); line-height:0;
+                 box-shadow:0 0 calc(var(--u)*7) rgba(255,255,255,.22); }
+    .qr-grande img, .qr-grande canvas { width:calc(var(--u)*34) !important; height:calc(var(--u)*34) !important; }
+    .qr-tit { font-family:'Bebas Neue', Impact, sans-serif; font-size:calc(var(--u)*7); letter-spacing:.08em; text-align:center; line-height:1; margin-bottom:calc(var(--u)*3); }
+    .qr-txt { color:#d4d4d4; font-size:calc(var(--u)*2.1); text-align:center; margin-top:calc(var(--u)*3); max-width:85%; line-height:1.35; }
+    .qr-url { color:var(--gris); font-size:calc(var(--u)*1.7); letter-spacing:.12em; margin-top:calc(var(--u)*1.2); }
+    .barra { position:absolute; left:calc(var(--u)*3.2); right:calc(var(--u)*3.2); bottom:calc(var(--u)*2); height:2px; background:var(--linea); border-radius:2px; overflow:hidden; }
+    .barra i { display:block; height:100%; width:0; background:var(--txt); box-shadow:0 0 8px #fff; }
+
+    .aviso { margin:auto; color:var(--gris); font-size:calc(var(--u)*2); text-align:center; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } .fila { opacity:1; transform:none; } }
+</style>
+</head>
+<body>
+<div id="lienzo">
+    <div class="fondo"></div><div class="grano"></div>
+    <div class="contenido" id="app"><div class="aviso">Cargando…</div></div>
+</div>
+<script src="../assets/qrcode.min.js"></script>
+<script>
+const API = 'https://tienda.sbbarber.com.ar/api/catalogo?pantalla=1';
+const CACHE = 'sb_pantalla_datos';
+const LOGO = '../assets/logo-sb-studio.png';
+const QRS = [
+    { tit: 'SACÁ TU TURNO', txt: 'Elegí barbero y horario desde el celu, sin esperar.', url: 'https://sbbarber.com.ar/turnos/', ver: 'sbbarber.com.ar/turnos' },
+    { tit: 'TIENDA ONLINE', txt: 'Todos los productos, con envío a todo el país.', url: 'https://tienda.sbbarber.com.ar', ver: 'tienda.sbbarber.com.ar' },
+    { tit: '¿TE GUSTÓ?', txt: 'Dejanos tu reseña en Google: nos ayuda un montón.', url: 'https://g.page/r/CYjlyyErmrYQEBM/review', ver: 'Reseñas en Google' },
+];
+const params = new URLSearchParams(location.search);
+const MODO = params.get('modo') === 'vidriera' ? 'vidriera' : 'precios';
+const ROT = params.get('rotar');
+if (ROT === '90' || ROT === '-90') document.body.classList.add('rot', ROT === '90' ? 'rot90' : 'rot-90');
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const plata = n => `<small>$</small>${Number(n || 0).toLocaleString('es-AR')}`;
+function qr(el, url) { new QRCode(el, { text: url, width: 512, height: 512, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M }); }
+
+let datos = null, firma = '';
+
+async function cargar() {
+    try {
+        const r = await fetch(API, { cache: 'no-store' });
+        if (!r.ok) throw new Error(r.status);
+        const d = await r.json();
+        try { localStorage.setItem(CACHE, JSON.stringify(d)); } catch {}
+        return d;
+    } catch (e) {
+        // Sin internet: se sigue mostrando lo último que llegó (mejor que una tele en negro)
+        try { return datos || JSON.parse(localStorage.getItem(CACHE)); } catch { return datos; }
+    }
+}
+
+// ---------- PRECIOS ----------
+let timerBrillo = null;
+function renderPrecios(d) {
+    const s = d.servicios || [];
+    // Tamaño de letra según cuántos servicios haya, para que siempre entren
+    const fs = Math.max(2.6, Math.min(5.2, 44 / Math.max(s.length, 1)));
+    document.getElementById('app').innerHTML = `
+        <img class="logo" src="${LOGO}" alt="SB">
+        <div class="titulo">SERVICIOS</div>
+        <div class="subt">Lista de precios</div>
+        <div class="sep"></div>
+        <div class="lista" style="--fs:calc(var(--u)*${fs})">
+            ${s.map((x, i) => `<div class="fila" style="animation-delay:${0.25 + i * 0.12}s">
+                <span class="nom">${esc(x.nombre)}</span><span class="pts"></span><span class="pre">${plata(x.precio)}</span></div>`).join('')}
+        </div>
+        <div class="pie"><div class="qr" id="qr-turnos"></div>
+            <div><b>SACÁ TU TURNO ONLINE</b><span>Escaneá con la cámara del celu · sbbarber.com.ar/turnos</span></div></div>`;
+    qr(document.getElementById('qr-turnos'), QRS[0].url);
+    // Cada 7 s un brillo recorre una fila (de arriba hacia abajo, en ronda)
+    clearInterval(timerBrillo);
+    let k = 0;
+    timerBrillo = setInterval(() => {
+        const filas = document.querySelectorAll('.fila');
+        if (!filas.length) return;
+        const f = filas[k++ % filas.length];
+        f.classList.remove('brilla'); void f.offsetWidth; f.classList.add('brilla');
+    }, 7000);
+}
+
+// ---------- VIDRIERA ----------
+const DURA = 9000; // ms por pantalla
+let timerSlide = null;
+function renderVidriera(d) {
+    const prods = (d.productos || []);
+    // Cada 3 productos, un QR (turnos, tienda, reseñas, en ronda)
+    const items = [];
+    let q = 0;
+    prods.forEach((p, i) => { items.push({ p }); if (i % 3 === 2) items.push({ q: QRS[q++ % QRS.length] }); });
+    if (!prods.length) QRS.forEach(x => items.push({ q: x }));
+    else if (q === 0) items.push({ q: QRS[0] });
+
+    document.getElementById('app').innerHTML = `
+        <img class="logo" src="${LOGO}" alt="SB" style="width:calc(var(--u)*8);height:calc(var(--u)*8)">
+        <div class="slides">${items.map((it, i) => it.p ? `
+            <div class="slide">
+                <div class="foto"><img src="${esc(it.p.foto)}" alt="" ${i > 1 ? 'loading="lazy"' : ''}></div>
+                <div class="prod-nom">${esc(it.p.nombre)}</div>
+                <div class="prod-pre">${plata(it.p.precio)}</div>
+                <div class="chip">Disponible en el local</div>
+            </div>` : `
+            <div class="slide">
+                <div class="qr-tit">${esc(it.q.tit)}</div>
+                <div class="qr-grande" data-qr="${esc(it.q.url)}"></div>
+                <div class="qr-txt">${esc(it.q.txt)}</div>
+                <div class="qr-url">${esc(it.q.ver)}</div>
+            </div>`).join('')}
+        </div>
+        <div class="barra"><i></i></div>`;
+    document.querySelectorAll('[data-qr]').forEach(el => qr(el, el.dataset.qr));
+
+    const slides = [...document.querySelectorAll('.slide')];
+    const barra = document.querySelector('.barra i');
+    let k = 0;
+    const mostrar = () => {
+        slides.forEach((s, i) => s.classList.toggle('activa', i === k));
+        barra.style.transition = 'none'; barra.style.width = '0';
+        void barra.offsetWidth;
+        barra.style.transition = `width ${DURA}ms linear`; barra.style.width = '100%';
+        k = (k + 1) % slides.length;
+    };
+    clearInterval(timerSlide);
+    mostrar();
+    timerSlide = setInterval(mostrar, DURA);
+}
+
+async function actualizar() {
+    const d = await cargar();
+    if (!d) {
+        if (!datos) document.getElementById('app').innerHTML = '<div class="aviso">Sin conexión. Reintentando…</div>';
+        return;
+    }
+    // Solo se redibuja si cambió algo (así la animación no se reinicia cada vez)
+    const f = JSON.stringify(MODO === 'vidriera' ? d.productos : d.servicios);
+    if (f === firma) return;
+    firma = f; datos = d;
+    MODO === 'vidriera' ? renderVidriera(d) : renderPrecios(d);
+}
+
+actualizar();
+setInterval(actualizar, 10 * 60 * 1000);             // precios nuevos cada 10 min
+setTimeout(() => location.reload(), 6 * 3600 * 1000); // y se recarga entera cada 6 h (cambios de diseño, memoria)
+
+// Que la tele no apague la pantalla (donde el navegador lo permite)
+async function noDormir() { try { await navigator.wakeLock?.request('screen'); } catch {} }
+noDormir();
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') noDormir(); });
+</script>
+</body>
+</html>

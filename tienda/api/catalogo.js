@@ -6,6 +6,9 @@ import { fetchFirestoreDoc, listFirestoreCollection } from '../lib/firestore.js'
 // una. Así evitamos repetir el agotamiento de cuota que tuvo el proyecto con el pico de tráfico
 // de las campañas de Instagram.
 export default async function handler(req, res) {
+    // Teles del mostrador (precios de la barbería, no de la tienda): ver lib/pantalla.js
+    // (import dinámico: así la tienda no carga firebase-admin en cada visita)
+    if (req.query?.pantalla) return (await import('../lib/pantalla.js')).default(req, res);
     try {
         const [productosOverride, extraProductos, extraKitsRaw, cursos, general, categorias, envios] = await Promise.all([
             listFirestoreCollection('tienda_productos'),
