@@ -9,6 +9,8 @@
     https://sbbarber.com.ar/pantalla/?modo=precios    → precios de servicios (los de Precios en recepcionista)
     https://sbbarber.com.ar/pantalla/?modo=vidriera   → los mismos servicios de a uno, en grande
   Solo servicios (sin productos), por decisión del dueño.
+  Dos estilos de letra: el de ahora (Inter Tight en negrita, como las historias de @sbbaarber) y
+  &estilo=clasico, el primero que se hizo (Bebas Neue en mayúscula, con puntitos y "Lista de precios").
   Si la tele no deja girar la imagen desde su menú (queda acostada), agregar &rotar=90 (o &rotar=-90).
   Datos: tienda.sbbarber.com.ar/api/catalogo?pantalla=1 (lib/pantalla.js, caché de 15 min). Se refresca sola.
 -->
@@ -16,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Inter Tight: la más parecida (libre) a la de las historias de @sbbaarber (títulos muy gruesos,
      subtítulo en itálica, nombres en negrita y datos en fino) -->
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,300;0,400;0,600;0,700;0,900;1,600;1,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter+Tight:ital,wght@0,300;0,400;0,600;0,700;0,900;1,600;1,700&display=swap" rel="stylesheet">
 <style>
     :root { --bg:#050505; --txt:#fafafa; --gris:#8c8c8c; --linea:rgba(255,255,255,.14); }
     * { box-sizing:border-box; margin:0; padding:0; }
@@ -97,6 +99,19 @@
     .barra { position:absolute; left:calc(var(--u)*3.2); right:calc(var(--u)*3.2); bottom:calc(var(--u)*2); height:2px; background:var(--linea); border-radius:2px; overflow:hidden; }
     .barra i { display:block; height:100%; width:0; background:var(--txt); box-shadow:0 0 8px #fff; }
 
+    /* ---- ESTILO CLÁSICO (&estilo=clasico): el primer diseño, Bebas Neue ---- */
+    body.clasico .titulo, body.clasico .fila .nom, body.clasico .fila .pre,
+    body.clasico .srv-num, body.clasico .srv-nom, body.clasico .prod-pre {
+        font-family:'Bebas Neue', Impact, sans-serif; font-weight:400; font-style:normal; text-transform:uppercase; }
+    body.clasico .titulo { font-size:calc(var(--u)*7.4); letter-spacing:.14em; line-height:1; }
+    body.clasico .subt { font-style:normal; font-weight:500; color:var(--gris); font-size:calc(var(--u)*1.5); letter-spacing:.38em; margin-top:calc(var(--u)*.8); }
+    body.clasico .fila .nom { letter-spacing:.05em; }
+    body.clasico .fila .pts { border-bottom:calc(var(--u)*.25) dotted rgba(255,255,255,.28); transform:translateY(calc(var(--u)*-.8)); }
+    body.clasico .fila .pre { letter-spacing:.03em; }
+    body.clasico .srv-num { font-size:calc(var(--u)*3.4); letter-spacing:.2em; }
+    body.clasico .srv-nom { font-size:calc(var(--u)*12); letter-spacing:.03em; }
+    body.clasico .prod-pre { font-size:calc(var(--u)*13); letter-spacing:0; }
+
     .aviso { margin:auto; color:var(--gris); font-size:calc(var(--u)*2); text-align:center; }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } .fila { opacity:1; transform:none; } }
 </style>
@@ -115,6 +130,8 @@ const MODO = params.get('modo') === 'vidriera' ? 'vidriera' : 'precios';
 const ROT = params.get('rotar');
 if (ROT === '90' || ROT === '-90') document.body.classList.add('rot', ROT === '90' ? 'rot90' : 'rot-90');
 else if (params.get('vista')) document.body.classList.add('vista');
+const CLASICO = params.get('estilo') === 'clasico';
+if (CLASICO) document.body.classList.add('clasico');
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const plata = n => `<small>$</small>${Number(n || 0).toLocaleString('es-AR')}`;
@@ -143,6 +160,7 @@ function renderPrecios(d) {
     document.getElementById('app').innerHTML = `
         <img class="logo" src="${LOGO}" alt="SB">
         <div class="titulo">SERVICIOS</div>
+        ${CLASICO ? '<div class="subt">Lista de precios</div>' : ''}
         <div class="sep"></div>
         <div class="lista" style="--fs:calc(var(--u)*${fs})">
             ${s.map((x, i) => `<div class="fila" style="animation-delay:${0.25 + i * 0.12}s">
