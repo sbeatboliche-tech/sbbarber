@@ -22,7 +22,9 @@ export default async function handler(req, res) {
         try {
             if (req.query.action === 'disponibilidad') return res.json(await disponibilidad(req.query));
             if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-            return res.json(await reservar(req.body));
+            // IP real del cliente (Vercel la pone primera en x-forwarded-for) para el límite de reservas por día
+            const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || '';
+            return res.json(await reservar(req.body, ip));
         } catch (e) {
             if (!e.status) console.error('turnos:', e);
             return res.status(e.status || 500).json({ error: e.status ? e.message : 'No se pudo reservar. Probá de nuevo.' });

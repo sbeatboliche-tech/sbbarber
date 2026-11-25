@@ -4216,6 +4216,8 @@ function renderAnotarTurnosList() {
         </div>`;
         return;
     }
+    // Los turnos online los escribe el cliente (nombre, servicio): se escapan antes de meterlos en el HTML
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
     el.innerHTML = dayTurnos.map(t => {
         const th = BARBER_THEME[t.barbero] || {bg:'bg-gray-600',text:'text-gray-400',initial:'?'};
         const photo = barberProfilesData[t.barbero];
@@ -4226,13 +4228,13 @@ function renderAnotarTurnosList() {
         const anotadoPor = t.anotadoPor || BARBER_EMAIL_MAP[t.userEmail] || 'Recepción';
         return `<div class="glass-card rounded-2xl p-4 flex items-center gap-3 ${done ? 'opacity-50' : ''}">
             <div class="text-center w-12 flex-shrink-0">
-                <div class="text-sm font-extrabold text-amber-300">${t.hora||'--:--'}</div>
+                <div class="text-sm font-extrabold text-amber-300">${esc(t.hora||'--:--')}</div>
             </div>
             ${avatar}
             <div class="flex-1 min-w-0">
-                <div class="font-bold text-white text-sm truncate">${t.clientName||'Sin nombre'}</div>
-                <div class="text-[10px] text-gray-500 mt-0.5">${t.barbero||''}${t.servicio?' · '+t.servicio:''}</div>
-                <div class="text-[9px] text-gray-700 mt-0.5">anotado por ${anotadoPor}</div>
+                <div class="font-bold text-white text-sm truncate">${esc(t.clientName||'Sin nombre')}</div>
+                <div class="text-[10px] text-gray-500 mt-0.5">${esc(t.barbero||'')}${t.servicio?' · '+esc(t.servicio):''}</div>
+                <div class="text-[9px] text-gray-700 mt-0.5">anotado por ${esc(anotadoPor)}</div>
             </div>
             <div class="flex gap-2 flex-shrink-0">
                 ${!done

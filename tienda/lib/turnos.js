@@ -4,6 +4,7 @@
 //   POST /api/push?action=reservar {barbero, servicio, largo, fecha, hora, nombre, telefono} → { ok, turnoId }
 // Las reglas de Firestore no dejan leer ni escribir turnos a clientes sin login, así que todo pasa por acá
 // (con la cuenta de servicio) y al cliente solo le llegan las horas libres, nunca los datos de otros turnos.
+import crypto from 'node:crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { barberDb } from './barberAdmin.js';
 import { enviarPush } from './push.js';
@@ -22,6 +23,9 @@ const APERTURA = 11 * 60, CIERRE = 19 * 60 + 30;
 const DIAS_ADELANTE = 14;
 const ANTICIPACION_MIN = 30;                 // no se reserva para dentro de menos de media hora
 const MAX_TURNOS_POR_TEL = 2;                // turnos futuros por teléfono (que nadie llene la agenda)
+const MAX_RESERVAS_POR_IP_DIA = 3;           // reservas por conexión por día (cambiar de teléfono no alcanza)
+// Nombre: solo letras, espacios y ' . - (se muestra en recepcionista y anotar: nada de HTML)
+const NOMBRE_OK = /^[\p{L}\p{M}][\p{L}\p{M} '.-]{1,39}$/u;
 
 const aMin = h => { const [a, b] = String(h).split(':').map(Number); return a * 60 + b; };
 const aHora = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
@@ -36,9 +40,10 @@ function ahoraAR() {
 }
 
 function validarFecha(fecha) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha || '')) return 'Fecha inválida';
+    if (typeof fecha !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return 'Fecha inválida';
     const [a, m, d] = fecha.split('-').map(Number);
     const dia = new Date(Date.UTC(a, m - 1, d));
+    if (dia.toISOString().slice(0, 10) !== fecha) return 'Fecha inválida'; // 2026-02-31 y similares
     if (!DIAS_ABIERTO.includes(dia.getUTCDay())) return 'Ese día está cerrado';
     const hoy = ahoraAR().fecha;
     const dif = (dia - new Date(hoy + 'T00:00:00Z')) / 864e5;
@@ -79,18 +84,21 @@ export async function disponibilidad(q) {
     return { horas: horasLibres(q.fecha, barbero, duracionDe(barbero, q.largo === '1'), ocupados(snap.docs, barbero)) };
 }
 
-export async function reservar(b) {
-    const barbero = String(b?.barbero || '');
-    const servicio = String(b?.servicio || '');
-    const largo = !!b?.largo && servicio !== 'Barba';
-    const nombre = String(b?.nombre || '').trim().replace(/\s+/g, ' ').slice(0, 40);
-    const telefono = String(b?.telefono || '').replace(/\D/g, '');
-    const fecha = String(b?.fecha || ''), hora = String(b?.hora || '');
+export async function reservar(b, ip = '') {
+    const str = v => (typeof v === 'string' ? v : '');
+    const barbero = str(b?.barbero);
+    const servicio = str(b?.servicio);
+    const largo = b?.largo === true && servicio !== 'Barba';
+    const nombre = str(b?.nombre).trim().replace(/\s+/g, ' ');
+    // Para comparar teléfonos: los últimos 10 dígitos (11 6789-1234, +54 9 11..., 011... son el mismo)
+    const telefono = str(b?.telefono).replace(/\D/g, '').slice(-10);
+    const fecha = str(b?.fecha), hora = str(b?.hora);
     const mal = msg => Object.assign(new Error(msg), { status: 400 });
     if (!BARBEROS_ONLINE[barbero]) throw mal('Barbero inválido');
     if (!SERVICIOS.includes(servicio)) throw mal('Servicio inválido');
     if (nombre.length < 2) throw mal('Poné tu nombre');
-    if (telefono.length < 8 || telefono.length > 15) throw mal('Teléfono inválido');
+    if (!NOMBRE_OK.test(nombre)) throw mal('El nombre solo puede tener letras y espacios');
+    if (telefono.length < 8) throw mal('Teléfono inválido');
     const errFecha = validarFecha(fecha);
     if (errFecha) throw mal(errFecha);
     if (!/^\d{2}:\d{2}$/.test(hora)) throw mal('Hora inválida');
@@ -99,12 +107,20 @@ export async function reservar(b) {
     const duracion = duracionDe(barbero, largo);
     const ref = db.collection('turnos').doc();
     const hoy = ahoraAR().fecha;
+    // Límite por conexión y por día: turnos_limite/{hash de la IP}-{día} (la IP no se guarda en claro)
+    const ipHash = crypto.createHash('sha256').update('sb-turnos:' + (ip || 'sin-ip')).digest('hex').slice(0, 32);
+    const limiteRef = db.doc(`turnos_limite/${ipHash}-${hoy}`);
     // Transacción: si dos personas reservan el mismo horario a la vez, la segunda falla al releer.
     await db.runTransaction(async tx => {
-        const [delDia, delTel] = await Promise.all([
+        const [delDia, delTel, limite] = await Promise.all([
             tx.get(db.collection('turnos').where('fecha', '==', fecha)),
             tx.get(db.collection('turnos').where('telefono', '==', telefono)),
+            tx.get(limiteRef),
         ]);
+        const usadas = Number(limite.data()?.n) || 0;
+        if (usadas >= MAX_RESERVAS_POR_IP_DIA) {
+            throw Object.assign(new Error('Hiciste muchas reservas hoy. Si necesitás otro turno, escribinos por WhatsApp.'), { status: 429 });
+        }
         if (!horasLibres(fecha, barbero, duracion, ocupados(delDia.docs, barbero)).includes(hora)) {
             throw Object.assign(new Error('Ese horario se acaba de ocupar. Elegí otro.'), { status: 409 });
         }
@@ -118,6 +134,7 @@ export async function reservar(b) {
             origen: 'online', anotadoPor: 'Online', userEmail: null,
             pushEnviado: true, creadoEn: FieldValue.serverTimestamp()
         });
+        tx.set(limiteRef, { n: usadas + 1, dia: hoy, actualizado: FieldValue.serverTimestamp() });
     });
 
     // Aviso al barbero y a los dueños (si falla, el turno ya quedó guardado)
