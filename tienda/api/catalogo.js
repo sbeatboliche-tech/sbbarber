@@ -1,4 +1,6 @@
 import { fetchFirestoreDoc, listFirestoreCollection } from '../lib/firestore.js';
+// Estático a propósito: con import() dinámico Vercel no incluía el módulo y la función fallaba
+import pantallaHandler from '../lib/pantalla.js';
 
 // Catálogo dinámico de la tienda (overrides de stock/precio, productos y kits cargados desde el
 // admin, cursos, config de categorías/envíos) servido con caché de borde: durante la ventana de
@@ -7,8 +9,7 @@ import { fetchFirestoreDoc, listFirestoreCollection } from '../lib/firestore.js'
 // de las campañas de Instagram.
 export default async function handler(req, res) {
     // Teles del mostrador (precios de la barbería, no de la tienda): ver lib/pantalla.js
-    // (import dinámico: así la tienda no carga firebase-admin en cada visita)
-    if (req.query?.pantalla) return (await import('../lib/pantalla.js')).default(req, res);
+    if (req.query?.pantalla) return pantallaHandler(req, res);
     try {
         const [productosOverride, extraProductos, extraKitsRaw, cursos, general, categorias, envios] = await Promise.all([
             listFirestoreCollection('tienda_productos'),
