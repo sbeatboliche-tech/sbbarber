@@ -143,7 +143,6 @@ function renderPrecios(d) {
     document.getElementById('app').innerHTML = `
         <img class="logo" src="${LOGO}" alt="SB">
         <div class="titulo">SERVICIOS</div>
-        <div class="subt">SB Studio</div>
         <div class="sep"></div>
         <div class="lista" style="--fs:calc(var(--u)*${fs})">
             ${s.map((x, i) => `<div class="fila" style="animation-delay:${0.25 + i * 0.12}s">
@@ -198,7 +197,6 @@ function renderVidriera(d) {
                 <div class="srv-nom">${esc(s.nombre)}</div>
                 <div class="srv-linea"></div>
                 <div class="prod-pre">${plata(s.precio)}</div>
-                <div class="chip">SB Studio · Barbería</div>
             </div>`).join('')}
         </div>
         <div class="barra"><i></i></div>`;
