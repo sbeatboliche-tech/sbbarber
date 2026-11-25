@@ -7,7 +7,7 @@
 <!--
   Teles verticales del mostrador. Se abre una URL por tele, en pantalla completa:
     https://sbbarber.com.ar/pantalla/?modo=precios    → precios de servicios (los de Precios en recepcionista)
-    https://sbbarber.com.ar/pantalla/?modo=vidriera   → los mismos servicios de a uno, en grande, intercalados con QR
+    https://sbbarber.com.ar/pantalla/?modo=vidriera   → los mismos servicios de a uno, en grande
   Solo servicios (sin productos), por decisión del dueño.
   Si la tele no deja girar la imagen desde su menú (queda acostada), agregar &rotar=90 (o &rotar=-90).
   Datos: tienda.sbbarber.com.ar/api/catalogo?pantalla=1 (lib/pantalla.js, caché de 15 min). Se refresca sola.
@@ -66,13 +66,6 @@
     .fila.brilla .pre { animation:pulso 1.6s ease-in-out; }
     @keyframes pulso { 40% { text-shadow:0 0 calc(var(--u)*3) rgba(255,255,255,.9); } }
 
-    .pie { display:flex; align-items:center; gap:calc(var(--u)*2); margin-top:calc(var(--u)*1.5); padding:calc(var(--u)*1.4) calc(var(--u)*2);
-           border:1px solid var(--linea); border-radius:calc(var(--u)*2); background:rgba(255,255,255,.03); }
-    .pie .qr { background:#fff; padding:calc(var(--u)*.6); border-radius:calc(var(--u)*.8); line-height:0; }
-    .pie .qr img, .pie .qr canvas { width:calc(var(--u)*8.5) !important; height:calc(var(--u)*8.5) !important; }
-    .pie b { display:block; font-family:'Bebas Neue', Impact, sans-serif; font-size:calc(var(--u)*3.2); letter-spacing:.08em; }
-    .pie span { color:var(--gris); font-size:calc(var(--u)*1.5); }
-
     /* ---- VIDRIERA ---- */
     .slides { position:relative; width:100%; flex:1; margin-top:calc(var(--u)*2); }
     .slide { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -94,12 +87,6 @@
                 text-shadow:0 0 calc(var(--u)*3) rgba(255,255,255,.35); }
     .prod-pre small { font-size:.55em; vertical-align:.38em; color:#d4d4d4; }
     .chip { margin-top:calc(var(--u)*1.6); font-size:calc(var(--u)*1.6); letter-spacing:.3em; color:var(--gris); text-transform:uppercase; }
-    .qr-grande { background:#fff; padding:calc(var(--u)*2); border-radius:calc(var(--u)*3); line-height:0;
-                 box-shadow:0 0 calc(var(--u)*7) rgba(255,255,255,.22); }
-    .qr-grande img, .qr-grande canvas { width:calc(var(--u)*34) !important; height:calc(var(--u)*34) !important; }
-    .qr-tit { font-family:'Bebas Neue', Impact, sans-serif; font-size:calc(var(--u)*7); letter-spacing:.08em; text-align:center; line-height:1; margin-bottom:calc(var(--u)*3); }
-    .qr-txt { color:#d4d4d4; font-size:calc(var(--u)*2.1); text-align:center; margin-top:calc(var(--u)*3); max-width:85%; line-height:1.35; }
-    .qr-url { color:var(--gris); font-size:calc(var(--u)*1.7); letter-spacing:.12em; margin-top:calc(var(--u)*1.2); }
     .barra { position:absolute; left:calc(var(--u)*3.2); right:calc(var(--u)*3.2); bottom:calc(var(--u)*2); height:2px; background:var(--linea); border-radius:2px; overflow:hidden; }
     .barra i { display:block; height:100%; width:0; background:var(--txt); box-shadow:0 0 8px #fff; }
 
@@ -112,15 +99,10 @@
     <div class="fondo"></div><div class="grano"></div>
     <div class="contenido" id="app"><div class="aviso">Cargando…</div></div>
 </div>
-<script src="../assets/qrcode.min.js"></script>
 <script>
 const API = 'https://tienda.sbbarber.com.ar/api/catalogo?pantalla=1';
 const CACHE = 'sb_pantalla_datos';
 const LOGO = '../assets/logo-sb-studio.png';
-const QRS = [
-    { tit: 'SACÁ TU TURNO', txt: 'Elegí barbero y horario desde el celu, sin esperar.', url: 'https://sbbarber.com.ar/turnos/', ver: 'sbbarber.com.ar/turnos' },
-    { tit: '¿TE GUSTÓ?', txt: 'Dejanos tu reseña en Google: nos ayuda un montón.', url: 'https://g.page/r/CYjlyyErmrYQEBM/review', ver: 'Reseñas en Google' },
-];
 const params = new URLSearchParams(location.search);
 const MODO = params.get('modo') === 'vidriera' ? 'vidriera' : 'precios';
 const ROT = params.get('rotar');
@@ -128,7 +110,6 @@ if (ROT === '90' || ROT === '-90') document.body.classList.add('rot', ROT === '9
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const plata = n => `<small>$</small>${Number(n || 0).toLocaleString('es-AR')}`;
-function qr(el, url) { new QRCode(el, { text: url, width: 512, height: 512, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M }); }
 
 let datos = null, firma = '';
 
@@ -159,10 +140,7 @@ function renderPrecios(d) {
         <div class="lista" style="--fs:calc(var(--u)*${fs})">
             ${s.map((x, i) => `<div class="fila" style="animation-delay:${0.25 + i * 0.12}s">
                 <span class="nom">${esc(x.nombre)}</span><span class="pts"></span><span class="pre">${plata(x.precio)}</span></div>`).join('')}
-        </div>
-        <div class="pie"><div class="qr" id="qr-turnos"></div>
-            <div><b>SACÁ TU TURNO ONLINE</b><span>Escaneá con la cámara del celu · sbbarber.com.ar/turnos</span></div></div>`;
-    qr(document.getElementById('qr-turnos'), QRS[0].url);
+        </div>`;
     ajustarLista();
     // Cada 7 s un brillo recorre una fila (de arriba hacia abajo, en ronda)
     clearInterval(timerBrillo);
@@ -199,34 +177,23 @@ addEventListener('resize', ajustarLista);
 const DURA = 9000; // ms por pantalla
 let timerSlide = null;
 function renderVidriera(d) {
+    // Solo los precios: un servicio por pantalla (sin QR, decisión del dueño)
     const servs = (d.servicios || []);
-    // Un servicio por pantalla y, cada 3, un QR (turnos y reseñas, en ronda)
-    const items = [];
-    let q = 0;
-    servs.forEach((s, i) => { items.push({ s, n: i + 1 }); if (i % 3 === 2) items.push({ q: QRS[q++ % QRS.length] }); });
-    if (!servs.length) QRS.forEach(x => items.push({ q: x }));
-    else if (q === 0) items.push({ q: QRS[0] });
+    if (!servs.length) { document.getElementById('app').innerHTML = '<div class="aviso">Sin servicios cargados</div>'; return; }
     const dos = n => String(n).padStart(2, '0');
 
     document.getElementById('app').innerHTML = `
         <img class="logo" src="${LOGO}" alt="SB">
-        <div class="slides">${items.map(it => it.s ? `
+        <div class="slides">${servs.map((s, i) => `
             <div class="slide">
-                <div class="srv-num">${dos(it.n)} <span>/ ${dos(servs.length)}</span></div>
-                <div class="srv-nom">${esc(it.s.nombre)}</div>
+                <div class="srv-num">${dos(i + 1)} <span>/ ${dos(servs.length)}</span></div>
+                <div class="srv-nom">${esc(s.nombre)}</div>
                 <div class="srv-linea"></div>
-                <div class="prod-pre">${plata(it.s.precio)}</div>
+                <div class="prod-pre">${plata(s.precio)}</div>
                 <div class="chip">SB Studio · Barbería</div>
-            </div>` : `
-            <div class="slide">
-                <div class="qr-tit">${esc(it.q.tit)}</div>
-                <div class="qr-grande" data-qr="${esc(it.q.url)}"></div>
-                <div class="qr-txt">${esc(it.q.txt)}</div>
-                <div class="qr-url">${esc(it.q.ver)}</div>
             </div>`).join('')}
         </div>
         <div class="barra"><i></i></div>`;
-    document.querySelectorAll('[data-qr]').forEach(el => qr(el, el.dataset.qr));
 
     const slides = [...document.querySelectorAll('.slide')];
     const barra = document.querySelector('.barra i');

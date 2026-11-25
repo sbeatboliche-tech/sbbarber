@@ -20,7 +20,7 @@ const SERVICIOS_BASE = [
 ];
 
 // Servicios que existen para anotar cortes pero no van en las teles
-const NO_MOSTRAR = new Set(['Corte Promo 50%']);
+const NO_MOSTRAR = new Set(['Corte Promo 50%', 'Corte + Pomada', 'Corte VIP + peinado']);
 
 // Mismo criterio que applyServicePrices en recepcionista
 function servicios(cfg) {
