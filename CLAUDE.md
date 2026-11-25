@@ -52,6 +52,10 @@ Los productos de `productos_barber` (proyecto `sb-barber-6dc16`) se enlazan a un
   - Código desconocido → elegir de qué producto es o crear uno nuevo.
 - Precio de productos: en Stock de productos (recepcionista) se toca el precio y se guarda en `productos_barber/{id}.precio` con `precioEditado: true`; para los productos base hardcodeados (`PRODUCTOS_BARBER_BASE`) ese precio manda sobre el del código, en recepcionista y anotar.
 
+## Turnos online
+
+`turnos/index.html` (GitHub Pages) reserva contra `tienda/lib/turnos.js` vía `/api/push?action=disponibilidad|reservar` (públicos, sin login; van en `api/push.js` por el límite de 12 funciones). El turno queda **confirmado solo** en `turnos/{id}` (misma colección que recepcionista y anotar, `barbero` = nombre de config: `Santi`, `SantiF`, `Stefa`), con `origen: 'online'`, `duracion`, `telefono` y aviso push al barbero y a los dueños. Barberos, duraciones (Santi/SantiF 45 min, Stefa 60, pelo largo +15), horario (mar–sáb 11:00–19:30) y límites (2 turnos futuros por teléfono —últimos 10 dígitos—, 3 reservas por IP por día en `turnos_limite/`) viven en `BARBEROS_ONLINE`/constantes de `lib/turnos.js`; `turnos/index.html` repite barberos y duraciones solo para mostrar. Los turnos cargados a mano sin `duracion` bloquean la duración del barbero. Lo que escribe el cliente se escapa al mostrarlo (recepcionista `escHtml`, anotar `esc`). Pendiente: WhatsApp automático de confirmación y recordatorio (API oficial de Meta + plantillas).
+
 ## Recepcionista (cierre de caja)
 
 `recepcionista/index.html` calcula el cierre diario/semanal a partir de cortes, retiros, propinas y ajustes. Hay atajos de teclado Ctrl+Shift+7 (Tony) y Ctrl+Shift+6 (Stefa) que descuentan $5.000 del "A cobrar" de la semana: se guardan en `ajustes_semanales` (un doc por semana y barbero, idempotente) y el cierre semanal los resta en silencio, sin tocar retiros ni la caja diaria. No mostrar avisos ni filas por estos atajos (fue decisión explícita).
