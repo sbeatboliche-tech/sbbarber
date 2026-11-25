@@ -7,7 +7,8 @@
 <!--
   Teles verticales del mostrador. Se abre una URL por tele, en pantalla completa:
     https://sbbarber.com.ar/pantalla/?modo=precios    → precios de servicios (los de Precios en recepcionista)
-    https://sbbarber.com.ar/pantalla/?modo=vidriera   → productos con foto y precio, intercalados con QR
+    https://sbbarber.com.ar/pantalla/?modo=vidriera   → los mismos servicios de a uno, en grande, intercalados con QR
+  Solo servicios (sin productos), por decisión del dueño.
   Si la tele no deja girar la imagen desde su menú (queda acostada), agregar &rotar=90 (o &rotar=-90).
   Datos: tienda.sbbarber.com.ar/api/catalogo?pantalla=1 (lib/pantalla.js, caché de 15 min). Se refresca sola.
 -->
@@ -77,14 +78,19 @@
     .slide { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
              opacity:0; transform:scale(.97); transition:opacity 1.1s ease, transform 1.4s cubic-bezier(.16,1,.3,1); }
     .slide.activa { opacity:1; transform:none; }
-    .foto { width:100%; flex:1; max-height:calc(var(--u)*52); background:#fff; border-radius:calc(var(--u)*3); overflow:hidden;
-            display:flex; align-items:center; justify-content:center; box-shadow:0 0 calc(var(--u)*6) rgba(255,255,255,.12); }
-    .foto img { width:88%; height:88%; object-fit:contain; }
-    .slide.activa .foto img { animation:zoom 9s ease-out forwards; }
-    @keyframes zoom { from { transform:scale(1); } to { transform:scale(1.07); } }
-    .prod-nom { font-family:'Bebas Neue', Impact, sans-serif; font-size:calc(var(--u)*5); letter-spacing:.05em; text-align:center;
-                line-height:1.02; margin-top:calc(var(--u)*3); max-width:100%; }
-    .prod-pre { font-family:'Bebas Neue', Impact, sans-serif; font-size:calc(var(--u)*9); line-height:1; margin-top:calc(var(--u)*1.2);
+    .srv-num { font-family:'Bebas Neue', Impact, sans-serif; font-size:calc(var(--u)*3.4); letter-spacing:.2em; color:#d4d4d4; }
+    .srv-num span { color:#555; }
+    .srv-nom { font-family:'Bebas Neue', Impact, sans-serif; font-size:calc(var(--u)*12); letter-spacing:.03em; text-align:center;
+               line-height:.92; margin-top:calc(var(--u)*3); max-width:100%; text-shadow:0 0 calc(var(--u)*4) rgba(255,255,255,.22);
+               overflow-wrap:anywhere; }
+    .srv-linea { height:2px; width:0; margin:calc(var(--u)*4) 0 calc(var(--u)*3);
+                 background:linear-gradient(90deg, transparent, #fff, transparent); box-shadow:0 0 12px #fff; }
+    .slide.activa .srv-linea { animation:linea 1.6s .3s cubic-bezier(.16,1,.3,1) forwards; }
+    @keyframes linea { to { width:60%; } }
+    .slide .srv-nom, .slide .prod-pre { opacity:0; transform:translateY(calc(var(--u)*2)); transition:opacity 1s .2s, transform 1.2s .2s cubic-bezier(.16,1,.3,1); }
+    .slide .prod-pre { transition-delay:.55s; }
+    .slide.activa .srv-nom, .slide.activa .prod-pre { opacity:1; transform:none; }
+    .prod-pre { font-family:'Bebas Neue', Impact, sans-serif; font-size:calc(var(--u)*13); line-height:1;
                 text-shadow:0 0 calc(var(--u)*3) rgba(255,255,255,.35); }
     .prod-pre small { font-size:.55em; vertical-align:.38em; color:#d4d4d4; }
     .chip { margin-top:calc(var(--u)*1.6); font-size:calc(var(--u)*1.6); letter-spacing:.3em; color:var(--gris); text-transform:uppercase; }
@@ -113,7 +119,6 @@ const CACHE = 'sb_pantalla_datos';
 const LOGO = '../assets/logo-sb-studio.png';
 const QRS = [
     { tit: 'SACÁ TU TURNO', txt: 'Elegí barbero y horario desde el celu, sin esperar.', url: 'https://sbbarber.com.ar/turnos/', ver: 'sbbarber.com.ar/turnos' },
-    { tit: 'TIENDA ONLINE', txt: 'Todos los productos, con envío a todo el país.', url: 'https://tienda.sbbarber.com.ar', ver: 'tienda.sbbarber.com.ar' },
     { tit: '¿TE GUSTÓ?', txt: 'Dejanos tu reseña en Google: nos ayuda un montón.', url: 'https://g.page/r/CYjlyyErmrYQEBM/review', ver: 'Reseñas en Google' },
 ];
 const params = new URLSearchParams(location.search);
@@ -194,22 +199,24 @@ addEventListener('resize', ajustarLista);
 const DURA = 9000; // ms por pantalla
 let timerSlide = null;
 function renderVidriera(d) {
-    const prods = (d.productos || []);
-    // Cada 3 productos, un QR (turnos, tienda, reseñas, en ronda)
+    const servs = (d.servicios || []);
+    // Un servicio por pantalla y, cada 3, un QR (turnos y reseñas, en ronda)
     const items = [];
     let q = 0;
-    prods.forEach((p, i) => { items.push({ p }); if (i % 3 === 2) items.push({ q: QRS[q++ % QRS.length] }); });
-    if (!prods.length) QRS.forEach(x => items.push({ q: x }));
+    servs.forEach((s, i) => { items.push({ s, n: i + 1 }); if (i % 3 === 2) items.push({ q: QRS[q++ % QRS.length] }); });
+    if (!servs.length) QRS.forEach(x => items.push({ q: x }));
     else if (q === 0) items.push({ q: QRS[0] });
+    const dos = n => String(n).padStart(2, '0');
 
     document.getElementById('app').innerHTML = `
-        <img class="logo" src="${LOGO}" alt="SB" style="width:calc(var(--u)*8);height:calc(var(--u)*8)">
-        <div class="slides">${items.map((it, i) => it.p ? `
+        <img class="logo" src="${LOGO}" alt="SB">
+        <div class="slides">${items.map(it => it.s ? `
             <div class="slide">
-                <div class="foto"><img src="${esc(it.p.foto)}" alt="" ${i > 1 ? 'loading="lazy"' : ''}></div>
-                <div class="prod-nom">${esc(it.p.nombre)}</div>
-                <div class="prod-pre">${plata(it.p.precio)}</div>
-                <div class="chip">Disponible en el local</div>
+                <div class="srv-num">${dos(it.n)} <span>/ ${dos(servs.length)}</span></div>
+                <div class="srv-nom">${esc(it.s.nombre)}</div>
+                <div class="srv-linea"></div>
+                <div class="prod-pre">${plata(it.s.precio)}</div>
+                <div class="chip">SB Studio · Barbería</div>
             </div>` : `
             <div class="slide">
                 <div class="qr-tit">${esc(it.q.tit)}</div>
@@ -243,7 +250,7 @@ async function actualizar() {
         return;
     }
     // Solo se redibuja si cambió algo (así la animación no se reinicia cada vez)
-    const f = JSON.stringify(MODO === 'vidriera' ? d.productos : d.servicios);
+    const f = JSON.stringify(d.servicios);
     if (f === firma) return;
     firma = f; datos = d;
     MODO === 'vidriera' ? renderVidriera(d) : renderPrecios(d);

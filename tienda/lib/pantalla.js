@@ -1,9 +1,9 @@
-// Datos de las teles del mostrador (sbbarber.com.ar/pantalla/): precios de servicios y productos con foto.
-//   GET /api/catalogo?pantalla=1 → { servicios: [{nombre, precio}], productos: [{nombre, precio, foto}] }
+// Datos de las teles del mostrador (sbbarber.com.ar/pantalla/): precios de los servicios.
+//   GET /api/catalogo?pantalla=1 → { servicios: [{nombre, precio}] }
 // Va adentro de catalogo.js porque el plan Hobby de Vercel no deja más de 12 funciones en api/.
 // Las reglas de Firestore solo dejan leer config_precios y productos_barber a cuentas logueadas, y loguear
 // una tele es incómodo: se lee acá con la cuenta de servicio y solo se devuelve lo que se muestra en público.
-// Caché de borde de 15 min: las dos teles juntas gastan ~25 lecturas cada 15 min (plan Spark, cuota justa).
+// Caché de borde de 15 min: las dos teles juntas gastan 1 lectura cada 15 min (plan Spark, cuota justa).
 import { barberDb } from './barberAdmin.js';
 
 // MISMA lista base que SERVICES en recepcionista/index.html (si se agrega un servicio fijo ahí, agregarlo acá).
@@ -19,6 +19,9 @@ const SERVICIOS_BASE = [
     { nombre: 'Global', precio: 60000 },
 ];
 
+// Servicios que existen para anotar cortes pero no van en las teles
+const NO_MOSTRAR = new Set(['Corte Promo 50%']);
+
 // Mismo criterio que applyServicePrices en recepcionista
 function servicios(cfg) {
     const lista = SERVICIOS_BASE.map(s => ({ ...s }));
@@ -31,26 +34,17 @@ function servicios(cfg) {
         lista.sort((a, b) => (pos.has(a.nombre) ? pos.get(a.nombre) : Infinity) - (pos.has(b.nombre) ? pos.get(b.nombre) : Infinity));
     }
     const ocultos = new Set(cfg.__ocultos || []);
-    return lista.filter(s => !ocultos.has(s.nombre) && s.precio > 0);
+    return lista.filter(s => !ocultos.has(s.nombre) && !NO_MOSTRAR.has(s.nombre) && s.precio > 0);
 }
 
 export default async function pantallaHandler(req, res) {
     try {
-        const db = barberDb();
-        const [cfgSnap, prodSnap] = await Promise.all([
-            db.doc('config_precios/servicios').get(),
-            db.collection('productos_barber').get(),
-        ]);
-        // Para la vidriera: con foto, precio y stock, en el orden de Stock de productos
-        const productos = prodSnap.docs.map(d => d.data())
-            .filter(p => !p.oculto && p.photoURL && Number(p.precio) > 0 && Number(p.stock) > 0)
-            .sort((a, b) => (a.position ?? 999) - (b.position ?? 999))
-            .map(p => ({ nombre: p.name, precio: Number(p.precio), foto: p.photoURL }));
-
+        // Las teles muestran solo servicios (decisión del dueño): 1 lectura cada 15 min
+        const cfgSnap = await barberDb().doc('config_precios/servicios').get();
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
         res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=900');
-        res.status(200).json({ servicios: servicios(cfgSnap.exists ? cfgSnap.data() : {}), productos, generado: new Date().toISOString() });
+        res.status(200).json({ servicios: servicios(cfgSnap.exists ? cfgSnap.data() : {}), generado: new Date().toISOString() });
     } catch (e) {
         console.error('pantalla:', e);
         res.status(500).json({ error: 'No se pudieron cargar los precios' });
