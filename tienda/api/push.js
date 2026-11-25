@@ -2,17 +2,33 @@
 //   POST /api/push?action=turno {turnoId} → "Turno nuevo" al barbero del turno (no a quien lo anotó).
 //   POST /api/push?action=prueba          → (solo dueños) aviso de prueba a los celus de los dueños.
 // El contenido sale del turno guardado en Firestore, no del cliente; turnos/{id}.pushEnviado evita duplicados.
+//   GET  /api/push?action=disponibilidad / POST ?action=reservar → turnos online, PÚBLICO (ver lib/turnos.js;
+//        va acá porque el plan Hobby de Vercel no deja más de 12 funciones en api/).
 import { barberDb, verifyBarberUser, OWNERS } from '../lib/barberAdmin.js';
 import { enviarPush } from '../lib/push.js';
+import { disponibilidad, reservar } from '../lib/turnos.js';
 
 const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Cache-Control', 'no-store');
     if (req.method === 'OPTIONS') return res.status(204).end();
+
+    // Turnos online: sin login (los clientes no tienen cuenta)
+    if (req.query.action === 'disponibilidad' || req.query.action === 'reservar') {
+        try {
+            if (req.query.action === 'disponibilidad') return res.json(await disponibilidad(req.query));
+            if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+            return res.json(await reservar(req.body));
+        } catch (e) {
+            if (!e.status) console.error('turnos:', e);
+            return res.status(e.status || 500).json({ error: e.status ? e.message : 'No se pudo reservar. Probá de nuevo.' });
+        }
+    }
+
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     const user = await verifyBarberUser(req);

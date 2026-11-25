@@ -124,6 +124,16 @@
                         <h1 class="text-2xl font-bold tracking-wide">Elegí el servicio</h1>
                     </div>
                     <div id="service-list" class="grid grid-cols-1 gap-4"></div>
+
+                    <!-- Pregunta pelo largo (suma 15 min al turno) -->
+                    <div id="largo-box" class="hidden mt-6 bg-[#121212] border border-zinc-700 rounded-2xl p-5">
+                        <p class="text-lg font-bold mb-1">¿Tenés el pelo largo?</p>
+                        <p class="text-sm text-zinc-400 mb-4">Así te reservamos el tiempo justo.</p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="window.elegirLargo(false)" class="bg-black border border-zinc-700 rounded-xl py-3.5 font-bold">No</button>
+                            <button onclick="window.elegirLargo(true)" class="bg-black border border-zinc-700 rounded-xl py-3.5 font-bold">Sí</button>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- PASO 3 · FECHA Y HORA -->
@@ -166,8 +176,9 @@
 
                     <div class="fixed bottom-0 left-0 w-full p-6 bg-black border-t border-zinc-800 safe-area-bottom hidden" id="confirm-bar">
                         <button id="btn-confirm" class="w-full bg-white text-black font-bold text-lg rounded-xl py-4 hover:bg-zinc-200 transition duration-150 shadow-lg uppercase tracking-wide flex justify-center items-center">
-                            Pedir turno por WhatsApp
+                            Confirmar turno
                         </button>
+                        <p id="confirm-error" class="hidden text-center text-sm text-red-400 mt-3"></p>
                     </div>
                 </section>
 
@@ -183,84 +194,58 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 13l3 3 7-7"></path>
             </svg>
         </div>
-        <h1 class="text-3xl font-bold mb-2 tracking-wide">¡Ya casi!</h1>
-        <p class="text-zinc-400 mb-8">Mandanos el mensaje por WhatsApp y te confirmamos el turno 💈</p>
+        <h1 class="text-3xl font-bold mb-2 tracking-wide">¡Turno confirmado!</h1>
+        <p class="text-zinc-400 mb-8">Te esperamos en SB Barber · Dávila 951 💈</p>
         <div id="success-details" class="bg-[#121212] border border-zinc-800 rounded-2xl p-5 w-full max-w-sm text-sm mb-6"></div>
-        <a id="wa-confirm-btn" href="#" target="_blank" rel="noopener" style="display:none;" class="w-full max-w-sm bg-[#25D366] text-black font-bold text-lg rounded-xl py-4 uppercase tracking-wide mb-3 flex items-center justify-center gap-2">
-            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
-            Confirmar por WhatsApp
+        <a id="cal-btn" href="#" target="_blank" rel="noopener" class="w-full max-w-sm bg-white text-black font-bold text-lg rounded-xl py-4 uppercase tracking-wide mb-3 flex items-center justify-center gap-2">
+            📅 Agregar al calendario
         </a>
-        <button onclick="location.reload()" class="w-full max-w-sm bg-white text-black font-bold text-lg rounded-xl py-4 uppercase tracking-wide">
+        <a id="wa-aviso-btn" href="#" target="_blank" rel="noopener" class="w-full max-w-sm text-zinc-400 text-sm py-3 mb-2 underline">
+            ¿No podés venir? Avisanos por WhatsApp
+        </a>
+        <button onclick="location.reload()" class="w-full max-w-sm border border-zinc-700 text-white font-bold rounded-xl py-3 uppercase tracking-wide">
             Sacar otro turno
         </button>
     </div>
 
     <script>
         /* ===========================================================
-           CONFIGURACIÓN
+           TURNOS ONLINE — el turno queda confirmado solo.
+           Horarios libres y reserva: tienda.sbbarber.com.ar/api/push?action=disponibilidad|reservar
+           (tienda/lib/turnos.js, que también define barberos, duraciones y horario del local).
+           Precios: los de Precios en recepcionista (vía /api/catalogo?pantalla=1, cacheado).
            =========================================================== */
-
-        const barberosConfig = [
-            { id: 'tony',  nombre: 'Tony',  inicio: '11:00', fin: '19:30', grilla: 30, foto: 'tony.jpg',
-              duraciones: { corte_barba: 45, pelo_largo: 50 } },
-            { id: 'stefa', nombre: 'Stefa', inicio: '11:00', fin: '19:00', grilla: 30, foto: 'stefa.jpg',
-              duraciones: { corte: 45, corte_barba: 60, pelo_largo: 60 } },
-            { id: 'bauti', nombre: 'Bauti', inicio: '11:00', fin: '19:30', grilla: 30, foto: 'bauti.jpg',
-              duraciones: { corte: 40, pelo_largo: 50 } },
-            { id: 'santi', nombre: 'Santi', inicio: '11:00', fin: '19:30', grilla: 30, foto: 'santi.jpg',
-              duraciones: {} },
-            { id: 'santif', nombre: 'Santi Flores', inicio: '11:00', fin: '19:30', grilla: 30, foto: 'santif.jpg',
-              duraciones: {} }
-        ];
-
-        const SERVICIOS = [
-            { id: 'corte',       nombre: 'Corte',         duracion: 30, precio: 16000 },
-            { id: 'corte_barba', nombre: 'Corte y Barba', duracion: 50, precio: 20000 },
-            { id: 'barba',       nombre: 'Barba',         duracion: 20, precio: 12000 },
-            { id: 'pelo_largo',  nombre: 'Pelo Largo',    duracion: 40, precio: 18000 }
-        ];
-
-        // 0=Dom · 1=Lun · 2=Mar · 3=Mié · 4=Jue · 5=Vie · 6=Sáb
-        const DIAS_CERRADOS = [0, 1];
-        const DIAS_A_MOSTRAR = 14;
-        const MIN_ANTICIPACION = 20;
-
-        // Pegá acá la URL de Make.com cuando la tengas
-        const WEBHOOK_URL = '';
-
-        // Número WhatsApp formato internacional sin + ni espacios (ej: 5491170583352)
+        const API = 'https://tienda.sbbarber.com.ar/api';
         const WHATSAPP_BARBERIA = '541170583352';
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
-            authDomain: "sb-barber-6dc16.firebaseapp.com",
-            projectId: "sb-barber-6dc16",
-            storageBucket: "sb-barber-6dc16.firebasestorage.app",
-            messagingSenderId: "213501157745",
-            appId: "1:213501157745:web:09fd59996cf1d72b6696d0"
-        };
+        // Mismos barberos y duraciones que tienda/lib/turnos.js (el servidor es el que manda)
+        const barberosConfig = [
+            { id: 'Santi',  nombre: 'Santi',        duracion: 45, foto: 'santi.jpg' },
+            { id: 'SantiF', nombre: 'Santi Flores', duracion: 45, foto: 'santif.jpg' },
+            { id: 'Stefa',  nombre: 'Stefa',        duracion: 60, foto: 'stefa.jpg' },
+        ];
+        const LARGO_EXTRA = 15;
+        const SERVICIOS = [
+            { id: 'Corte',         nombre: 'Corte',         precio: 20000 },
+            { id: 'Corte y Barba', nombre: 'Corte y Barba', precio: 24000 },
+            { id: 'Barba',         nombre: 'Barba',         precio: 12000 },
+        ];
+        let precioPeloLargo = 22000;
+        const DIAS_CERRADOS = [0, 1];   // domingo y lunes
+        const DIAS_A_MOSTRAR = 14;
 
-        /* =========================================================== */
+        let turnoActual = { barbero: null, servicio: null, largo: false, fecha: null, hora: null };
 
-        let db = null;
-        let fb = {};
-        let fbReady = false;
-        let turnoActual = { barbero: null, servicio: null, fecha: null, hora: null };
-
-        const aMin  = (hhmm) => { const [h,m] = hhmm.split(':').map(Number); return h*60+m; };
-        const aHHMM = (min)  => String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0');
-        const fmtPrecio = (n) => '$'+n.toLocaleString('es-AR');
-
-        function getDuracion(barbero, servicio) {
-            if (barbero?.duraciones?.[servicio.id] !== undefined) return barbero.duraciones[servicio.id];
-            return servicio.duracion;
-        }
+        const fmtPrecio = n => '$' + Number(n).toLocaleString('es-AR');
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+        const duracion = () => turnoActual.barbero.duracion + (turnoActual.largo ? LARGO_EXTRA : 0);
+        const precio = () => turnoActual.servicio.id === 'Corte' && turnoActual.largo ? precioPeloLargo : turnoActual.servicio.precio;
+        const nombreServicio = () => turnoActual.servicio.nombre + (turnoActual.largo ? ' (pelo largo)' : '');
 
         function fechaLegible(iso) {
             const [y,m,d] = iso.split('-').map(Number);
-            const dt = new Date(y, m-1, d);
             const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-            return dias[dt.getDay()]+' '+String(d).padStart(2,'0')+'/'+String(m).padStart(2,'0');
+            return dias[new Date(y, m-1, d).getDay()]+' '+String(d).padStart(2,'0')+'/'+String(m).padStart(2,'0');
         }
 
         function ocultarSplash() {
@@ -278,27 +263,35 @@
             else confirmBar.classList.add('hidden');
         };
 
+        function limpiarFechaHora() {
+            turnoActual.fecha = null; turnoActual.hora = null;
+            document.querySelectorAll('.date-item').forEach(d => d.classList.remove('selected-item'));
+            document.getElementById('time-slots').innerHTML = '';
+            document.getElementById('time-label').classList.add('hidden');
+        }
+
         function renderBarbers() {
             const barberList = document.getElementById('barber-list');
             barberosConfig.forEach(barbero => {
                 const btn = document.createElement('button');
                 btn.className = 'bg-[#121212] border border-zinc-800 rounded-2xl p-4 text-left flex items-center gap-5 transition-all duration-150 w-full hover:border-zinc-600 focus:outline-none';
+                const avatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(barbero.nombre) + '&background=27272a&color=fff&size=128';
                 btn.innerHTML =
                     '<div class="relative shrink-0">'+
-                        '<img src="'+barbero.foto+'" alt="'+barbero.nombre+'" onerror="this.src=\'https://ui-avatars.com/api/?name='+barbero.nombre+'&background=27272a&color=fff&size=128\'" class="w-16 h-16 rounded-full object-cover border-2 border-zinc-800 shadow-lg bg-zinc-900">'+
+                        '<img src="'+barbero.foto+'" alt="'+barbero.nombre+'" data-avatar="'+avatar+'" class="w-16 h-16 rounded-full object-cover border-2 border-zinc-800 shadow-lg bg-zinc-900">'+
                     '</div>'+
                     '<div class="flex flex-col gap-1 w-full">'+
                         '<span class="text-xl font-bold">'+barbero.nombre+'</span>'+
-                        '<span class="text-sm text-zinc-400">'+barbero.inicio+' - '+barbero.fin+'</span>'+
+                        '<span class="text-sm text-zinc-400">Martes a sábado · 11:00 a 19:30</span>'+
                     '</div>';
+                const img = btn.querySelector('img');
+                img.onerror = () => { img.onerror = null; img.src = img.dataset.avatar; };
                 btn.onclick = () => {
                     document.querySelectorAll('#barber-list button').forEach(b => b.classList.remove('border-white','bg-zinc-800'));
                     btn.classList.add('border-white','bg-zinc-800');
-                    turnoActual = { barbero, servicio: null, fecha: null, hora: null };
+                    turnoActual = { barbero, servicio: null, largo: false, fecha: null, hora: null };
                     renderServices();
-                    document.querySelectorAll('.date-item').forEach(d => d.classList.remove('selected-item'));
-                    document.getElementById('time-slots').innerHTML = '';
-                    document.getElementById('time-label').classList.add('hidden');
+                    limpiarFechaHora();
                     setTimeout(() => window.goToStep(2), 200);
                 };
                 barberList.appendChild(btn);
@@ -307,31 +300,38 @@
 
         function renderServices() {
             const list = document.getElementById('service-list');
+            document.getElementById('largo-box').classList.add('hidden');
             list.innerHTML = '';
             SERVICIOS.forEach(s => {
-                const dur = getDuracion(turnoActual.barbero, s);
                 const btn = document.createElement('button');
                 btn.className = 'bg-[#121212] border border-zinc-800 rounded-2xl p-5 flex items-center justify-between transition-all duration-150 w-full hover:border-zinc-600 focus:outline-none text-left';
                 btn.innerHTML =
                     '<div class="flex flex-col gap-1">'+
                         '<span class="text-xl font-bold">'+s.nombre+'</span>'+
-                        '<span class="text-sm text-zinc-400">'+dur+' min</span>'+
+                        (turnoActual.barbero ? '<span class="text-sm text-zinc-400">'+turnoActual.barbero.duracion+' min</span>' : '')+
                     '</div>'+
                     '<span class="text-lg font-bold shrink-0 ml-3">'+fmtPrecio(s.precio)+'</span>';
                 btn.onclick = () => {
                     document.querySelectorAll('#service-list button').forEach(b => b.classList.remove('border-white','bg-zinc-800'));
                     btn.classList.add('border-white','bg-zinc-800');
                     turnoActual.servicio = s;
-                    turnoActual.fecha = null;
-                    turnoActual.hora = null;
-                    document.querySelectorAll('.date-item').forEach(d => d.classList.remove('selected-item'));
-                    document.getElementById('time-slots').innerHTML = '';
-                    document.getElementById('time-label').classList.add('hidden');
-                    setTimeout(() => window.goToStep(3), 200);
+                    turnoActual.largo = false;
+                    limpiarFechaHora();
+                    // Barba no depende del largo del pelo; el resto pregunta
+                    if (s.id === 'Barba') { setTimeout(() => window.goToStep(3), 200); return; }
+                    const box = document.getElementById('largo-box');
+                    box.classList.remove('hidden');
+                    setTimeout(() => box.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
                 };
                 list.appendChild(btn);
             });
         }
+
+        window.elegirLargo = (largo) => {
+            turnoActual.largo = largo;
+            limpiarFechaHora();
+            setTimeout(() => window.goToStep(3), 150);
+        };
 
         function renderCustomDatePicker() {
             const dateSelector = document.getElementById('date-selector');
@@ -357,141 +357,137 @@
             }
         }
 
+        let pedidoHoras = 0;
         async function generarHorarios() {
             if (!turnoActual.barbero || !turnoActual.servicio || !turnoActual.fecha) return;
             const timeSlots = document.getElementById('time-slots');
             const timeLabel = document.getElementById('time-label');
             timeSlots.innerHTML = '<div class="col-span-3 text-center text-sm text-zinc-400 py-4">Buscando horarios...</div>';
             timeLabel.classList.remove('hidden');
-
-            let ocupados = [];
-            if (fbReady && db) {
-                try {
-                    const q = fb.query(fb.collection(db,'turnos'), fb.where('barbero','==',turnoActual.barbero.id), fb.where('fecha','==',turnoActual.fecha));
-                    const snap = await fb.getDocs(q);
-                    snap.forEach(doc => {
-                        const t = doc.data();
-                        if (t.estado !== 'cancelado') { const ini = aMin(t.hora); ocupados.push({ ini, fin: ini+(t.duracion||30) }); }
-                    });
-                } catch(e) { console.error(e); }
+            const n = ++pedidoHoras; // si toca otro día mientras carga, gana el último
+            let horas = [];
+            try {
+                const q = new URLSearchParams({ action: 'disponibilidad', barbero: turnoActual.barbero.id, fecha: turnoActual.fecha, largo: turnoActual.largo ? '1' : '0' });
+                const r = await fetch(API + '/push?' + q);
+                const j = await r.json();
+                if (!r.ok) throw new Error(j.error);
+                horas = j.horas || [];
+            } catch (e) {
+                if (n !== pedidoHoras) return;
+                timeSlots.innerHTML = '<div class="col-span-3 text-center text-sm text-red-400 py-4">No pudimos cargar los horarios. Probá de nuevo.</div>';
+                return;
             }
-
+            if (n !== pedidoHoras) return;
             timeSlots.innerHTML = '';
-            const dur = getDuracion(turnoActual.barbero, turnoActual.servicio);
-            const grilla = turnoActual.barbero.grilla;
-            const inicioDia = aMin(turnoActual.barbero.inicio);
-            const finDia = aMin(turnoActual.barbero.fin);
-            const ahora = new Date();
-            const hoyISO = ahora.getFullYear()+'-'+String(ahora.getMonth()+1).padStart(2,'0')+'-'+String(ahora.getDate()).padStart(2,'0');
-            const esHoy = turnoActual.fecha === hoyISO;
-            const minDesdeAhora = esHoy ? (ahora.getHours()*60 + ahora.getMinutes() + MIN_ANTICIPACION) : 0;
-
-            for (let S = inicioDia; S+dur <= finDia; S += grilla) {
-                if (esHoy && S < minDesdeAhora) continue;
-                const horaStr = aHHMM(S);
-                const seSolapa = ocupados.some(o => S < o.fin && (S+dur) > o.ini);
+            horas.forEach(horaStr => {
                 const btn = document.createElement('button');
-                if (seSolapa) {
-                    btn.className = 'border border-zinc-800 bg-zinc-900/50 rounded-xl py-3.5 text-lg font-medium text-center text-zinc-600 cursor-not-allowed';
-                    btn.innerText = horaStr; btn.disabled = true;
-                } else {
-                    btn.className = 'time-btn border border-zinc-800 bg-[#121212] rounded-xl py-3.5 text-lg font-medium text-center transition-all duration-150';
-                    btn.innerText = horaStr;
-                    btn.onclick = () => {
-                        document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('selected-item'));
-                        btn.classList.add('selected-item');
-                        turnoActual.hora = horaStr;
-                        setTimeout(() => window.goToStep(4), 250);
-                    };
-                }
+                btn.className = 'time-btn border border-zinc-800 bg-[#121212] rounded-xl py-3.5 text-lg font-medium text-center transition-all duration-150';
+                btn.innerText = horaStr;
+                btn.onclick = () => {
+                    document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('selected-item'));
+                    btn.classList.add('selected-item');
+                    turnoActual.hora = horaStr;
+                    setTimeout(() => window.goToStep(4), 250);
+                };
                 timeSlots.appendChild(btn);
-            }
-            if (timeSlots.children.length === 0) {
-                timeSlots.innerHTML = '<div class="col-span-3 text-center text-sm text-zinc-400 py-4">No hay horarios disponibles para este día.</div>';
+            });
+            if (!horas.length) {
+                timeSlots.innerHTML = '<div class="col-span-3 text-center text-sm text-zinc-400 py-4">No quedan horarios libres este día. Probá con otro.</div>';
             }
             setTimeout(() => timeLabel.scrollIntoView({ behavior:'smooth', block:'start' }), 100);
+        }
+
+        function filasResumen() {
+            const t = turnoActual;
+            const fila = (k, v) => '<div class="flex justify-between py-1.5"><span class="text-zinc-400">'+k+'</span><span class="font-semibold">'+v+'</span></div>';
+            return fila('Barbero', t.barbero.nombre) + fila('Servicio', nombreServicio()) + fila('Duración', duracion()+' min') +
+                fila('Día y hora', fechaLegible(t.fecha)+' · '+t.hora) +
+                '<div class="flex justify-between py-1.5 border-t border-zinc-800 mt-2 pt-2"><span class="text-zinc-400">Precio</span><span class="font-bold text-base">'+fmtPrecio(precio())+'</span></div>';
         }
 
         function renderResumen() {
             const t = turnoActual;
             if (!t.barbero || !t.servicio || !t.fecha || !t.hora) return;
-            const dur = getDuracion(t.barbero, t.servicio);
-            document.getElementById('resumen').innerHTML =
-                '<div class="flex justify-between py-1"><span class="text-zinc-400">Barbero</span><span class="font-semibold">'+t.barbero.nombre+'</span></div>'+
-                '<div class="flex justify-between py-1"><span class="text-zinc-400">Servicio</span><span class="font-semibold">'+t.servicio.nombre+'</span></div>'+
-                '<div class="flex justify-between py-1"><span class="text-zinc-400">Duración</span><span class="font-semibold">'+dur+' min</span></div>'+
-                '<div class="flex justify-between py-1"><span class="text-zinc-400">Día y hora</span><span class="font-semibold">'+fechaLegible(t.fecha)+' · '+t.hora+'</span></div>'+
-                '<div class="flex justify-between py-1 border-t border-zinc-800 mt-2 pt-2"><span class="text-zinc-400">Precio</span><span class="font-bold text-base">'+fmtPrecio(t.servicio.precio)+'</span></div>';
+            document.getElementById('resumen').innerHTML = filasResumen();
+            document.getElementById('confirm-error').classList.add('hidden');
+        }
+
+        // Link para agendarlo en Google Calendar (en el celu abre la app de calendario)
+        function linkCalendario() {
+            const t = turnoActual;
+            const [y, m, d] = t.fecha.split('-').map(Number);
+            const [hh, mm] = t.hora.split(':').map(Number);
+            const ini = new Date(Date.UTC(y, m - 1, d, hh + 3, mm)); // Argentina = UTC-3
+            const fin = new Date(ini.getTime() + duracion() * 60000);
+            const f = x => x.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+            return 'https://calendar.google.com/calendar/render?' + new URLSearchParams({
+                action: 'TEMPLATE', text: 'Turno SB Barber · ' + nombreServicio(), dates: f(ini) + '/' + f(fin),
+                details: 'Con ' + t.barbero.nombre, location: 'SB Barber, Dávila 951, CABA'
+            });
         }
 
         function mostrarExito(nombre) {
             const t = turnoActual;
-            const dur = getDuracion(t.barbero, t.servicio);
-            document.getElementById('success-details').innerHTML =
-                '<div class="flex justify-between py-2"><span class="text-zinc-400">Barbero</span><span class="font-semibold">'+t.barbero.nombre+'</span></div>'+
-                '<div class="flex justify-between py-2"><span class="text-zinc-400">Servicio</span><span class="font-semibold">'+t.servicio.nombre+'</span></div>'+
-                '<div class="flex justify-between py-2"><span class="text-zinc-400">Duración</span><span class="font-semibold">'+dur+' min</span></div>'+
-                '<div class="flex justify-between py-2"><span class="text-zinc-400">Día y hora</span><span class="font-semibold">'+fechaLegible(t.fecha)+' · '+t.hora+'</span></div>'+
-                '<div class="flex justify-between py-2 border-t border-zinc-800 mt-2 pt-2"><span class="text-zinc-400">Precio</span><span class="font-bold text-base">'+fmtPrecio(t.servicio.precio)+'</span></div>'+
-                '<div class="flex justify-between py-2 border-t border-zinc-800 mt-1 pt-2"><span class="text-zinc-400">Cliente</span><span class="font-semibold">'+nombre+'</span></div>';
-
-            const waBtn = document.getElementById('wa-confirm-btn');
-            if (WHATSAPP_BARBERIA) {
-                const msg = '¡Hola! Quiero sacar este turno en SB Barber:\n\n💈 Barbero: '+t.barbero.nombre+'\n✂️ Servicio: '+t.servicio.nombre+'\n📅 '+fechaLegible(t.fecha)+' a las '+t.hora+'\n👤 '+nombre;
-                waBtn.href = 'https://wa.me/'+WHATSAPP_BARBERIA+'?text='+encodeURIComponent(msg);
-                waBtn.style.display = 'flex';
-                window.open(waBtn.href, '_blank'); // abre WhatsApp directo; si el navegador lo bloquea queda el botón
-            }
-
+            document.getElementById('success-details').innerHTML = filasResumen() +
+                '<div class="flex justify-between py-1.5 border-t border-zinc-800 mt-1 pt-2"><span class="text-zinc-400">Cliente</span><span class="font-semibold">'+esc(nombre)+'</span></div>';
+            document.getElementById('cal-btn').href = linkCalendario();
+            const msg = 'Hola! Tengo turno el '+fechaLegible(t.fecha)+' a las '+t.hora+' con '+t.barbero.nombre+' ('+nombre+') y no voy a poder ir.';
+            document.getElementById('wa-aviso-btn').href = 'https://wa.me/'+WHATSAPP_BARBERIA+'?text='+encodeURIComponent(msg);
             const screen = document.getElementById('success-screen');
             screen.style.display = 'flex';
             screen.offsetHeight;
             screen.classList.add('visible');
         }
 
-        function notificarTurno(datos) {
-            if (!WEBHOOK_URL) return;
-            fetch(WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...datos,
-                    mensaje: '📋 *Nuevo turno*\n\n💈 Barbero: *'+datos.nombreBarbero+'*\n✂️ Servicio: '+datos.nombreServicio+' ('+datos.duracion+' min)\n📅 '+fechaLegible(datos.fecha)+'\n🕐 '+datos.hora+'\n👤 '+datos.cliente+'\n📱 '+datos.telefono
-                })
-            }).catch(e => console.warn('Webhook error:', e));
-        }
-
         function initBotonConfirmar() {
             const nameInput  = document.getElementById('client-name');
             const phoneInput = document.getElementById('client-phone');
+            const errorEl    = document.getElementById('confirm-error');
             nameInput.addEventListener('input',  () => nameInput.classList.remove('input-error'));
             phoneInput.addEventListener('input', () => phoneInput.classList.remove('input-error'));
 
             document.getElementById('btn-confirm').addEventListener('click', async () => {
                 const nombre = nameInput.value.trim();
-                const tel    = phoneInput.value.trim();
+                const tel    = phoneInput.value.replace(/\D/g, '');
                 const btn    = document.getElementById('btn-confirm');
                 let hayError = false;
-                if (!nombre) { nameInput.classList.add('input-error');  hayError = true; }
-                if (!tel)    { phoneInput.classList.add('input-error'); hayError = true; }
-                if (hayError) return;
+                if (nombre.length < 2) { nameInput.classList.add('input-error');  hayError = true; }
+                if (tel.length < 8)    { phoneInput.classList.add('input-error'); hayError = true; }
+                if (hayError || btn.disabled) return;
 
-                const datos = {
-                    barbero: turnoActual.barbero.id, nombreBarbero: turnoActual.barbero.nombre,
-                    servicio: turnoActual.servicio.id, nombreServicio: turnoActual.servicio.nombre,
-                    duracion: getDuracion(turnoActual.barbero, turnoActual.servicio),
-                    precio: turnoActual.servicio.precio,
-                    fecha: turnoActual.fecha, hora: turnoActual.hora,
-                    cliente: nombre, telefono: tel,
-                    estado: 'pendiente', creadoEn: new Date().toISOString()
-                };
-
-                // Los clientes no pueden guardar turnos en la base (las reglas exigen ser del staff):
-                // el turno se pide por WhatsApp con el mensaje armado y recepción lo agenda.
-                notificarTurno(datos);
-                mostrarExito(nombre);
+                btn.disabled = true; btn.textContent = 'Reservando…';
+                errorEl.classList.add('hidden');
+                try {
+                    const r = await fetch(API + '/push?action=reservar', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            barbero: turnoActual.barbero.id, servicio: turnoActual.servicio.id, largo: turnoActual.largo,
+                            fecha: turnoActual.fecha, hora: turnoActual.hora, nombre, telefono: tel
+                        })
+                    });
+                    const j = await r.json().catch(() => ({}));
+                    if (!r.ok) throw Object.assign(new Error(j.error || 'No se pudo reservar'), { status: r.status });
+                    mostrarExito(nombre);
+                } catch (e) {
+                    errorEl.textContent = e.message || 'No se pudo reservar. Probá de nuevo.';
+                    errorEl.classList.remove('hidden');
+                    // Horario ocupado mientras completaba los datos: vuelve a elegir hora
+                    if (e.status === 409 && /horario/i.test(e.message)) {
+                        setTimeout(() => { window.goToStep(3); generarHorarios(); }, 1800);
+                    }
+                }
+                btn.disabled = false; btn.textContent = 'Confirmar turno';
             });
         }
+
+        // Precios actuales (los de Precios en recepcionista)
+        fetch(API + '/catalogo?pantalla=1').then(r => r.json()).then(d => {
+            const norm = s => String(s || '').toLowerCase().trim();
+            const map = Object.fromEntries((d.servicios || []).map(s => [norm(s.nombre), s.precio]));
+            SERVICIOS.forEach(s => { if (map[norm(s.nombre)] != null) s.precio = map[norm(s.nombre)]; });
+            if (map['pelo largo'] != null) precioPeloLargo = map['pelo largo'];
+            if (document.getElementById('service-list').children.length) renderServices();
+        }).catch(() => {});
 
         document.addEventListener('DOMContentLoaded', () => {
             renderBarbers();
@@ -500,31 +496,6 @@
             initBotonConfirmar();
             setTimeout(ocultarSplash, 1000);
         });
-
-        (async () => {
-            try {
-                const appMod = await import("https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js");
-                const fsMod  = await import("https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js");
-                db = fsMod.getFirestore(appMod.initializeApp(firebaseConfig));
-                fb = { collection: fsMod.collection, addDoc: fsMod.addDoc, query: fsMod.query, where: fsMod.where, getDocs: fsMod.getDocs };
-                fbReady = true;
-                // Precios de servicios configurados desde recepción
-                try {
-                    const snap = await fsMod.getDoc(fsMod.doc(db, 'config_precios', 'servicios'));
-                    if (snap.exists()) {
-                        const p = snap.data() || {};
-                        const norm = s => (s||'').toLowerCase().trim();
-                        const map = {}; Object.keys(p).forEach(k => { map[norm(k)] = p[k]; });
-                        SERVICIOS.forEach(s => { const v = map[norm(s.nombre)]; if (v != null) s.precio = Number(v); });
-                        // Los eliminados desde Precios en recepción no se ofrecen
-                        const ocultos = new Set((p.__ocultos || []).map(norm));
-                        for (let i = SERVICIOS.length - 1; i >= 0; i--) if (ocultos.has(norm(SERVICIOS[i].nombre))) SERVICIOS.splice(i, 1);
-                        const sl = document.getElementById('service-list');
-                        if (sl && sl.children.length) renderServices();
-                    }
-                } catch(e) {}
-            } catch(e) { console.warn('Firebase no disponible:', e); }
-        })();
     </script>
     <script src="../assets/sb-motion.js"></script>
 </body>
