@@ -264,6 +264,9 @@
                         <a id="btn-clientes" href="../estadisticas/#clientes" target="_blank" rel="noopener" onclick="window.closeMasMenu()" class="hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-address-book w-4 text-center text-gray-400"></i> Clientes
                         </a>
+                        <a id="btn-mayorista" href="../mayorista/" target="_blank" rel="noopener" data-solo-sb onclick="window.closeMasMenu()" class="hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
+                            <i class="fas fa-tags w-4 text-center text-gray-400"></i> Lista mayorista
+                        </a>
                         <button id="btn-uso" type="button" onclick="window.closeMasMenu(); window.openUsoPanel()" class="hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-gauge-high w-4 text-center text-gray-400"></i>
                             <span class="flex-1 min-w-0">
@@ -1937,7 +1940,7 @@ async function init() {
                 });
             }
             if (isOwner) {
-                ['btn-dispositivos', 'btn-estadisticas', 'btn-clientes', 'btn-uso'].forEach(id => { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); });
+                ['btn-dispositivos', 'btn-estadisticas', 'btn-clientes', 'btn-mayorista', 'btn-uso'].forEach(id => { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); });
                 iniciarMonitorUso();
                 document.getElementById('gastos-fijos-card').classList.remove('hidden');
             }
