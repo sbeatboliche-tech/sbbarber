@@ -1790,7 +1790,14 @@ const PATH_PROFILES  = ruta('barber_profiles');
 let BARBER_EMAIL_MAP = mapaEmails(CFG);
 let barberProfilesData = {};
 
-const SERVICES = [
+// Barbería nueva (no SB): arranca con estos en $0 y carga sus servicios y precios desde "Precios" en recepción
+// (se guardan en su config_precios/servicios). Los de arriba son solo de SB Barber.
+const SERVICIOS_INICIALES = [
+    { name:'Corte', price:0 },
+    { name:'Corte y Barba', price:0 },
+    { name:'Barba', price:0 }
+];
+const SERVICES = !ES_SB ? SERVICIOS_INICIALES : [
     { name:'Corte Promo 50%', price:12000 },
     { name:'Corte',           price:16000 },
     { name:'Corte y Barba',   price:20000 },
@@ -1829,7 +1836,8 @@ const BARBER_EXTRA_THEMES = [
 ];
 let extraThemeIdx = 0;
 
-const PRODUCTOS_BARBER_BASE = [
+// Productos fijos de SB Barber; otra barbería arranca sin productos y crea los suyos (productos_barber de su ruta).
+const PRODUCTOS_BARBER_BASE = !ES_SB ? [] : [
     { id:'pomada-mate',               name:'Pomada Mate',                  precio:11000 },
     { id:'pomada-brillosa',           name:'Pomada Brillosa',              precio:11000 },
     { id:'polvo-texturizador',        name:'Polvo Texturizador',           precio:11000 },
