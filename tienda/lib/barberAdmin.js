@@ -21,10 +21,11 @@ export const barberDb = () => getFirestore(barberApp());
 
 // Valida el ID token de Firebase que manda recepcionista/anotar (header Authorization: Bearer ...).
 // Devuelve el usuario decodificado o null.
-export async function verifyBarberUser(req) {
+// checkRevoked: además rechaza sesiones dadas de baja o deshabilitadas (1 consulta extra a Auth; se usa en lo sensible).
+export async function verifyBarberUser(req, { checkRevoked = false } = {}) {
     const h = req.headers.authorization || '';
     const token = h.startsWith('Bearer ') ? h.slice(7) : null;
     if (!token) return null;
-    try { return await getAuth(barberApp()).verifyIdToken(token); }
+    try { return await getAuth(barberApp()).verifyIdToken(token, checkRevoked); }
     catch { return null; }
 }

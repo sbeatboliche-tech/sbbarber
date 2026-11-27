@@ -267,6 +267,9 @@
                         <a id="btn-mayorista" href="../mayorista/" target="_blank" rel="noopener" data-solo-sb onclick="window.closeMasMenu()" class="hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-tags w-4 text-center text-gray-400"></i> Lista mayorista
                         </a>
+                        <button id="btn-equipo" type="button" onclick="window.closeMasMenu(); window.abrirEquipo()" class="hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
+                            <i class="fas fa-users-gear w-4 text-center text-gray-400"></i> <span id="btn-equipo-txt">Equipo</span>
+                        </button>
                         <button id="btn-uso" type="button" onclick="window.closeMasMenu(); window.openUsoPanel()" class="hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-gauge-high w-4 text-center text-gray-400"></i>
                             <span class="flex-1 min-w-0">
@@ -1759,6 +1762,7 @@ import { initClientes, pickerCliente, resolverCliente, limpiarCliente, normTelef
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
 import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
 import { registrarPush, avisarTurnoNuevo } from "../assets/push.js";
+import { initEquipo, abrirEquipo } from "../assets/equipo.js?v=e4"; // equipo de cada barbería (alta de barberos/admins)
 import { ruta } from "../assets/rutas-barberia.js?v=e3"; // SB: rutas de siempre; otra barbería: barberias/{id}/...
 import { BARBERIA_ID, ES_SB, exigirAcceso, olvidarBarberia, configInicial, escucharConfig, barberosActivos, etiquetaBarbero, mapaEmails, temaDe, comisionesBase, comisionConReglas, servicioDisponible, moduloActivo } from "../assets/config-barberia.js?v=e3";
 
@@ -1951,6 +1955,13 @@ async function init() {
             }
             if (isOwner) {
                 ['btn-dispositivos', 'btn-estadisticas', 'btn-clientes', 'btn-mayorista'].forEach(id => { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); });
+                // Equipo: el admin de otra barbería maneja el suyo; nosotros, además, las barberías (assets/equipo.js)
+                if (esDuenoSB || !ES_SB) {
+                    initEquipo({ auth, db, fs: { doc, getDoc, collection, getDocs }, esDueno: esDuenoSB, barberiaId: BARBERIA_ID });
+                    window.abrirEquipo = abrirEquipo;
+                    document.getElementById('btn-equipo-txt').textContent = esDuenoSB && ES_SB ? 'Barberías' : 'Equipo';
+                    document.getElementById('btn-equipo').classList.remove('hidden'); document.getElementById('btn-equipo').classList.add('flex');
+                }
                 // La cuota de Firebase es del proyecto entero (y /api/uso es solo para nosotros): no a los admins de otras barberías
                 if (esDuenoSB) {
                     document.getElementById('btn-uso').classList.remove('hidden'); document.getElementById('btn-uso').classList.add('flex');

@@ -1,10 +1,13 @@
-// Alta y baja de usuarios de otras barberías (multi-barbería etapa 3, solo dueños).
-// Plan: docs/superpowers/plans/2026-11-27-multi-barberia-etapa-3.md
+// Equipo de cada barbería (multi-barbería etapas 3 y 4). Plan: docs/superpowers/plans/2026-11-27-multi-barberia-etapa-3.md
+//   POST /api/uso?action=barberia      { id, nombre, adminEmail, adminPassword? }   → solo dueños: crea la barbería y su primer admin
 //   POST /api/uso?action=usuario       { barberia, email, nombre?, rol: 'admin'|'barbero', password? }
 //   POST /api/uso?action=usuario-baja  { email }
-// A cada usuario se le pone el custom claim { barberia, rol }: la app lo lee al iniciar sesión para abrir
-// su barbería y las reglas de Firestore lo usan para dejarlo ver solo barberias/{su id}/... (sin get(), 0 lecturas).
-// Las cuentas de SB Barber no llevan claim (sin claim = SB, como siempre), por eso acá no se puede tocar sb-barber.
+// Quién puede:
+//   - Dueños (OWNERS, nosotros): cualquier barbería menos SB (las cuentas de SB no llevan claim y se manejan como siempre).
+//   - Admin de una barbería (claim rol 'admin'): solo la suya. El `barberia` que manda se ignora y se usa el de su claim,
+//     así nunca puede tocar SB ni otra barbería.
+// A cada usuario se le pone el custom claim { barberia, rol }: la app lo lee al iniciar sesión para abrir su barbería
+// y las reglas de Firestore lo usan para dejarlo ver solo barberias/{su id}/... (sin get(), 0 lecturas).
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue } from 'firebase-admin/firestore';
 import { randomBytes } from 'node:crypto';
@@ -14,45 +17,60 @@ const ID_RE = /^[a-z0-9-]{2,40}$/;
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
 const NOMBRE_RE = /^[\p{L}\p{M}0-9][\p{L}\p{M}0-9 '.-]{0,29}$/u;
 const SB_ID = 'sb-barber';
+// Ids que no puede tomar una barbería nueva (SB y nombres que se confunden con ella o con rutas)
+const IDS_RESERVADOS = new Set([SB_ID, 'sb', 'sbbarber', 'sb-studio', 'prueba-sb', 'admin', 'barberias']);
+
+const err = (status, msg) => Object.assign(new Error(msg), { status });
 
 // Contraseña legible para pasar por WhatsApp (sin 0/O/1/l): 10 caracteres.
 function generarPassword() {
     const abc = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    const b = randomBytes(10);
-    return Array.from(b, x => abc[x % abc.length]).join('');
+    return Array.from(randomBytes(10), x => abc[x % abc.length]).join('');
 }
 
-const err = (status, msg) => Object.assign(new Error(msg), { status });
+const esDueno = caller => OWNERS.includes(caller?.email);
 
-export async function altaUsuario(body) {
-    const barberia = String(body?.barberia || '').trim();
+// Barbería sobre la que puede actuar quien llama (o error).
+function barberiaPermitida(caller, pedida) {
+    if (esDueno(caller)) {
+        const id = String(pedida || '').trim();
+        if (!ID_RE.test(id)) throw err(400, 'Barbería inválida');
+        if (id === SB_ID) throw err(400, 'Las cuentas de SB Barber no se manejan desde acá');
+        return id;
+    }
+    if (caller?.rol === 'admin' && typeof caller.barberia === 'string' && ID_RE.test(caller.barberia) && caller.barberia !== SB_ID) {
+        return caller.barberia;
+    }
+    throw err(403, 'Solo los admins de la barbería pueden manejar su equipo');
+}
+
+export async function altaUsuario(body, caller) {
+    const barberia = barberiaPermitida(caller, body?.barberia);
     const email = String(body?.email || '').trim().toLowerCase();
     const rol = body?.rol === 'admin' ? 'admin' : body?.rol === 'barbero' ? 'barbero' : null;
     const nombre = String(body?.nombre || '').trim();
     let password = body?.password ? String(body.password) : null;
 
-    if (!ID_RE.test(barberia)) throw err(400, 'Barbería inválida');
-    if (barberia === SB_ID) throw err(400, 'Las cuentas de SB Barber no llevan barbería (se manejan como siempre)');
     if (!EMAIL_RE.test(email)) throw err(400, 'Email inválido');
-    if (OWNERS.includes(email)) throw err(400, 'Ese email es de un dueño');
+    if (OWNERS.includes(email)) throw err(400, 'Ese email es de un dueño de SB');
     if (!rol) throw err(400, 'Rol inválido (admin o barbero)');
-    if (rol === 'barbero' && !NOMBRE_RE.test(nombre)) throw err(400, 'Falta el nombre del barbero');
+    if (rol === 'barbero' && !NOMBRE_RE.test(nombre)) throw err(400, 'Falta el nombre del barbero (letras, hasta 30)');
     if (password && password.length < 8) throw err(400, 'La contraseña tiene que tener al menos 8 caracteres');
+    if (!esDueno(caller) && email === String(caller.email || '').toLowerCase() && rol !== 'admin') throw err(400, 'No te podés sacar a vos mismo de admin');
 
     const db = barberDb();
     const cfgRef = db.doc(`barberias/${barberia}`);
-    const cfgSnap = await cfgRef.get();
-    if (!cfgSnap.exists) throw err(404, 'No existe esa barbería');
+    if (!(await cfgRef.get()).exists) throw err(404, 'No existe esa barbería');
 
     const auth = getAuth(barberApp());
     let user = await auth.getUserByEmail(email).catch(e => { if (e.code === 'auth/user-not-found') return null; throw e; });
     let creado = false;
     if (user) {
-        // No se puede "robar" una cuenta de otra barbería (ni una de SB, que no tiene claim)
+        // No se puede "robar" una cuenta de otra barbería ni una de SB (que no tiene claim)
         const actual = user.customClaims?.barberia;
-        if (actual !== barberia) throw err(409, actual ? `Ese email ya es de la barbería "${actual}"` : 'Ese email ya tiene una cuenta (puede ser de SB Barber)');
-        if (password) await auth.updateUser(user.uid, { password, disabled: false });
-        else await auth.updateUser(user.uid, { disabled: false });
+        if (actual !== barberia) throw err(409, actual ? 'Ese email ya está en otra barbería' : 'Ese email ya tiene una cuenta (puede ser de SB Barber)');
+        if (!password && body?.nuevaPassword) password = generarPassword();   // "Nueva contraseña" desde Equipo
+        await auth.updateUser(user.uid, { ...(password ? { password } : {}), disabled: false });
     } else {
         if (!password) password = generarPassword();
         user = await auth.createUser({ email, password, displayName: nombre || undefined });
@@ -60,19 +78,18 @@ export async function altaUsuario(body) {
     }
     await auth.setCustomUserClaims(user.uid, { barberia, rol });
 
-    // Config de la barbería: admins (emails) o barberos ({nombre, email, ...})
+    // Config de la barbería: admins (emails) y barberos ({nombre, email, ...})
     await db.runTransaction(async tx => {
-        const s = await tx.get(cfgRef);
-        const cfg = s.data() || {};
+        const cfg = (await tx.get(cfgRef)).data() || {};
         const admins = Array.isArray(cfg.admins) ? cfg.admins.filter(e => e !== email) : [];
         const barberos = Array.isArray(cfg.barberos) ? cfg.barberos.map(b => ({ ...b })) : [];
         if (rol === 'admin') {
             admins.push(email);
-            barberos.forEach(b => { if (b.email === email) delete b.email; });
+            barberos.forEach(b => { if (b.email === email) { delete b.email; } });
         } else {
             const yaEmail = barberos.find(b => b.email === email);
             const mismoNombre = barberos.find(b => b.nombre === nombre);
-            if (mismoNombre && mismoNombre.email && mismoNombre.email !== email) throw err(409, `Ya hay un barbero "${nombre}" con otro email`);
+            if (mismoNombre?.email && mismoNombre.email !== email) throw err(409, `Ya hay un barbero "${nombre}" con otro email`);
             if (yaEmail && yaEmail !== mismoNombre) delete yaEmail.email;
             if (mismoNombre) Object.assign(mismoNombre, { email, activo: true });
             else barberos.push({ nombre, email, comision: 0.5, activo: true });
@@ -80,26 +97,29 @@ export async function altaUsuario(body) {
         tx.update(cfgRef, { admins, barberos, actualizado: FieldValue.serverTimestamp() });
     });
 
-    // La contraseña solo vuelve si la generó el servidor (o se cambió), y nunca se guarda.
+    // La contraseña solo vuelve si la generó el servidor o se cambió; nunca se guarda.
     return { ok: true, email, barberia, rol, creado, ...(password ? { password } : {}) };
 }
 
-export async function bajaUsuario(body) {
+export async function bajaUsuario(body, caller) {
     const email = String(body?.email || '').trim().toLowerCase();
     if (!EMAIL_RE.test(email) || OWNERS.includes(email)) throw err(400, 'Email inválido');
+    if (email === String(caller?.email || '').toLowerCase()) throw err(400, 'No te podés dar de baja a vos mismo');
     const auth = getAuth(barberApp());
     const user = await auth.getUserByEmail(email).catch(() => null);
     if (!user) throw err(404, 'No existe ese usuario');
     const barberia = user.customClaims?.barberia;
     if (!barberia) throw err(400, 'Es una cuenta de SB Barber: no se da de baja desde acá');
+    if (barberiaPermitida(caller, barberia) !== barberia) throw err(403, 'Ese usuario no es de tu barbería');
+
     await auth.updateUser(user.uid, { disabled: true });
     await auth.setCustomUserClaims(user.uid, null);
-    await auth.revokeRefreshTokens(user.uid);
-    // En la config: sale de admins; el barbero queda inactivo (sus cortes viejos se siguen viendo con su color)
+    await auth.revokeRefreshTokens(user.uid);   // el token que ya tiene vence en ≤1 h (las reglas no consultan revocados: costaría lecturas)
     const ref = barberDb().doc(`barberias/${barberia}`);
     await barberDb().runTransaction(async tx => {
         const cfg = (await tx.get(ref)).data() || {};
         const admins = (cfg.admins || []).filter(e => e !== email);
+        // El barbero queda inactivo, sin email: sus cortes viejos se siguen viendo con su color
         const barberos = (cfg.barberos || []).map(b => {
             if (b.email !== email) return b;
             const { email: _, ...resto } = b;
@@ -108,4 +128,21 @@ export async function bajaUsuario(body) {
         tx.update(ref, { admins, barberos, actualizado: FieldValue.serverTimestamp() });
     });
     return { ok: true, email, barberia };
+}
+
+// Solo dueños: barbería nueva (config vacía, sin módulos de SB) + su primer admin.
+export async function crearBarberia(body, caller) {
+    if (!esDueno(caller)) throw err(403, 'Solo los dueños de SB crean barberías');
+    const id = String(body?.id || '').trim().toLowerCase();
+    const nombre = String(body?.nombre || '').trim().slice(0, 60);
+    if (!ID_RE.test(id) || IDS_RESERVADOS.has(id)) throw err(400, 'Id inválido (minúsculas, números y guiones; no puede ser de SB)');
+    if (!nombre) throw err(400, 'Falta el nombre de la barbería');
+    const ref = barberDb().doc(`barberias/${id}`);
+    await barberDb().runTransaction(async tx => {
+        if ((await tx.get(ref)).exists) throw err(409, 'Ya existe una barbería con ese id');
+        tx.set(ref, { nombre, admins: [], barberos: [], atajos: [], modulos: {}, creado: FieldValue.serverTimestamp(), creadoPor: caller.email });
+    });
+    const admin = await altaUsuario({ barberia: id, email: body?.adminEmail, rol: 'admin', password: body?.adminPassword }, caller)
+        .catch(async e => { await ref.delete().catch(() => {}); throw e; });   // sin admin no sirve: se deshace
+    return { ok: true, id, nombre, admin };
 }

@@ -10,7 +10,7 @@
 import { barberDb, verifyBarberUser, OWNERS } from '../lib/barberAdmin.js';
 import { enviarPush } from '../lib/push.js';
 import backupHandler from '../lib/backup.js';
-import { altaUsuario, bajaUsuario } from '../lib/usuarios.js';
+import { altaUsuario, bajaUsuario, crearBarberia } from '../lib/usuarios.js';
 
 export const config = { maxDuration: 300 }; // lo necesita la copia de seguridad
 
@@ -26,22 +26,26 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     if (req.method === 'OPTIONS') return res.status(204).end();
 
-    const user = await verifyBarberUser(req);
-    if (!user) return res.status(401).json({ error: 'Sesión inválida' });
-    if (!OWNERS.includes(user.email)) return res.status(403).json({ error: 'Solo dueños' });
-
-    // Alta / baja de usuarios de otras barberías (lib/usuarios.js, multi-barbería etapa 3)
     const action = req.query?.action;
-    if (action === 'usuario' || action === 'usuario-baja') {
+    const EQUIPO = { usuario: altaUsuario, 'usuario-baja': bajaUsuario, barberia: crearBarberia };
+    // Cambios de equipo: también se rechaza una sesión dada de baja aunque su token todavía no haya vencido.
+    const user = await verifyBarberUser(req, { checkRevoked: !!EQUIPO[action] });
+    if (!user) return res.status(401).json({ error: 'Sesión inválida' });
+
+    // Equipo de cada barbería (lib/usuarios.js): dueños y admins de otras barberías (cada uno la suya;
+    // los permisos se chequean adentro con el custom claim del token).
+    if (EQUIPO[action]) {
         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
         try {
             const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
-            return res.json(action === 'usuario' ? await altaUsuario(body) : await bajaUsuario(body));
+            return res.json(await EQUIPO[action](body, user));
         } catch (e) {
             if (!e.status) console.error('usuarios:', e);
-            return res.status(e.status || 500).json({ error: e.message });
+            return res.status(e.status || 500).json({ error: e.status ? e.message : 'Error del servidor' });
         }
     }
+
+    if (!OWNERS.includes(user.email)) return res.status(403).json({ error: 'Solo dueños' });
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
     try {
