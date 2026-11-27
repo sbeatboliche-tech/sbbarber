@@ -3,11 +3,15 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Funciones de ayuda. Los emails son los mismos de ADMINS / BARBER_EMAIL_MAP en las apps.
     // Con "crear usuarios" deshabilitado en Firebase Auth, solo estas cuentas pueden existir.
+    // Una cuenta de otra barbería (con claim 'barberia') nunca pasa como gente de SB, aunque tenga uno de estos mails.
+    function sinBarberia() {
+      return request.auth.token.get('barberia', null) == null;
+    }
     function esDueno() {
-      return request.auth != null && request.auth.token.email in ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
+      return request.auth != null && sinBarberia() && request.auth.token.email in ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
     }
     function esStaff() {
-      return esDueno() || (request.auth != null && request.auth.token.email in [
+      return esDueno() || (request.auth != null && sinBarberia() && request.auth.token.email in [
         'ap1773508@gmail.com', 'stefanoacostasla@gmail.com',
         'rodriguezsantiagoet5@gmail.com', 'santiagofl551@gmail.com'
       ]);

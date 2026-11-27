@@ -30,6 +30,14 @@ function generarPassword() {
 
 const esDueno = caller => OWNERS.includes(caller?.email);
 
+// Mails del equipo de SB: los de firestore.rules (esDueno/esStaff) + los de su config (admins y barberos).
+const STAFF_SB = ['ap1773508@gmail.com', 'stefanoacostasla@gmail.com', 'rodriguezsantiagoet5@gmail.com', 'santiagofl551@gmail.com'];
+async function esMailDeSB(email) {
+    if (OWNERS.includes(email) || STAFF_SB.includes(email)) return true;
+    const cfg = (await barberDb().doc(`barberias/${SB_ID}`).get()).data() || {};
+    return (cfg.admins || []).includes(email) || (cfg.barberos || []).some(b => String(b.email || '').toLowerCase() === email);
+}
+
 // Barbería sobre la que puede actuar quien llama (o error).
 function barberiaPermitida(caller, pedida) {
     if (esDueno(caller)) {
@@ -52,7 +60,9 @@ export async function altaUsuario(body, caller) {
     let password = body?.password ? String(body.password) : null;
 
     if (!EMAIL_RE.test(email)) throw err(400, 'Email inválido');
-    if (OWNERS.includes(email)) throw err(400, 'Ese email es de un dueño de SB');
+    // Ningún mail del equipo de SB (aunque todavía no tenga cuenta): las reglas reconocen al staff de SB por email,
+    // así que una cuenta creada acá con uno de esos mails podría ver datos de SB.
+    if (await esMailDeSB(email)) throw err(400, 'Ese email es del equipo de SB Barber');
     if (!rol) throw err(400, 'Rol inválido (admin o barbero)');
     if (rol === 'barbero' && !NOMBRE_RE.test(nombre)) throw err(400, 'Falta el nombre del barbero (letras, hasta 30)');
     if (password && password.length < 8) throw err(400, 'La contraseña tiene que tener al menos 8 caracteres');
