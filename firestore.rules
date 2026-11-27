@@ -71,7 +71,9 @@ service cloud.firestore {
     // sigue en las colecciones de la raíz). Los usa su equipo (claim barberia == id) y nosotros, para soporte.
     // Borrar: solo sus admins (igual que en SB, donde borran solo los dueños).
     match /barberias/{id}/{col}/{d=**} {
-      allow read, create, update: if esDueno() || miBarberia(id);
+      allow read: if esDueno() || miBarberia(id);
+      // Precios y servicios (config_precios) los cambian solo sus admins, no los barberos
+      allow create, update: if esDueno() || (miBarberia(id) && (col != 'config_precios' || esAdminDe(id)));
       allow delete: if esDueno() || esAdminDe(id);
     }
 
