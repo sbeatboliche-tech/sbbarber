@@ -2,7 +2,7 @@
 // SB Barber usa las rutas de siempre (no se mudó, para no gastar cuota ni arriesgar la caja);
 // cualquier otra barbería guarda todo en barberias/{id}/{coleccion}.
 // Plan: docs/superpowers/plans/2026-11-20-multi-barberia-etapa-2.md
-import { BARBERIA_ID, ES_SB } from './config-barberia.js';
+import { BARBERIA_ID, ES_SB } from './config-barberia.js?v=e3';
 
 // Las únicas de SB que no se llaman igual que la colección
 const RUTAS_SB = {

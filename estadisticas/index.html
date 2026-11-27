@@ -348,8 +348,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, query, where, doc, writeBatch, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getDocs, iniciarContador } from "../assets/uso-lecturas.js"; // cuenta las lecturas (ver el archivo)
-import { ES_SB, exigirAcceso, olvidarBarberia } from "../assets/config-barberia.js";
-import { ruta, claveLocal } from "../assets/rutas-barberia.js"; // SB: rutas de siempre; otra barbería (?barberia=, solo dueños): barberias/{id}/...
+import { ES_SB, exigirAcceso, olvidarBarberia } from "../assets/config-barberia.js?v=e3";
+import { ruta, claveLocal } from "../assets/rutas-barberia.js?v=e3"; // SB: rutas de siempre; otra barbería (?barberia=, solo dueños): barberias/{id}/...
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",

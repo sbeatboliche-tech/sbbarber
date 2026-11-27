@@ -16,7 +16,7 @@
    ========================================================= */
 import { collection, query, orderBy, limit, addDoc, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { onSnapshot } from "./uso-lecturas.js"; // cuenta las lecturas
-import { ruta } from "./rutas-barberia.js"; // SB: rutas de siempre; otra barbería: barberias/{id}/...
+import { ruta } from "./rutas-barberia.js?v=e3"; // SB: rutas de siempre; otra barbería: barberias/{id}/...
 
 const CLAVE_RETIROS = 'sbsb';
 const CLAVE_SOCIOS = 'sbsb2004';
