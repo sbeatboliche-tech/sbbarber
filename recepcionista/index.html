@@ -1637,6 +1637,10 @@
                         </div>
                         <input type="hidden" id="venta-metodo-pago" value="efectivo">
                     </div>
+                    <label class="flex items-center gap-3 p-3 rounded-xl bg-black/30 border border-gray-700 cursor-pointer select-none">
+                        <input type="checkbox" id="venta-afecta-caja" checked class="w-5 h-5 accent-indigo-500">
+                        <span class="text-sm text-gray-300 font-semibold">Que cuente en el cierre de caja <span class="block text-[10px] text-gray-500 font-normal">Destildalo si esa plata no entra a la caja</span></span>
+                    </label>
                     <button onclick="window.submitVenta()" id="btn-submit-venta" disabled class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white p-3.5 rounded-xl font-bold text-base shadow-lg uppercase tracking-widest hover:shadow-indigo-500/30 hover:scale-[1.01] transition opacity-50 disabled:cursor-not-allowed">Registrar venta</button>
                 </div>
             </div>
@@ -2855,7 +2859,7 @@ function renderVentas() {
         const icon = v.tipo === 'bebida' ? '🥤' : esML ? '🛒' : '💈';
         const border = v.tipo === 'bebida' ? 'border-cyan-500/40' : esML ? 'border-yellow-500/30' : 'border-indigo-500/40';
         const metodoTag = !esML && v.metodoPago ? ` <span class="${v.metodoPago==='transferencia'?'text-blue-400':'text-emerald-400'}">${v.metodoPago==='transferencia'?'📲':'💵'}</span>` : esML ? ' <span class="text-yellow-600 text-[10px] font-bold">ML</span>' : '';
-        const regaloTag = v.esRegalo ? ` <span class="text-pink-400">🎁</span>` : '';
+        const regaloTag = v.esRegalo ? ` <span class="text-pink-400">🎁</span>` : v.afectaCaja === false ? ` <span class="text-gray-500 text-[10px] font-bold">FUERA DE CAJA</span>` : '';
         const totalStr = esML ? `<span class="text-xs text-yellow-600">ML</span>` : v.esRegalo ? `<span class="text-xs font-bold text-pink-400">🎁 Regalo</span>` : (v.total || 0) > 0 ? `<span class="text-sm font-bold text-indigo-300">$${v.total.toLocaleString('es-AR')}</span>` : `<span class="text-xs text-gray-500">—</span>`;
         return `<div class="flex justify-between items-center bg-black/30 p-3 rounded-xl border-l-2 ${border}">
             <div class="flex items-center gap-2 flex-1 min-w-0">
@@ -2871,7 +2875,7 @@ function renderVentas() {
             </div>
         </div>`;
     }).join('');
-    const total = ventasHoy.filter(v => v.canal !== 'ml').reduce((s, v) => s + (v.total || 0), 0);
+    const total = ventasHoy.filter(v => v.canal !== 'ml' && v.afectaCaja !== false).reduce((s, v) => s + (v.total || 0), 0);
     document.getElementById('ventas-total').textContent = `$${total.toLocaleString('es-AR')}`;
     totalRow.classList.remove('hidden'); totalRow.classList.add('flex');
     const cuts = allCuts.filter(c => !c.eliminado && c.createdAt && c.createdAt.toDate() >= today && c.createdAt.toDate() < todayEnd);
@@ -2881,7 +2885,7 @@ function renderVentas() {
 function updateDailyTotalStat(cutsBilling, ventasTotal = null) {
     if (ventasTotal === null) {
         const { hoy } = getDashFecha();
-        ventasTotal = allVentas.filter(v => v.fecha === hoy && !v.eliminado && v.canal !== 'ml').reduce((s,v) => s+(v.total||0), 0);
+        ventasTotal = allVentas.filter(v => v.fecha === hoy && !v.eliminado && v.canal !== 'ml' && v.afectaCaja !== false).reduce((s,v) => s+(v.total||0), 0);
     }
     const ventasRow = document.getElementById('stat-ventas-row');
     const totalRow = document.getElementById('stat-total-row');
@@ -3079,6 +3083,7 @@ window.openVentaModal = () => {
     ventaSearchQuery = '';
     document.getElementById('venta-producto-search').value = '';
     window.setVentaMetodo('efectivo');
+    document.getElementById('venta-afecta-caja').checked = true;
     renderProductosGrid();
     renderCarrito();
     showModal('ventas-modal');
@@ -3226,6 +3231,7 @@ window.submitVenta = async () => {
                 tipo: 'producto',
                 canal: 'local',
                 metodoPago: document.getElementById('venta-metodo-pago').value,
+                ...(document.getElementById('venta-afecta-caja').checked ? {} : { afectaCaja: false }),
                 barbero: 'Recepción',
                 userEmail: currentUser?.email || null,
                 fecha: hoy,
@@ -3238,6 +3244,7 @@ window.submitVenta = async () => {
         // y el botón confirma un momento. El método de pago se mantiene.
         ventaCart = [];
         ventaSearchQuery = '';
+        document.getElementById('venta-afecta-caja').checked = true;
         document.getElementById('venta-producto-search').value = '';
         renderProductosGrid();
         renderCarrito();
@@ -4626,7 +4633,7 @@ function renderCierreCaja() {
     // se excluyen las ventas por canal ML (esa plata no pasa por la caja física) y el
     // consumo interno de barberos (esConsumoStaff — eso ya se resta de lo que se le
     // paga al barbero, no de la caja del negocio).
-    const ventasProductos = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo);
+    const ventasProductos = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo && v.afectaCaja !== false);
 
     const totalCortes   = cuts.filter(c => c.afectaCaja !== false).reduce((s, c) => s + (c.price || 0), 0);
     const cortesEfectivo = cuts.reduce((s, c) => s + cutCashAmount(c), 0);

@@ -541,6 +541,10 @@
                         </div>
                         <input type="hidden" id="venta-metodo-pago" value="efectivo">
                     </div>
+                    <label class="flex items-center gap-3 p-3 rounded-xl bg-black/30 border border-gray-700 cursor-pointer select-none">
+                        <input type="checkbox" id="venta-afecta-caja" checked class="w-5 h-5 accent-indigo-500">
+                        <span class="text-sm text-gray-300 font-semibold">Que cuente en el cierre de caja <span class="block text-[10px] text-gray-500 font-normal">Destildalo si esa plata no entra a la caja</span></span>
+                    </label>
                     <button onclick="window.submitVenta()" id="btn-submit-venta" disabled class="w-full bg-gradient-to-r from-indigo-600 to-slate-600 text-white p-3.5 rounded-xl font-bold text-base shadow-lg uppercase tracking-widest hover:shadow-indigo-500/30 hover:scale-[1.01] transition opacity-50 disabled:cursor-not-allowed">Registrar venta</button>
                 </div>
             </div>
@@ -3116,6 +3120,7 @@ window.openVentaModal = () => {
     ventaSearchQuery = '';
     document.getElementById('venta-producto-search').value = '';
     window.setVentaMetodo('efectivo');
+    document.getElementById('venta-afecta-caja').checked = true;
     renderProductosGrid();
     renderCarrito();
     showModal('ventas-modal');
@@ -3267,6 +3272,7 @@ window.submitVenta = async () => {
                 tipo: 'producto',
                 canal: 'local',
                 metodoPago: document.getElementById('venta-metodo-pago').value,
+                ...(document.getElementById('venta-afecta-caja').checked ? {} : { afectaCaja: false }),
                 barbero: myName,
                 userEmail: currentUser.email,
                 fecha: hoy,
@@ -3706,7 +3712,7 @@ function renderCierreDia() {
     // Cuenta como venta real (Productos + caja) solo lo vendido en el local a un cliente:
     // se excluyen las ventas por canal ML y el consumo interno de barberos
     // (esConsumoStaff — eso resta de lo que se le paga al barbero, no de la caja).
-    const ventasProductos = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo);
+    const ventasProductos = ventasHoy.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo && v.afectaCaja !== false);
 
     const totalCortes    = cuts.filter(c => c.afectaCaja !== false).reduce((s, c) => s + (c.price || 0), 0);
     const cortesEfectivo = cuts.reduce((s, c) => s + cutCashAmount(c), 0);
@@ -3930,7 +3936,7 @@ function renderCierreSemana() {
         const d = new Date(v.fecha+'T00:00:00');
         return d >= weekStart && d <= today;
     });
-    const ventasProductos = ventasSemana.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo);
+    const ventasProductos = ventasSemana.filter(v => v.canal !== 'ml' && !v.esConsumoStaff && !v.esRegalo && v.afectaCaja !== false);
 
     const totalCortes    = cuts.filter(c => c.afectaCaja !== false).reduce((s, c) => s + (c.price || 0), 0);
     const totalComm      = cuts.reduce((s, c) => s + c.price*comisionCorte(c), 0);
