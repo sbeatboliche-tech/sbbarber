@@ -734,7 +734,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <button onclick="window.pedirClaveSocios()" class="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold px-4 py-2 rounded-xl text-xs md:text-sm transition">
+                <button onclick="window.pedirClaveSocios()" data-solo-sb class="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold px-4 py-2 rounded-xl text-xs md:text-sm transition">
                     <i class="fas fa-user-lock text-[10px] md:text-xs"></i>
                     <span>Socios</span>
                 </button>
@@ -1760,7 +1760,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { onSnapshot, getDocs, getDoc, iniciarContador } from "../assets/uso-lecturas.js";
 import { initClientes, pickerCliente, resolverCliente, limpiarCliente, normTelefono, telefonoValido } from "../assets/clientes.js";
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
-import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
+import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js?v=e4";
 import { registrarPush, avisarTurnoNuevo } from "../assets/push.js";
 import { initEquipo, abrirEquipo } from "../assets/equipo.js?v=e4"; // equipo de cada barbería (alta de barberos/admins)
 import { ruta } from "../assets/rutas-barberia.js?v=e3"; // SB: rutas de siempre; otra barbería: barberias/{id}/...
@@ -4360,6 +4360,8 @@ window.setCierreCajaFecha = (value) => {
 };
 
 window.openCierreCaja = () => {
+    // La clave del cierre es de SB Barber; en otra barbería solo entran sus admins a recepción, así que abre directo
+    if (!ES_SB) { abrirCierreCajaVista(); return; }
     const modal = document.getElementById('cierre-pass-modal');
     const input = document.getElementById('cierre-pass-input');
     const err   = document.getElementById('cierre-pass-err');
@@ -4377,12 +4379,15 @@ window.confirmCierrePass = () => {
         input.value = ''; input.focus(); return;
     }
     window.closeCierrePass();
+    abrirCierreCajaVista();
+};
+function abrirCierreCajaVista() {
     const v = document.getElementById('cierre-caja-view');
     v.classList.remove('hidden'); v.classList.add('flex', 'flex-col');
     cierreCajaTab = 'diario';
     cierreCajaFechaSel = null;
     setCierreCajaTab('diario');
-};
+}
 window.closeCierreCaja = () => {
     const v = document.getElementById('cierre-caja-view');
     v.classList.add('hidden'); v.classList.remove('flex', 'flex-col');

@@ -1053,7 +1053,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { onSnapshot, getDocs, getDoc, iniciarContador } from "../assets/uso-lecturas.js";
 import { initClientes, pickerCliente, resolverCliente, limpiarCliente, normTelefono, telefonoValido } from "../assets/clientes.js";
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
-import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
+import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js?v=e4";
 import { registrarPush, avisarTurnoNuevo } from "../assets/push.js";
 import { ruta } from "../assets/rutas-barberia.js?v=e3"; // SB: rutas de siempre; otra barbería: barberias/{id}/...
 import { BARBERIA_ID, ES_SB, exigirAcceso, olvidarBarberia, configInicial, escucharConfig, barberosActivos, etiquetaBarbero, mapaEmails, temaDe, comisionesBase, comisionConReglas, servicioDisponible, moduloActivo } from "../assets/config-barberia.js?v=e3";
@@ -1288,7 +1288,7 @@ window.openRetirosView = () => {
     const v=document.getElementById('retiros-view');
     v.classList.remove('hidden'); v.classList.add('flex','flex-col');
     // El botón de Socios (Agus y Manu) solo para los dueños
-    const bs=document.getElementById('btn-socios'), esDueno=ADMINS.includes(currentUser?.email);
+    const bs=document.getElementById('btn-socios'), esDueno=ES_SB && ADMINS.includes(currentUser?.email);   // Socios es solo de SB
     bs.classList.toggle('hidden', !esDueno); bs.classList.toggle('flex', esDueno);
     renderRetirosView();
 };

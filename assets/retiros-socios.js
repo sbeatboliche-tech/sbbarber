@@ -16,7 +16,8 @@
    ========================================================= */
 import { collection, query, orderBy, limit, addDoc, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { onSnapshot } from "./uso-lecturas.js"; // cuenta las lecturas
-import { ruta } from "./rutas-barberia.js?v=e3"; // SB: rutas de siempre; otra barbería: barberias/{id}/...
+import { ruta } from "./rutas-barberia.js?v=e3";
+import { ES_SB } from "./config-barberia.js?v=e3"; // SB: rutas de siempre; otra barbería: barberias/{id}/...
 
 const CLAVE_RETIROS = 'sbsb';
 const CLAVE_SOCIOS = 'sbsb2004';
@@ -199,11 +200,14 @@ export function initRetirosSocios(opciones) {
 
 // Botón "Socios" dentro de Retiros: mismo cartel (con "sbsb2004" abre la sección de los socios)
 export function pedirClaveSocios() {
+    if (!ES_SB) return;   // Socios (Agus y Manu) es solo de SB Barber
     pedirClaveRetiros();
     $('rs-clave-titulo').textContent = 'Socios';
 }
 
 export function pedirClaveRetiros() {
+    // Las claves son de SB Barber: en otra barbería entra directo (ya está logueado en la suya)
+    if (!ES_SB) { cfg.abrirRetiros(); return; }
     $('rs-clave-titulo').textContent = 'Retiros';
     $('rs-clave-input').value = '';
     $('rs-clave-error').classList.add('hidden');
