@@ -45,15 +45,21 @@ const firebaseConfig = {
     messagingSenderId: "213501157745",
     appId: "1:213501157745:web:09fd59996cf1d72b6696d0"
 };
-// Los mismos de ADMINS en recepcionista y anotar
-const ADMINS = ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
+import { irABarberia, SB_ID } from '../assets/config-barberia.js';
+// Admins de SB Barber (los mismos de su config). Las cuentas de otras barberías traen su barbería y su rol
+// en el login (custom claims, ver assets/config-barberia.js y tienda/lib/usuarios.js).
+const ADMINS_SB = ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
 
 const auth = getAuth(initializeApp(firebaseConfig));
 await setPersistence(auth, browserLocalPersistence);
 
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth, async user => {
     if (user && !user.isAnonymous) {
-        location.replace(ADMINS.includes(user.email) ? '../recepcionista/' : '../anotar/');
+        let claims = {};
+        try { claims = (await user.getIdTokenResult()).claims || {}; } catch {}
+        const barberia = typeof claims.barberia === 'string' ? claims.barberia : SB_ID;
+        const admin = barberia === SB_ID ? ADMINS_SB.includes(user.email) : claims.rol === 'admin';
+        irABarberia(barberia, admin ? '../recepcionista/' : '../anotar/');
         return;
     }
     document.getElementById('login-form').classList.remove('hidden');

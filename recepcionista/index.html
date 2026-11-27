@@ -1760,7 +1760,7 @@ import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../a
 import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
 import { registrarPush, avisarTurnoNuevo } from "../assets/push.js";
 import { ruta } from "../assets/rutas-barberia.js"; // SB: rutas de siempre; otra barbería: barberias/{id}/...
-import { BARBERIA_ID, ES_SB, exigirAcceso, configInicial, escucharConfig, barberosActivos, etiquetaBarbero, mapaEmails, temaDe, comisionesBase, comisionConReglas, servicioDisponible, moduloActivo } from "../assets/config-barberia.js";
+import { BARBERIA_ID, ES_SB, exigirAcceso, olvidarBarberia, configInicial, escucharConfig, barberosActivos, etiquetaBarbero, mapaEmails, temaDe, comisionesBase, comisionConReglas, servicioDisponible, moduloActivo } from "../assets/config-barberia.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -1872,6 +1872,7 @@ let newItemPhoto = null, editItemPhoto = null, editItemId = null, editPhotoColle
 let newProductoPhoto = null;
 let isAdmin = false;
 let isOwner = false;
+let esDuenoSB = false;   // nosotros dos (no el admin de otra barbería): cuota de Firebase, soporte
 let activeTab = 'cortes';
 let ventaCart = [];
 let ventaSearchQuery = '';
@@ -1916,8 +1917,13 @@ async function init() {
     onAuthStateChanged(auth, async user => {
         if (user) {
             currentUser = user;
-            if (!exigirAcceso(user.email)) return; // otra barbería por URL: solo dueños
-            isOwner = ADMINS.includes(user.email);
+            // ¿Es la barbería de este usuario? Si no, recarga en la suya (etapa 3, assets/config-barberia.js).
+            const acceso = await exigirAcceso(user);
+            if (!acceso) return;
+            // Barbero de otra barbería que abrió recepción: va a anotar, que es lo suyo.
+            if (acceso.rol === 'barbero') { location.replace('../anotar/' + location.search); return; }
+            esDuenoSB = acceso.dueno;
+            isOwner = ADMINS.includes(user.email) || acceso.rol === 'admin';
             isAdmin = isOwner;
             // Solo entran los dueños con email y contraseña: las sesiones anónimas viejas (del
             // antiguo gate "femesb") y cualquier otro usuario se cierran.
@@ -1934,7 +1940,7 @@ async function init() {
             window.dispatchEvent(new Event('sb-dashboard-ready'));
             // App del celu: este token recibe los avisos de dueños (ventas de ML, etc.).
             registrarPush((token, plataforma) => setDoc(doc(db, 'push_tokens', token), {
-                email: user.email, barbero: null, admin: true, plataforma, actualizado: serverTimestamp()
+                email: user.email, barbero: null, admin: true, barberia: BARBERIA_ID, plataforma, actualizado: serverTimestamp()
             }));
             if (isAdmin) {
                 document.getElementById('btn-add-stock-item').classList.remove('hidden');
@@ -1944,8 +1950,12 @@ async function init() {
                 });
             }
             if (isOwner) {
-                ['btn-dispositivos', 'btn-estadisticas', 'btn-clientes', 'btn-mayorista', 'btn-uso'].forEach(id => { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); });
-                iniciarMonitorUso();
+                ['btn-dispositivos', 'btn-estadisticas', 'btn-clientes', 'btn-mayorista'].forEach(id => { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); });
+                // La cuota de Firebase es del proyecto entero (y /api/uso es solo para nosotros): no a los admins de otras barberías
+                if (esDuenoSB) {
+                    document.getElementById('btn-uso').classList.remove('hidden'); document.getElementById('btn-uso').classList.add('flex');
+                    iniciarMonitorUso();
+                }
                 document.getElementById('gastos-fijos-card').classList.remove('hidden');
             }
             if (!_listenersAttached) {
@@ -4300,7 +4310,7 @@ document.getElementById('login-form').addEventListener('submit', async e => {
     btn.disabled = false; btn.textContent = 'INGRESAR';
 });
 
-window.logout = () => signOut(auth);
+window.logout = () => { olvidarBarberia(); signOut(auth); };
 
 // ---- CIERRE DE CAJA ----
 let cierreCajaTab = 'diario';

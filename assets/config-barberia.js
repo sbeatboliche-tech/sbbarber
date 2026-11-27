@@ -5,17 +5,26 @@
 // Mientras el doc no llega (o si falla) se usa la última config guardada en este dispositivo y, si no
 // hay, CONFIG_RESPALDO: los valores de SB Barber de hoy. Así la app nunca se queda sin barberos.
 
-// Barbería de esta pestaña. Hasta la etapa 3 (login por barbería) siempre es SB Barber, salvo
-// `?barberia=<id>` en la URL para probar otra: solo sirve a los dueños (ver exigirAcceso y las reglas
-// de barberias/{id}/...). Plan etapa 2: docs/superpowers/plans/2026-11-20-multi-barberia-etapa-2.md
+// Barbería de esta pestaña (etapa 3: docs/superpowers/plans/2026-11-27-multi-barberia-etapa-3.md).
+// Las rutas se arman al cargar, antes del login, así que sale de: `?barberia=<id>` en la URL → la última
+// de este dispositivo (BARBERIA_KEY) → SB Barber. Después del login, exigirAcceso() compara con la
+// barbería del usuario (custom claim `barberia`, lo pone tienda/lib/usuarios.js) y si no coincide recarga
+// en la suya. Las cuentas de SB no tienen claim: sin claim = SB, como siempre. Los dueños entran a cualquiera.
 export const SB_ID = 'sb-barber';
-function idDesdeUrl() {
+const ID_RE = /^[a-z0-9-]{2,40}$/;
+const BARBERIA_KEY = 'sb_barberia_actual';
+function idInicial() {
     try {
         const p = new URLSearchParams(location.search).get('barberia');
-        return p && /^[a-z0-9-]{2,40}$/.test(p) ? p : null;
-    } catch { return null; }
+        if (p && ID_RE.test(p)) return p;
+    } catch {}
+    try {
+        const g = localStorage.getItem(BARBERIA_KEY);
+        if (g && ID_RE.test(g)) return g;
+    } catch {}
+    return null;
 }
-export const BARBERIA_ID = idDesdeUrl() || SB_ID;
+export const BARBERIA_ID = idInicial() || SB_ID;
 export const ES_SB = BARBERIA_ID === SB_ID;
 const CACHE_KEY = `sb_config_barberia_${BARBERIA_ID}`;
 
@@ -62,16 +71,48 @@ export function configInicial() {
     return clonar(CONFIG_RESPALDO);
 }
 
-// Otra barbería por URL solo para los dueños: a cualquier otro lo devuelve a SB Barber (las reglas
-// igual le niegan esos datos; esto es para que no quede en una pantalla vacía con errores).
-export function exigirAcceso(email) {
-    if (ES_SB || CONFIG_RESPALDO.admins.includes(email)) return true;
+// Después del login: ¿esta pestaña está en la barbería del usuario? Devuelve
+//   { dueno, rol, barberia }  si puede seguir (rol: 'admin' | 'barbero' | null = cuenta de SB sin claim)
+//   null                      si recargó en su barbería (el que llama tiene que cortar ahí).
+// Los dueños pueden estar en cualquiera (soporte). Las reglas igual le niegan a cada uno los datos ajenos;
+// esto es para que nadie quede en una pantalla vacía con errores.
+export async function exigirAcceso(user) {
+    const email = user?.email;
+    if (CONFIG_RESPALDO.admins.includes(email)) return { dueno: true, rol: 'admin', barberia: BARBERIA_ID };
+    const leer = async forzar => {
+        try { return (await user.getIdTokenResult(forzar)).claims || {}; } catch { return {}; }
+    };
+    const barberiaDe = c => typeof c.barberia === 'string' && ID_RE.test(c.barberia) ? c.barberia : SB_ID;
+    // El token guardado alcanza casi siempre (el claim se pone antes del primer login). Si no coincide,
+    // se pide uno nuevo antes de mover a nadie, por si le cambiaron la barbería con la sesión abierta.
+    let claims = await leer(false);
+    if (barberiaDe(claims) !== BARBERIA_ID) claims = await leer(true);
+    const suya = barberiaDe(claims);
+    const rol = suya === SB_ID ? null : (claims.rol === 'admin' ? 'admin' : 'barbero');
+    if (suya === BARBERIA_ID) {
+        try { if (suya === SB_ID) localStorage.removeItem(BARBERIA_KEY); else localStorage.setItem(BARBERIA_KEY, suya); } catch {}
+        return { dueno: false, rol, barberia: suya };
+    }
+    irABarberia(suya);
+    return null;
+}
+
+// Recarga la página en otra barbería. Va por URL (y no solo por localStorage) para que no quede en un
+// bucle si el dispositivo no deja guardar.
+export function irABarberia(id, pagina) {
     try {
-        const u = new URL(location.href);
-        u.searchParams.delete('barberia');
+        if (id === SB_ID) localStorage.removeItem(BARBERIA_KEY); else localStorage.setItem(BARBERIA_KEY, id);
+    } catch {}
+    try {
+        const u = new URL(pagina || location.href, location.href);
+        if (id === SB_ID) u.searchParams.delete('barberia'); else u.searchParams.set('barberia', id);
         location.replace(u.toString());
     } catch {}
-    return false;
+}
+
+// Al cerrar sesión: el próximo que entre en este dispositivo arranca sin barbería elegida.
+export function olvidarBarberia() {
+    try { localStorage.removeItem(BARBERIA_KEY); } catch {}
 }
 
 // Escucha el doc (1 lectura al abrir + los cambios). onCambio(cfg) solo si llega una config válida.

@@ -12,6 +12,18 @@ service cloud.firestore {
         'rodriguezsantiagoet5@gmail.com', 'santiagofl551@gmail.com'
       ]);
     }
+    // Otras barberías (multi-barbería etapa 3): la barbería y el rol vienen en el login como custom claims
+    // (los pone solo el servidor, tienda/lib/usuarios.js). Sin get(): no gasta lecturas. Las cuentas de SB no
+    // tienen claim, así que nunca matchean acá; y estas cuentas no son esStaff(), así que no ven nada de SB.
+    function miBarberia(id) {
+      return request.auth != null && request.auth.token.get('barberia', null) == id;
+    }
+    function esAdminDe(id) {
+      return miBarberia(id) && request.auth.token.get('rol', null) == 'admin';
+    }
+    function deOtraBarberia() {
+      return request.auth != null && request.auth.token.get('barberia', null) is string;
+    }
 
     // Tienda y menú: lectura pública, escritura solo dueños (el admin de tienda y de menú)
     match /tienda_productos/{d}        { allow read: if true; allow write: if esDueno(); }
@@ -48,22 +60,29 @@ service cloud.firestore {
     // Config de cada barbería (barberos, admins, comisiones, módulos; assets/config-barberia.js):
     // la leen todos los del equipo, la cambian solo los dueños.
     match /barberias/{id} {
-      allow read: if esStaff();
-      allow write: if esDueno();
+      allow read: if esStaff() || miBarberia(id);
+      allow write: if esDueno();   // barberos y admins los da de alta el servidor (tienda/lib/usuarios.js)
     }
     // Datos de las otras barberías (multi-barbería etapa 2: barberias/{id}/cortes, retiros, ...; SB Barber
-    // sigue en las colecciones de la raíz). Hasta la etapa 3 (custom claims con la barbería del usuario)
-    // solo los dueños, para probar. Sin get(): cada get() en reglas cuesta una lectura.
+    // sigue en las colecciones de la raíz). Los usa su equipo (claim barberia == id) y nosotros, para soporte.
+    // Borrar: solo sus admins (igual que en SB, donde borran solo los dueños).
     match /barberias/{id}/{col}/{d=**} {
-      allow read, write: if esDueno();
+      allow read, create, update: if esDueno() || miBarberia(id);
+      allow delete: if esDueno() || esAdminDe(id);
     }
 
     // Tokens de la app del celu (assets/push.js): cada uno guarda el suyo y solo con su propio email,
     // así nadie se anota para recibir los avisos de otro (el servidor elige destinatarios por email).
     match /push_tokens/{t} {
       allow read: if esDueno();
-      allow create, update: if esStaff() && request.resource.data.email == request.auth.token.email;
+      allow create, update: if (esStaff() || deOtraBarberia()) && request.resource.data.email == request.auth.token.email;
       allow delete: if esDueno();
+    }
+
+    // Estimado de lecturas (assets/uso-lecturas.js): la cuota es del proyecto entero, así que también suman
+    // las otras barberías. Solo escriben (sumar); leerlo es de los dueños (comodín de abajo / api/uso).
+    match /uso_lecturas/{d} {
+      allow create, update: if deOtraBarberia();
     }
 
     // Resto (recepción / anotar, uso interno): solo dueños y barberos. Eliminar documentos

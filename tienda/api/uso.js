@@ -10,6 +10,7 @@
 import { barberDb, verifyBarberUser, OWNERS } from '../lib/barberAdmin.js';
 import { enviarPush } from '../lib/push.js';
 import backupHandler from '../lib/backup.js';
+import { altaUsuario, bajaUsuario } from '../lib/usuarios.js';
 
 export const config = { maxDuration: 300 }; // lo necesita la copia de seguridad
 
@@ -21,14 +22,27 @@ export default async function handler(req, res) {
     if (req.query?.action === 'backup') return backupHandler(req, res); // tiene su propia autorización (cron)
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Cache-Control', 'no-store');
     if (req.method === 'OPTIONS') return res.status(204).end();
-    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
     const user = await verifyBarberUser(req);
     if (!user) return res.status(401).json({ error: 'Sesión inválida' });
     if (!OWNERS.includes(user.email)) return res.status(403).json({ error: 'Solo dueños' });
+
+    // Alta / baja de usuarios de otras barberías (lib/usuarios.js, multi-barbería etapa 3)
+    const action = req.query?.action;
+    if (action === 'usuario' || action === 'usuario-baja') {
+        if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+        try {
+            const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+            return res.json(action === 'usuario' ? await altaUsuario(body) : await bajaUsuario(body));
+        } catch (e) {
+            if (!e.status) console.error('usuarios:', e);
+            return res.status(e.status || 500).json({ error: e.message });
+        }
+    }
+    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
     try {
         if (!_cache || Date.now() - _cache.t > 2 * 60 * 1000) {

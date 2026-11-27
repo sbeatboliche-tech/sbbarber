@@ -348,7 +348,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, query, where, doc, writeBatch, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getDocs, iniciarContador } from "../assets/uso-lecturas.js"; // cuenta las lecturas (ver el archivo)
-import { ES_SB } from "../assets/config-barberia.js";
+import { ES_SB, exigirAcceso, olvidarBarberia } from "../assets/config-barberia.js";
 import { ruta, claveLocal } from "../assets/rutas-barberia.js"; // SB: rutas de siempre; otra barbería (?barberia=, solo dueños): barberias/{id}/...
 
 const firebaseConfig = {
@@ -359,7 +359,7 @@ const firebaseConfig = {
     messagingSenderId: "213501157745",
     appId: "1:213501157745:web:09fd59996cf1d72b6696d0"
 };
-const ADMINS = ['abalo7272@gmail.com', 'carusomanu21@gmail.com'];
+// Entran los dueños y los admins de cada barbería (custom claim rol: admin, ver assets/config-barberia.js)
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -1497,7 +1497,7 @@ $('btn-guardar-lista').addEventListener('click', async () => {
         btn.disabled = false; btn.textContent = 'Agregar a la lista';
     }
 });
-$('btn-logout').addEventListener('click', () => signOut(auth));
+$('btn-logout').addEventListener('click', () => { olvidarBarberia(); signOut(auth); });
 
 $('login-form').addEventListener('submit', async e => {
     e.preventDefault();
@@ -1510,10 +1510,12 @@ $('login-form').addEventListener('submit', async e => {
     }
 });
 
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth, async user => {
     show('auth-loading', false);
     if (!user || user.isAnonymous) { show('app', false); show('data-loading', false); show('login-view', true); return; }
-    if (!ADMINS.includes(user.email)) {
+    const acceso = await exigirAcceso(user);
+    if (!acceso) return; // recargó en su barbería
+    if (!acceso.dueno && acceso.rol !== 'admin') {
         signOut(auth);
         $('login-error').textContent = 'Esta cuenta no tiene acceso a las estadísticas.';
         $('login-error').classList.remove('hidden');

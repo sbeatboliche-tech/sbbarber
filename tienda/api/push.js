@@ -54,7 +54,9 @@ export default async function handler(req, res) {
 async function avisarTurno(turnoId, user) {
     if (typeof turnoId !== 'string' || !/^[A-Za-z0-9]{10,40}$/.test(turnoId)) throw new Error('turnoId inválido');
     const db = barberDb();
-    const ref = db.doc(`turnos/${turnoId}`);
+    // Turno de otra barbería (custom claim del que lo anotó, etapa 3): se busca en la suya y avisa a su barbero.
+    const barberia = typeof user.barberia === 'string' && /^[a-z0-9-]{2,40}$/.test(user.barberia) ? user.barberia : null;
+    const ref = db.doc(barberia ? `barberias/${barberia}/turnos/${turnoId}` : `turnos/${turnoId}`);
     // Marca primero (transacción) así dos llamadas seguidas no mandan dos avisos.
     const turno = await db.runTransaction(async tx => {
         const s = await tx.get(ref);
@@ -67,7 +69,7 @@ async function avisarTurno(turnoId, user) {
     const [a, m, d] = String(turno.fecha || '').split('-').map(Number);
     const fecha = a ? `${DIAS[new Date(a, m - 1, d).getDay()]} ${d}/${m}` : turno.fecha;
     const partes = [turno.clientName, `${fecha} ${turno.hora || ''}`.trim(), turno.servicio].filter(Boolean);
-    const enviados = await enviarPush({ barbero: turno.barbero }, {
+    const enviados = await enviarPush({ barbero: turno.barbero, ...(barberia ? { barberia } : {}) }, {
         titulo: '📅 Turno nuevo',
         cuerpo: partes.join(' · '),
         datos: { tipo: 'turno', turnoId }

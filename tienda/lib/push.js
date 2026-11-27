@@ -11,16 +11,19 @@ const TOKEN_MUERTO = ['messaging/registration-token-not-registered', 'messaging/
 // Respaldo si no se puede leer la config de la barbería (barberias/sb-barber, assets/config-barberia.js).
 const BARBEROS_BASE = { 'ap1773508@gmail.com': 'Tony', 'stefanoacostasla@gmail.com': 'Stefa', 'rodriguezsantiagoet5@gmail.com': 'Santi', 'santiagofl551@gmail.com': 'SantiF' };
 
-async function emailsDeBarbero(db, nombre) {
-    const cfg = (await db.doc('barberias/sb-barber').get().catch(() => null))?.data();
+async function emailsDeBarbero(db, nombre, barberia = 'sb-barber') {
+    const cfg = (await db.doc(`barberias/${barberia}`).get().catch(() => null))?.data();
     if (Array.isArray(cfg?.barberos)) return cfg.barberos.filter(b => b.nombre === nombre && b.email).map(b => b.email);
+    // El respaldo con los mails de SB es solo para SB: un barbero de otra barbería con el mismo nombre no tiene que recibirlo
+    if (barberia !== 'sb-barber') return [];
     return Object.entries(BARBEROS_BASE).filter(([, n]) => n === nombre).map(([e]) => e);
 }
 
-// para: { barbero: 'Santi' } | { admins: true }. excluirEmail: no avisarle a quien hizo la acción.
+// para: { barbero: 'Santi', barberia? } | { admins: true }. excluirEmail: no avisarle a quien hizo la acción.
+// barberia: la de la config donde se busca el barbero (por defecto SB Barber).
 export async function enviarPush(para, { titulo, cuerpo, datos = {} }, { excluirEmail } = {}) {
     const db = barberDb();
-    const emails = (para.admins ? OWNERS : await emailsDeBarbero(db, para.barbero)).filter(e => e !== excluirEmail);
+    const emails = (para.admins ? OWNERS : await emailsDeBarbero(db, para.barbero, para.barberia)).filter(e => e !== excluirEmail);
     if (!emails.length) return 0;
     const snap = await db.collection(TOKENS).where('email', 'in', emails.slice(0, 30)).get();
     const tokens = snap.docs.map(d => d.id);

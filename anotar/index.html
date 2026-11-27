@@ -1056,7 +1056,7 @@ import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../a
 import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js";
 import { registrarPush, avisarTurnoNuevo } from "../assets/push.js";
 import { ruta } from "../assets/rutas-barberia.js"; // SB: rutas de siempre; otra barbería: barberias/{id}/...
-import { BARBERIA_ID, ES_SB, exigirAcceso, configInicial, escucharConfig, barberosActivos, etiquetaBarbero, mapaEmails, temaDe, comisionesBase, comisionConReglas, servicioDisponible, moduloActivo } from "../assets/config-barberia.js";
+import { BARBERIA_ID, ES_SB, exigirAcceso, olvidarBarberia, configInicial, escucharConfig, barberosActivos, etiquetaBarbero, mapaEmails, temaDe, comisionesBase, comisionConReglas, servicioDisponible, moduloActivo } from "../assets/config-barberia.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAXUQmV19Z0VNbOlrrk_IcMc2GKQZ8yk7w",
@@ -1209,11 +1209,15 @@ function init() {
         }
     }, 8000);
 
-    onAuthStateChanged(auth, user => {
+    onAuthStateChanged(auth, async user => {
         clearTimeout(loadingTimeout);
         if(user) {
             currentUser=user;
-            if(!exigirAcceso(user.email)) return; // otra barbería por URL: solo dueños
+            // ¿Es la barbería de este usuario? Si no, recarga en la suya (etapa 3, assets/config-barberia.js).
+            const acceso = await exigirAcceso(user);
+            if(!acceso) return;
+            // Admin de otra barbería: también es admin acá aunque la config todavía no haya llegado.
+            if(acceso.rol==='admin' && !ADMINS.includes(user.email)) ADMINS.push(user.email);
             document.getElementById('loading-view').classList.add('hidden');
             document.getElementById('dashboard-view').classList.remove('hidden');
             document.getElementById('login-view').classList.add('hidden');
@@ -1222,7 +1226,7 @@ function init() {
             // App del celu: el barbero recibe sus turnos nuevos; los dueños, lo de admins.
             registrarPush((token, plataforma) => setDoc(doc(db, 'push_tokens', token), {
                 email: user.email, barbero: BARBER_EMAIL_MAP[user.email] || null,
-                admin: ADMINS.includes(user.email), plataforma, actualizado: serverTimestamp()
+                admin: ADMINS.includes(user.email), barberia: BARBERIA_ID, plataforma, actualizado: serverTimestamp()
             }));
             checkUpdatesBadge();
             if(ADMINS.includes(user.email)){
@@ -2630,7 +2634,7 @@ window.saveRetiroNota = async () => {
 };
 function showModal(id){ document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
 window.closeModals = ()=>ALL_MODALS.forEach(id=>{ document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); });
-window.logout = ()=>signOut(auth);
+window.logout = ()=>{ olvidarBarberia(); signOut(auth); };
 
 // ---- FORMULARIOS ----
 document.getElementById('login-form').addEventListener('submit', async e=>{
