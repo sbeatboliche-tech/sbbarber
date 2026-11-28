@@ -244,3 +244,22 @@ async function copiar(b) {
     try { await navigator.clipboard.writeText(b.dataset.msj); b.innerHTML = '<i class="fas fa-check mr-1"></i>Copiado'; }
     catch { b.textContent = 'No se pudo copiar'; }
 }
+
+// "Eliminar mi cuenta" (lo pide Apple para publicar la app, regla 5.1.1(v)). Solo cuentas de otras barberías;
+// el servidor no deja borrar al último admin ni cuentas de SB. alTerminar() cierra la sesión.
+export async function eliminarMiCuenta(auth, alTerminar) {
+    if (!confirm('¿Eliminar tu cuenta? Ya no vas a poder entrar a la app. Los cortes y ventas que cargaste quedan en la barbería.')) return;
+    if (!confirm('Última confirmación: ¿eliminar tu cuenta definitivamente?')) return;
+    try {
+        const token = await auth.currentUser.getIdToken();
+        const r = await fetch(`${API}?action=cuenta-baja`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: '{}'
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || `Error ${r.status}`);
+        alert('Tu cuenta fue eliminada.');
+        alTerminar?.();
+    } catch (e) { alert(e.message); }
+}

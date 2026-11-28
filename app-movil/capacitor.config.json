@@ -8,5 +8,16 @@
   },
   "android": {
     "backgroundColor": "#000000"
+  },
+  "ios": {
+    "backgroundColor": "#000000",
+    "contentInset": "never"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": [
+        "sound"
+      ]
+    }
   }
 }

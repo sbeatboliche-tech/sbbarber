@@ -121,7 +121,28 @@ export async function bajaUsuario(body, caller) {
     const barberia = user.customClaims?.barberia;
     if (!barberia) throw err(400, 'Es una cuenta de SB Barber: no se da de baja desde acá');
     if (barberiaPermitida(caller, barberia) !== barberia) throw err(403, 'Ese usuario no es de tu barbería');
+    return darDeBaja(auth, user, email, barberia);
+}
 
+// "Eliminar mi cuenta" desde la app (lo pide Apple, regla 5.1.1(v)). Solo cuentas de otras barberías:
+// las de SB las manejan los dueños. El último admin de una barbería no se puede borrar solo (quedaría sin admin).
+export async function eliminarMiCuenta(_body, caller) {
+    const email = String(caller?.email || '').toLowerCase();
+    if (OWNERS.includes(email)) throw err(400, 'Las cuentas de los dueños no se borran desde la app');
+    const barberia = typeof caller?.barberia === 'string' ? caller.barberia : null;
+    if (!barberia) throw err(400, 'Tu cuenta es de SB Barber: pedile la baja a los dueños');
+    const auth = getAuth(barberApp());
+    const user = await auth.getUser(caller.uid);
+    if (caller.rol === 'admin') {
+        const cfg = (await barberDb().doc(`barberias/${barberia}`).get()).data() || {};
+        if ((cfg.admins || []).filter(e => e !== email).length === 0) {
+            throw err(409, 'Sos el único admin de la barbería: agregá otro admin en Equipo antes de borrar tu cuenta');
+        }
+    }
+    return darDeBaja(auth, user, email, barberia);
+}
+
+async function darDeBaja(auth, user, email, barberia) {
     await auth.updateUser(user.uid, { disabled: true });
     await auth.setCustomUserClaims(user.uid, null);
     await auth.revokeRefreshTokens(user.uid);   // el token que ya tiene vence en ≤1 h (las reglas no consultan revocados: costaría lecturas)

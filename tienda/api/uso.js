@@ -10,7 +10,7 @@
 import { barberDb, verifyBarberUser, OWNERS } from '../lib/barberAdmin.js';
 import { enviarPush } from '../lib/push.js';
 import backupHandler from '../lib/backup.js';
-import { altaUsuario, bajaUsuario, crearBarberia } from '../lib/usuarios.js';
+import { altaUsuario, bajaUsuario, crearBarberia, eliminarMiCuenta } from '../lib/usuarios.js';
 
 export const config = { maxDuration: 300 }; // lo necesita la copia de seguridad
 
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(204).end();
 
     const action = req.query?.action;
-    const EQUIPO = { usuario: altaUsuario, 'usuario-baja': bajaUsuario, barberia: crearBarberia };
+    const EQUIPO = { usuario: altaUsuario, 'usuario-baja': bajaUsuario, barberia: crearBarberia, 'cuenta-baja': eliminarMiCuenta };
     // Cambios de equipo: también se rechaza una sesión dada de baja aunque su token todavía no haya vencido.
     const user = await verifyBarberUser(req, { checkRevoked: !!EQUIPO[action] });
     if (!user) return res.status(401).json({ error: 'Sesión inválida' });

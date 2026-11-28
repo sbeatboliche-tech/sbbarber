@@ -270,6 +270,9 @@
                         <button id="btn-equipo" type="button" onclick="window.closeMasMenu(); window.abrirEquipo()" class="hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-users-gear w-4 text-center text-gray-400"></i> <span id="btn-equipo-txt">Equipo</span>
                         </button>
+                        <button id="btn-eliminar-cuenta" type="button" onclick="window.closeMasMenu(); window.eliminarMiCuenta()" class="hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-red-400 hover:bg-white/10 active:bg-white/15 transition text-left">
+                            <i class="fas fa-user-xmark w-4 text-center"></i> Eliminar mi cuenta
+                        </button>
                         <button id="btn-uso" type="button" onclick="window.closeMasMenu(); window.openUsoPanel()" class="hidden items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-bold text-gray-200 hover:bg-white/10 active:bg-white/15 transition text-left">
                             <i class="fas fa-gauge-high w-4 text-center text-gray-400"></i>
                             <span class="flex-1 min-w-0">
@@ -1762,7 +1765,7 @@ import { initClientes, pickerCliente, resolverCliente, limpiarCliente, normTelef
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
 import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js?v=e4";
 import { registrarPush, avisarTurnoNuevo } from "../assets/push.js";
-import { initEquipo, abrirEquipo } from "../assets/equipo.js?v=e4"; // equipo de cada barbería (alta de barberos/admins)
+import { initEquipo, abrirEquipo, eliminarMiCuenta } from "../assets/equipo.js?v=e5"; // equipo de cada barbería (alta de barberos/admins)
 import { ruta } from "../assets/rutas-barberia.js?v=e3"; // SB: rutas de siempre; otra barbería: barberias/{id}/...
 import { BARBERIA_ID, ES_SB, exigirAcceso, olvidarBarberia, configInicial, escucharConfig, barberosActivos, etiquetaBarbero, mapaEmails, temaDe, comisionesBase, comisionConReglas, servicioDisponible, moduloActivo } from "../assets/config-barberia.js?v=e3";
 
@@ -1969,6 +1972,11 @@ async function init() {
                     window.abrirEquipo = abrirEquipo;
                     document.getElementById('btn-equipo-txt').textContent = esDuenoSB && ES_SB ? 'Barberías' : 'Equipo';
                     document.getElementById('btn-equipo').classList.remove('hidden'); document.getElementById('btn-equipo').classList.add('flex');
+                }
+                // "Eliminar mi cuenta" (lo pide Apple): solo cuentas de otras barberías, no nosotros ni el staff de SB
+                if (!ES_SB && !esDuenoSB) {
+                    window.eliminarMiCuenta = () => eliminarMiCuenta(auth, () => window.logout());
+                    document.getElementById('btn-eliminar-cuenta').classList.remove('hidden'); document.getElementById('btn-eliminar-cuenta').classList.add('flex');
                 }
                 // La cuota de Firebase es del proyecto entero (y /api/uso es solo para nosotros): no a los admins de otras barberías
                 if (esDuenoSB) {

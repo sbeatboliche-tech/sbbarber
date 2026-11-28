@@ -938,6 +938,7 @@
                 <p id="settings-user-name" class="font-bold text-lg uppercase"></p>
             </div>
             <button onclick="window.saveProfileImage()" class="w-full bg-gradient-to-r from-blue-600 to-cyan-600 p-4 rounded-xl font-bold text-white shadow-lg uppercase tracking-wider">Guardar Foto</button>
+            <button id="btn-eliminar-cuenta" type="button" onclick="window.eliminarMiCuenta()" class="hidden w-full mt-4 p-3 rounded-xl text-sm font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition"><i class="fas fa-user-xmark mr-2"></i>Eliminar mi cuenta</button>
         </div>
     </div>
 
@@ -1113,6 +1114,7 @@ import { onSnapshot, getDocs, getDoc, iniciarContador } from "../assets/uso-lect
 import { initClientes, pickerCliente, resolverCliente, limpiarCliente, normTelefono, telefonoValido } from "../assets/clientes.js";
 import { abrirCamara, cerrarCamara, scanBeep, scanToast, normCodigo } from "../assets/escaner.js";
 import { initRetirosSocios, pedirClaveRetiros, pedirClaveSocios } from "../assets/retiros-socios.js?v=e4";
+import { eliminarMiCuenta } from "../assets/equipo.js?v=e5"; // "Eliminar mi cuenta" (lo pide Apple)
 import { registrarPush, avisarTurnoNuevo } from "../assets/push.js";
 import { ruta } from "../assets/rutas-barberia.js?v=e3"; // SB: rutas de siempre; otra barbería: barberias/{id}/...
 import { BARBERIA_ID, ES_SB, exigirAcceso, olvidarBarberia, configInicial, escucharConfig, barberosActivos, etiquetaBarbero, mapaEmails, temaDe, comisionesBase, comisionConReglas, servicioDisponible, moduloActivo } from "../assets/config-barberia.js?v=e3";
@@ -1285,6 +1287,12 @@ function init() {
             if(!acceso) return;
             // Admin de otra barbería: también es admin acá aunque la config todavía no haya llegado.
             if(acceso.rol==='admin' && !ADMINS.includes(user.email)) ADMINS.push(user.email);
+            // "Eliminar mi cuenta" (lo pide Apple): solo cuentas de otras barberías
+            if(!ES_SB && !acceso.dueno){
+                window.eliminarMiCuenta = () => eliminarMiCuenta(auth, () => window.logout());
+                document.getElementById('btn-eliminar-cuenta').classList.remove('hidden');
+                document.getElementById('settings-btn').classList.remove('hidden');
+            }
             document.getElementById('loading-view').classList.add('hidden');
             document.getElementById('dashboard-view').classList.remove('hidden');
             document.getElementById('login-view').classList.add('hidden');
