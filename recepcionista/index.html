@@ -2285,6 +2285,10 @@ window.openAddCutModal = () => {
     sec.style.maxHeight = '0'; sec.style.opacity = '0';
     window.setMetodoPago('efectivo');
     showModal('add-cut-modal');
+    // El barbero que quedó marcado de la vez anterior (o el único que hay) ya muestra sus servicios:
+    // tocarlo de nuevo no dispara "change" y los servicios no aparecían nunca.
+    const marcado = document.querySelector('input[name="barber"]:checked') || (BARBERS.length === 1 ? document.querySelector('input[name="barber"]') : null);
+    if (marcado) { marcado.checked = true; window.renderServices(marcado.value); }
 };
 
 window.setMetodoPago = (tipo) => {

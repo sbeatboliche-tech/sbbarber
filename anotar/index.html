@@ -2650,6 +2650,9 @@ window.openAddModal = () => {
     window.setCutPago('efectivo');
     showModal('add-modal');
     renderBarberSelection();
+    // Un solo barbero: queda elegido y ya muestra sus servicios
+    const unico = BARBERS_LIST.length === 1 ? document.querySelector('input[name="barber"]') : null;
+    if (unico) { unico.checked = true; window.renderServices(unico.value); }
 };
 
 const ALL_MODALS=['settings-modal','add-modal','expense-modal','date-search-modal','admin-settings-modal','updates-modal','fixed-expenses-modal','stock-item-modal','retiro-modal','propina-modal','ventas-modal','retiro-manual-modal','retiro-nota-modal','nuevo-turno-modal','stock-mov-modal','nuevo-producto-modal'];
